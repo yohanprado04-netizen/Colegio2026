@@ -1,22 +1,18 @@
 // server.js — Servidor principal EduSistema Pro
 require('dotenv').config();
-const express    = require('express');
-const mongoose   = require('mongoose');
-const cors       = require('cors');
-const helmet     = require('helmet');
-const rateLimit  = require('express-rate-limit');
-const connectDB  = require('./config/db');
+const express  = require('express');
+const mongoose = require('mongoose');
+const cors     = require('cors');
+const helmet   = require('helmet');
+const rateLimit = require('express-rate-limit');
+const path     = require('path');
+const connectDB = require('./config/db');
 
 const app = express();
-const path = require('path'); // Asegúrate de que esta línea esté arriba con los otros require
 
-// Esta línea sirve para que Render muestre tu index.html, CSS y JS
-app.use(express.static(__dirname));
-
-// Esta ruta asegura que al entrar a la URL principal se cargue el HTML
-app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, 'index.html'));
-});
+// ─── Servir frontend estático ─────────────────────────────────────
+app.use(express.static(path.join(__dirname)));
+app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'index.html')));
 
 // ─── Seguridad ───────────────────────────────────────────────────
 app.use(helmet({ contentSecurityPolicy: false }));
@@ -24,13 +20,11 @@ app.use(helmet({ contentSecurityPolicy: false }));
 const corsOptions = {
   origin: function (origin, callback) {
     const allowed = [
-      process.env.FRONTEND_URL || 'https://tu-pagina.onrender.com',
+      'https://colegio2026.onrender.com',
+      'http://localhost:5500',
       'http://127.0.0.1:5500',
-    'https://colegio2026.onrender.com',
-
-      // Agrega aquí tu dominio de producción, ej: 'https://tuescuela.com'
+      'http://localhost:3001',
     ];
-    // Permitir archivos abiertos directamente desde disco (origin es null o undefined)
     if (!origin || origin === 'null' || allowed.includes(origin)) {
       return callback(null, true);
     }
@@ -42,9 +36,9 @@ const corsOptions = {
 };
 app.use(cors(corsOptions));
 
-// Rate limiting — protección contra ataques de fuerza bruta
+// ─── Rate limiting ───────────────────────────────────────────────
 const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutos
+  windowMs: 15 * 60 * 1000,
   max: 200,
   standardHeaders: true,
   legacyHeaders: false,
@@ -52,7 +46,6 @@ const limiter = rateLimit({
 });
 app.use(limiter);
 
-// Rate limit estricto solo para login
 const loginLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 20,
@@ -60,11 +53,10 @@ const loginLimiter = rateLimit({
 });
 
 // ─── Body parser ─────────────────────────────────────────────────
-// Aumentar límite para soportar archivos en base64 (talleres, planes)
 app.use(express.json({ limit: '25mb' }));
 app.use(express.urlencoded({ extended: true, limit: '25mb' }));
 
-// ─── Rutas ───────────────────────────────────────────────────────
+// ─── Rutas API ───────────────────────────────────────────────────
 app.use('/api/auth', loginLimiter, require('./routes/auth'));
 app.use('/api/db',                 require('./routes/db'));
 app.use('/api',                    require('./routes/api'));
@@ -96,8 +88,7 @@ const PORT = process.env.PORT || 3001;
 (async () => {
   await connectDB();
   app.listen(PORT, () => {
-    console.log(`\n🚀 EduSistema Pro Backend corriendo en http://https://colegio2026.onrender.comost:${PORT}`);
-    console.log(`📡 Health check: http://https://colegio2026.onrender.comost:${PORT}/health`);
-    console.log(`🌍 CORS permitido para: ${process.env.FRONTEND_URL}`);
+    console.log(`\n🚀 Servidor corriendo en puerto ${PORT}`);
+    console.log(`📡 Health check: /health`);
   });
 })();
