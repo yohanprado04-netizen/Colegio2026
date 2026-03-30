@@ -1,0 +1,135 @@
+INSTRUCCIONES DE INTEGRACIÓN — EduSistema Pro con MongoDB
+==========================================================
+
+PASO 1 — Configurar el .env
+────────────────────────────
+Edita el archivo .env y reemplaza <password> con tu contraseña real de MongoDB Atlas:
+
+  MONGODB_URI=mongodb+srv://yohanprado04_db_user:TU_CONTRASEÑA_REAL@prado04.t4d8ob8.mongodb.net/edusistema?retryWrites=true&w=majority
+
+También cambia el JWT_SECRET por una cadena larga y segura.
+
+
+PASO 2 — Instalar dependencias y hacer seed
+────────────────────────────────────────────
+  cd edusistema-backend
+  npm install
+  node scripts/seed.js
+
+
+PASO 3 — Arrancar el backend
+────────────────────────────
+  npm start
+  # El servidor corre en http://localhost:3001
+  # Verifica: http://localhost:3001/health
+
+
+PASO 4 — Integrar api-layer.js en el HTML
+──────────────────────────────────────────
+En el archivo edusistema-pro-v5.html, justo ANTES del cierre de </body>,
+añade esta línea:
+
+  <script src="api-layer.js"></script>
+
+IMPORTANTE: el script api-layer.js debe ir DESPUÉS del <script> principal
+del HTML (el que contiene toda la lógica), para que pueda sobreescribir
+las funciones que usan localStorage.
+
+El bloque al final del HTML original que dice:
+  let _dbReady=false;
+  (async()=>{ ... await dbLoad(); ... })();
+
+Ya NO se ejecutará porque api-layer.js define su propio DOMContentLoaded
+que maneja la inicialización.
+
+Puedes comentar o eliminar ese bloque del HTML original si quieres,
+aunque no causará problemas si lo dejas (api-layer lo sobreescribe).
+
+
+PASO 5 — Configurar la URL del backend
+───────────────────────────────────────
+En api-layer.js, línea 4:
+
+  const API_BASE = 'http://localhost:3001'; // desarrollo local
+
+Para producción, cámbialo a la URL de tu servidor:
+
+  const API_BASE = 'https://tu-backend.railway.app';
+
+Y en el .env del backend, actualiza FRONTEND_URL con la URL de tu HTML.
+
+
+PASO 6 — MongoDB Atlas — permitir conexiones
+─────────────────────────────────────────────
+1. Ve a https://cloud.mongodb.com
+2. Tu clúster: prado04
+3. Network Access → Add IP Address
+4. Para desarrollo: Allow from anywhere (0.0.0.0/0)
+5. Para producción: agrega la IP de tu servidor backend
+
+
+ESTRUCTURA DE ARCHIVOS FINAL
+──────────────────────────────
+  mi-proyecto/
+  ├── edusistema-pro-v5.html        ← el HTML original (modificado con <script src="api-layer.js">)
+  ├── api-layer.js                  ← el puente entre el HTML y MongoDB
+  └── edusistema-backend/           ← el servidor Node.js
+      ├── server.js
+      ├── .env
+      ├── package.json
+      ├── config/db.js
+      ├── models/index.js
+      ├── middleware/auth.js
+      ├── routes/auth.js
+      ├── routes/db.js
+      ├── routes/api.js
+      └── scripts/seed.js
+
+
+CREDENCIALES INICIALES (después del seed)
+──────────────────────────────────────────
+  Admin:      admin   / admin123
+  Profesor:   profe1  / profe123
+  Estudiante: est1    / est1123   (hasta est10)
+
+⚠️ CAMBIA LAS CONTRASEÑAS EN PRODUCCIÓN.
+
+
+DESPLIEGUE EN RAILWAY (recomendado — gratis para empezar)
+──────────────────────────────────────────────────────────
+1. Crea cuenta en https://railway.app
+2. New Project → Deploy from GitHub
+3. Sube la carpeta edusistema-backend a un repositorio GitHub
+4. En Railway → Variables → añade todas las del .env
+5. Railway detecta automáticamente Node.js y ejecuta npm start
+6. Copia la URL pública que Railway te da y ponla en api-layer.js
+
+
+CÓMO FUNCIONA LA INTEGRACIÓN
+──────────────────────────────
+El HTML original usa localStorage a través de dos funciones:
+  dbLoad()  → carga DB del localStorage
+  dbSave()  → guarda DB en localStorage
+
+api-layer.js SOBREESCRIBE estas funciones para que:
+  dbLoad()  → GET /api/db  (trae toda la BD de MongoDB)
+  dbSave()  → PUT /api/config/* (guarda configuración)
+
+Además sobreescribe las funciones de acción específicas:
+  saveTri()          → PUT /api/notas/:estId/:periodo/:materia
+  addEst()           → POST /api/usuarios
+  delEst()           → DELETE /api/usuarios/:id
+  saveAst()          → PUT /api/asistencias
+  envExcusa()        → POST /api/excusas
+  addVClase()        → POST /api/vclases
+  subirTarea()       → POST /api/uploads
+  marcarTareaRevisada() → PUT /api/uploads/:id/revisar
+  subirRecPlan()     → POST /api/recuperaciones
+  marcarRecRevisado() → PUT /api/recuperaciones/:id/revisar
+  saveExt()          → PUT /api/config/ext
+  saveDR()           → PUT /api/config/dr
+  clearAudit()       → DELETE /api/auditoria
+  ... y más
+
+Todas las demás funciones del HTML (cálculos, UI, PDF, Excel) siguen
+funcionando exactamente igual, sin cambios.
