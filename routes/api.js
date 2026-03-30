@@ -28,12 +28,22 @@ router.get('/usuarios', authMiddleware, requireRole('admin'), async (req, res) =
 router.post('/usuarios', authMiddleware, requireRole('admin'), async (req, res) => {
   try {
     const d = req.body;
-    const exists = await Usuario.findOne({ usuario: d.usuario });
-    if (exists) return res.status(409).json({ error: 'Ese usuario ya existe' });
+
+    // ✅ CORRECCIÓN: validar que el id esté presente
+    if (!d.id) {
+      return res.status(400).json({ error: 'El campo id es requerido' });
+    }
+
+    // Verificar usuario duplicado
+    const exists = await Usuario.findOne({ $or: [{ usuario: d.usuario }, { id: d.id }] });
+    if (exists) return res.status(409).json({ error: 'Ese usuario o ID ya existe' });
+
     d.password = await hashPwd(d.password || 'changeme123');
     const u = await Usuario.create(d);
-    const out = u.toObject(); delete out.password; delete out._id;
-    // Registrar en historial si es estudiante
+    const out = u.toObject();
+    delete out.password;
+    delete out._id;
+
     if (d.role === 'est') {
       await EstHist.findOneAndUpdate(
         { id: d.id },
@@ -42,8 +52,12 @@ router.post('/usuarios', authMiddleware, requireRole('admin'), async (req, res) 
         { upsert: true }
       );
     }
+
     res.status(201).json(out);
-  } catch (err) { res.status(500).json({ error: err.message }); }
+  } catch (err) {
+    console.error('Error creando usuario:', err);
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // PUT /api/usuarios/:id — actualizar usuario

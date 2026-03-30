@@ -688,9 +688,20 @@ async function saveAno() {
 // ═══════════════════════════════════════════════════════════════════
 async function addPrf(data) {
   try {
+    // Garantizar que el id esté presente antes de enviar
+    if (!data.id) {
+      data.id = 'prf_' + Date.now();
+    }
     const newProf = await apiFetch('/api/usuarios', {
       method: 'POST',
-      body: JSON.stringify({ ...data, role: 'profe', blocked: false, materias: [], materia: '', salonMaterias: {} })
+      body: JSON.stringify({
+        ...data,
+        role: 'profe',
+        blocked: false,
+        materias: [],
+        materia: '',
+        salonMaterias: {}
+      })
     });
     DB.profs.push({ ...data, role: 'profe', blocked: false, materias: [], materia: '', salonMaterias: {} });
     return newProf;
