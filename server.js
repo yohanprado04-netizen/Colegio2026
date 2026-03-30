@@ -8,6 +8,9 @@ const rateLimit  = require('express-rate-limit');
 const connectDB  = require('./config/db');
 
 const app = express();
+// Servir archivos estáticos (HTML, CSS, JS) desde la raíz
+app.use(express.static(__dirname));
+
 
 // ─── Seguridad ───────────────────────────────────────────────────
 app.use(helmet({ contentSecurityPolicy: false }));
