@@ -3,7 +3,7 @@
 // Incluir este script ANTES del cierre de </body> en el HTML
 // ============================================================
 
-const API_BASE = 'http://localhost:3001'; // 🔧 CAMBIA a tu URL de backend en producción
+const API_BASE = 'https://colegio2026.onrender.com';
 
 // ─── Token JWT ───────────────────────────────────────────────────
 const TokenStore = {

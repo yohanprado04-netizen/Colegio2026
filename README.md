@@ -115,7 +115,7 @@ El archivo `edusistema-frontend-mongodb.html` reemplaza `localStorage` por
 llamadas a esta API. Configurar la URL del backend al inicio del script:
 
 ```javascript
-const API_BASE = 'http://localhost:3001'; // producción: 'https://tu-backend.com'
+const API_BASE = 'https://colegio2026.onrender.com; // producción: 'https://tu-backend.com'
 ```
 
 ---
