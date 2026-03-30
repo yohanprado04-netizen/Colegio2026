@@ -960,12 +960,12 @@ function openAddPrf(ciclo){
     const d=r.value;
     if(!d.nombre||!d.usuario||!d.password){sw('error','Campos obligatorios vacíos');return;}
     if(uExists(d.usuario)){sw('error','Ese usuario ya existe');return;}
-    d.password=await hashPwd(d.password);
-    const newProf={id:'prf_'+Date.now(),...d,ciclo,role:'profe',blocked:false,
-      materias:[],materia:'',salonMaterias:{}};
-    DB.profs.push(newProf);dbSave();
-    if(ciclo==='bachillerato'&&d.salones.length) openSalonMaterias(newProf.id,()=>{renderPrfTbl();});
-    else{renderPrfTbl();sw('success','Profesor agregado','',1400);}
+    try{
+      const newProf=await addPrf({id:'prf_'+Date.now(),...d,ciclo});
+      const saved=DB.profs[DB.profs.length-1];
+      if(ciclo==='bachillerato'&&d.salones.length) openSalonMaterias(saved.id,()=>{renderPrfTbl();});
+      else{renderPrfTbl();sw('success','Profesor agregado','',1400);}
+    }catch(e){sw('error','Error al guardar: '+e.message);}
   });
 }
 
@@ -1052,18 +1052,27 @@ function editPrf(pid){
     if(!r.isConfirmed)return;
     const d=r.value;
     p.nombre=d.nombre;p.ti=d.ti;p.usuario=d.usuario;p.salones=d.salones;
-    if(d.newPwd) p.password=await hashPwd(d.newPwd);
+    const upd={nombre:d.nombre,ti:d.ti,usuario:d.usuario,salones:d.salones};
+    if(d.newPwd) upd.password=d.newPwd;
     if(p.salonMaterias){
       Object.keys(p.salonMaterias).forEach(s=>{if(!(p.salones||[]).includes(s))delete p.salonMaterias[s];});
+      upd.salonMaterias=p.salonMaterias;
     }
-    dbSave();renderPrfTbl();
+    try{
+      await apiFetch(`/api/usuarios/${pid}`,{method:'PUT',body:JSON.stringify(upd)});
+      renderPrfTbl();
+    }catch(e){sw('error','Error al guardar: '+e.message);}
   });
 }
 function delPrf(pid,ciclo){
   const p=DB.profs.find(x=>x.id===pid);
   Swal.fire({title:'¿Eliminar?',text:p.nombre,icon:'warning',showCancelButton:true,
-    confirmButtonColor:'#e53e3e'}).then(r=>{
-    if(!r.isConfirmed)return;DB.profs=DB.profs.filter(x=>x.id!==pid);dbSave();renderPrfTbl();
+    confirmButtonColor:'#e53e3e'}).then(async r=>{
+    if(!r.isConfirmed)return;
+    try{
+      await apiFetch(`/api/usuarios/${pid}`,{method:'DELETE'});
+      DB.profs=DB.profs.filter(x=>x.id!==pid);renderPrfTbl();
+    }catch(e){sw('error','Error al eliminar: '+e.message);}
   });
 }
 
