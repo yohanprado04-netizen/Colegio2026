@@ -15,7 +15,7 @@ app.use(helmet({ contentSecurityPolicy: false }));
 const corsOptions = {
   origin: function (origin, callback) {
     const allowed = [
-      process.env.FRONTEND_URL || 'http://localhost:5500',
+      process.env.FRONTEND_URL || 'https://tu-pagina.onrender.com',
       'http://127.0.0.1:5500',
       'http://localhost:3000',
       // Agrega aquí tu dominio de producción, ej: 'https://tuescuela.com'

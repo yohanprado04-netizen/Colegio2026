@@ -32,7 +32,7 @@
        MONGODB_URI=mongodb+srv://usuario:PASSWORD@cluster.mongodb.net/edusistema
        JWT_SECRET=una_cadena_muy_larga_y_segura
        PORT=3001
-       FRONTEND_URL=http://localhost:5500   ← o tu dominio de producción
+       FRONTEND_URL=https://tu-pagina.onrender.com   ← o tu dominio de producción
 
   2. Instala dependencias e inicializa datos:
        cd edusistema-backend
@@ -47,7 +47,7 @@
 
   ══════════════════════════════════════════════════════════════════
   CORS — server.js permite estas origins:
-    http://localhost:5500   (VS Code Live Server — desarrollo)
+    https://tu-pagina.onrender.com   (VS Code Live Server — desarrollo)
     http://127.0.0.1:5500
     http://localhost:3000
     variable FRONTEND_URL del .env (producción)
