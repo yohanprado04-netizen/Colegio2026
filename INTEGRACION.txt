@@ -20,8 +20,8 @@ PASO 2 — Instalar dependencias y hacer seed
 PASO 3 — Arrancar el backend
 ────────────────────────────
   npm start
-  # El servidor corre en http://localhost:3001
-  # Verifica: http://localhost:3001/health
+  # El servidor corre en http://https://colegio2026.onrender.comost:3001
+  # Verifica: http://https://colegio2026.onrender.comost:3001/health
 
 
 PASO 4 — Integrar api-layer.js en el HTML
@@ -50,7 +50,7 @@ PASO 5 — Configurar la URL del backend
 ───────────────────────────────────────
 En api-layer.js, línea 4:
 
-  const API_BASE = 'http://localhost:3001'; // desarrollo local
+  const API_BASE = 'http://https://colegio2026.onrender.comost:3001'; // desarrollo local
 
 Para producción, cámbialo a la URL de tu servidor:
 

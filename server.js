@@ -26,7 +26,8 @@ const corsOptions = {
     const allowed = [
       process.env.FRONTEND_URL || 'https://tu-pagina.onrender.com',
       'http://127.0.0.1:5500',
-      'http://localhost:3000',
+    'https://colegio2026.onrender.com',
+
       // Agrega aquí tu dominio de producción, ej: 'https://tuescuela.com'
     ];
     // Permitir archivos abiertos directamente desde disco (origin es null o undefined)
@@ -95,8 +96,8 @@ const PORT = process.env.PORT || 3001;
 (async () => {
   await connectDB();
   app.listen(PORT, () => {
-    console.log(`\n🚀 EduSistema Pro Backend corriendo en http://localhost:${PORT}`);
-    console.log(`📡 Health check: http://localhost:${PORT}/health`);
+    console.log(`\n🚀 EduSistema Pro Backend corriendo en http://https://colegio2026.onrender.comost:${PORT}`);
+    console.log(`📡 Health check: http://https://colegio2026.onrender.comost:${PORT}/health`);
     console.log(`🌍 CORS permitido para: ${process.env.FRONTEND_URL}`);
   });
 })();
