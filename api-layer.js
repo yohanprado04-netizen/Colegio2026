@@ -84,20 +84,29 @@ async function dbLoad() {
 // dbSave: solo guarda config y datos pequeños al backend
 // Las notas, asistencias etc. se guardan con rutas específicas
 function dbSave() {
-  // Guardar config globales en background (no bloqueante)
   _saveConfigBg();
+  _saveUsersBg();
 }
 
-async function _saveConfigBg() {
+async function _saveUsersBg() {
   try {
-    const cfgKeys = ['mP', 'mB', 'pers', 'dr', 'drPer', 'ext', 'anoActual'];
-    await Promise.all(cfgKeys.map(k =>
-      apiFetch(`/api/config/${k}`, {
-        method: 'PUT',
-        body: JSON.stringify({ value: DB[k] })
-      }).catch(e => console.warn(`Config ${k}:`, e))
-    ));
-  } catch (e) { console.warn('dbSave config error:', e); }
+    await apiFetch('/api/db', {
+      method: 'PUT',
+      body: JSON.stringify({
+        admin: DB.admin,
+        profs: DB.profs,
+        ests: DB.ests,
+        sals: DB.sals,
+        mP: DB.mP,
+        mB: DB.mB,
+        pers: DB.pers,
+        dr: DB.dr,
+        drPer: DB.drPer,
+        ext: DB.ext,
+        anoActual: DB.anoActual,
+      })
+    });
+  } catch (e) { console.warn('dbSave users error:', e); }
 }
 
 // ═══════════════════════════════════════════════════════════════════
