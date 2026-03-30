@@ -1,4 +1,5 @@
-// ============================================================
+const gi = (id) => document.getElementById(id);
+
 // api-layer.js — Reemplaza localStorage por llamadas a MongoDB
 // Incluir este script ANTES del cierre de </body> en el HTML
 // ============================================================
