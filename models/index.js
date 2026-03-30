@@ -55,7 +55,9 @@ const NotaEntradaSchema = new Schema({
 
 const NotaPeriodoSchema = new Schema({
   periodo:     { type: String, required: true },
-  materias:    { type: Map, of: NotaEntradaSchema, default: {} }, // { materia: {a,c,r} }
+ // Cambia la línea 58 por esta:
+materias: { type: Schema.Types.Mixed, default: {} }, 
+
   disciplina:  { type: String, default: '' },
 }, { _id: false });
 
