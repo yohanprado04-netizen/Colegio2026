@@ -124,11 +124,6 @@ async function doLogin() {
     // Guardar token
     TokenStore.set(data.token);
     CU = data.user;
-    if (!CU.role) {
-  show('Error: usuario sin rol asignado.');
-  TokenStore.clear();
-  return;
-}
 
     // Cargar DB completa
     await dbLoad();
@@ -697,7 +692,7 @@ async function addPrf(data) {
       method: 'POST',
       body: JSON.stringify({ ...data, role: 'profe', blocked: false, materias: [], materia: '', salonMaterias: {} })
     });
-   DB.profs.push(newProf);
+    DB.profs.push({ ...data, role: 'profe', blocked: false, materias: [], materia: '', salonMaterias: {} });
     return newProf;
   } catch (e) { throw e; }
 }
@@ -847,12 +842,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
       }
     } catch (e) {
-  TokenStore.clear();
-  CU = null;
-  _dbReady = true;
-  if (btn) { btn.textContent = 'Ingresar →'; btn.disabled = false; }
-  return;
-}
+      TokenStore.clear();
+    }
   }
 
   _dbReady = true;
