@@ -84,29 +84,20 @@ async function dbLoad() {
 // dbSave: solo guarda config y datos pequeños al backend
 // Las notas, asistencias etc. se guardan con rutas específicas
 function dbSave() {
+  // Guardar config globales en background (no bloqueante)
   _saveConfigBg();
-  _saveUsersBg();
 }
 
-async function _saveUsersBg() {
+async function _saveConfigBg() {
   try {
-    await apiFetch('/api/db', {
-      method: 'PUT',
-      body: JSON.stringify({
-        admin: DB.admin,
-        profs: DB.profs,
-        ests: DB.ests,
-        sals: DB.sals,
-        mP: DB.mP,
-        mB: DB.mB,
-        pers: DB.pers,
-        dr: DB.dr,
-        drPer: DB.drPer,
-        ext: DB.ext,
-        anoActual: DB.anoActual,
-      })
-    });
-  } catch (e) { console.warn('dbSave users error:', e); }
+    const cfgKeys = ['mP', 'mB', 'pers', 'dr', 'drPer', 'ext', 'anoActual'];
+    await Promise.all(cfgKeys.map(k =>
+      apiFetch(`/api/config/${k}`, {
+        method: 'PUT',
+        body: JSON.stringify({ value: DB[k] })
+      }).catch(e => console.warn(`Config ${k}:`, e))
+    ));
+  } catch (e) { console.warn('dbSave config error:', e); }
 }
 
 // ═══════════════════════════════════════════════════════════════════
@@ -133,6 +124,11 @@ async function doLogin() {
     // Guardar token
     TokenStore.set(data.token);
     CU = data.user;
+    if (!CU.role) {
+  show('Error: usuario sin rol asignado.');
+  TokenStore.clear();
+  return;
+}
 
     // Cargar DB completa
     await dbLoad();
@@ -701,7 +697,7 @@ async function addPrf(data) {
       method: 'POST',
       body: JSON.stringify({ ...data, role: 'profe', blocked: false, materias: [], materia: '', salonMaterias: {} })
     });
-    DB.profs.push({ ...data, role: 'profe', blocked: false, materias: [], materia: '', salonMaterias: {} });
+   DB.profs.push(newProf);
     return newProf;
   } catch (e) { throw e; }
 }
@@ -851,8 +847,12 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
       }
     } catch (e) {
-      TokenStore.clear();
-    }
+  TokenStore.clear();
+  CU = null;
+  _dbReady = true;
+  if (btn) { btn.textContent = 'Ingresar →'; btn.disabled = false; }
+  return;
+}
   }
 
   _dbReady = true;
