@@ -8,9 +8,15 @@ const rateLimit  = require('express-rate-limit');
 const connectDB  = require('./config/db');
 
 const app = express();
-// Servir archivos estáticos (HTML, CSS, JS) desde la raíz
+const path = require('path'); // Asegúrate de que esta línea esté arriba con los otros require
+
+// Esta línea sirve para que Render muestre tu index.html, CSS y JS
 app.use(express.static(__dirname));
 
+// Esta ruta asegura que al entrar a la URL principal se cargue el HTML
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, 'index.html'));
+});
 
 // ─── Seguridad ───────────────────────────────────────────────────
 app.use(helmet({ contentSecurityPolicy: false }));
