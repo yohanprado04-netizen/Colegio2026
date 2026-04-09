@@ -1,4 +1,3 @@
-
 // api-layer.js — Reemplaza localStorage por llamadas a MongoDB
 // Incluir este script ANTES del cierre de </body> en el HTML
 // ============================================================
@@ -190,13 +189,27 @@ async function doLogin() {
       await dbLoad();
     }
 
-    gi('ls').classList.add('hidden');
-    gi('app').classList.remove('hidden');
-    resetSessionTimer();
-    bootApp();
+    // ─── Post-login: mostrar app ──────────────────────────────────
+    try {
+      gi('ls').classList.add('hidden');
+      gi('app').classList.remove('hidden');
+      resetSessionTimer();
+      bootApp();
+    } catch (bootErr) {
+      console.error('[doLogin] Error al iniciar la app después del login:', bootErr);
+      // Login fue exitoso — mostrar app igual aunque bootApp falle parcialmente
+      gi('ls').classList.add('hidden');
+      gi('app').classList.remove('hidden');
+    }
+
   } catch (e) {
-    show('Error conectando al servidor. Verifica que el backend esté activo.');
-    console.error('Login error:', e);
+    // Solo errores de red o del servidor llegan aquí
+    if (e.name === 'AbortError') {
+      show('⚠️ El servidor tardó demasiado. Intenta de nuevo en unos segundos.');
+    } else {
+      show('Error conectando al servidor. Verifica que el backend esté activo.');
+    }
+    console.error('[doLogin] Error:', e);
   }
 }
 

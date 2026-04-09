@@ -50,6 +50,7 @@ const corsOptions = {
 app.use(cors(corsOptions));
 // Pre-flight para todas las rutas
 app.options('*', cors(corsOptions));
+app.set('trust proxy', 1); // Confiar en el proxy de Render
 
 // ─── Rate limiting ────────────────────────────────────────────────
 const limiter = rateLimit({
