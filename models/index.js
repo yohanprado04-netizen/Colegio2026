@@ -1,66 +1,64 @@
-// models/index.js — Todos los modelos de MongoDB para EduSistema Pro
+// models/index.js — Todos los modelos con índices optimizados para 50k+ estudiantes
+'use strict';
 const mongoose = require('mongoose');
 const { Schema } = mongoose;
 
 // ─────────────────────────────────────────────────────────────────────────────
-// COLEGIO (institución gestionada por un admin)
+// COLEGIO
 // ─────────────────────────────────────────────────────────────────────────────
 const ColegioSchema = new Schema({
   id:           { type: String, required: true, unique: true },
   nombre:       { type: String, required: true, trim: true },
-  codigo:       { type: String, default: '' },        // código interno
+  codigo:       { type: String, default: '' },
   direccion:    { type: String, default: '' },
   telefono:     { type: String, default: '' },
-  logo:         { type: String, default: '' },        // base64 o URL
+  logo:         { type: String, default: '' },
   activo:       { type: Boolean, default: true },
-  // Configuración institucional (super admin)
   sedes:        [{ type: String }],
   jornadas:     [{ type: String }],
   createdBy:    { type: String, default: 'superadmin' },
 }, { timestamps: true, collection: 'colegios' });
 
 // ─────────────────────────────────────────────────────────────────────────────
-// USUARIO (superadmin, admin, profe, estudiante — colección unificada)
+// USUARIO
 // ─────────────────────────────────────────────────────────────────────────────
 const UsuarioSchema = new Schema({
-  // Identificación
-  id:         { type: String, required: true, unique: true },
-  nombre:     { type: String, required: true, trim: true },
-  ti:         { type: String, default: '' },
-  usuario:    { type: String, required: true, unique: true, trim: true },
-  password:   { type: String, required: true },
-  role:       { type: String, enum: ['superadmin', 'admin', 'profe', 'est'], required: true },
-  blocked:    { type: Boolean, default: false },
-
-  // Multi-tenant: a qué colegio pertenece (null = superadmin)
-  colegioId:  { type: String, default: null },
+  id:            { type: String, required: true, unique: true },
+  nombre:        { type: String, required: true, trim: true },
+  ti:            { type: String, default: '' },
+  usuario:       { type: String, required: true, unique: true, trim: true },
+  password:      { type: String, required: true },
+  role:          { type: String, enum: ['superadmin','admin','profe','est'], required: true },
+  blocked:       { type: Boolean, default: false },
+  colegioId:     { type: String, default: null, index: true },
   colegioNombre: { type: String, default: '' },
-
   // Solo estudiantes
-  salon:      { type: String, default: '' },
-  registrado: { type: String, default: '' },
-
+  salon:         { type: String, default: '' },
+  registrado:    { type: String, default: '' },
   // Solo profesores
-  ciclo:         { type: String, enum: ['primaria', 'bachillerato', ''], default: '' },
+  ciclo:         { type: String, enum: ['primaria','bachillerato',''], default: '' },
   salones:       [{ type: String }],
   materias:      [{ type: String }],
   materia:       { type: String, default: '' },
   salonMaterias: { type: Schema.Types.Mixed, default: {} },
 }, { timestamps: true, collection: 'usuarios' });
+// Índice compuesto para queries multi-tenant frecuentes
+UsuarioSchema.index({ colegioId: 1, role: 1 });
+UsuarioSchema.index({ colegioId: 1, salon: 1 });
 
 // ─────────────────────────────────────────────────────────────────────────────
 // SALÓN
 // ─────────────────────────────────────────────────────────────────────────────
 const SalonSchema = new Schema({
   nombre:    { type: String, required: true, trim: true },
-  ciclo:     { type: String, enum: ['primaria', 'bachillerato'], required: true },
+  ciclo:     { type: String, enum: ['primaria','bachillerato'], required: true },
   mats:      [{ type: String }],
-  colegioId: { type: String, required: true },
+  colegioId: { type: String, required: true, index: true },
 }, { timestamps: true, collection: 'salones' });
 SalonSchema.index({ nombre: 1, colegioId: 1 }, { unique: true });
 
 // ─────────────────────────────────────────────────────────────────────────────
-// CONFIGURACIÓN GLOBAL (por colegio o global para superadmin)
+// CONFIGURACIÓN (por colegio)
 // ─────────────────────────────────────────────────────────────────────────────
 const ConfigSchema = new Schema({
   key:       { type: String, required: true },
@@ -70,27 +68,22 @@ const ConfigSchema = new Schema({
 ConfigSchema.index({ key: 1, colegioId: 1 }, { unique: true });
 
 // ─────────────────────────────────────────────────────────────────────────────
-// PLAN DE ESTUDIOS (super admin define áreas/asignaturas/intensidades)
+// PLAN DE ESTUDIOS
 // ─────────────────────────────────────────────────────────────────────────────
 const PlanEstudiosSchema = new Schema({
-  colegioId:   { type: String, required: true },
-  ciclo:       { type: String, enum: ['primaria', 'bachillerato'], required: true },
-  grado:       { type: String, required: true },
-  area:        { type: String, required: true },
-  asignatura:  { type: String, required: true },
-  intensidad:  { type: Number, default: 0 },           // horas semanales
-  periodo:     { type: String, default: '' },
+  colegioId:  { type: String, required: true, index: true },
+  ciclo:      { type: String, enum: ['primaria','bachillerato'], required: true },
+  grado:      { type: String, required: true },
+  area:       { type: String, required: true },
+  asignatura: { type: String, required: true },
+  intensidad: { type: Number, default: 0 },
+  periodo:    { type: String, default: '' },
 }, { timestamps: true, collection: 'plan_estudios' });
+PlanEstudiosSchema.index({ colegioId: 1, ciclo: 1, grado: 1 });
 
 // ─────────────────────────────────────────────────────────────────────────────
-// NOTAS  — tripartita por estudiante / periodo / materia
+// NOTAS — índice compuesto crítico para escala
 // ─────────────────────────────────────────────────────────────────────────────
-const NotaEntradaSchema = new Schema({
-  a: { type: Number, default: 0, min: 0, max: 5 },
-  c: { type: Number, default: 0, min: 0, max: 5 },
-  r: { type: Number, default: 0, min: 0, max: 5 },
-}, { _id: false });
-
 const NotaPeriodoSchema = new Schema({
   periodo:    { type: String, required: true },
   materias:   { type: Schema.Types.Mixed, default: {} },
@@ -102,105 +95,112 @@ const NotaSchema = new Schema({
   anoLectivo: { type: String, required: true, default: () => String(new Date().getFullYear()) },
   periodos:   [NotaPeriodoSchema],
   disciplina: { type: String, default: '' },
-  colegioId:  { type: String, default: '' },
+  colegioId:  { type: String, default: '', index: true },
 }, { timestamps: true, collection: 'notas' });
-NotaSchema.index({ estId: 1, anoLectivo: 1 }, { unique: true });
+// Único por (estId, anoLectivo, colegioId) — clave de acceso más frecuente
+NotaSchema.index({ estId: 1, anoLectivo: 1, colegioId: 1 }, { unique: true });
+NotaSchema.index({ colegioId: 1, anoLectivo: 1 }); // para agregaciones del superadmin
 
 // ─────────────────────────────────────────────────────────────────────────────
 // ASISTENCIA
 // ─────────────────────────────────────────────────────────────────────────────
 const AsistenciaSchema = new Schema({
-  fecha:    { type: String, required: true },
-  salon:    { type: String, required: true },
-  colegioId:{ type: String, required: true },
+  fecha:     { type: String, required: true },
+  salon:     { type: String, required: true },
+  colegioId: { type: String, required: true, index: true },
   registros: [{
     estId:  { type: String, required: true },
-    estado: { type: String, enum: ['presente', 'ausente', 'tarde'], default: 'presente' },
+    estado: { type: String, enum: ['presente','ausente','tarde'], default: 'presente' },
   }],
 }, { timestamps: true, collection: 'asistencias' });
 AsistenciaSchema.index({ fecha: 1, salon: 1, colegioId: 1 }, { unique: true });
+AsistenciaSchema.index({ colegioId: 1, fecha: 1 }); // listado por fecha
 
 // ─────────────────────────────────────────────────────────────────────────────
 // EXCUSA
 // ─────────────────────────────────────────────────────────────────────────────
 const ExcusaSchema = new Schema({
-  estId:    { type: String, required: true },
-  enombre:  { type: String, required: true },
-  salon:    { type: String, default: '' },
-  fecha:    { type: String, required: true },
-  dest:     { type: String, required: true },
-  causa:    { type: String, required: true },
-  desc:     { type: String, default: '' },
-  leida:    { type: Boolean, default: false },
-  ts:       { type: String, default: '' },
-  colegioId:{ type: String, default: '' },
+  estId:     { type: String, required: true },
+  enombre:   { type: String, required: true },
+  salon:     { type: String, default: '' },
+  fecha:     { type: String, required: true },
+  dest:      { type: String, required: true },
+  causa:     { type: String, required: true },
+  desc:      { type: String, default: '' },
+  leida:     { type: Boolean, default: false },
+  ts:        { type: String, default: '' },
+  colegioId: { type: String, default: '', index: true },
 }, { timestamps: true, collection: 'excusas' });
+ExcusaSchema.index({ colegioId: 1, estId: 1 });
 
 // ─────────────────────────────────────────────────────────────────────────────
 // CLASE VIRTUAL
 // ─────────────────────────────────────────────────────────────────────────────
 const VClaseSchema = new Schema({
-  id:          { type: String, required: true, unique: true },
-  profId:      { type: String, required: true },
-  profNombre:  { type: String, default: '' },
-  materias:    { type: String, default: '' },
-  salon:       { type: String, required: true },
-  fecha:       { type: String, required: true },
-  hora:        { type: String, required: true },
-  link:        { type: String, required: true },
-  desc:        { type: String, default: '' },
-  ts:          { type: String, default: '' },
-  colegioId:   { type: String, default: '' },
+  id:         { type: String, required: true, unique: true },
+  profId:     { type: String, required: true },
+  profNombre: { type: String, default: '' },
+  materias:   { type: String, default: '' },
+  salon:      { type: String, required: true },
+  fecha:      { type: String, required: true },
+  hora:       { type: String, required: true },
+  link:       { type: String, required: true },
+  desc:       { type: String, default: '' },
+  ts:         { type: String, default: '' },
+  colegioId:  { type: String, default: '', index: true },
 }, { timestamps: true, collection: 'vclases' });
 
 // ─────────────────────────────────────────────────────────────────────────────
-// TAREA / UPLOAD
+// UPLOAD (TAREA)
 // ─────────────────────────────────────────────────────────────────────────────
 const UploadSchema = new Schema({
-  id:          { type: String, required: true, unique: true },
-  estId:       { type: String, required: true },
-  estNombre:   { type: String, required: true },
-  profId:      { type: String, default: '' },
-  profNombre:  { type: String, default: '' },
-  materia:     { type: String, required: true },
-  periodo:     { type: String, required: true },
-  nombre:      { type: String, required: true },
-  desc:        { type: String, default: '' },
-  fecha:       { type: String, required: true },
-  size:        { type: Number, default: 0 },
-  type:        { type: String, default: '' },
-  dataUrl:     { type: String, default: '' },
-  revisado:    { type: Boolean, default: false },
-  revisadoTs:  { type: String, default: '' },
-  colegioId:   { type: String, default: '' },
+  id:         { type: String, required: true, unique: true },
+  estId:      { type: String, required: true },
+  estNombre:  { type: String, required: true },
+  profId:     { type: String, default: '' },
+  profNombre: { type: String, default: '' },
+  materia:    { type: String, required: true },
+  periodo:    { type: String, required: true },
+  nombre:     { type: String, required: true },
+  desc:       { type: String, default: '' },
+  fecha:      { type: String, required: true },
+  size:       { type: Number, default: 0 },
+  type:       { type: String, default: '' },
+  dataUrl:    { type: String, default: '' }, // base64 — se excluye de listados
+  revisado:   { type: Boolean, default: false },
+  revisadoTs: { type: String, default: '' },
+  colegioId:  { type: String, default: '', index: true },
 }, { timestamps: true, collection: 'uploads' });
+UploadSchema.index({ colegioId: 1, estId: 1 });
+UploadSchema.index({ colegioId: 1, profId: 1 });
 
 // ─────────────────────────────────────────────────────────────────────────────
 // PLAN DE RECUPERACIÓN
 // ─────────────────────────────────────────────────────────────────────────────
 const PlanSchema = new Schema({
-  id:           { type: String, required: true, unique: true },
-  estId:        { type: String, required: true },
-  estNombre:    { type: String, required: true },
-  salon:        { type: String, required: true },
-  materia:      { type: String, required: true },
-  profId:       { type: String, required: true },
-  profNombre:   { type: String, required: true },
-  titulo:       { type: String, required: true },
-  desc:         { type: String, default: '' },
-  fechaLimite:  { type: String, default: '' },
-  archNombre:   { type: String, default: '' },
-  archDataUrl:  { type: String, default: '' },
-  archType:     { type: String, default: '' },
-  fecha:        { type: String, required: true },
-  visto:        { type: Boolean, default: false },
-  esSalon:      { type: Boolean, default: false },
-  planId:       { type: String, default: '' },
-  archivado:    { type: Boolean, default: false },
-  _periodo:     { type: String, default: '' },
-  _archivedAt:  { type: String, default: '' },
-  colegioId:    { type: String, default: '' },
+  id:          { type: String, required: true, unique: true },
+  estId:       { type: String, required: true },
+  estNombre:   { type: String, required: true },
+  salon:       { type: String, required: true },
+  materia:     { type: String, required: true },
+  profId:      { type: String, required: true },
+  profNombre:  { type: String, required: true },
+  titulo:      { type: String, required: true },
+  desc:        { type: String, default: '' },
+  fechaLimite: { type: String, default: '' },
+  archNombre:  { type: String, default: '' },
+  archDataUrl: { type: String, default: '' },
+  archType:    { type: String, default: '' },
+  fecha:       { type: String, required: true },
+  visto:       { type: Boolean, default: false },
+  esSalon:     { type: Boolean, default: false },
+  planId:      { type: String, default: '' },
+  archivado:   { type: Boolean, default: false },
+  _periodo:    { type: String, default: '' },
+  _archivedAt: { type: String, default: '' },
+  colegioId:   { type: String, default: '', index: true },
 }, { timestamps: true, collection: 'planes' });
+PlanSchema.index({ colegioId: 1, archivado: 1 });
 
 // ─────────────────────────────────────────────────────────────────────────────
 // RECUPERACIÓN
@@ -224,27 +224,29 @@ const RecuperacionSchema = new Schema({
   archivado:   { type: Boolean, default: false },
   _periodo:    { type: String, default: '' },
   _archivedAt: { type: String, default: '' },
-  colegioId:   { type: String, default: '' },
+  colegioId:   { type: String, default: '', index: true },
 }, { timestamps: true, collection: 'recuperaciones' });
+RecuperacionSchema.index({ colegioId: 1, archivado: 1 });
 
 // ─────────────────────────────────────────────────────────────────────────────
 // AUDITORÍA
 // ─────────────────────────────────────────────────────────────────────────────
 const AuditoriaSchema = new Schema({
-  ts:       { type: String, required: true },
-  uid:      { type: String, default: '' },
-  who:      { type: String, default: '' },
-  role:     { type: String, default: '' },
-  est:      { type: String, default: '' },
-  mat:      { type: String, default: '' },
-  old:      { type: String, default: '' },
-  nw:       { type: String, default: '' },
-  ip:       { type: String, default: '' },
-  user:     { type: String, default: '' },
-  accion:   { type: String, default: '' },
-  extra:    { type: String, default: '' },
-  colegioId:{ type: String, default: '' },
+  ts:        { type: String, required: true },
+  uid:       { type: String, default: '' },
+  who:       { type: String, default: '' },
+  role:      { type: String, default: '' },
+  est:       { type: String, default: '' },
+  mat:       { type: String, default: '' },
+  old:       { type: String, default: '' },
+  nw:        { type: String, default: '' },
+  ip:        { type: String, default: '' },
+  user:      { type: String, default: '' },
+  accion:    { type: String, default: '' },
+  extra:     { type: String, default: '' },
+  colegioId: { type: String, default: '', index: true },
 }, { timestamps: true, collection: 'auditoria' });
+AuditoriaSchema.index({ colegioId: 1, createdAt: -1 });
 
 // ─────────────────────────────────────────────────────────────────────────────
 // HISTORIAL ESTUDIANTE
@@ -266,30 +268,32 @@ const EstHistSchema = new Schema({
   snapNotas:       { type: Schema.Types.Mixed, default: {} },
   snapNotasPorAno: { type: Schema.Types.Mixed, default: {} },
   snapAsist:       { type: Schema.Types.Mixed, default: {} },
-  colegioId:       { type: String, default: '' },
+  colegioId:       { type: String, default: '', index: true },
 }, { timestamps: true, collection: 'est_historial' });
 
 // ─────────────────────────────────────────────────────────────────────────────
-// BLOQUEOS DE USUARIO
+// BLOQUEOS
 // ─────────────────────────────────────────────────────────────────────────────
 const BloqueoSchema = new Schema({
-  usuario: { type: String, required: true, unique: true },
-  on:      { type: Boolean, default: true },
-  ts:      { type: String, default: '' },
+  usuario:   { type: String, required: true, unique: true },
+  on:        { type: Boolean, default: true },
+  ts:        { type: String, default: '' },
+  colegioId: { type: String, default: '' },
 }, { collection: 'bloqueos' });
 
 // ─────────────────────────────────────────────────────────────────────────────
-// ESTADÍSTICAS GLOBALES (para dashboard superadmin)
+// ESTADÍSTICAS (snapshot periódico — para no recalcular siempre)
 // ─────────────────────────────────────────────────────────────────────────────
 const EstadisticaSchema = new Schema({
-  colegioId:    { type: String, required: true },
-  fecha:        { type: String, required: true },
-  totalEst:     { type: Number, default: 0 },
-  totalProfs:   { type: Number, default: 0 },
-  promNotas:    { type: Number, default: 0 },
-  asistPct:     { type: Number, default: 0 },
-  ingresosMes:  { type: Number, default: 0 },
+  colegioId:   { type: String, required: true },
+  fecha:       { type: String, required: true },
+  totalEst:    { type: Number, default: 0 },
+  totalProfs:  { type: Number, default: 0 },
+  promNotas:   { type: Number, default: 0 },
+  asistPct:    { type: Number, default: 0 },
+  ingresosMes: { type: Number, default: 0 },
 }, { timestamps: true, collection: 'estadisticas' });
+EstadisticaSchema.index({ colegioId: 1, fecha: -1 });
 
 // ─────────────────────────────────────────────────────────────────────────────
 // EXPORTS

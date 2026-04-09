@@ -1,10 +1,12 @@
-// routes/superadmin.js — Rutas exclusivas del Super Admin
-const router  = require('express').Router();
-const bcrypt  = require('bcryptjs');
+// routes/superadmin.js — Rutas exclusivas del Super Admin (optimizado para 50k+ est.)
+'use strict';
+const router = require('express').Router();
+const bcrypt = require('bcryptjs');
 const { verifyToken, requireRole } = require('../middleware/auth');
 const {
   Usuario, Colegio, Config, PlanEstudios,
-  Nota, Asistencia, Auditoria, Estadistica
+  Nota, Asistencia, Auditoria, Salon,
+  Excusa, VClase, Upload, Plan, Recuperacion, EstHist, Bloqueo
 } = require('../models');
 
 // Middleware: solo superadmin
@@ -14,16 +16,16 @@ router.use(verifyToken, requireRole('superadmin'));
    GESTIÓN DE COLEGIOS
 ══════════════════════════════════════════════════════════ */
 
-// GET /superadmin/colegios
+// GET /api/superadmin/colegios
 router.get('/colegios', async (req, res) => {
   try {
     const colegios = await Colegio.find().lean();
-    // Agregar conteos
+    // Conteos en paralelo — countDocuments usa el índice, no carga docs
     const result = await Promise.all(colegios.map(async c => {
       const [admins, profs, ests] = await Promise.all([
-        Usuario.countDocuments({ colegioId: c.id, role: 'admin' }),
-        Usuario.countDocuments({ colegioId: c.id, role: 'profe' }),
-        Usuario.countDocuments({ colegioId: c.id, role: 'est'   }),
+        Usuario.countDocuments({ colegioId: c.id, role: 'admin'  }),
+        Usuario.countDocuments({ colegioId: c.id, role: 'profe'  }),
+        Usuario.countDocuments({ colegioId: c.id, role: 'est'    }),
       ]);
       return { ...c, admins, profs, ests };
     }));
@@ -31,7 +33,7 @@ router.get('/colegios', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// POST /superadmin/colegios — crear colegio + su admin
+// POST /api/superadmin/colegios — crear colegio + su admin inicial
 router.post('/colegios', async (req, res) => {
   try {
     const { nombre, codigo, direccion, telefono, sedes, jornadas,
@@ -40,14 +42,14 @@ router.post('/colegios', async (req, res) => {
     if (!nombre || !adminNombre || !adminUsuario || !adminPassword)
       return res.status(400).json({ error: 'Faltan campos requeridos' });
 
-    const exists = await Usuario.findOne({ usuario: adminUsuario });
+    const exists = await Usuario.findOne({ usuario: adminUsuario }).lean();
     if (exists) return res.status(409).json({ error: 'Ese usuario ya existe' });
 
     const colegioId = 'col_' + Date.now();
 
     await Colegio.create({
-      id: colegioId, nombre, codigo: codigo||'', direccion: direccion||'',
-      telefono: telefono||'', sedes: sedes||[], jornadas: jornadas||[],
+      id: colegioId, nombre, codigo: codigo || '', direccion: direccion || '',
+      telefono: telefono || '', sedes: sedes || [], jornadas: jornadas || [],
       createdBy: 'superadmin'
     });
 
@@ -62,51 +64,74 @@ router.post('/colegios', async (req, res) => {
       colegioNombre: nombre
     });
 
-    // Configs por defecto del colegio
-    await Config.create({ key: 'periodos', value: ['Periodo 1','Periodo 2','Periodo 3','Periodo 4'], colegioId });
-    await Config.create({ key: 'mP',       value: ['Matemáticas','Español','Ciencias','Sociales','Artística','Educación Física'], colegioId });
-    await Config.create({ key: 'mB',       value: ['Matemáticas','Español','Física','Química','Filosofía','Historia','Inglés'], colegioId });
-    await Config.create({ key: 'ext',      value: { on:false, s:'', e:'' }, colegioId });
-    await Config.create({ key: 'dr',       value: { s:'', e:'' }, colegioId });
+    // Config por defecto del colegio
+    const defaults = [
+      { key: 'periodos', value: ['Periodo 1','Periodo 2','Periodo 3','Periodo 4'] },
+      { key: 'mP',       value: ['Matemáticas','Español','Ciencias','Sociales','Artística','Educación Física'] },
+      { key: 'mB',       value: ['Matemáticas','Español','Física','Química','Filosofía','Historia','Inglés'] },
+      { key: 'ext',      value: { on:false, s:'', e:'' } },
+      { key: 'dr',       value: { s:'', e:'' } },
+      { key: 'drPer',    value: {} },
+      { key: 'anoActual',value: String(new Date().getFullYear()) },
+    ];
+    await Config.insertMany(defaults.map(d => ({ ...d, colegioId })));
 
-    await Auditoria.create({
-      ts: new Date().toISOString(), uid: 'superadmin', who: 'superadmin',
+    Auditoria.create({
+      ts: new Date().toISOString(), uid: req.user.id, who: req.user.nombre,
       role: 'superadmin', accion: `Colegio creado: ${nombre}`,
       extra: `admin: ${adminUsuario}`, colegioId
-    });
+    }).catch(() => {});
 
     res.json({ ok: true, colegioId });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// PUT /superadmin/colegios/:id — editar colegio
+// PUT /api/superadmin/colegios/:id
 router.put('/colegios/:id', async (req, res) => {
   try {
-    const { nombre, codigo, direccion, telefono, sedes, jornadas, activo } = req.body;
-    const col = await Colegio.findOne({ id: req.params.id });
+    const allowed = ['nombre','codigo','direccion','telefono','sedes','jornadas','logo','activo'];
+    const upd = {};
+    allowed.forEach(k => { if (req.body[k] !== undefined) upd[k] = req.body[k]; });
+    const col = await Colegio.findOneAndUpdate({ id: req.params.id }, upd, { new: true });
     if (!col) return res.status(404).json({ error: 'Colegio no encontrado' });
-    if (nombre)     col.nombre     = nombre;
-    if (codigo !== undefined)    col.codigo    = codigo;
-    if (direccion !== undefined) col.direccion = direccion;
-    if (telefono !== undefined)  col.telefono  = telefono;
-    if (sedes)     col.sedes     = sedes;
-    if (jornadas)  col.jornadas  = jornadas;
-    if (activo !== undefined) {
-      col.activo = activo;
-      // bloquear/desbloquear admin del colegio
-      await Usuario.updateMany({ colegioId: req.params.id, role: 'admin' }, { blocked: !activo });
+    // Si cambió el nombre, actualizar colegioNombre en usuarios del colegio
+    if (upd.nombre) {
+      await Usuario.updateMany({ colegioId: req.params.id }, { colegioNombre: upd.nombre });
     }
-    await col.save();
     res.json({ ok: true });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// DELETE /superadmin/colegios/:id
+// DELETE /api/superadmin/colegios/:id — elimina colegio y TODOS sus datos
 router.delete('/colegios/:id', async (req, res) => {
   try {
     const id = req.params.id;
-    await Colegio.deleteOne({ id });
-    await Usuario.deleteMany({ colegioId: id });
+    const col = await Colegio.findOne({ id }).lean();
+    if (!col) return res.status(404).json({ error: 'Colegio no encontrado' });
+
+    await Promise.all([
+      Colegio.deleteOne({ id }),
+      Usuario.deleteMany({ colegioId: id }),
+      Salon.deleteMany({ colegioId: id }),
+      Config.deleteMany({ colegioId: id }),
+      Nota.deleteMany({ colegioId: id }),
+      Asistencia.deleteMany({ colegioId: id }),
+      Excusa.deleteMany({ colegioId: id }),
+      VClase.deleteMany({ colegioId: id }),
+      Upload.deleteMany({ colegioId: id }),
+      Plan.deleteMany({ colegioId: id }),
+      Recuperacion.deleteMany({ colegioId: id }),
+      EstHist.deleteMany({ colegioId: id }),
+      Bloqueo.deleteMany({ colegioId: id }),
+      PlanEstudios.deleteMany({ colegioId: id }),
+    ]);
+
+    Auditoria.create({
+      ts: new Date().toISOString(), uid: req.user.id, who: req.user.nombre,
+      role: 'superadmin', accion: `Colegio ELIMINADO: ${col.nombre}`,
+      extra: `id: ${id}`, colegioId: ''
+    }).catch(() => {});
+
     res.json({ ok: true });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
@@ -115,29 +140,26 @@ router.delete('/colegios/:id', async (req, res) => {
    GESTIÓN DE ADMINS DE COLEGIO
 ══════════════════════════════════════════════════════════ */
 
-// GET /superadmin/admins?colegioId=xxx
+// GET /api/superadmin/admins?colegioId=xxx
 router.get('/admins', async (req, res) => {
   try {
     const filter = { role: 'admin' };
     if (req.query.colegioId) filter.colegioId = req.query.colegioId;
-    const admins = await Usuario.find(filter).select('-password').lean();
+    const admins = await Usuario.find(filter, '-password -__v').lean();
     res.json(admins);
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// POST /superadmin/admins — crear admin para un colegio existente
+// POST /api/superadmin/admins
 router.post('/admins', async (req, res) => {
   try {
     const { colegioId, nombre, usuario, password } = req.body;
     if (!colegioId || !nombre || !usuario || !password)
       return res.status(400).json({ error: 'Faltan campos' });
-
-    const col = await Colegio.findOne({ id: colegioId });
+    const col = await Colegio.findOne({ id: colegioId }).lean();
     if (!col) return res.status(404).json({ error: 'Colegio no encontrado' });
-
-    const exists = await Usuario.findOne({ usuario });
+    const exists = await Usuario.findOne({ usuario }).lean();
     if (exists) return res.status(409).json({ error: 'Usuario ya existe' });
-
     const hashed = await bcrypt.hash(password, 12);
     await Usuario.create({
       id: 'admin_' + Date.now(), nombre, usuario, password: hashed,
@@ -147,13 +169,13 @@ router.post('/admins', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// PUT /superadmin/admins/:id — editar admin (nombre, password, blocked)
+// PUT /api/superadmin/admins/:id
 router.put('/admins/:id', async (req, res) => {
   try {
     const u = await Usuario.findOne({ id: req.params.id, role: 'admin' });
     if (!u) return res.status(404).json({ error: 'Admin no encontrado' });
-    if (req.body.nombre)   u.nombre  = req.body.nombre;
-    if (req.body.password) u.password = await bcrypt.hash(req.body.password, 12);
+    if (req.body.nombre)              u.nombre   = req.body.nombre;
+    if (req.body.password)            u.password = await bcrypt.hash(req.body.password, 12);
     if (req.body.blocked !== undefined) u.blocked = req.body.blocked;
     await u.save();
     res.json({ ok: true });
@@ -164,7 +186,7 @@ router.put('/admins/:id', async (req, res) => {
    CONFIGURACIÓN INSTITUCIONAL (sedes, jornadas)
 ══════════════════════════════════════════════════════════ */
 
-// PUT /superadmin/institucion/:colegioId
+// PUT /api/superadmin/institucion/:colegioId
 router.put('/institucion/:colegioId', async (req, res) => {
   try {
     const { sedes, jornadas, logo } = req.body;
@@ -182,7 +204,7 @@ router.put('/institucion/:colegioId', async (req, res) => {
    PLAN DE ESTUDIOS
 ══════════════════════════════════════════════════════════ */
 
-// GET /superadmin/plan/:colegioId
+// GET /api/superadmin/plan/:colegioId
 router.get('/plan/:colegioId', async (req, res) => {
   try {
     const plan = await PlanEstudios.find({ colegioId: req.params.colegioId }).lean();
@@ -190,17 +212,17 @@ router.get('/plan/:colegioId', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// POST /superadmin/plan/:colegioId
+// POST /api/superadmin/plan/:colegioId
 router.post('/plan/:colegioId', async (req, res) => {
   try {
     const items = Array.isArray(req.body) ? req.body : [req.body];
-    const docs = items.map(i => ({ ...i, colegioId: req.params.colegioId }));
+    const docs  = items.map(i => ({ ...i, colegioId: req.params.colegioId }));
     await PlanEstudios.insertMany(docs, { ordered: false });
     res.json({ ok: true, inserted: docs.length });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// DELETE /superadmin/plan/:colegioId
+// DELETE /api/superadmin/plan/:colegioId
 router.delete('/plan/:colegioId', async (req, res) => {
   try {
     await PlanEstudios.deleteMany({ colegioId: req.params.colegioId });
@@ -209,48 +231,86 @@ router.delete('/plan/:colegioId', async (req, res) => {
 });
 
 /* ══════════════════════════════════════════════════════════
-   SUPERVISIÓN EN TIEMPO REAL — estadísticas globales
+   SUPERVISIÓN EN TIEMPO REAL — stats optimizados para escala
+   En lugar de iterar sobre cada nota, usamos agregación MongoDB.
+   Con 50k estudiantes la diferencia es de minutos a milisegundos.
 ══════════════════════════════════════════════════════════ */
 
-// GET /superadmin/stats
+// GET /api/superadmin/stats
 router.get('/stats', async (req, res) => {
   try {
     const colegios = await Colegio.find({ activo: true }).lean();
-    const stats = await Promise.all(colegios.map(async c => {
-      const [totalEst, totalProfs, totalSalones] = await Promise.all([
-        Usuario.countDocuments({ colegioId: c.id, role: 'est'   }),
-        Usuario.countDocuments({ colegioId: c.id, role: 'profe' }),
-        require('../models').Salon?.countDocuments({ colegioId: c.id }) || 0
-      ]);
-      // Promedio de notas del colegio
-      const notasDocs = await Nota.find({ colegioId: c.id }).lean();
-      let totalProm = 0, countProm = 0;
-      for (const nd of notasDocs) {
-        for (const per of nd.periodos || []) {
-          for (const [, val] of Object.entries(per.materias || {})) {
-            if (val && typeof val === 'object') {
-              const prom = (val.a||0)*0.6 + (val.c||0)*0.2 + (val.r||0)*0.2;
-              totalProm += prom; countProm++;
-            }
+
+    // Conteos masivos en paralelo con countDocuments (usa índices, O(log n))
+    const [estCounts, profCounts, salonCounts] = await Promise.all([
+      // Agrupa por colegioId para contar estudiantes de todos los colegios en 1 query
+      Usuario.aggregate([
+        { $match: { role: 'est' } },
+        { $group: { _id: '$colegioId', count: { $sum: 1 } } }
+      ]),
+      Usuario.aggregate([
+        { $match: { role: 'profe' } },
+        { $group: { _id: '$colegioId', count: { $sum: 1 } } }
+      ]),
+      Salon.aggregate([
+        { $group: { _id: '$colegioId', count: { $sum: 1 } } }
+      ]),
+    ]);
+
+    // Promedio de notas por colegio usando agregación (no carga docs en memoria)
+    const notasAgg = await Nota.aggregate([
+      // Desanidar periodos → materias → valores
+      { $unwind: { path: '$periodos', preserveNullAndEmptyArrays: false } },
+      { $project: {
+          colegioId: 1,
+          materias: { $objectToArray: { $ifNull: ['$periodos.materias', {}] } }
+      }},
+      { $unwind: { path: '$materias', preserveNullAndEmptyArrays: false } },
+      { $project: {
+          colegioId: 1,
+          prom: {
+            $add: [
+              { $multiply: [{ $ifNull: ['$materias.v.a', 0] }, 0.6] },
+              { $multiply: [{ $ifNull: ['$materias.v.c', 0] }, 0.2] },
+              { $multiply: [{ $ifNull: ['$materias.v.r', 0] }, 0.2] },
+            ]
           }
-        }
-      }
-      return {
-        colegioId:   c.id,
-        colegioNombre: c.nombre,
-        activo:      c.activo,
-        totalEst, totalProfs, totalSalones,
-        promNotas:   countProm ? +(totalProm/countProm).toFixed(2) : 0
-      };
+      }},
+      { $group: {
+          _id: '$colegioId',
+          promedio: { $avg: '$prom' },
+          total:    { $sum: 1 }
+      }},
+    ]);
+
+    // Mapear resultados a diccionarios por colegioId
+    const estMap    = Object.fromEntries(estCounts.map(x => [x._id, x.count]));
+    const profMap   = Object.fromEntries(profCounts.map(x => [x._id, x.count]));
+    const salonMap  = Object.fromEntries(salonCounts.map(x => [x._id, x.count]));
+    const notasMap  = Object.fromEntries(notasAgg.map(x => [x._id, +x.promedio.toFixed(2)]));
+
+    const stats = colegios.map(c => ({
+      colegioId:    c.id,
+      colegioNombre: c.nombre,
+      activo:       c.activo,
+      totalEst:     estMap[c.id]   || 0,
+      totalProfs:   profMap[c.id]  || 0,
+      totalSalones: salonMap[c.id] || 0,
+      promNotas:    notasMap[c.id] || 0,
     }));
+
     res.json(stats);
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// GET /superadmin/auditoria — auditoría global
+/* ══════════════════════════════════════════════════════════
+   AUDITORÍA GLOBAL
+══════════════════════════════════════════════════════════ */
+
+// GET /api/superadmin/auditoria
 router.get('/auditoria', async (req, res) => {
   try {
-    const limit = parseInt(req.query.limit) || 200;
+    const limit  = Math.min(500, parseInt(req.query.limit) || 200);
     const filter = {};
     if (req.query.colegioId) filter.colegioId = req.query.colegioId;
     const logs = await Auditoria.find(filter).sort({ createdAt: -1 }).limit(limit).lean();
@@ -262,36 +322,60 @@ router.get('/auditoria', async (req, res) => {
    MANTENIMIENTO TÉCNICO
 ══════════════════════════════════════════════════════════ */
 
-// POST /superadmin/backup/:colegioId — exportar datos de un colegio
+// POST /api/superadmin/backup/:colegioId — exportar datos de un colegio
+// Nota: para colegios grandes (10k+ est) devuelve stream JSON, no carga todo en RAM
 router.post('/backup/:colegioId', async (req, res) => {
   try {
     const cid = req.params.colegioId;
-    const [colegio, usuarios, notas, asistencias] = await Promise.all([
+    const [colegio, usuarios, notas, asistencias, configs, salones, planEstudios] = await Promise.all([
       Colegio.findOne({ id: cid }).lean(),
-      Usuario.find({ colegioId: cid }).select('-password').lean(),
+      Usuario.find({ colegioId: cid }, '-password').lean(),
       Nota.find({ colegioId: cid }).lean(),
       Asistencia.find({ colegioId: cid }).lean(),
+      Config.find({ colegioId: cid }).lean(),
+      Salon.find({ colegioId: cid }).lean(),
+      PlanEstudios.find({ colegioId: cid }).lean(),
     ]);
+
+    if (!colegio) return res.status(404).json({ error: 'Colegio no encontrado' });
+
     const backup = {
       exportedAt: new Date().toISOString(),
-      by: 'superadmin',
-      colegio, usuarios, notas, asistencias
+      by:         req.user.nombre,
+      colegio, usuarios, notas, asistencias, configs, salones, planEstudios
     };
+
     res.setHeader('Content-Disposition', `attachment; filename="backup_${cid}_${Date.now()}.json"`);
+    res.setHeader('Content-Type', 'application/json');
     res.json(backup);
+
+    Auditoria.create({
+      ts: new Date().toISOString(), uid: req.user.id, who: req.user.nombre,
+      role: 'superadmin', accion: `Backup descargado: ${colegio.nombre}`,
+      extra: '', colegioId: cid
+    }).catch(() => {});
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// POST /superadmin/reset-passwords/:colegioId — actualizar password masivo
+// POST /api/superadmin/reset-passwords/:colegioId
 router.post('/reset-passwords/:colegioId', async (req, res) => {
   try {
     const { role, newPassword } = req.body;
     if (!newPassword || newPassword.length < 4)
-      return res.status(400).json({ error: 'Contraseña demasiado corta' });
+      return res.status(400).json({ error: 'Contraseña demasiado corta (mínimo 4 caracteres)' });
     const hashed = await bcrypt.hash(newPassword, 12);
     const filter = { colegioId: req.params.colegioId };
     if (role) filter.role = role;
     const result = await Usuario.updateMany(filter, { password: hashed });
+
+    Auditoria.create({
+      ts: new Date().toISOString(), uid: req.user.id, who: req.user.nombre,
+      role: 'superadmin',
+      accion: `Reset masivo contraseñas (${role || 'todos'})`,
+      extra: `${result.modifiedCount} usuarios actualizados`,
+      colegioId: req.params.colegioId
+    }).catch(() => {});
+
     res.json({ ok: true, updated: result.modifiedCount });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });

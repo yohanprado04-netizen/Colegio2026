@@ -1,74 +1,90 @@
-// routes/api.js — Rutas granulares para cada entidad
+// routes/api.js — Multi-tenant con colegioId + optimizado para 50k+ estudiantes
+'use strict';
 const router = require('express').Router();
-const bcrypt = require('bcryptjs');
+const bcrypt  = require('bcryptjs');
 const { authMiddleware, requireRole } = require('../middleware/auth');
 const {
   Usuario, Salon, Config, Nota, Asistencia, Excusa,
   VClase, Upload, Plan, Recuperacion, Auditoria, EstHist, Bloqueo
 } = require('../models');
 
-// ─────── HELPER ───────
 const hashPwd = async (raw) => {
   if (!raw) return '';
-  if (/^\$2[ab]\$/.test(raw)) return raw; // ya es bcrypt
+  if (/^\$2[ab]\$/.test(raw)) return raw;
   return bcrypt.hash(raw, 12);
+};
+
+// ─── tenantFilter: filtro { colegioId } según rol del usuario ────────────────
+// superadmin sin ?colegioId → {} (ve todo)
+// superadmin con ?colegioId → filtra ese colegio
+// admin/profe/est → siempre su propio colegioId
+const tenantFilter = (req) => {
+  if (req.user.role === 'superadmin') {
+    const cid = req.query.colegioId || req.body?.colegioId;
+    return cid ? { colegioId: cid } : {};
+  }
+  return { colegioId: req.user.colegioId };
+};
+
+// ─── tenantId: colegioId a inyectar en docs nuevos ───────────────────────────
+const tenantId = (req) => {
+  if (req.user.role === 'superadmin') return req.body?.colegioId || req.query.colegioId || '';
+  return req.user.colegioId || '';
 };
 
 // ═══════════════════════════════════════════════════════════════════
 // USUARIOS
 // ═══════════════════════════════════════════════════════════════════
 
-// GET /api/usuarios — lista todos (sin password)
-router.get('/usuarios', authMiddleware, requireRole('admin'), async (req, res) => {
-  const users = await Usuario.find({}, '-password -__v').lean();
-  res.json(users);
+router.get('/usuarios', authMiddleware, requireRole('admin', 'superadmin'), async (req, res) => {
+  try {
+    const filter = { ...tenantFilter(req), role: { $in: ['admin','profe','est'] } };
+    const page  = Math.max(1, parseInt(req.query.page)  || 1);
+    const limit = Math.min(500, parseInt(req.query.limit) || 200);
+    const skip  = (page - 1) * limit;
+    const [users, total] = await Promise.all([
+      Usuario.find(filter, '-password -__v').skip(skip).limit(limit).lean(),
+      Usuario.countDocuments(filter),
+    ]);
+    res.json({ users, total, page, pages: Math.ceil(total / limit) });
+  } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// POST /api/usuarios — crear usuario
-router.post('/usuarios', authMiddleware, requireRole('admin'), async (req, res) => {
+router.post('/usuarios', authMiddleware, requireRole('admin', 'superadmin'), async (req, res) => {
   try {
-    const d = req.body;
-
-    // ✅ CORRECCIÓN: validar que el id esté presente
-    if (!d.id) {
-      return res.status(400).json({ error: 'El campo id es requerido' });
-    }
-
-    // Verificar usuario duplicado
-    const exists = await Usuario.findOne({ $or: [{ usuario: d.usuario }, { id: d.id }] });
+    const d = { ...req.body };
+    if (!d.id) return res.status(400).json({ error: 'El campo id es requerido' });
+    const cid = tenantId(req);
+    if (cid) { d.colegioId = cid; d.colegioNombre = req.user.colegioNombre || d.colegioNombre || ''; }
+    const exists = await Usuario.findOne({ $or: [{ usuario: d.usuario }, { id: d.id }] }).lean();
     if (exists) return res.status(409).json({ error: 'Ese usuario o ID ya existe' });
-
     d.password = await hashPwd(d.password || 'changeme123');
-    const u = await Usuario.create(d);
-    const out = u.toObject();
-    delete out.password;
-    delete out._id;
-
+    const u   = await Usuario.create(d);
+    const out = u.toObject(); delete out.password; delete out._id;
     if (d.role === 'est') {
       await EstHist.findOneAndUpdate(
         { id: d.id },
         { id: d.id, nombre: d.nombre, ti: d.ti || '', salon: d.salon || '',
-          registrado: new Date().toLocaleDateString('es-CO'), activo: true },
+          registrado: new Date().toLocaleDateString('es-CO'), activo: true, colegioId: cid },
         { upsert: true }
       );
     }
-
     res.status(201).json(out);
-  } catch (err) {
-    console.error('Error creando usuario:', err);
-    res.status(500).json({ error: err.message });
-  }
+  } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// PUT /api/usuarios/:id — actualizar usuario
 router.put('/usuarios/:id', authMiddleware, async (req, res) => {
   try {
-    const d = req.body;
-    // Solo admin puede editar cualquier usuario; profe/est solo se editan a sí mismos
-    if (req.user.role !== 'admin' && req.user.id !== req.params.id)
+    const d    = req.body;
+    const role = req.user.role;
+    if (role !== 'admin' && role !== 'superadmin' && req.user.id !== req.params.id)
       return res.status(403).json({ error: 'Sin autorización' });
-    if (d.password && !/^\$2[ab]\$/.test(d.password))
-      d.password = await hashPwd(d.password);
+    if (role === 'admin') {
+      const target = await Usuario.findOne({ id: req.params.id }).lean();
+      if (target && target.colegioId !== req.user.colegioId)
+        return res.status(403).json({ error: 'Sin autorización' });
+    }
+    if (d.password && !/^\$2[ab]\$/.test(d.password)) d.password = await hashPwd(d.password);
     const u = await Usuario.findOneAndUpdate({ id: req.params.id }, d, { new: true });
     if (!u) return res.status(404).json({ error: 'Usuario no encontrado' });
     const out = u.toObject(); delete out.password; delete out._id;
@@ -76,12 +92,12 @@ router.put('/usuarios/:id', authMiddleware, async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// DELETE /api/usuarios/:id
-router.delete('/usuarios/:id', authMiddleware, requireRole('admin'), async (req, res) => {
+router.delete('/usuarios/:id', authMiddleware, requireRole('admin', 'superadmin'), async (req, res) => {
   try {
-    const u = await Usuario.findOneAndDelete({ id: req.params.id });
+    const filter = { id: req.params.id };
+    if (req.user.role === 'admin') filter.colegioId = req.user.colegioId;
+    const u = await Usuario.findOneAndDelete(filter);
     if (!u) return res.status(404).json({ error: 'No encontrado' });
-    // Marcar como inactivo en historial
     await EstHist.findOneAndUpdate(
       { id: req.params.id },
       { activo: false, eliminado: new Date().toLocaleDateString('es-CO') }
@@ -94,13 +110,15 @@ router.delete('/usuarios/:id', authMiddleware, requireRole('admin'), async (req,
 // SALONES
 // ═══════════════════════════════════════════════════════════════════
 router.get('/salones', authMiddleware, async (req, res) => {
-  const s = await Salon.find({}, '-__v').lean();
-  res.json(s);
+  try {
+    const s = await Salon.find(tenantFilter(req), '-__v').lean();
+    res.json(s);
+  } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-router.post('/salones', authMiddleware, requireRole('admin'), async (req, res) => {
+router.post('/salones', authMiddleware, requireRole('admin', 'superadmin'), async (req, res) => {
   try {
-    const s = await Salon.create(req.body);
+    const s = await Salon.create({ ...req.body, colegioId: tenantId(req) });
     res.status(201).json(s);
   } catch (err) {
     if (err.code === 11000) return res.status(409).json({ error: 'Salón ya existe' });
@@ -108,16 +126,16 @@ router.post('/salones', authMiddleware, requireRole('admin'), async (req, res) =
   }
 });
 
-router.put('/salones/:nombre', authMiddleware, requireRole('admin'), async (req, res) => {
+router.put('/salones/:nombre', authMiddleware, requireRole('admin', 'superadmin'), async (req, res) => {
   const s = await Salon.findOneAndUpdate(
-    { nombre: req.params.nombre }, req.body, { new: true }
+    { nombre: req.params.nombre, ...tenantFilter(req) }, req.body, { new: true }
   );
   if (!s) return res.status(404).json({ error: 'Salón no encontrado' });
   res.json(s);
 });
 
-router.delete('/salones/:nombre', authMiddleware, requireRole('admin'), async (req, res) => {
-  await Salon.findOneAndDelete({ nombre: req.params.nombre });
+router.delete('/salones/:nombre', authMiddleware, requireRole('admin', 'superadmin'), async (req, res) => {
+  await Salon.findOneAndDelete({ nombre: req.params.nombre, ...tenantFilter(req) });
   res.json({ ok: true });
 });
 
@@ -125,54 +143,56 @@ router.delete('/salones/:nombre', authMiddleware, requireRole('admin'), async (r
 // CONFIGURACIÓN
 // ═══════════════════════════════════════════════════════════════════
 router.get('/config', authMiddleware, async (req, res) => {
-  const configs = await Config.find({}).lean();
-  const out = {};
-  configs.forEach(c => { out[c.key] = c.value; });
-  res.json(out);
-});
-
-router.put('/config/:key', authMiddleware, requireRole('admin'), async (req, res) => {
-  const cfg = await Config.findOneAndUpdate(
-    { key: req.params.key },
-    { value: req.body.value },
-    { upsert: true, new: true }
-  );
-  res.json(cfg);
-});
-
-// ═══════════════════════════════════════════════════════════════════
-// NOTAS
-// ═══════════════════════════════════════════════════════════════════
-
-// GET /api/notas/:estId?ano=2025
-router.get('/notas/:estId', authMiddleware, async (req, res) => {
   try {
-    const cfg = await Config.findOne({ key: 'anoActual' });
-    const ano = req.query.ano || (cfg?.value) || String(new Date().getFullYear());
-    const nota = await Nota.findOne({ estId: req.params.estId, anoLectivo: ano }).lean();
-    if (!nota) return res.json({ estId: req.params.estId, periodos: [] });
-    res.json(nota);
+    const cid     = tenantId(req) || req.user.colegioId || 'global';
+    const configs = await Config.find({ colegioId: cid }).lean();
+    const out = {};
+    configs.forEach(c => { out[c.key] = c.value; });
+    res.json(out);
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// PUT /api/notas/:estId/:periodo/:materia — guarda una nota tripartita
+router.put('/config/:key', authMiddleware, requireRole('admin', 'superadmin'), async (req, res) => {
+  try {
+    const cid = tenantId(req) || req.user.colegioId || 'global';
+    const cfg = await Config.findOneAndUpdate(
+      { key: req.params.key, colegioId: cid },
+      { value: req.body.value, colegioId: cid },
+      { upsert: true, new: true }
+    );
+    res.json(cfg);
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// ═══════════════════════════════════════════════════════════════════
+// NOTAS — optimizado: índice (estId, anoLectivo, colegioId)
+// ═══════════════════════════════════════════════════════════════════
+router.get('/notas/:estId', authMiddleware, async (req, res) => {
+  try {
+    const cid  = tenantId(req) || req.user.colegioId || '';
+    const cfg  = await Config.findOne({ key: 'anoActual', colegioId: cid }).lean();
+    const ano  = req.query.ano || cfg?.value || String(new Date().getFullYear());
+    const nota = await Nota.findOne({ estId: req.params.estId, anoLectivo: ano, colegioId: cid }).lean();
+    res.json(nota || { estId: req.params.estId, periodos: [] });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
 router.put('/notas/:estId/:periodo/:materia', authMiddleware, async (req, res) => {
   try {
     const { estId, periodo, materia } = req.params;
-    const { a, c, r, disciplina } = req.body;
+    const { a, c, r, disciplina }    = req.body;
+    const cid = tenantId(req) || req.user.colegioId || '';
 
-    // Verificar autorización (profe solo puede editar sus salones)
     if (req.user.role === 'profe') {
-      const est = await Usuario.findOne({ id: estId, role: 'est' });
+      const est = await Usuario.findOne({ id: estId, role: 'est' }).lean();
       if (!est || !(req.user.salones || []).includes(est.salon))
         return res.status(403).json({ error: 'Sin autorización para este estudiante' });
     }
 
-    const cfg = await Config.findOne({ key: 'anoActual' });
-    const ano = cfg?.value || String(new Date().getFullYear());
-
-    let nota = await Nota.findOne({ estId, anoLectivo: ano });
-    if (!nota) nota = new Nota({ estId, anoLectivo: ano, periodos: [] });
+    const cfg  = await Config.findOne({ key: 'anoActual', colegioId: cid }).lean();
+    const ano  = cfg?.value || String(new Date().getFullYear());
+    let   nota = await Nota.findOne({ estId, anoLectivo: ano, colegioId: cid });
+    if (!nota) nota = new Nota({ estId, anoLectivo: ano, periodos: [], colegioId: cid });
 
     let perEntry = nota.periodos.find(p => p.periodo === periodo);
     if (!perEntry) {
@@ -180,33 +200,34 @@ router.put('/notas/:estId/:periodo/:materia', authMiddleware, async (req, res) =
       perEntry = nota.periodos[nota.periodos.length - 1];
     }
     if (!perEntry.materias) perEntry.materias = {};
-    perEntry.materias.set ? perEntry.materias.set(materia, { a, c, r }) : (perEntry.materias[materia] = { a, c, r });
+    perEntry.materias.set
+      ? perEntry.materias.set(materia, { a, c, r })
+      : (perEntry.materias[materia] = { a, c, r });
     if (disciplina !== undefined) perEntry.disciplina = disciplina;
     nota.markModified('periodos');
     await nota.save();
 
-    // Registrar en auditoría
-    await Auditoria.create({
+    // Auditoría fire-and-forget
+    Auditoria.create({
       ts: new Date().toISOString(),
       uid: req.user.id, who: req.user.nombre, role: req.user.role,
       est: estId, mat: `${materia} (${periodo})`,
       old: '?', nw: JSON.stringify({ a, c, r }),
-      ip: req.ip || '—'
-    });
+      ip: req.ip || '—', colegioId: cid
+    }).catch(() => {});
 
     res.json({ ok: true });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// PUT /api/notas/:estId/disciplina
 router.put('/notas/:estId/disciplina', authMiddleware, async (req, res) => {
   try {
-    const { estId } = req.params;
-    const cfg = await Config.findOne({ key: 'anoActual' });
+    const cid = tenantId(req) || req.user.colegioId || '';
+    const cfg = await Config.findOne({ key: 'anoActual', colegioId: cid }).lean();
     const ano = cfg?.value || String(new Date().getFullYear());
     await Nota.findOneAndUpdate(
-      { estId, anoLectivo: ano },
-      { disciplina: req.body.disciplina },
+      { estId: req.params.estId, anoLectivo: ano, colegioId: cid },
+      { disciplina: req.body.disciplina, colegioId: cid },
       { upsert: true }
     );
     res.json({ ok: true });
@@ -217,19 +238,22 @@ router.put('/notas/:estId/disciplina', authMiddleware, async (req, res) => {
 // ASISTENCIA
 // ═══════════════════════════════════════════════════════════════════
 router.get('/asistencias', authMiddleware, async (req, res) => {
-  const filter = {};
-  if (req.query.salon) filter.salon = req.query.salon;
-  if (req.query.fecha) filter.fecha = req.query.fecha;
-  const list = await Asistencia.find(filter).lean();
-  res.json(list);
+  try {
+    const filter = { ...tenantFilter(req) };
+    if (req.query.salon) filter.salon = req.query.salon;
+    if (req.query.fecha) filter.fecha = req.query.fecha;
+    const list = await Asistencia.find(filter).lean();
+    res.json(list);
+  } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-router.put('/asistencias', authMiddleware, requireRole('admin', 'profe'), async (req, res) => {
+router.put('/asistencias', authMiddleware, requireRole('admin', 'profe', 'superadmin'), async (req, res) => {
   try {
     const { salon, fecha, registros } = req.body;
+    const cid = tenantId(req) || req.user.colegioId || '';
     const a = await Asistencia.findOneAndUpdate(
-      { salon, fecha },
-      { registros },
+      { salon, fecha, colegioId: cid },
+      { registros, colegioId: cid },
       { upsert: true, new: true }
     );
     res.json(a);
@@ -240,15 +264,20 @@ router.put('/asistencias', authMiddleware, requireRole('admin', 'profe'), async 
 // EXCUSAS
 // ═══════════════════════════════════════════════════════════════════
 router.get('/excusas', authMiddleware, async (req, res) => {
-  const filter = {};
-  if (req.query.estId) filter.estId = req.query.estId;
-  const list = await Excusa.find(filter).sort({ createdAt: -1 }).lean();
-  res.json(list);
+  try {
+    const filter = { ...tenantFilter(req) };
+    if (req.query.estId) filter.estId = req.query.estId;
+    const list = await Excusa.find(filter).sort({ createdAt: -1 }).lean();
+    res.json(list);
+  } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
 router.post('/excusas', authMiddleware, requireRole('est'), async (req, res) => {
   try {
-    const e = await Excusa.create({ ...req.body, estId: req.user.id, enombre: req.user.nombre });
+    const e = await Excusa.create({
+      ...req.body, estId: req.user.id, enombre: req.user.nombre,
+      colegioId: req.user.colegioId || ''
+    });
     res.status(201).json(e);
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
@@ -257,44 +286,66 @@ router.post('/excusas', authMiddleware, requireRole('est'), async (req, res) => 
 // CLASES VIRTUALES
 // ═══════════════════════════════════════════════════════════════════
 router.get('/vclases', authMiddleware, async (req, res) => {
-  const filter = {};
-  if (req.query.salon) filter.salon = req.query.salon;
-  if (req.query.profId) filter.profId = req.query.profId;
-  const list = await VClase.find(filter).sort({ createdAt: -1 }).lean();
-  res.json(list);
+  try {
+    const filter = { ...tenantFilter(req) };
+    if (req.query.salon)  filter.salon  = req.query.salon;
+    if (req.query.profId) filter.profId = req.query.profId;
+    const list = await VClase.find(filter).sort({ createdAt: -1 }).lean();
+    res.json(list);
+  } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-router.post('/vclases', authMiddleware, requireRole('profe', 'admin'), async (req, res) => {
+router.post('/vclases', authMiddleware, requireRole('profe', 'admin', 'superadmin'), async (req, res) => {
   try {
-    const v = await VClase.create({ ...req.body, profId: req.user.id, profNombre: req.user.nombre });
+    const v = await VClase.create({
+      ...req.body, profId: req.user.id, profNombre: req.user.nombre,
+      colegioId: tenantId(req) || req.user.colegioId || ''
+    });
     res.status(201).json(v);
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-router.delete('/vclases/:id', authMiddleware, requireRole('profe', 'admin'), async (req, res) => {
+router.delete('/vclases/:id', authMiddleware, requireRole('profe', 'admin', 'superadmin'), async (req, res) => {
   await VClase.findOneAndDelete({ id: req.params.id });
   res.json({ ok: true });
 });
 
 // ═══════════════════════════════════════════════════════════════════
-// UPLOADS (TAREAS)
+// UPLOADS (TAREAS) — paginado + lazy dataUrl
 // ═══════════════════════════════════════════════════════════════════
 router.get('/uploads', authMiddleware, async (req, res) => {
-  const filter = {};
-  if (req.query.estId) filter.estId = req.query.estId;
-  if (req.query.profId) filter.profId = req.query.profId;
-  const list = await Upload.find(filter).sort({ createdAt: -1 }).lean();
-  res.json(list);
+  try {
+    const filter = { ...tenantFilter(req) };
+    if (req.query.estId)  filter.estId  = req.query.estId;
+    if (req.query.profId) filter.profId = req.query.profId;
+    const limit = Math.min(200, parseInt(req.query.limit) || 100);
+    const skip  = (Math.max(1, parseInt(req.query.page) || 1) - 1) * limit;
+    // Excluir dataUrl de listados (puede ser varios MB por archivo)
+    const list  = await Upload.find(filter, '-dataUrl').sort({ createdAt: -1 }).skip(skip).limit(limit).lean();
+    res.json(list);
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// GET lazy: solo devuelve el dataUrl de un upload específico
+router.get('/uploads/:id/data', authMiddleware, async (req, res) => {
+  try {
+    const u = await Upload.findOne({ id: req.params.id }, 'dataUrl type nombre').lean();
+    if (!u) return res.status(404).json({ error: 'No encontrado' });
+    res.json(u);
+  } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
 router.post('/uploads', authMiddleware, requireRole('est'), async (req, res) => {
   try {
-    const u = await Upload.create({ ...req.body, estId: req.user.id, estNombre: req.user.nombre });
+    const u = await Upload.create({
+      ...req.body, estId: req.user.id, estNombre: req.user.nombre,
+      colegioId: req.user.colegioId || ''
+    });
     res.status(201).json(u);
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-router.put('/uploads/:id/revisar', authMiddleware, requireRole('profe', 'admin'), async (req, res) => {
+router.put('/uploads/:id/revisar', authMiddleware, requireRole('profe', 'admin', 'superadmin'), async (req, res) => {
   const u = await Upload.findOneAndUpdate(
     { id: req.params.id },
     { revisado: true, revisadoTs: new Date().toLocaleDateString('es-CO') },
@@ -308,14 +359,14 @@ router.delete('/uploads/:id', authMiddleware, async (req, res) => {
   try {
     const u = await Upload.findOne({ id: req.params.id });
     if (!u) return res.status(404).json({ error: 'No encontrado' });
-    if (!u.revisado && req.user.role !== 'admin') {
-      // Log intento en auditoría
-      await Auditoria.create({
+    if (!u.revisado && req.user.role !== 'admin' && req.user.role !== 'superadmin') {
+      Auditoria.create({
         ts: new Date().toISOString(), uid: req.user.id, who: req.user.nombre,
         role: req.user.role,
         accion: 'Intento de eliminar taller sin revisar',
-        extra: `Taller: ${u.nombre} | Estudiante: ${u.estNombre} | Materia: ${u.materia}`
-      });
+        extra: `Taller: ${u.nombre} | Est: ${u.estNombre} | Mat: ${u.materia}`,
+        colegioId: u.colegioId || ''
+      }).catch(() => {});
       return res.status(403).json({ error: 'Solo puedes eliminar talleres ya revisados' });
     }
     await u.deleteOne();
@@ -327,16 +378,18 @@ router.delete('/uploads/:id', authMiddleware, async (req, res) => {
 // PLANES DE RECUPERACIÓN
 // ═══════════════════════════════════════════════════════════════════
 router.get('/planes', authMiddleware, async (req, res) => {
-  const filter = { archivado: false };
-  if (req.query.estId) filter.estId = req.query.estId;
-  if (req.query.profId) filter.profId = req.query.profId;
-  const list = await Plan.find(filter).sort({ createdAt: -1 }).lean();
-  res.json(list);
+  try {
+    const filter = { archivado: false, ...tenantFilter(req) };
+    if (req.query.estId)  filter.estId  = req.query.estId;
+    if (req.query.profId) filter.profId = req.query.profId;
+    const list = await Plan.find(filter).sort({ createdAt: -1 }).lean();
+    res.json(list);
+  } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-router.post('/planes', authMiddleware, requireRole('profe', 'admin'), async (req, res) => {
+router.post('/planes', authMiddleware, requireRole('profe', 'admin', 'superadmin'), async (req, res) => {
   try {
-    const p = await Plan.create(req.body);
+    const p = await Plan.create({ ...req.body, colegioId: tenantId(req) || req.user.colegioId || '' });
     res.status(201).json(p);
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
@@ -346,37 +399,39 @@ router.put('/planes/:id/visto', authMiddleware, requireRole('est'), async (req, 
   res.json({ ok: true });
 });
 
-// Archivar todos los planes activos (al cerrar periodo extraordinario)
-router.post('/planes/archivar', authMiddleware, requireRole('admin'), async (req, res) => {
+router.post('/planes/archivar', authMiddleware, requireRole('admin', 'superadmin'), async (req, res) => {
   try {
     const { periodoLabel, archivedAt } = req.body;
-    await Plan.updateMany(
-      { archivado: false },
-      { archivado: true, _periodo: periodoLabel, _archivedAt: archivedAt }
-    );
+    const filter = { archivado: false, ...tenantFilter(req) };
+    await Plan.updateMany(filter, { archivado: true, _periodo: periodoLabel, _archivedAt: archivedAt });
     res.json({ ok: true });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
 // ═══════════════════════════════════════════════════════════════════
-// RECUPERACIONES (respuestas de estudiantes)
+// RECUPERACIONES
 // ═══════════════════════════════════════════════════════════════════
 router.get('/recuperaciones', authMiddleware, async (req, res) => {
-  const filter = { archivado: false };
-  if (req.query.estId) filter.estId = req.query.estId;
-  if (req.query.profId) filter.profId = req.query.profId;
-  const list = await Recuperacion.find(filter).sort({ createdAt: -1 }).lean();
-  res.json(list);
+  try {
+    const filter = { archivado: false, ...tenantFilter(req) };
+    if (req.query.estId)  filter.estId  = req.query.estId;
+    if (req.query.profId) filter.profId = req.query.profId;
+    const list = await Recuperacion.find(filter).sort({ createdAt: -1 }).lean();
+    res.json(list);
+  } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
 router.post('/recuperaciones', authMiddleware, requireRole('est'), async (req, res) => {
   try {
-    const r = await Recuperacion.create({ ...req.body, estId: req.user.id, estNombre: req.user.nombre });
+    const r = await Recuperacion.create({
+      ...req.body, estId: req.user.id, estNombre: req.user.nombre,
+      colegioId: req.user.colegioId || ''
+    });
     res.status(201).json(r);
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-router.put('/recuperaciones/:id/revisar', authMiddleware, requireRole('profe', 'admin'), async (req, res) => {
+router.put('/recuperaciones/:id/revisar', authMiddleware, requireRole('profe', 'admin', 'superadmin'), async (req, res) => {
   const r = await Recuperacion.findOneAndUpdate(
     { id: req.params.id },
     { revisado: true, revisadoTs: new Date().toLocaleDateString('es-CO') },
@@ -386,23 +441,20 @@ router.put('/recuperaciones/:id/revisar', authMiddleware, requireRole('profe', '
   res.json(r);
 });
 
-router.delete('/recuperaciones/:id', authMiddleware, requireRole('est', 'admin'), async (req, res) => {
+router.delete('/recuperaciones/:id', authMiddleware, requireRole('est', 'admin', 'superadmin'), async (req, res) => {
   const r = await Recuperacion.findOne({ id: req.params.id });
   if (!r) return res.status(404).json({ error: 'No encontrado' });
-  if (!r.revisado && req.user.role !== 'admin')
+  if (!r.revisado && req.user.role !== 'admin' && req.user.role !== 'superadmin')
     return res.status(403).json({ error: 'Solo puedes eliminar recuperaciones revisadas' });
   await r.deleteOne();
   res.json({ ok: true });
 });
 
-// Archivar todas las recuperaciones activas
-router.post('/recuperaciones/archivar', authMiddleware, requireRole('admin'), async (req, res) => {
+router.post('/recuperaciones/archivar', authMiddleware, requireRole('admin', 'superadmin'), async (req, res) => {
   try {
     const { periodoLabel, archivedAt } = req.body;
-    await Recuperacion.updateMany(
-      { archivado: false },
-      { archivado: true, _periodo: periodoLabel, _archivedAt: archivedAt }
-    );
+    const filter = { archivado: false, ...tenantFilter(req) };
+    await Recuperacion.updateMany(filter, { archivado: true, _periodo: periodoLabel, _archivedAt: archivedAt });
     res.json({ ok: true });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
@@ -410,51 +462,77 @@ router.post('/recuperaciones/archivar', authMiddleware, requireRole('admin'), as
 // ═══════════════════════════════════════════════════════════════════
 // AUDITORÍA
 // ═══════════════════════════════════════════════════════════════════
-router.get('/auditoria', authMiddleware, requireRole('admin'), async (req, res) => {
-  const list = await Auditoria.find({}).sort({ createdAt: -1 }).limit(500).lean();
-  res.json(list);
+router.get('/auditoria', authMiddleware, requireRole('admin', 'superadmin'), async (req, res) => {
+  try {
+    const filter = tenantFilter(req);
+    const limit  = Math.min(1000, parseInt(req.query.limit) || 500);
+    const list   = await Auditoria.find(filter).sort({ createdAt: -1 }).limit(limit).lean();
+    res.json(list);
+  } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
 router.post('/auditoria', authMiddleware, async (req, res) => {
   try {
-    const a = await Auditoria.create({ ...req.body, uid: req.user.id, who: req.user.nombre, role: req.user.role });
+    const cid = tenantId(req) || req.user.colegioId || '';
+    const a   = await Auditoria.create({
+      ...req.body, uid: req.user.id, who: req.user.nombre, role: req.user.role, colegioId: cid
+    });
     res.status(201).json(a);
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-router.delete('/auditoria', authMiddleware, requireRole('admin'), async (req, res) => {
-  await Auditoria.deleteMany({});
-  res.json({ ok: true });
+router.delete('/auditoria', authMiddleware, requireRole('admin', 'superadmin'), async (req, res) => {
+  try {
+    await Auditoria.deleteMany(tenantFilter(req));
+    res.json({ ok: true });
+  } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
 // ═══════════════════════════════════════════════════════════════════
 // BLOQUEOS
 // ═══════════════════════════════════════════════════════════════════
-router.get('/bloqueos', authMiddleware, requireRole('admin'), async (req, res) => {
-  const list = await Bloqueo.find({ on: true }).lean();
-  res.json(list);
+router.get('/bloqueos', authMiddleware, requireRole('admin', 'superadmin'), async (req, res) => {
+  try {
+    const list = await Bloqueo.find({ on: true, ...tenantFilter(req) }).lean();
+    res.json(list);
+  } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-router.put('/bloqueos/:usuario', authMiddleware, requireRole('admin'), async (req, res) => {
-  const b = await Bloqueo.findOneAndUpdate(
-    { usuario: req.params.usuario },
-    req.body,
-    { upsert: true, new: true }
-  );
-  res.json(b);
+router.put('/bloqueos/:usuario', authMiddleware, requireRole('admin', 'superadmin'), async (req, res) => {
+  try {
+    const cid = tenantId(req) || req.user.colegioId || '';
+    const b   = await Bloqueo.findOneAndUpdate(
+      { usuario: req.params.usuario },
+      { ...req.body, colegioId: cid },
+      { upsert: true, new: true }
+    );
+    res.json(b);
+  } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
 // ═══════════════════════════════════════════════════════════════════
-// HISTORIAL ESTUDIANTES
+// HISTORIAL ESTUDIANTES — paginado
 // ═══════════════════════════════════════════════════════════════════
-router.get('/est-hist', authMiddleware, requireRole('admin'), async (req, res) => {
-  const list = await EstHist.find({}).lean();
-  res.json(list);
+router.get('/est-hist', authMiddleware, requireRole('admin', 'superadmin'), async (req, res) => {
+  try {
+    const filter = tenantFilter(req);
+    const limit  = Math.min(500, parseInt(req.query.limit) || 200);
+    const skip   = (Math.max(1, parseInt(req.query.page) || 1) - 1) * limit;
+    const list   = await EstHist.find(filter).skip(skip).limit(limit).lean();
+    res.json(list);
+  } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-router.put('/est-hist/:id', authMiddleware, requireRole('admin'), async (req, res) => {
-  const h = await EstHist.findOneAndUpdate({ id: req.params.id }, req.body, { upsert: true, new: true });
-  res.json(h);
+router.put('/est-hist/:id', authMiddleware, requireRole('admin', 'superadmin'), async (req, res) => {
+  try {
+    const cid = tenantId(req) || req.user.colegioId || '';
+    const h   = await EstHist.findOneAndUpdate(
+      { id: req.params.id },
+      { ...req.body, colegioId: cid },
+      { upsert: true, new: true }
+    );
+    res.json(h);
+  } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
 module.exports = router;
