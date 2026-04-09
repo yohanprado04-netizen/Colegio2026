@@ -53,11 +53,11 @@ app.use(express.json({ limit: '25mb' }));
 app.use(express.urlencoded({ extended: true, limit: '25mb' }));
 
 // ─── Rutas API ────────────────────────────────────────────────────
-app.use('/api/auth',         loginLimiter, require('./routes/auth'));
-app.use('/api/superadmin',                 require('./routes/superadmin'));
-app.use('/api/sugerencias',               require('./routes/sugerencias'));
-app.use('/api/db',                         require('./routes/db'));
-app.use('/api',                            require('./routes/api'));
+app.use('/api/auth',        loginLimiter, require('./routes/auth'));
+app.use('/api/superadmin',               require('./routes/superadmin'));
+app.use('/api/sugerencias',              require('./routes/sugerencias'));
+app.use('/api/db',                       require('./routes/db'));
+app.use('/api',                          require('./routes/api'));
 
 // ─── Health check ─────────────────────────────────────────────────
 app.get('/health', (req, res) => {
@@ -84,8 +84,8 @@ const PORT = process.env.PORT || 3001;
   await connectDB();
   app.listen(PORT, () => {
     console.log(`\n🚀 Servidor corriendo en puerto ${PORT}`);
-    console.log(`📡 Health check: /health`);
-    console.log(`🔐 Super Admin: usuario: superadmin`);
+    console.log(`📡 Health: /health`);
+    console.log(`🔐 SuperAdmin: POST /api/auth/login`);
     console.log(`💡 Sugerencias: POST /api/sugerencias`);
   });
 })();

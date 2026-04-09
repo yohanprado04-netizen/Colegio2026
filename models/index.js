@@ -1,28 +1,23 @@
-// models/index.js — Todos los modelos con índices optimizados para 50k+ estudiantes
-require('dotenv').config();
+// models/index.js — Todos los modelos con Sugerencia incluido
 'use strict';
 const mongoose = require('mongoose');
 const { Schema } = mongoose;
 
-// ─────────────────────────────────────────────────────────────────────────────
 // COLEGIO
-// ─────────────────────────────────────────────────────────────────────────────
 const ColegioSchema = new Schema({
-  id:           { type: String, required: true, unique: true },
-  nombre:       { type: String, required: true, trim: true },
-  codigo:       { type: String, default: '' },
-  direccion:    { type: String, default: '' },
-  telefono:     { type: String, default: '' },
-  logo:         { type: String, default: '' },
-  activo:       { type: Boolean, default: true },
-  sedes:        [{ type: String }],
-  jornadas:     [{ type: String }],
-  createdBy:    { type: String, default: 'superadmin' },
+  id:        { type: String, required: true, unique: true },
+  nombre:    { type: String, required: true, trim: true },
+  codigo:    { type: String, default: '' },
+  direccion: { type: String, default: '' },
+  telefono:  { type: String, default: '' },
+  logo:      { type: String, default: '' },
+  activo:    { type: Boolean, default: true },
+  sedes:     [{ type: String }],
+  jornadas:  [{ type: String }],
+  createdBy: { type: String, default: 'superadmin' },
 }, { timestamps: true, collection: 'colegios' });
 
-// ─────────────────────────────────────────────────────────────────────────────
 // USUARIO
-// ─────────────────────────────────────────────────────────────────────────────
 const UsuarioSchema = new Schema({
   id:            { type: String, required: true, unique: true },
   nombre:        { type: String, required: true, trim: true },
@@ -33,23 +28,18 @@ const UsuarioSchema = new Schema({
   blocked:       { type: Boolean, default: false },
   colegioId:     { type: String, default: null, index: true },
   colegioNombre: { type: String, default: '' },
-  // Solo estudiantes
   salon:         { type: String, default: '' },
   registrado:    { type: String, default: '' },
-  // Solo profesores
   ciclo:         { type: String, enum: ['primaria','bachillerato',''], default: '' },
   salones:       [{ type: String }],
   materias:      [{ type: String }],
   materia:       { type: String, default: '' },
   salonMaterias: { type: Schema.Types.Mixed, default: {} },
 }, { timestamps: true, collection: 'usuarios' });
-// Índice compuesto para queries multi-tenant frecuentes
 UsuarioSchema.index({ colegioId: 1, role: 1 });
 UsuarioSchema.index({ colegioId: 1, salon: 1 });
 
-// ─────────────────────────────────────────────────────────────────────────────
 // SALÓN
-// ─────────────────────────────────────────────────────────────────────────────
 const SalonSchema = new Schema({
   nombre:    { type: String, required: true, trim: true },
   ciclo:     { type: String, enum: ['primaria','bachillerato'], required: true },
@@ -58,9 +48,7 @@ const SalonSchema = new Schema({
 }, { timestamps: true, collection: 'salones' });
 SalonSchema.index({ nombre: 1, colegioId: 1 }, { unique: true });
 
-// ─────────────────────────────────────────────────────────────────────────────
-// CONFIGURACIÓN (por colegio)
-// ─────────────────────────────────────────────────────────────────────────────
+// CONFIGURACIÓN
 const ConfigSchema = new Schema({
   key:       { type: String, required: true },
   value:     { type: Schema.Types.Mixed, required: true },
@@ -68,9 +56,7 @@ const ConfigSchema = new Schema({
 }, { collection: 'config' });
 ConfigSchema.index({ key: 1, colegioId: 1 }, { unique: true });
 
-// ─────────────────────────────────────────────────────────────────────────────
 // PLAN DE ESTUDIOS
-// ─────────────────────────────────────────────────────────────────────────────
 const PlanEstudiosSchema = new Schema({
   colegioId:  { type: String, required: true, index: true },
   ciclo:      { type: String, enum: ['primaria','bachillerato'], required: true },
@@ -82,9 +68,7 @@ const PlanEstudiosSchema = new Schema({
 }, { timestamps: true, collection: 'plan_estudios' });
 PlanEstudiosSchema.index({ colegioId: 1, ciclo: 1, grado: 1 });
 
-// ─────────────────────────────────────────────────────────────────────────────
-// NOTAS — índice compuesto crítico para escala
-// ─────────────────────────────────────────────────────────────────────────────
+// NOTAS
 const NotaPeriodoSchema = new Schema({
   periodo:    { type: String, required: true },
   materias:   { type: Schema.Types.Mixed, default: {} },
@@ -98,13 +82,10 @@ const NotaSchema = new Schema({
   disciplina: { type: String, default: '' },
   colegioId:  { type: String, default: '', index: true },
 }, { timestamps: true, collection: 'notas' });
-// Único por (estId, anoLectivo, colegioId) — clave de acceso más frecuente
-NotaSchema.index({ estId: 1, anoLectivo: 1, colegioId: 1 }, { unique: true });
-NotaSchema.index({ colegioId: 1, anoLectivo: 1 }); // para agregaciones del superadmin
+NotaSchema.index({ estId: 1, anoLectivo: 1 }, { unique: true });
+NotaSchema.index({ colegioId: 1, anoLectivo: 1 });
 
-// ─────────────────────────────────────────────────────────────────────────────
 // ASISTENCIA
-// ─────────────────────────────────────────────────────────────────────────────
 const AsistenciaSchema = new Schema({
   fecha:     { type: String, required: true },
   salon:     { type: String, required: true },
@@ -115,11 +96,8 @@ const AsistenciaSchema = new Schema({
   }],
 }, { timestamps: true, collection: 'asistencias' });
 AsistenciaSchema.index({ fecha: 1, salon: 1, colegioId: 1 }, { unique: true });
-AsistenciaSchema.index({ colegioId: 1, fecha: 1 }); // listado por fecha
 
-// ─────────────────────────────────────────────────────────────────────────────
 // EXCUSA
-// ─────────────────────────────────────────────────────────────────────────────
 const ExcusaSchema = new Schema({
   estId:     { type: String, required: true },
   enombre:   { type: String, required: true },
@@ -132,11 +110,8 @@ const ExcusaSchema = new Schema({
   ts:        { type: String, default: '' },
   colegioId: { type: String, default: '', index: true },
 }, { timestamps: true, collection: 'excusas' });
-ExcusaSchema.index({ colegioId: 1, estId: 1 });
 
-// ─────────────────────────────────────────────────────────────────────────────
 // CLASE VIRTUAL
-// ─────────────────────────────────────────────────────────────────────────────
 const VClaseSchema = new Schema({
   id:         { type: String, required: true, unique: true },
   profId:     { type: String, required: true },
@@ -151,9 +126,7 @@ const VClaseSchema = new Schema({
   colegioId:  { type: String, default: '', index: true },
 }, { timestamps: true, collection: 'vclases' });
 
-// ─────────────────────────────────────────────────────────────────────────────
 // UPLOAD (TAREA)
-// ─────────────────────────────────────────────────────────────────────────────
 const UploadSchema = new Schema({
   id:         { type: String, required: true, unique: true },
   estId:      { type: String, required: true },
@@ -167,17 +140,13 @@ const UploadSchema = new Schema({
   fecha:      { type: String, required: true },
   size:       { type: Number, default: 0 },
   type:       { type: String, default: '' },
-  dataUrl:    { type: String, default: '' }, // base64 — se excluye de listados
+  dataUrl:    { type: String, default: '' },
   revisado:   { type: Boolean, default: false },
   revisadoTs: { type: String, default: '' },
   colegioId:  { type: String, default: '', index: true },
 }, { timestamps: true, collection: 'uploads' });
-UploadSchema.index({ colegioId: 1, estId: 1 });
-UploadSchema.index({ colegioId: 1, profId: 1 });
 
-// ─────────────────────────────────────────────────────────────────────────────
 // PLAN DE RECUPERACIÓN
-// ─────────────────────────────────────────────────────────────────────────────
 const PlanSchema = new Schema({
   id:          { type: String, required: true, unique: true },
   estId:       { type: String, required: true },
@@ -201,11 +170,8 @@ const PlanSchema = new Schema({
   _archivedAt: { type: String, default: '' },
   colegioId:   { type: String, default: '', index: true },
 }, { timestamps: true, collection: 'planes' });
-PlanSchema.index({ colegioId: 1, archivado: 1 });
 
-// ─────────────────────────────────────────────────────────────────────────────
 // RECUPERACIÓN
-// ─────────────────────────────────────────────────────────────────────────────
 const RecuperacionSchema = new Schema({
   id:          { type: String, required: true, unique: true },
   estId:       { type: String, required: true },
@@ -227,11 +193,8 @@ const RecuperacionSchema = new Schema({
   _archivedAt: { type: String, default: '' },
   colegioId:   { type: String, default: '', index: true },
 }, { timestamps: true, collection: 'recuperaciones' });
-RecuperacionSchema.index({ colegioId: 1, archivado: 1 });
 
-// ─────────────────────────────────────────────────────────────────────────────
 // AUDITORÍA
-// ─────────────────────────────────────────────────────────────────────────────
 const AuditoriaSchema = new Schema({
   ts:        { type: String, required: true },
   uid:       { type: String, default: '' },
@@ -249,9 +212,7 @@ const AuditoriaSchema = new Schema({
 }, { timestamps: true, collection: 'auditoria' });
 AuditoriaSchema.index({ colegioId: 1, createdAt: -1 });
 
-// ─────────────────────────────────────────────────────────────────────────────
 // HISTORIAL ESTUDIANTE
-// ─────────────────────────────────────────────────────────────────────────────
 const EstHistSchema = new Schema({
   id:              { type: String, required: true, unique: true },
   nombre:          { type: String, required: true },
@@ -272,55 +233,14 @@ const EstHistSchema = new Schema({
   colegioId:       { type: String, default: '', index: true },
 }, { timestamps: true, collection: 'est_historial' });
 
-// ─────────────────────────────────────────────────────────────────────────────
 // BLOQUEOS
-// ─────────────────────────────────────────────────────────────────────────────
 const BloqueoSchema = new Schema({
   usuario:   { type: String, required: true, unique: true },
   on:        { type: Boolean, default: true },
   ts:        { type: String, default: '' },
-  colegioId: { type: String, default: '' },
 }, { collection: 'bloqueos' });
 
-// ─────────────────────────────────────────────────────────────────────────────
-// SUGERENCIAS — enviadas por cualquier usuario al superadmin
-// ─────────────────────────────────────────────────────────────────────────────
-const SugerenciaSchema = new Schema({
-  uid:           { type: String, required: true },
-  nombre:        { type: String, default: '' },
-  role:          { type: String, default: '' },
-  colegioId:     { type: String, default: '' },
-  colegioNombre: { type: String, default: '' },
-  titulo:        { type: String, default: '' },
-  mensaje:       { type: String, required: true },
-  categoria:     { type: String, default: 'general' },
-  leida:         { type: Boolean, default: false },
-  leidaTs:       { type: String, default: '' },
-  respuesta:     { type: String, default: '' },
-  respondidaTs:  { type: String, default: '' },
-  ts:            { type: String, default: '' },
-}, { timestamps: true, collection: 'sugerencias' });
-SugerenciaSchema.index({ uid: 1 });
-SugerenciaSchema.index({ leida: 1 });
-
-// ─────────────────────────────────────────────────────────────────────────────
-// PAPELERA — colegios y admins eliminados (para restauración)
-// ─────────────────────────────────────────────────────────────────────────────
-const PapeleraSchema = new Schema({
-  tipo:          { type: String, enum: ['colegio', 'admin'], required: true },
-  eliminadoTs:   { type: String, required: true },
-  eliminadoPor:  { type: String, default: '' },
-  // Snapshot completo del colegio o admin eliminado
-  datos:         { type: Schema.Types.Mixed, required: true },
-  // Datos relacionados (solo para colegios)
-  admins:        { type: Schema.Types.Mixed, default: null },
-  config:        { type: Schema.Types.Mixed, default: null },
-}, { timestamps: true, collection: 'papelera' });
-PapeleraSchema.index({ tipo: 1 });
-
-// ─────────────────────────────────────────────────────────────────────────────
-// ESTADÍSTICAS (snapshot periódico — para no recalcular siempre)
-// ─────────────────────────────────────────────────────────────────────────────
+// ESTADÍSTICAS
 const EstadisticaSchema = new Schema({
   colegioId:   { type: String, required: true },
   fecha:       { type: String, required: true },
@@ -330,7 +250,31 @@ const EstadisticaSchema = new Schema({
   asistPct:    { type: Number, default: 0 },
   ingresosMes: { type: Number, default: 0 },
 }, { timestamps: true, collection: 'estadisticas' });
-EstadisticaSchema.index({ colegioId: 1, fecha: -1 });
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SUGERENCIAS — cualquier usuario (admin/profe/est) envía → superadmin lee
+// ─────────────────────────────────────────────────────────────────────────────
+const SugerenciaSchema = new Schema({
+  uid:           { type: String, required: true },
+  nombre:        { type: String, required: true },
+  role:          { type: String, required: true },
+  colegioId:     { type: String, default: '' },
+  colegioNombre: { type: String, default: '' },
+  titulo:        { type: String, default: '' },
+  mensaje:       { type: String, required: true },
+  categoria:     {
+    type: String, default: 'general',
+    enum: ['general','academico','tecnico','sugerencia','felicitacion','queja']
+  },
+  leida:        { type: Boolean, default: false },
+  leidaTs:      { type: String, default: '' },
+  respuesta:    { type: String, default: '' },
+  respondidaTs: { type: String, default: '' },
+  ts:           { type: String, default: '' },
+}, { timestamps: true, collection: 'sugerencias' });
+SugerenciaSchema.index({ leida: 1, createdAt: -1 });
+SugerenciaSchema.index({ colegioId: 1 });
+SugerenciaSchema.index({ uid: 1 });
 
 // ─────────────────────────────────────────────────────────────────────────────
 // EXPORTS
@@ -353,5 +297,4 @@ module.exports = {
   Bloqueo:       mongoose.model('Bloqueo',       BloqueoSchema),
   Estadistica:   mongoose.model('Estadistica',   EstadisticaSchema),
   Sugerencia:    mongoose.model('Sugerencia',    SugerenciaSchema),
-  Papelera:      mongoose.model('Papelera',      PapeleraSchema),
 };

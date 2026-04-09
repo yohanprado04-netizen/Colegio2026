@@ -442,12 +442,17 @@ function logAuditAnon(usuario,msg){ /* implementado en api-layer.js */ }
    BOOT & NAVIGATION
 ============================================================ */
 const PL={
-  
-sadash:'Panel Global', sacolegios:'Colegios & Admins', saplan:'Plan de Estudios',
-saestadisticas:'Estadísticas Globales', saauditoria:'Auditoría Global',
-samantenimiento:'Mantenimiento', sasug:'Sugerencias Recibidas',
-asug:'Sugerencias', psug:'Sugerencias', esug:'Sugerencias',
- 
+  sadash:'Panel Global', sacolegios:'Colegios & Admins', saplan:'Plan de Estudios',
+  saestadisticas:'Estadísticas Globales', saauditoria:'Auditoría Global',
+  samantenimiento:'Mantenimiento', sasug:'Sugerencias Recibidas',
+  dash:'Panel General',asal:'Salones & Grados',apri:'Primaria (1°-5°)',abac:'Bachillerato (6°-11°)',
+  aprf:'Profesores',amat:'Materias & Periodos',anot:'Gestión de Notas',areh:'Recuperaciones',
+  afec:'Control de Fechas',ablk:'Usuarios Bloqueados',aaud:'Auditoría',aexp:'Exportar',ahist:'Historial Estudiantes',
+  aexc:'Excusas (Admin)',avcl:'Clases Virtuales (Admin)',asug:'Sugerencias',
+  ph:'Mi Panel',pnot:'Ingresar Notas',past:'Asistencias',pvir:'Clases Virtuales',ptar:'Tareas Recibidas',prec:'Recuperaciones',phist:'Historial Recuperaciones',psug:'Sugerencias',
+  eb:'Mi Boletín',east:'Mi Asistencia',etare:'Tareas & Talleres',
+  eexc:'Excusas',eprof:'Mis Profesores',ereh:'Mi Recuperación',evir:'Mis Clases Virtuales',
+  ehist:'Historial Recuperaciones',esug:'Sugerencias'
 };
 
 function bootApp(){
@@ -573,7 +578,7 @@ function navItems(){
     {s:'Académico'},{id:'saplan',ic:'📖',lb:'Plan de Estudios'},
     {s:'Supervisión'},{id:'saestadisticas',ic:'📊',lb:'Estadísticas'},
     {id:'saauditoria',ic:'🔍',lb:'Auditoría Global'},
-     {s:'Sistema'},{id:'samantenimiento',ic:'⚙️',lb:'Mantenimiento'},
+    {s:'Sistema'},{id:'samantenimiento',ic:'⚙️',lb:'Mantenimiento'},
     {id:'sasug',ic:'💡',lb:'Sugerencias Recibidas'},
   ];
 
@@ -641,7 +646,6 @@ function goto(pid){
   initPg(pid);
 }
 function renderPg(pid){
-
   const map={
     dash:pgDash,asal:pgASal,apri:()=>pgAEst('primaria'),abac:()=>pgAEst('bachillerato'),
     aprf:pgAPrf,amat:pgAMat,anot:pgANot,areh:pgAReh,afec:pgAFec,
@@ -650,10 +654,9 @@ function renderPg(pid){
     eb:pgEB,east:pgEAst,etare:pgETare,eexc:pgEExc,eprof:pgEProf,
     evir:pgEVir,ereh:pgEReh,ehist:pgEHist,
     sadash:pgSADash,sacolegios:pgSAColegios,saplan:pgSAPlan,
-    saestadisticas:pgSAEstadisticas,saauditoria:pgSAAuditoria,
-    samantenimiento:pgSAMantenimiento,sasug:pgSASug,
+    saestadisticas:pgSAEstadisticas,saauditoria:pgSAAuditoria,samantenimiento:pgSAMantenimiento,
+    sasug:pgSASug,
     asug:pgSugerencias,psug:pgSugerencias,esug:pgSugerencias,
-    
   };
   return(map[pid]||(() =>'<div class="card"><p>No disponible.</p></div>'))();
 }
@@ -662,10 +665,10 @@ function initPg(pid){
     dash:initDash,asal:initASal,apri:()=>initAEst('primaria'),abac:()=>initAEst('bachillerato'),
     aprf:initAPrf,amat:initAMat,anot:initANot,areh:initAReh,aexc:initAExc,avcl:initAVcl,
     past:initPAst,eb:initEB,
-    ph:()=>{ setTimeout(renderPExcR,0); }
-    ,sadash:initSADash,sacolegios:initSAColegios,saplan:initSAPlan,
-    saestadisticas:initSAEstadisticas,saauditoria:initSAAuditoria,
-    samantenimiento:initSAMantenimiento,sasug:initSASug,
+    ph:()=>{ setTimeout(renderPExcR,0); },
+    sadash:initSADash,sacolegios:initSAColegios,saplan:initSAPlan,
+    saestadisticas:initSAEstadisticas,saauditoria:initSAAuditoria,samantenimiento:initSAMantenimiento,
+    sasug:initSASug,
     asug:initSugerencias,psug:initSugerencias,esug:initSugerencias,
   };
   if(map[pid]) map[pid]();
@@ -3549,14 +3552,8 @@ function dlBoletin(estId,perFilter,anno,snapData){
 /* ============================================================
    KEYBOARD & INIT
 ============================================================ */
-document.addEventListener('keydown',ev=>{
-  if(ev.key==='Enter'&&!gi('ls').classList.contains('hidden')) doLogin();
-});
 /* ════════════════════════════════════════════════════════════════
    SUPER ADMIN — PANEL GLOBAL
-   INSTRUCCIÓN: Reemplaza todo el contenido de app.js desde la línea
-   que contiene "function pgSADash(){" hasta el final del archivo,
-   pegando este contenido completo en su lugar.
 ════════════════════════════════════════════════════════════════ */
 
 /* ─── DASHBOARD ─────────────────────────────────────────── */
@@ -3577,9 +3574,9 @@ function pgSADash(){
 }
 async function initSADash(){
   try{
-    const [stats, sugCount] = await Promise.all([
+    const [stats,sugCount]=await Promise.all([
       saApiFetch('/api/superadmin/stats'),
-      saApiFetch('/api/sugerencias/count'),
+      saApiFetch('/api/sugerencias/count').catch(()=>({noLeidas:0})),
     ]);
     const grid=gi('saStatsGrid');
     if(!grid) return;
@@ -3605,7 +3602,6 @@ async function initSADash(){
       <td>${s.totalEst}</td><td>${s.totalProfs}</td><td>${s.totalSalones||0}</td><td>${s.promNotas}</td>
       <td><span class="bdg ${s.activo?'bgr':'bred'}">${s.activo?'Activo':'Inactivo'}</span></td>
     </tr>`).join('')}</tbody></table>`;
-    // Badge de sugerencias no leídas
     const badge=gi('saSugBadge');
     if(badge&&sugCount&&sugCount.noLeidas>0){
       badge.textContent=`💡 ${sugCount.noLeidas} Sugerencia${sugCount.noLeidas>1?'s':''} nueva${sugCount.noLeidas>1?'s':''}`;
@@ -3671,14 +3667,12 @@ async function modalNuevoColegio(){
       <input id="snCodigo"  class="swal2-input" placeholder="Código (opcional)">
       <input id="snDir"     class="swal2-input" placeholder="Dirección">
       <hr style="margin:.5rem 0">
-      <p style="margin:.5rem 1rem;font-size:.85rem;color:#666;text-align:left">Datos del administrador del colegio:</p>
+      <p style="margin:.5rem 1rem;font-size:.85rem;color:#666;text-align:left">Datos del administrador:</p>
       <input id="snANombre" class="swal2-input" placeholder="Nombre del Admin *">
       <input id="snAUser"   class="swal2-input" placeholder="Usuario Admin * (sin espacios)">
       <input id="snAPwd"    class="swal2-input" type="password" placeholder="Contraseña Admin *">
     `,
-    focusConfirm:false,
-    showCancelButton:true,
-    confirmButtonText:'Crear Colegio',
+    focusConfirm:false,showCancelButton:true,confirmButtonText:'Crear Colegio',
     preConfirm:()=>({
       nombre:       gi('snNombre')?.value.trim(),
       codigo:       gi('snCodigo')?.value.trim(),
@@ -3703,12 +3697,12 @@ async function modalEditColegio(id){
   const {value:f}=await Swal.fire({
     title:'Editar Colegio',
     html:`
-      <input id="enNombre"   class="swal2-input" value="${col.nombre}"                placeholder="Nombre *">
-      <input id="enCodigo"   class="swal2-input" value="${col.codigo||''}"            placeholder="Código">
-      <input id="enDir"      class="swal2-input" value="${col.direccion||''}"         placeholder="Dirección">
-      <input id="enTel"      class="swal2-input" value="${col.telefono||''}"          placeholder="Teléfono">
-      <input id="enSedes"    class="swal2-input" value="${(col.sedes||[]).join(', ')}"   placeholder="Sedes (separadas por coma)">
-      <input id="enJornadas" class="swal2-input" value="${(col.jornadas||[]).join(', ')}"placeholder="Jornadas (separadas por coma)">
+      <input id="enNombre"   class="swal2-input" value="${col.nombre}"                  placeholder="Nombre *">
+      <input id="enCodigo"   class="swal2-input" value="${col.codigo||''}"              placeholder="Código">
+      <input id="enDir"      class="swal2-input" value="${col.direccion||''}"           placeholder="Dirección">
+      <input id="enTel"      class="swal2-input" value="${col.telefono||''}"            placeholder="Teléfono">
+      <input id="enSedes"    class="swal2-input" value="${(col.sedes||[]).join(', ')}"  placeholder="Sedes (coma)">
+      <input id="enJornadas" class="swal2-input" value="${(col.jornadas||[]).join(', ')}" placeholder="Jornadas (coma)">
     `,
     focusConfirm:false,showCancelButton:true,confirmButtonText:'Guardar',
     preConfirm:()=>({
@@ -3741,7 +3735,7 @@ async function modalAdmins(colegioId,colegioNombre){
     Swal.fire({
       title:`Admins — ${colegioNombre}`,
       html:`<div style="overflow-x:auto"><table class="tbl"><thead><tr><th>Nombre</th><th>Usuario</th><th>Estado</th><th>Acc.</th></tr></thead>
-        <tbody>${lista||'<tr><td colspan="4" style="text-align:center;color:#999">Sin admins adicionales</td></tr>'}</tbody></table></div>
+        <tbody>${lista||'<tr><td colspan="4" style="text-align:center;color:#999">Sin admins</td></tr>'}</tbody></table></div>
         <hr style="margin:.75rem 0">
         <button class="btn" onclick="modalNuevoAdmin('${colegioId}','${colegioNombre.replace(/'/g,"\\'")}')">＋ Nuevo Admin</button>`,
       width:640,showConfirmButton:false,showCloseButton:true
@@ -3767,8 +3761,8 @@ async function modalNuevoAdmin(colegioId,colegioNombre){
 async function editAdmin(id){
   const {value:f}=await Swal.fire({
     title:'Editar Admin',
-    html:`<input id="eaNom" class="swal2-input" placeholder="Nuevo nombre (dejar vacío = no cambiar)">
-          <input id="eaPwd" class="swal2-input" type="password" placeholder="Nueva contraseña (dejar vacío = no cambiar)">`,
+    html:`<input id="eaNom" class="swal2-input" placeholder="Nuevo nombre (vacío = no cambiar)">
+          <input id="eaPwd" class="swal2-input" type="password" placeholder="Nueva contraseña (vacío = no cambiar)">`,
     focusConfirm:false,showCancelButton:true,
     preConfirm:()=>{const o={};const n=gi('eaNom')?.value.trim();const p=gi('eaPwd')?.value;if(n)o.nombre=n;if(p)o.password=p;return o;}
   });
@@ -3816,23 +3810,20 @@ async function initSAPlan(){
 }
 async function loadSAPlan(){
   const cid=gi('saPlanCol')?.value;
-  const planTable=gi('saPlanTable');
-  if(!cid){if(planTable)planTable.textContent='Selecciona un colegio.';return;}
-  if(planTable)planTable.textContent='Cargando…';
+  const pt=gi('saPlanTable');
+  if(!cid){if(pt)pt.textContent='Selecciona un colegio.';return;}
+  if(pt)pt.textContent='Cargando…';
   try{
     const ciclo=gi('saPlanCiclo')?.value;
     let plan=await saApiFetch(`/api/superadmin/plan/${cid}`);
     if(ciclo) plan=plan.filter(p=>p.ciclo===ciclo);
-    if(!plan.length){
-      if(planTable)planTable.innerHTML='<p style="color:#999">Sin asignaturas. Agrega una o importa el plan por defecto.</p>';
-      return;
-    }
-    if(planTable)planTable.innerHTML=`<table class="tbl"><thead><tr>
+    if(!plan.length){if(pt)pt.innerHTML='<p style="color:#999">Sin asignaturas. Agrega una o usa Plan por Defecto.</p>';return;}
+    if(pt)pt.innerHTML=`<table class="tbl"><thead><tr>
       <th>Ciclo</th><th>Grado</th><th>Área</th><th>Asignatura</th><th>h/sem</th>
     </tr></thead><tbody>${plan.map(p=>`<tr>
       <td>${p.ciclo}</td><td>${p.grado}</td><td>${p.area}</td><td>${p.asignatura}</td><td>${p.intensidad}</td>
     </tr>`).join('')}</tbody></table>`;
-  }catch(e){if(planTable)planTable.innerHTML=`<p style="color:red">Error: ${e.message}</p>`;}
+  }catch(e){if(pt)pt.innerHTML=`<p style="color:red">Error: ${e.message}</p>`;}
 }
 async function modalNuevaMateria(){
   const cid=gi('saPlanCol')?.value;
@@ -3840,21 +3831,16 @@ async function modalNuevaMateria(){
   const {value:f}=await Swal.fire({
     title:'Nueva Asignatura',
     html:`<select id="nmCiclo" class="swal2-select" style="width:100%;margin:.25rem 0">
-            <option value="primaria">Primaria</option>
-            <option value="bachillerato">Bachillerato</option>
+            <option value="primaria">Primaria</option><option value="bachillerato">Bachillerato</option>
           </select>
           <input id="nmGrado" class="swal2-input" placeholder="Grado (ej: 1°, 6°)">
           <input id="nmArea"  class="swal2-input" placeholder="Área (ej: Ciencias Naturales)">
           <input id="nmAsig"  class="swal2-input" placeholder="Asignatura *">
           <input id="nmInt"   class="swal2-input" type="number" min="0" max="40" placeholder="Intensidad h/sem">`,
     focusConfirm:false,showCancelButton:true,confirmButtonText:'Agregar',
-    preConfirm:()=>({
-      ciclo:gi('nmCiclo')?.value,
-      grado:gi('nmGrado')?.value.trim(),
-      area:gi('nmArea')?.value.trim(),
-      asignatura:gi('nmAsig')?.value.trim(),
-      intensidad:parseInt(gi('nmInt')?.value)||0
-    })
+    preConfirm:()=>({ciclo:gi('nmCiclo')?.value,grado:gi('nmGrado')?.value.trim(),
+      area:gi('nmArea')?.value.trim(),asignatura:gi('nmAsig')?.value.trim(),
+      intensidad:parseInt(gi('nmInt')?.value)||0})
   });
   if(!f||!f.asignatura) return;
   try{
@@ -3905,7 +3891,7 @@ async function importarPlanDefecto(){
 function pgSAEstadisticas(){
   return`<div class="card">
     <h2>📊 Estadísticas Globales</h2>
-    <div id="saEstadisticasContent" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:1rem;margin-bottom:1.5rem">
+    <div id="saEstGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:1rem;margin-bottom:1.5rem">
       <div class="card" style="text-align:center"><div style="font-size:2rem">⏳</div><p>Cargando…</p></div>
     </div>
     <h3 style="margin-bottom:.75rem">Detalle por institución</h3>
@@ -3915,13 +3901,13 @@ function pgSAEstadisticas(){
 async function initSAEstadisticas(){
   try{
     const stats=await saApiFetch('/api/superadmin/stats');
-    const cont=gi('saEstadisticasContent');
-    if(!cont) return;
+    const grid=gi('saEstGrid');
+    if(!grid) return;
     const totalEst=stats.reduce((a,s)=>a+s.totalEst,0);
     const totalProfs=stats.reduce((a,s)=>a+s.totalProfs,0);
     const totalSal=stats.reduce((a,s)=>a+(s.totalSalones||0),0);
     const promGlobal=stats.length?+(stats.reduce((a,s)=>a+s.promNotas,0)/stats.length).toFixed(2):0;
-    cont.innerHTML=[
+    grid.innerHTML=[
       {ic:'🏫',lb:'Instituciones',val:stats.length},
       {ic:'👨‍🎓',lb:'Estudiantes',val:totalEst},
       {ic:'👩‍🏫',lb:'Profesores',val:totalProfs},
@@ -3942,8 +3928,8 @@ async function initSAEstadisticas(){
       <td><span class="bdg ${s.activo?'bgr':'bred'}">${s.activo?'Activo':'Inactivo'}</span></td>
     </tr>`).join('')}</tbody></table>`;
   }catch(e){
-    const cont=gi('saEstadisticasContent');
-    if(cont)cont.innerHTML=`<p style="color:red">Error: ${e.message}</p>`;
+    const g=gi('saEstGrid');
+    if(g)g.innerHTML=`<p style="color:red">Error: ${e.message}</p>`;
   }
 }
 
@@ -3999,7 +3985,7 @@ function pgSAMantenimiento(){
     <div style="display:grid;gap:1.5rem">
       <div class="card">
         <h3>💾 Copia de Seguridad</h3>
-        <p style="color:#888;margin-bottom:.75rem">Descarga un backup JSON con todos los datos de una institución.</p>
+        <p style="color:#888;margin-bottom:.75rem">Descarga un backup JSON de una institución.</p>
         <div style="display:flex;gap:.75rem;flex-wrap:wrap">
           <select id="saBackupCol" class="inp" style="min-width:200px"></select>
           <button class="btn" onclick="descargarBackup()">📥 Descargar Backup</button>
@@ -4041,7 +4027,7 @@ async function descargarBackup(){
     const res=await fetch(API_BASE+`/api/superadmin/backup/${cid}`,{
       method:'POST',headers:{Authorization:`Bearer ${token}`,'Content-Type':'application/json'}
     });
-    if(!res.ok){const e=await res.json();throw new Error(e.error||'Error al generar backup');}
+    if(!res.ok){const e=await res.json().catch(()=>({}));throw new Error(e.error||'Error backup');}
     const blob=await res.blob();
     const url=URL.createObjectURL(blob);
     const a=document.createElement('a');
@@ -4068,7 +4054,7 @@ async function resetMasivo(){
   }catch(e){sw('error',e.message);}
 }
 
-/* ─── SUGERENCIAS (superadmin recibe) ──────────────────── */
+/* ─── SUGERENCIAS — superadmin recibe ──────────────────── */
 function pgSASug(){
   return`<div class="card">
     <h2>💡 Sugerencias Recibidas</h2>
@@ -4104,7 +4090,7 @@ async function loadSASug(){
     if(cid) url+=`&colegioId=${cid}`;
     if(leida!=='') url+=`&leida=${leida}`;
     const list=await saApiFetch(url);
-    if(!list.length){el.innerHTML='<p style="color:#999;text-align:center;padding:2rem">No hay sugerencias.</p>';return;}
+    if(!list||!list.length){el.innerHTML='<p style="color:#999;text-align:center;padding:2rem">No hay sugerencias.</p>';return;}
     el.innerHTML=list.map(s=>`<div class="card" style="margin-bottom:1rem;border-left:4px solid ${s.leida?'#cbd5e0':'#4299e1'}">
       <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:.5rem">
         <div>
@@ -4112,8 +4098,8 @@ async function loadSASug(){
           <strong style="margin-left:.5rem">${s.nombre}</strong>
           <span style="font-size:.78rem;color:#718096;margin-left:.5rem">${s.colegioNombre||'—'}</span>
         </div>
-        <div style="display:flex;gap:.4rem;align-items:center">
-          <span style="font-size:.75rem;color:#718096">${(s.ts||s.createdAt||'').slice(0,10)}</span>
+        <div style="display:flex;gap:.4rem;align-items:center;flex-wrap:wrap">
+          <span style="font-size:.75rem;color:#718096">${(s.ts||'').slice(0,10)}</span>
           ${!s.leida?`<button class="btn bsm" onclick="marcarSugLeida('${s._id}')">✓ Leída</button>`:''}
           <button class="btn bsm" onclick="responderSug('${s._id}','${encodeURIComponent(s.nombre)}')">💬 Responder</button>
           <button class="btn bsm bdan" onclick="eliminarSug('${s._id}')">🗑️</button>
@@ -4126,10 +4112,8 @@ async function loadSASug(){
   }catch(e){el.innerHTML=`<p style="color:red">Error: ${e.message}</p>`;}
 }
 async function marcarSugLeida(id){
-  try{
-    await saApiFetch(`/api/sugerencias/${id}/leer`,{method:'PUT',body:JSON.stringify({})});
-    loadSASug();
-  }catch(e){sw('error',e.message);}
+  try{await saApiFetch(`/api/sugerencias/${id}/leer`,{method:'PUT',body:JSON.stringify({})});loadSASug();}
+  catch(e){sw('error',e.message);}
 }
 async function responderSug(id,nombreEnc){
   const nombre=decodeURIComponent(nombreEnc);
@@ -4148,16 +4132,13 @@ async function responderSug(id,nombreEnc){
 async function eliminarSug(id){
   const conf=await Swal.fire({title:'¿Eliminar sugerencia?',icon:'warning',showCancelButton:true,confirmButtonText:'Eliminar',confirmButtonColor:'#e53e3e'});
   if(!conf.isConfirmed) return;
-  try{
-    await saApiFetch(`/api/sugerencias/${id}`,{method:'DELETE'});
-    loadSASug();
-  }catch(e){sw('error',e.message);}
+  try{await saApiFetch(`/api/sugerencias/${id}`,{method:'DELETE'});loadSASug();}
+  catch(e){sw('error',e.message);}
 }
 
-/* ─── SUGERENCIAS (admin/profe/est envían) ──────────────── */
+/* ─── SUGERENCIAS — admin/profe/est envían ──────────────── */
 function pgSugerencias(){
-  const histId='sugHistorial';
-  return`<div class="ph"><h2>💡 Sugerencias</h2><p>Envía sugerencias, comentarios o reportes al administrador de la plataforma.</p></div>
+  return`<div class="ph"><h2>💡 Sugerencias</h2><p>Envía sugerencias, comentarios o reportes al super administrador de la plataforma.</p></div>
   <div class="card">
     <div class="chd"><span class="cti">Nueva Sugerencia</span></div>
     <div class="fg">
@@ -4173,25 +4154,27 @@ function pgSugerencias(){
         </select>
       </div>
     </div>
-    <div class="fld"><label>Mensaje *</label><textarea id="sugMensaje" class="inp" rows="4" style="width:100%;resize:vertical" placeholder="Describe tu sugerencia o comentario…"></textarea></div>
+    <div class="fld"><label>Mensaje *</label>
+      <textarea id="sugMensaje" rows="4" style="width:100%;resize:vertical;padding:10px;border:1px solid var(--bd);border-radius:8px;font-size:14px;font-family:inherit" placeholder="Describe tu sugerencia o comentario…"></textarea>
+    </div>
     <button class="btn bg" onclick="enviarSugerencia()" style="margin-top:.5rem">📨 Enviar Sugerencia</button>
   </div>
   <div class="card" style="margin-top:1rem">
     <div class="chd"><span class="cti">Mis Sugerencias Enviadas</span></div>
-    <div id="${histId}">Cargando…</div>
+    <div id="sugHistorial">Cargando…</div>
   </div>`;
 }
 async function initSugerencias(){
   await cargarMisSugerencias();
 }
 async function enviarSugerencia(){
-  const titulo=gi('sugTitulo')?.value.trim();
+  const titulo=(gi('sugTitulo')?.value||'').trim();
   const categoria=gi('sugCat')?.value||'general';
-  const mensaje=gi('sugMensaje')?.value.trim();
+  const mensaje=(gi('sugMensaje')?.value||'').trim();
   if(!mensaje) return sw('warning','El mensaje es obligatorio');
   try{
     await apiFetch('/api/sugerencias',{method:'POST',body:JSON.stringify({titulo,categoria,mensaje})});
-    sw('success','¡Sugerencia enviada! Gracias por tu aportación.');
+    sw('success','¡Sugerencia enviada correctamente!');
     if(gi('sugTitulo')) gi('sugTitulo').value='';
     if(gi('sugMensaje')) gi('sugMensaje').value='';
     await cargarMisSugerencias();
@@ -4206,17 +4189,16 @@ async function cargarMisSugerencias(){
     cont.innerHTML=list.map(s=>`<div style="border-bottom:1px solid var(--bd);padding:.75rem 0">
       <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:.25rem">
         <span class="bdg" style="background:#ebf4ff;color:#2b6cb0">${s.categoria||'general'}</span>
-        <span style="font-size:.75rem;color:#718096">${(s.ts||s.createdAt||'').slice(0,10)}</span>
+        <span style="font-size:.75rem;color:#718096">${(s.ts||'').slice(0,10)}</span>
       </div>
       ${s.titulo?`<div style="font-weight:600;margin:.25rem 0">${s.titulo}</div>`:''}
       <p style="color:#4a5568;margin:.25rem 0;font-size:.9rem">${s.mensaje}</p>
-      ${s.respuesta?`<div style="background:#f0fff4;border-radius:6px;padding:.4rem .6rem;margin-top:.35rem;font-size:.85rem;color:#276749"><strong>💬 Respuesta:</strong> ${s.respuesta}</div>`:'<div style="font-size:.78rem;color:#a0aec0;margin-top:.25rem">Sin respuesta aún</div>'}
+      ${s.respuesta?`<div style="background:#f0fff4;border-radius:6px;padding:.4rem .6rem;margin-top:.35rem;font-size:.85rem;color:#276749"><strong>💬 Respuesta del Admin:</strong> ${s.respuesta}</div>`:'<div style="font-size:.78rem;color:#a0aec0;margin-top:.25rem">Pendiente de respuesta</div>'}
     </div>`).join('');
-  }catch(e){cont.innerHTML=`<p style="color:red;font-size:.85rem">Error: ${e.message}</p>`;}
+  }catch(e){cont.innerHTML=`<p style="color:red;font-size:.85rem">Error cargando sugerencias: ${e.message}</p>`;}
 }
 
-/* ─── Helper apiFetch exclusivo superadmin ──────────────── */
-// Evita usar el apiFetch global que puede tener problemas de scope en SA
+/* ─── Helper apiFetch para SuperAdmin (usa /api/ correcto) ─ */
 async function saApiFetch(path,opts={}){
   const token=window.TokenStore?.get();
   const headers={'Content-Type':'application/json',...(opts.headers||{})};
