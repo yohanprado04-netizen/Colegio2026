@@ -12,8 +12,7 @@ const authMiddleware = async (req, res, next) => {
     const token = header.split(' ')[1];
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-    // LÍNEA 15 — ACTUAL (puede fallar si el superadmin no tiene campo 'id' indexado):
-const user = await Usuario.findOne({ id: decoded.id });;
+   const user = await Usuario.findOne({ id: decoded.id }).lean();
     if (!user) return res.status(401).json({ error: 'Usuario no encontrado' });
     if (user.blocked) return res.status(403).json({ error: 'Cuenta bloqueada' });
 
