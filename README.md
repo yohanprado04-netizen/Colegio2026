@@ -1,131 +1,248 @@
-# EduSistema Pro — Backend MongoDB Atlas
+/**
+ * styles.css — EduSistema Pro v5
+ * ════════════════════════════════
+ * Estilos visuales completos de la plataforma.
+ *
+ * Variables CSS (:root)
+ *   --nv, --nv2, --nv3   → azul marino (sidebar, navbar)
+ *   --bl, --bl2, --bl3   → azul primario (botones, énfasis)
+ *   --tl                 → teal/verde azulado (acentos)
+ *   --sl, --sl2, --sl3   → grises (texto secundario)
+ *   --bd                 → borde general
+ *   --bg, --bg2          → fondos
+ *   --red, --ora, --grn  → colores de estado (reprobado, regular, aprobado)
+ *   --r, --rl, --rxl     → border-radius
+ *   --sh, --shm          → sombras
+ *   --fn, --mn           → fuentes (Outfit, JetBrains Mono)
+ *   --sw                 → ancho del sidebar (258px)
+ *
+ * Fuentes externas (cargadas en index.html):
+ *   Outfit        → https://fonts.google.com
+ *   JetBrains Mono→ https://fonts.google.com
+ */
 
-## Estructura del proyecto
+:root{
+  --nv:#0b1e33;--nv2:#112940;--nv3:#1a3a5c;
+  --bl:#1e5fa8;--bl2:#2d74c8;--bl3:#3b82f6;
+  --tl:#0ea5a0;--sl:#445566;--sl2:#6b7a8d;--sl3:#94a3b8;
+  --bd:#d8e2ef;--bg:#eef2f7;--bg2:#f5f8fc;--wh:#fff;--tx:#1a2535;
+  --red:#e53e3e;--rbg:#fff5f5;--ora:#ed8936;--obg:#fffaf0;
+  --grn:#38a169;--gbg:#f0fff4;--nsc:#2b6cb0;--nsbg:#ebf8ff;
+  --r:10px;--rl:16px;--rxl:22px;
+  --sh:0 1px 4px rgba(11,30,51,.08);--shm:0 4px 14px rgba(11,30,51,.12);
+  --fn:'Outfit',sans-serif;--mn:'JetBrains Mono',monospace;--sw:258px;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{font-size:15px}
+body{font-family:var(--fn);background:var(--bg);color:var(--tx);min-height:100vh;overflow:hidden}
+input,select,textarea,button{font-family:var(--fn)}
+.hidden{display:none!important}
+::-webkit-scrollbar{width:5px;height:5px}
+::-webkit-scrollbar-thumb{background:var(--bd);border-radius:3px}
 
-```
-edusistema-backend/
-├── config/
-│   └── db.js              ← Conexión a MongoDB Atlas
-├── middleware/
-│   └── auth.js            ← JWT + guardas de rol
-├── models/
-│   └── index.js           ← Todos los modelos Mongoose
-├── routes/
-│   ├── auth.js            ← POST /api/auth/login
-│   ├── db.js              ← GET|PUT /api/db (compatibilidad completa)
-│   └── api.js             ← Rutas granulares por entidad
-├── scripts/
-│   └── seed.js            ← Seed inicial de la BD
-├── .env                   ← Variables de entorno (NO subir a git)
-├── .gitignore
-├── package.json
-└── server.js              ← Entrada principal
-```
-
----
-
-## Instalación
-
-```bash
-# 1. Instalar dependencias
-npm install
-
-# 2. Configurar variables de entorno
-# Editar .env y poner tu contraseña real en MONGODB_URI:
-MONGODB_URI=mongodb+srv://yohanprado04_db_user:pradera123@prado04.t4d8ob8.mongodb.net/edusistema?retryWrites=true&w=majority
-
-# 3. Cargar datos iniciales (solo la primera vez)
-node scripts/seed.js
-
-# 4. Arrancar el servidor
-npm start
-# o en desarrollo:
-npm run dev
-```
-
----
-
-## Variables de entorno (.env)
-
-| Variable | Descripción |
-|---|---|
-| `MONGODB_URI` | Cadena de conexión MongoDB Atlas |
-| `DB_NAME` | Nombre de la base de datos (`edusistema`) |
-| `JWT_SECRET` | Clave secreta para firmar tokens JWT |
-| `JWT_EXPIRES_IN` | Duración del token (`20m` = 20 minutos) |
-| `PORT` | Puerto del servidor (default: 3001) |
-| `FRONTEND_URL` | URL del frontend para CORS |
-
----
-
-## Endpoints principales
-
-### Autenticación
-| Método | Ruta | Descripción |
-|---|---|---|
-| POST | `/api/auth/login` | Login → devuelve JWT + datos usuario |
-
-### DB completo (compatibilidad con frontend)
-| Método | Ruta | Descripción |
-|---|---|---|
-| GET | `/api/db` | Carga todo el objeto DB (como localStorage) |
-| PUT | `/api/db` | Guarda todo el objeto DB (solo admin) |
-
-### Granular
-| Método | Ruta | Descripción |
-|---|---|---|
-| GET/POST/PUT/DELETE | `/api/usuarios` | CRUD usuarios |
-| GET/POST/PUT/DELETE | `/api/salones` | CRUD salones |
-| GET/PUT | `/api/config/:key` | Configuración global |
-| GET/PUT | `/api/notas/:estId` | Notas tripartitas |
-| GET/PUT | `/api/asistencias` | Registros de asistencia |
-| GET/POST | `/api/excusas` | Excusas |
-| GET/POST/DELETE | `/api/vclases` | Clases virtuales |
-| GET/POST/DELETE | `/api/uploads` | Tareas/talleres |
-| GET/POST | `/api/planes` | Planes de recuperación |
-| GET/POST/DELETE | `/api/recuperaciones` | Respuestas de recuperación |
-| GET/POST/DELETE | `/api/auditoria` | Historial de auditoría |
-| GET/PUT | `/api/bloqueos` | Bloqueos de usuarios |
-| GET/PUT | `/api/est-hist` | Historial de estudiantes |
-
-### Sistema
-| Método | Ruta | Descripción |
-|---|---|---|
-| GET | `/health` | Estado del servidor y BD |
-
----
-
-## Credenciales iniciales (después del seed)
-
-| Rol | Usuario | Contraseña |
-|---|---|---|
-| Admin | `admin` | `admin123` |
-| Profesor | `profe1` | `profe123` |
-| Estudiante | `est1` | `est1123` |
-| Estudiante | `est2` | `est2123` |
-| … | … | … |
-
-> ⚠️ **Cambia las contraseñas en producción.**
-
----
-
-## Frontend
-
-El archivo `edusistema-frontend-mongodb.html` reemplaza `localStorage` por
-llamadas a esta API. Configurar la URL del backend al inicio del script:
-
-```javascript
-const API_BASE = 'https://colegio2026.onrender.com; // producción: 'https://tu-backend.com'
-```
-
----
-
-## Despliegue recomendado
-
-- **Backend**: Railway, Render, Heroku, o VPS (Node.js)
-- **Frontend**: Netlify, Vercel, GitHub Pages, o mismo VPS con nginx
-- **BD**: MongoDB Atlas (cluster gratuito M0 es suficiente para empezar)
-
-### MongoDB Atlas — configurar IP
-En Atlas → Network Access → Add IP Address → Allow from Anywhere (0.0.0.0/0)
-o agrega la IP específica de tu servidor backend.
+/* LOGIN */
+#ls{position:fixed;inset:0;z-index:9999;
+  background:linear-gradient(145deg,var(--nv) 0%,var(--nv3) 55%,#1a4a7a 100%);
+  display:flex;align-items:center;justify-content:center;padding:20px}
+#ls::before{content:'';position:absolute;inset:0;pointer-events:none;
+  background:radial-gradient(ellipse 60% 50% at 75% 25%,rgba(14,165,160,.12) 0%,transparent 70%),
+             radial-gradient(ellipse 50% 60% at 15% 75%,rgba(59,130,246,.09) 0%,transparent 65%)}
+.lgw{position:relative;z-index:1;display:grid;grid-template-columns:1fr 400px;gap:60px;width:100%;max-width:920px}
+@media(max-width:750px){.lgw{grid-template-columns:1fr}.lgh{display:none}}
+.lgh{display:flex;flex-direction:column;justify-content:center;color:#fff}
+.lgm{width:68px;height:68px;border-radius:18px;margin-bottom:28px;
+  background:linear-gradient(135deg,var(--tl),var(--bl3));
+  display:flex;align-items:center;justify-content:center;font-size:30px;
+  box-shadow:0 8px 28px rgba(14,165,160,.35)}
+.lgh h1{font-size:38px;font-weight:900;line-height:1.1;letter-spacing:-.5px}
+.lgh h1 em{font-style:normal;color:var(--tl)}
+.lgh p{font-size:14px;color:rgba(255,255,255,.55);line-height:1.7;margin-top:14px;max-width:320px}
+.lgr{display:flex;gap:10px;margin-top:32px;flex-wrap:wrap}
+.lgc{padding:7px 16px;border-radius:40px;font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase}
+.lgc.a{background:rgba(245,158,11,.18);border:1px solid rgba(245,158,11,.35);color:#fbbf24}
+.lgc.p{background:rgba(59,130,246,.18);border:1px solid rgba(59,130,246,.35);color:#93c5fd}
+.lgc.e{background:rgba(14,165,160,.18);border:1px solid rgba(14,165,160,.35);color:#5eead4}
+.lgc2{background:rgba(255,255,255,.97);border-radius:var(--rxl);padding:44px 36px;
+  box-shadow:0 28px 72px rgba(0,0,0,.32)}
+.lgc2 h2{font-size:24px;font-weight:900;color:var(--nv);letter-spacing:-.3px}
+.lgc2 .sub{font-size:13px;color:var(--sl3);margin-bottom:28px;margin-top:3px}
+/* FORMS */
+.fld{margin-bottom:16px}
+.fld label{display:block;font-size:11px;font-weight:800;color:var(--sl);text-transform:uppercase;
+  letter-spacing:.06em;margin-bottom:6px}
+.fld input,.fld select,.fld textarea{width:100%;padding:11px 14px;border:1.5px solid var(--bd);
+  border-radius:var(--r);font-size:14px;background:var(--wh);color:var(--tx);
+  transition:border .15s,box-shadow .15s;outline:none}
+.fld input:focus,.fld select:focus,.fld textarea:focus{border-color:var(--bl3);
+  box-shadow:0 0 0 3px rgba(59,130,246,.14)}
+.fld textarea{resize:vertical;min-height:78px}
+.fg{display:grid;grid-template-columns:repeat(auto-fill,minmax(165px,1fr));gap:14px}
+/* BUTTONS */
+.btn{display:inline-flex;align-items:center;gap:7px;padding:10px 18px;border-radius:var(--r);
+  font-size:13px;font-weight:700;border:none;cursor:pointer;transition:all .15s;
+  white-space:nowrap;line-height:1}
+.btn:disabled{opacity:.4;pointer-events:none}
+.bn{background:var(--nv3);color:#fff}.bn:hover{background:var(--bl);box-shadow:var(--shm);transform:translateY(-1px)}
+.bb{background:var(--bl);color:#fff}.bb:hover{background:var(--bl2);transform:translateY(-1px)}
+.bt{background:var(--tl);color:#fff}.bt:hover{filter:brightness(1.08)}
+.bg{background:transparent;color:var(--sl);border:1.5px solid var(--bd)}.bg:hover{background:var(--bg)}
+.bd{background:#e53e3e;color:#fff}.bd:hover{background:#c53030}
+.bs{background:#38a169;color:#fff}.bs:hover{background:#2f855a}
+.bw{background:#d97706;color:#fff}.bw:hover{background:#b45309}
+.br{background:#e53e3e;color:#fff}.br:hover{background:#c53030}
+.sm{padding:7px 14px;font-size:12px}.xs{padding:4px 10px;font-size:11px;border-radius:7px}
+.bl{width:100%;display:flex;align-items:center;justify-content:center;padding:13px;font-size:15px;
+  font-weight:800;border:none;border-radius:13px;
+  background:linear-gradient(135deg,var(--nv3),var(--bl2));color:#fff;cursor:pointer;
+  box-shadow:0 4px 20px rgba(30,95,168,.45);transition:all .2s}
+.bl:hover{box-shadow:0 8px 30px rgba(30,95,168,.55);transform:translateY(-2px)}
+/* SHELL */
+#app{display:flex;height:100vh;overflow:hidden}
+.sidebar{width:var(--sw);min-width:var(--sw);background:var(--nv);
+  display:flex;flex-direction:column;height:100vh;overflow-y:auto;z-index:10}
+.sbh{padding:20px 18px 16px;border-bottom:1px solid rgba(255,255,255,.07)}
+.sblo{display:flex;align-items:center;gap:10px;color:#fff}
+.sbli{width:38px;height:38px;border-radius:11px;flex-shrink:0;
+  background:linear-gradient(135deg,var(--tl),var(--bl3));
+  display:flex;align-items:center;justify-content:center;font-size:17px;
+  box-shadow:0 4px 12px rgba(14,165,160,.3)}
+.sbln{font-size:14px;font-weight:800;line-height:1.2;color:#fff}
+.sbls{font-size:10px;opacity:.4;margin-top:1px;color:#fff}
+.sbu{margin:14px 14px 0;padding:11px 13px;background:rgba(255,255,255,.07);border-radius:11px;
+  display:flex;align-items:center;gap:10px}
+.sbav{width:34px;height:34px;border-radius:50%;flex-shrink:0;
+  background:linear-gradient(135deg,var(--bl3),var(--tl));
+  display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:800;color:#fff}
+.sbun{font-size:13px;font-weight:700;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sbur{font-size:10px;color:rgba(255,255,255,.38);text-transform:uppercase;letter-spacing:.05em;margin-top:1px}
+.sbnav{flex:1;padding:10px}
+.sbsc{font-size:9px;font-weight:800;color:rgba(255,255,255,.28);text-transform:uppercase;
+  letter-spacing:.12em;padding:14px 10px 5px}
+.sbi{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:9px;
+  color:rgba(255,255,255,.55);font-size:13px;font-weight:500;cursor:pointer;
+  transition:all .15s;border:none;background:none;width:100%;text-align:left}
+.sbi .ic{font-size:16px;width:20px;text-align:center;flex-shrink:0}
+.sbi:hover{background:rgba(255,255,255,.08);color:rgba(255,255,255,.9)}
+.sbi.on{background:rgba(255,255,255,.13);color:#fff;font-weight:700}
+.sbi.on::before{content:'';width:3px;height:16px;background:var(--tl);
+  border-radius:2px;margin-right:-2px;flex-shrink:0}
+.sbft{padding:10px;border-top:1px solid rgba(255,255,255,.07)}
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.topbar{height:60px;flex-shrink:0;background:var(--wh);border-bottom:1px solid var(--bd);
+  padding:0 28px;display:flex;align-items:center;justify-content:space-between;box-shadow:var(--sh)}
+.tbti{font-size:17px;font-weight:800;color:var(--nv)}
+.tbr{display:flex;align-items:center;gap:10px}
+.tbdt{font-size:11px;font-weight:600;color:var(--sl2);background:var(--bg);padding:5px 11px;
+  border-radius:7px;border:1px solid var(--bd);font-family:var(--mn)}
+.tbst{font-size:11px;font-weight:700;padding:5px 12px;border-radius:20px}
+.tbop{background:#f0fff4;color:#276749;border:1px solid #9ae6b4}
+.tbcl{background:#fff5f5;color:#c53030;border:1px solid #fed7d7}
+.cnt{flex:1;overflow-y:auto;padding:28px}
+/* CARDS */
+.card{background:var(--wh);border-radius:var(--rl);border:1px solid var(--bd);
+  padding:22px;margin-bottom:20px;box-shadow:var(--sh)}
+.chd{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;
+  flex-wrap:wrap;gap:10px}
+.cti{font-size:15px;font-weight:800;color:var(--nv)}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+.g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px}
+@media(max-width:900px){.g2,.g3{grid-template-columns:1fr}}
+/* STAT CARDS */
+.sr{display:grid;grid-template-columns:repeat(auto-fit,minmax(148px,1fr));gap:14px;margin-bottom:22px}
+.scc{background:var(--wh);border-radius:var(--rl);padding:20px;border:1px solid var(--bd);
+  box-shadow:var(--sh);position:relative;overflow:hidden}
+.scc::after{content:attr(data-i);position:absolute;right:14px;top:12px;font-size:30px;opacity:.1;pointer-events:none}
+.scc .sv{font-size:28px;font-weight:900;color:var(--nv);font-family:var(--mn);line-height:1}
+.scc .sl{font-size:10px;font-weight:700;color:var(--sl3);text-transform:uppercase;letter-spacing:.06em;margin-top:5px}
+.scc .bar{height:3px;background:linear-gradient(90deg,var(--nv3),var(--tl));border-radius:2px;margin-top:12px}
+/* TABLES */
+.tw{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:13px}
+thead th{background:var(--bg);color:var(--sl);font-size:10.5px;font-weight:800;
+  text-transform:uppercase;letter-spacing:.05em;padding:10px 12px;text-align:left;
+  border-bottom:1.5px solid var(--bd);white-space:nowrap}
+tbody td{padding:10px 12px;border-bottom:1px solid #f0f4f8;vertical-align:middle}
+tbody tr:last-child td{border-bottom:none}
+tbody tr:hover{background:#fafcff}
+/* SCORE PILLS */
+.sc{display:inline-block;padding:3px 10px;border-radius:20px;font-size:12px;
+  font-weight:700;font-family:var(--mn);min-width:44px;text-align:center}
+.scr{background:var(--rbg);color:var(--red)}
+.sco{background:var(--obg);color:var(--ora)}
+.scg{background:var(--gbg);color:var(--grn)}
+.scb{background:var(--nsbg);color:var(--nsc)}
+.scz{background:#f7fafc;color:#a0aec0;border:1px solid #e2e8f0}
+/* BADGES */
+.bdg{display:inline-block;padding:3px 9px;border-radius:20px;font-size:11px;font-weight:700}
+.bbl{background:#ebf8ff;color:#2b6cb0} .bgr{background:#f0fff4;color:#276749}
+.brd{background:#fff5f5;color:#c53030} .bor{background:#fffaf0;color:#c05621}
+.bgy{background:#f7fafc;color:#4a5568} .bte{background:#e6fffa;color:#234e52}
+.bwa{background:#fffff0;color:#744210} .bnv{background:var(--nv);color:#fff}
+/* SEARCH */
+.srch{display:flex;align-items:center;gap:8px;background:var(--bg);border:1.5px solid var(--bd);
+  border-radius:var(--r);padding:8px 13px;margin-bottom:16px}
+.srch input{border:none;background:none;outline:none;font-size:13px;flex:1;color:var(--tx)}
+/* ALERTS */
+.al{padding:12px 16px;border-radius:var(--r);font-size:13px;
+  display:flex;align-items:flex-start;gap:10px;margin-bottom:16px;line-height:1.55}
+.alb{background:#ebf8ff;border:1px solid #bee3f8;color:#2c5282}
+.aly{background:#fffff0;border:1px solid #f6e05e;color:#744210}
+.alr{background:#fff5f5;border:1px solid #fed7d7;color:#822727}
+.alg{background:#f0fff4;border:1px solid #9ae6b4;color:#1a4731}
+/* NOTE INPUTS */
+.ni{width:60px;padding:5px 6px;border:1.5px solid var(--bd);border-radius:7px;
+  text-align:center;font-size:12px;font-family:var(--mn);font-weight:600;
+  background:var(--bg2);transition:border .15s;outline:none;color:var(--tx)}
+.ni:focus{border-color:var(--bl3);background:#fff;box-shadow:0 0 0 3px rgba(59,130,246,.1)}
+/* LOGS */
+.lw{display:flex;flex-direction:column;gap:6px;max-height:380px;overflow-y:auto;padding-right:4px}
+.le{padding:9px 13px;border-radius:9px;background:var(--bg2);
+  border-left:3px solid var(--bl);font-size:12px;line-height:1.5}
+.lts{font-family:var(--mn);font-size:10.5px;color:var(--sl3)}
+.lwho{font-weight:700;color:var(--nv)} .ladm{color:var(--ora)}
+/* UPLOAD */
+.uzone{border:2px dashed var(--bd);border-radius:var(--rl);padding:34px;text-align:center;
+  cursor:pointer;transition:all .2s;background:var(--bg2)}
+.uzone:hover{border-color:var(--bl3);background:#ebf8ff}
+.uzic{font-size:38px;margin-bottom:10px}
+.uzone p{font-size:13px;color:var(--sl2)} .uzone small{font-size:11px;color:var(--sl3)}
+/* REHAB */
+.rbc{border:2px solid #f6e05e;background:#fffff0;border-radius:var(--rl);
+  padding:18px 20px;margin-bottom:14px}
+.rbc h4{color:#744210;font-size:14px;font-weight:800;margin-bottom:6px}
+/* PAGE HEADER */
+.ph{margin-bottom:22px}
+.ph h2{font-size:22px;font-weight:900;color:var(--nv);letter-spacing:-.3px}
+.ph p{font-size:13px;color:var(--sl2);margin-top:3px}
+.mty{text-align:center;padding:40px 20px;color:var(--sl3)}
+.mty .ei{font-size:36px;margin-bottom:10px}
+/* VIRTUAL CLASS */
+.vc-card{background:linear-gradient(135deg,var(--nv2),var(--nv3));color:#fff;
+  border-radius:var(--rl);padding:18px 20px;margin-bottom:12px;
+  display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px}
+.vc-card h4{font-size:14px;font-weight:800;margin-bottom:4px}
+.vc-card small{font-size:11px;opacity:.65}
+/* BOLETIN PDF */
+#pdfBox{font-family:'Outfit',sans-serif;max-width:750px;background:#fff;color:#0b1e33}
+.bh{background:linear-gradient(135deg,#0b1e33 0%,#1a3a5c 100%);color:#fff;
+  padding:28px 32px;position:relative;overflow:hidden}
+.bh::after{content:'🏛️';font-size:90px;position:absolute;right:20px;top:50%;
+  transform:translateY(-50%);opacity:.07;line-height:1}
+.bh h1{font-size:19px;font-weight:900;margin-bottom:3px}
+.bh p{font-size:11px;opacity:.6}
+.binf{background:#eef2f7;padding:16px 32px;display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.binf .bi{font-size:12px;line-height:1.6}
+.binf .bi strong{font-weight:700}
+.bbd{padding:18px 32px}
+.bpr{margin-bottom:18px}
+.bpr h3{font-size:13px;font-weight:800;color:#1a3a5c;margin-bottom:8px;
+  border-bottom:2px solid #1a3a5c;padding-bottom:5px;
+  display:flex;justify-content:space-between}
+.btbl{width:100%;border-collapse:collapse;font-size:11.5px}
+.btbl th{background:#1a3a5c;color:#fff;padding:6px 9px;text-align:left;font-weight:700;font-size:11px}
+.btbl td{padding:6px 9px;border-bottom:1px solid #dde4ee}
+.btbl tr:last-child td{border-bottom:none}
+.bsig{display:flex;justify-content:space-around;margin-top:50px;padding:0 32px 32px}
+.bsig .bs{text-align:center}
+.bsig .bs .ln{width:165px;border-top:1px solid #1a3a5c;margin:0 auto 6px}
+.bsig .bs small{font-size:10px;color:#718096}
