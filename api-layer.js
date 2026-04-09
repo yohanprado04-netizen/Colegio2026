@@ -5,6 +5,12 @@
 
 const API_BASE = 'https://colegio2026.onrender.com';
 
+// ─── Helpers de seguridad ────────────────────────────────────────
+// gi() puede no estar disponible si app.js falla al cargar — definimos fallback
+if (typeof gi === 'undefined') {
+  window.gi = (id) => document.getElementById(id);
+}
+
 // ─── Token JWT ───────────────────────────────────────────────────
 const TokenStore = {
   get:    ()    => sessionStorage.getItem('edu_jwt'),
@@ -130,13 +136,25 @@ async function doLogin() {
   if (!u || !p) { show('Ingresa usuario y contraseña.'); return; }
 
   try {
-    const res = await fetch(API_BASE + '/api/auth/login', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ usuario: u, password: p })
-    });
+    let res;
+    try {
+      res = await fetch(API_BASE + '/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ usuario: u, password: p })
+      });
+    } catch (netErr) {
+      show('⚠️ No se pudo conectar al servidor. Verifica tu conexión a internet.');
+      return;
+    }
 
-    const data = await res.json();
+    // 502/503 = servidor caído o iniciando en Render
+    if (res.status === 502 || res.status === 503 || res.status === 504) {
+      show('⚠️ El servidor está iniciando (puede tardar ~30 segundos en Render). Intenta de nuevo en un momento.');
+      return;
+    }
+
+    const data = await res.json().catch(() => ({}));
     if (!res.ok) { show(data.error || 'Credenciales incorrectas.'); return; }
 
     TokenStore.set(data.token);
