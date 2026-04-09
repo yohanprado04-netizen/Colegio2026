@@ -12,12 +12,13 @@ const authMiddleware = async (req, res, next) => {
     const token = header.split(' ')[1];
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-    // Validar que el usuario siga existiendo y no esté bloqueado
     const user = await Usuario.findOne({ id: decoded.id });
     if (!user) return res.status(401).json({ error: 'Usuario no encontrado' });
     if (user.blocked) return res.status(403).json({ error: 'Cuenta bloqueada' });
 
     req.user = user;
+    // Inyectar colegioId para filtrado automático en rutas normales
+    req.colegioId = user.colegioId || null;
     next();
   } catch (err) {
     if (err.name === 'TokenExpiredError') {
@@ -27,7 +28,10 @@ const authMiddleware = async (req, res, next) => {
   }
 };
 
-// Guardia de roles
+// Alias para las rutas de superadmin
+const verifyToken = authMiddleware;
+
+// Guardia de roles (acepta uno o varios)
 const requireRole = (...roles) => (req, res, next) => {
   if (!req.user || !roles.includes(req.user.role)) {
     return res.status(403).json({ error: 'Acceso no autorizado' });
@@ -35,4 +39,11 @@ const requireRole = (...roles) => (req, res, next) => {
   next();
 };
 
-module.exports = { authMiddleware, requireRole };
+// Solo superadmin puede ver datos entre colegios;
+// admin/profe/est ven solo su colegioId
+const scopeFilter = (req) => {
+  if (req.user.role === 'superadmin') return {};
+  return { colegioId: req.user.colegioId };
+};
+
+module.exports = { authMiddleware, verifyToken, requireRole, scopeFilter };

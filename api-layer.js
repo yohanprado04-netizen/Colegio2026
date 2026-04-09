@@ -1,5 +1,4 @@
 
-
 // api-layer.js — Reemplaza localStorage por llamadas a MongoDB
 // Incluir este script ANTES del cierre de </body> en el HTML
 // ============================================================
@@ -41,50 +40,43 @@ async function apiFetch(path, opts = {}) {
 }
 
 // ═══════════════════════════════════════════════════════════════════
-// REEMPLAZAR dbLoad() y dbSave()
+// dbLoad() y dbSave()
 // ═══════════════════════════════════════════════════════════════════
-
-// Sobreescribe la función dbLoad del script original
 async function dbLoad() {
   try {
     const data = await apiFetch('/api/db');
     if (data) {
       DB = data;
-      // Asegurar campos obligatorios
-      DB.mP       = DB.mP       || dfP();
-      DB.mB       = DB.mB       || dfB();
-      DB.pers     = DB.pers     || dfPer();
-      DB.sals     = DB.sals     || [];
-      DB.audit    = DB.audit    || [];
-      DB.blk      = DB.blk      || {};
-      DB.dr       = DB.dr       || { s: '', e: '' };
-      DB.drPer    = DB.drPer    || {};
-      DB.ext      = DB.ext      || { on: false, s: '', e: '' };
-      DB.ups      = DB.ups      || {};
-      DB.asist    = DB.asist    || {};
-      DB.exc      = DB.exc      || [];
-      DB.profs    = DB.profs    || [];
-      DB.vclases  = DB.vclases  || [];
-      DB.recs     = DB.recs     || [];
-      DB.planes   = DB.planes   || [];
-      DB.histRecs = DB.histRecs || [];
+      DB.mP         = DB.mP         || dfP();
+      DB.mB         = DB.mB         || dfB();
+      DB.pers       = DB.pers       || dfPer();
+      DB.sals       = DB.sals       || [];
+      DB.audit      = DB.audit      || [];
+      DB.blk        = DB.blk        || {};
+      DB.dr         = DB.dr         || { s: '', e: '' };
+      DB.drPer      = DB.drPer      || {};
+      DB.ext        = DB.ext        || { on: false, s: '', e: '' };
+      DB.ups        = DB.ups        || {};
+      DB.asist      = DB.asist      || {};
+      DB.exc        = DB.exc        || [];
+      DB.profs      = DB.profs      || [];
+      DB.vclases    = DB.vclases    || [];
+      DB.recs       = DB.recs       || [];
+      DB.planes     = DB.planes     || [];
+      DB.histRecs   = DB.histRecs   || [];
       DB.histPlanes = DB.histPlanes || [];
-      DB.estHist  = DB.estHist  || [];
-      DB.anoActual = DB.anoActual || String(new Date().getFullYear());
+      DB.estHist    = DB.estHist    || [];
+      DB.anoActual  = DB.anoActual  || String(new Date().getFullYear());
       DB.notasPorAno = DB.notasPorAno || {};
       DB.sals.forEach(s => { if (!Array.isArray(s.mats)) s.mats = []; });
     }
   } catch (err) {
     console.error('Error cargando DB:', err);
-    // Fallback: inicializar vacío
     dbInit();
   }
 }
 
-// dbSave: solo guarda config y datos pequeños al backend
-// Las notas, asistencias etc. se guardan con rutas específicas
 function dbSave() {
-  // Guardar config globales en background (no bloqueante)
   _saveConfigBg();
 }
 
@@ -101,11 +93,11 @@ async function _saveConfigBg() {
 }
 
 // ═══════════════════════════════════════════════════════════════════
-// REEMPLAZAR doLogin() — usa /api/auth/login
+// doLogin() — usa /api/auth/login
 // ═══════════════════════════════════════════════════════════════════
 async function doLogin() {
-  const u = gi('liu').value.trim();
-  const p = gi('lip').value.trim();
+  const u   = gi('liu').value.trim();
+  const p   = gi('lip').value.trim();
   const err = gi('lierr');
 
   function show(m) { err.textContent = m; err.style.display = 'block'; }
@@ -121,12 +113,38 @@ async function doLogin() {
     const data = await res.json();
     if (!res.ok) { show(data.error || 'Credenciales incorrectas.'); return; }
 
-    // Guardar token
     TokenStore.set(data.token);
     CU = data.user;
 
-    // Cargar DB completa
-    await dbLoad();
+    if (CU.role === 'superadmin') {
+      // Superadmin: inicializa DB mínimo, no necesita /api/db
+      DB = {
+        admin:      CU,
+        profs:      [],
+        ests:       [],
+        sals:       [],
+        mP:         [],
+        mB:         [],
+        pers:       [],
+        notas:      {},
+        dr:         { s: '', e: '' },
+        drPer:      {},
+        ext:        { on: false, s: '', e: '' },
+        ups:        {},
+        asist:      {},
+        exc:        [],
+        vclases:    [],
+        recs:       [],
+        planes:     [],
+        histRecs:   [],
+        histPlanes: [],
+        audit:      [],
+        blk:        {},
+      };
+    } else {
+      // Admin, profe, estudiante → cargar DB del colegio
+      await dbLoad();
+    }
 
     gi('ls').classList.add('hidden');
     gi('app').classList.remove('hidden');
@@ -139,7 +157,7 @@ async function doLogin() {
 }
 
 // ═══════════════════════════════════════════════════════════════════
-// REEMPLAZAR doLogout()
+// doLogout()
 // ═══════════════════════════════════════════════════════════════════
 function doLogout() {
   clearTimeout(_sessionTimer);
@@ -153,10 +171,10 @@ function doLogout() {
 }
 
 // ═══════════════════════════════════════════════════════════════════
-// REEMPLAZAR saveTri() — guarda nota en MongoDB
+// saveTri() — guarda nota en MongoDB
 // ═══════════════════════════════════════════════════════════════════
 async function saveTri(inp) {
-  if (!validateSession() || !['admin', 'profe'].includes(CU.role)) {
+  if (!validateSession() || !['admin', 'profe', 'superadmin'].includes(CU.role)) {
     sw('error', 'Sin autorización'); return;
   }
   const eid = inp.dataset.eid;
@@ -170,19 +188,16 @@ async function saveTri(inp) {
     return;
   }
 
-  // Actualizar localmente
   syncN(eid);
   const oldDef = def(DB.notas[eid][per][mat]);
   DB.notas[eid][per][mat][f] = v;
 
-  // Actualizar UI inmediatamente
   const nd = def(DB.notas[eid][per][mat]);
   const dc = gi(`dc_${eid}_${encodeURIComponent(mat)}_${encodeURIComponent(per)}`);
   if (dc) dc.innerHTML = `<span class="${scC(nd)}" style="font-size:11px">${nd.toFixed(2)}</span>`;
   const apr = gi('apr_' + eid);
-  if (apr) { const p = pprom(eid, per); apr.innerHTML = `<span class="${scC(p)}">${p.toFixed(2)}</span>`; }
+  if (apr) { const px = pprom(eid, per); apr.innerHTML = `<span class="${scC(px)}">${px.toFixed(2)}</span>`; }
 
-  // Guardar en backend
   try {
     await apiFetch(`/api/notas/${eid}/${encodeURIComponent(per)}/${encodeURIComponent(mat)}`, {
       method: 'PUT',
@@ -197,7 +212,7 @@ async function saveTri(inp) {
 }
 
 // ═══════════════════════════════════════════════════════════════════
-// REEMPLAZAR auditLog() — guarda en MongoDB
+// auditLog() / logAudit() / logAuditAnon()
 // ═══════════════════════════════════════════════════════════════════
 function auditLog(estN, campo, oldV, newV) {
   const entry = {
@@ -230,7 +245,7 @@ function logAuditAnon(usuario, msg) {
 }
 
 // ═══════════════════════════════════════════════════════════════════
-// REEMPLAZAR addEst() — crea estudiante en MongoDB
+// addEst() — crea estudiante en MongoDB
 // ═══════════════════════════════════════════════════════════════════
 async function addEst(ciclo) {
   const n  = gi('nen').value.trim();
@@ -246,7 +261,7 @@ async function addEst(ciclo) {
   const fecha = new Date().toLocaleDateString('es-CO');
 
   try {
-    const newEst = await apiFetch('/api/usuarios', {
+    await apiFetch('/api/usuarios', {
       method: 'POST',
       body: JSON.stringify({ id, nombre: n, ti, usuario: u, password: p, role: 'est', salon: s, blocked: false, registrado: fecha })
     });
@@ -262,7 +277,7 @@ async function addEst(ciclo) {
 }
 
 // ═══════════════════════════════════════════════════════════════════
-// REEMPLAZAR delEst() — elimina estudiante en MongoDB
+// delEst() — elimina estudiante en MongoDB
 // ═══════════════════════════════════════════════════════════════════
 function delEst(eid, ciclo) {
   const e = DB.ests.find(x => x.id === eid);
@@ -271,7 +286,6 @@ function delEst(eid, ciclo) {
       if (!r.isConfirmed) return;
       try {
         await apiFetch(`/api/usuarios/${eid}`, { method: 'DELETE' });
-        // Actualizar historial
         const h = DB.estHist?.find(x => x.id === eid);
         if (h) {
           h.activo = false;
@@ -290,7 +304,7 @@ function delEst(eid, ciclo) {
 }
 
 // ═══════════════════════════════════════════════════════════════════
-// REEMPLAZAR addSal() / delSal()
+// addSal() / delSal()
 // ═══════════════════════════════════════════════════════════════════
 async function addSal() {
   const n = gi('nsn').value.trim().toUpperCase();
@@ -321,7 +335,7 @@ function delSal(n) {
 }
 
 // ═══════════════════════════════════════════════════════════════════
-// REEMPLAZAR saveAst() — guarda asistencia en MongoDB
+// saveAst() — guarda asistencia
 // ═══════════════════════════════════════════════════════════════════
 async function saveAst(key) {
   try {
@@ -337,7 +351,7 @@ async function saveAst(key) {
 }
 
 // ═══════════════════════════════════════════════════════════════════
-// REEMPLAZAR envExcusa()
+// envExcusa()
 // ═══════════════════════════════════════════════════════════════════
 async function envExcusa() {
   if (!excusasOk()) { sw('error', 'Fuera del horario de excusas (18:00–07:00)'); return; }
@@ -358,7 +372,7 @@ async function envExcusa() {
 }
 
 // ═══════════════════════════════════════════════════════════════════
-// REEMPLAZAR addVClase() / delVClase()
+// addVClase() / delVClase()
 // ═══════════════════════════════════════════════════════════════════
 async function addVClase() {
   const s = gi('vcs')?.value, f = gi('vcf')?.value,
@@ -388,7 +402,7 @@ function delVClase(id) {
 }
 
 // ═══════════════════════════════════════════════════════════════════
-// REEMPLAZAR subirTarea()
+// subirTarea()
 // ═══════════════════════════════════════════════════════════════════
 async function subirTarea() {
   const m      = gi('utm')?.value;
@@ -422,13 +436,9 @@ async function subirTarea() {
   reader.readAsDataURL(f);
 }
 
-// ═══════════════════════════════════════════════════════════════════
-// REEMPLAZAR marcarTareaRevisada()
-// ═══════════════════════════════════════════════════════════════════
 async function marcarTareaRevisada(upId) {
   try {
     await apiFetch(`/api/uploads/${upId}/revisar`, { method: 'PUT', body: JSON.stringify({}) });
-    // Actualizar local
     Object.values(DB.ups || {}).forEach(lista => {
       lista.forEach(u => { if (u.id === upId) { u.revisado = true; u.revisadoTs = new Date().toLocaleDateString('es-CO'); } });
     });
@@ -442,7 +452,7 @@ async function eliminarTallerProf(upId) {
   Object.values(DB.ups || {}).forEach(lista => { const found = lista.find(x => x.id === upId); if (found) u = found; });
   if (!u) { sw('error', 'Taller no encontrado'); return; }
   if (!u.revisado) {
-    logAudit('Intento de eliminar taller sin revisar', `Profesor: ${CU.nombre} | Taller: ${u.nombre} | Estudiante: ${u.estNombre} | Materia: ${u.materia}`);
+    logAudit('Intento de eliminar taller sin revisar', `Profesor: ${CU.nombre} | Taller: ${u.nombre} | Est: ${u.estNombre} | Materia: ${u.materia}`);
     sw('warning', 'No puedes eliminar este taller sin haberlo revisado primero.');
     return;
   }
@@ -476,7 +486,7 @@ async function eliminarTallerEst(upId) {
 }
 
 // ═══════════════════════════════════════════════════════════════════
-// REEMPLAZAR subirRecPlan() — respuesta de recuperación
+// subirRecPlan() — respuesta de recuperación
 // ═══════════════════════════════════════════════════════════════════
 async function subirRecPlan(planId, materia, profId) {
   const key  = planId.replace(/[^a-z0-9]/gi, '_');
@@ -533,7 +543,7 @@ async function eliminarRecEst(recId) {
 }
 
 // ═══════════════════════════════════════════════════════════════════
-// REEMPLAZAR saveExt() — activa/cierra periodo extraordinario
+// saveExt()
 // ═══════════════════════════════════════════════════════════════════
 async function saveExt() {
   const wasOn = DB.ext.on;
@@ -558,19 +568,18 @@ async function archivarYLimpiarRecuperacion() {
       apiFetch('/api/recuperaciones/archivar', { method: 'POST', body: JSON.stringify({ periodoLabel, archivedAt }) }),
       apiFetch('/api/planes/archivar', { method: 'POST', body: JSON.stringify({ periodoLabel, archivedAt }) }),
     ]);
-    // Actualizar local
     (DB.recs || []).forEach(r => { r.archivado = true; r._periodo = periodoLabel; r._archivedAt = archivedAt; });
     DB.histRecs = [...(DB.histRecs || []), ...(DB.recs || [])];
     DB.recs = [];
     (DB.planes || []).forEach(p => { p.archivado = true; p._periodo = periodoLabel; p._archivedAt = archivedAt; });
     DB.histPlanes = [...(DB.histPlanes || []), ...(DB.planes || [])];
     DB.planes = [];
-    sw('success', 'Periodo Extraordinario cerrado', `Historial archivado.`, 3000);
+    sw('success', 'Periodo Extraordinario cerrado', 'Historial archivado.', 3000);
   } catch (e) { sw('error', 'Error archivando: ' + e.message); }
 }
 
 // ═══════════════════════════════════════════════════════════════════
-// REEMPLAZAR clearAudit()
+// clearAudit()
 // ═══════════════════════════════════════════════════════════════════
 function clearAudit() {
   Swal.fire({
@@ -590,7 +599,7 @@ function clearAudit() {
 }
 
 // ═══════════════════════════════════════════════════════════════════
-// REEMPLAZAR unblk()
+// unblk()
 // ═══════════════════════════════════════════════════════════════════
 async function unblk(u) {
   try {
@@ -602,7 +611,7 @@ async function unblk(u) {
 }
 
 // ═══════════════════════════════════════════════════════════════════
-// REEMPLAZAR saveDisc() — disciplina del estudiante
+// saveDisc()
 // ═══════════════════════════════════════════════════════════════════
 async function saveDisc(eid, v) {
   if (!validateSession() || !['admin', 'profe'].includes(CU.role)) return;
@@ -616,7 +625,7 @@ async function saveDisc(eid, v) {
 }
 
 // ═══════════════════════════════════════════════════════════════════
-// REEMPLAZAR saveDR() / saveDRPer()
+// saveDR() / saveDRPer()
 // ═══════════════════════════════════════════════════════════════════
 async function saveDR() {
   DB.dr = { s: gi('drs').value, e: gi('dre').value };
@@ -636,8 +645,8 @@ async function saveDR() {
 
 async function saveDRPer(key, per) {
   if (!DB.drPer) DB.drPer = {};
-  const s     = gi('dps_' + key)?.value || '';
-  const e     = gi('dpe_' + key)?.value || '';
+  const s      = gi('dps_' + key)?.value || '';
+  const e      = gi('dpe_' + key)?.value || '';
   const extPer = gi('dpex_' + key)?.value || '';
   DB.drPer[per] = { s, e, extPer };
   try {
@@ -647,7 +656,7 @@ async function saveDRPer(key, per) {
 }
 
 // ═══════════════════════════════════════════════════════════════════
-// REEMPLAZAR saveAno()
+// saveAno()
 // ═══════════════════════════════════════════════════════════════════
 async function saveAno() {
   const v = parseInt(gi('anoActualInp')?.value || '');
@@ -675,7 +684,6 @@ async function saveAno() {
     DB.anoActual = nuevo;
     try {
       await apiFetch('/api/config/anoActual', { method: 'PUT', body: JSON.stringify({ value: nuevo }) });
-      // Recargar DB para el nuevo año
       await dbLoad();
       goto('afec');
       sw('success', `Año lectivo ${nuevo} activado`, `Los datos del ${actual} quedan en el historial.`, 2500);
@@ -684,24 +692,14 @@ async function saveAno() {
 }
 
 // ═══════════════════════════════════════════════════════════════════
-// REEMPLAZAR openAddPrf() — agregar profesor
+// addPrf() — agregar profesor
 // ═══════════════════════════════════════════════════════════════════
 async function addPrf(data) {
   try {
-    // Garantizar que el id esté presente antes de enviar
-    if (!data.id) {
-      data.id = 'prf_' + Date.now();
-    }
+    if (!data.id) data.id = 'prf_' + Date.now();
     const newProf = await apiFetch('/api/usuarios', {
       method: 'POST',
-      body: JSON.stringify({
-        ...data,
-        role: 'profe',
-        blocked: false,
-        materias: [],
-        materia: '',
-        salonMaterias: {}
-      })
+      body: JSON.stringify({ ...data, role: 'profe', blocked: false, materias: [], materia: '', salonMaterias: {} })
     });
     DB.profs.push({ ...data, role: 'profe', blocked: false, materias: [], materia: '', salonMaterias: {} });
     return newProf;
@@ -709,7 +707,7 @@ async function addPrf(data) {
 }
 
 // ═══════════════════════════════════════════════════════════════════
-// REEMPLAZAR editEst()
+// editEst()
 // ═══════════════════════════════════════════════════════════════════
 function editEst(eid, ciclo) {
   const e = DB.ests.find(x => x.id === eid);
@@ -744,7 +742,7 @@ function editEst(eid, ciclo) {
 }
 
 // ═══════════════════════════════════════════════════════════════════
-// REEMPLAZAR editSalMats() — guardar materias personalizadas del salón
+// _saveSalMats() / _savePlan()
 // ═══════════════════════════════════════════════════════════════════
 async function _saveSalMats(sname, chosen) {
   const sal = DB.sals.find(s => s.nombre === sname);
@@ -757,9 +755,6 @@ async function _saveSalMats(sname, chosen) {
   } catch (e) { console.warn('saveSalMats:', e); }
 }
 
-// ═══════════════════════════════════════════════════════════════════
-// PLANES DE RECUPERACIÓN — enviar al backend
-// ═══════════════════════════════════════════════════════════════════
 async function _savePlan(planData) {
   const saved = await apiFetch('/api/planes', { method: 'POST', body: JSON.stringify(planData) });
   if (!DB.planes) DB.planes = [];
@@ -768,14 +763,14 @@ async function _savePlan(planData) {
 }
 
 // ═══════════════════════════════════════════════════════════════════
-// RESTAURAR ESTUDIANTE
+// restaurarEst()
 // ═══════════════════════════════════════════════════════════════════
 async function restaurarEst(eid) {
   const h = (DB.estHist || []).find(x => x.id === eid);
   if (!h) { sw('error', 'No se encontró el registro'); return; }
 
   Swal.fire({
-    title: `♻️ Restaurar estudiante`, icon: 'question', width: 480,
+    title: '♻️ Restaurar estudiante', icon: 'question', width: 480,
     html: `<div style="text-align:left;font-family:var(--fn)">
       <div style="background:#eef2f7;padding:12px 16px;border-radius:8px;margin-bottom:14px">
         <div style="font-size:13px;line-height:1.9"><strong>Nombre:</strong> ${esc(h.nombre)}</div>
@@ -792,7 +787,7 @@ async function restaurarEst(eid) {
     if (conflict) usuario = usuario + '_r' + Date.now().toString().slice(-4);
 
     try {
-      const restored = await apiFetch('/api/usuarios', {
+      await apiFetch('/api/usuarios', {
         method: 'POST',
         body: JSON.stringify({
           id: h.id, nombre: h.nombre, ti: h.ti || '', usuario,
@@ -801,7 +796,6 @@ async function restaurarEst(eid) {
         })
       });
       DB.ests.push({ id: h.id, nombre: h.nombre, ti: h.ti || '', usuario, role: 'est', salon: h.snapSalon || h.salon || '', blocked: false });
-      // Restaurar notas desde snapshot
       if (h.snapNotas) DB.notas[h.id] = JSON.parse(JSON.stringify(h.snapNotas));
       h.activo = true; h.usuario = usuario; h.restaurado = new Date().toLocaleDateString('es-CO');
       delete h.eliminado;
@@ -813,46 +807,93 @@ async function restaurarEst(eid) {
 }
 
 // ═══════════════════════════════════════════════════════════════════
-// VALIDAR SESIÓN contra el servidor (no solo local)
+// validateSession()
 // ═══════════════════════════════════════════════════════════════════
 function validateSession() {
   if (!CU) return false;
   if (!TokenStore.get()) { doLogout(); return false; }
-  // La validación real ocurre en cada llamada a la API (el middleware JWT lo verifica)
   return true;
 }
 
 // ═══════════════════════════════════════════════════════════════════
-// INICIALIZACIÓN — reemplaza el IIFE al final del HTML original
+// INICIALIZACIÓN — restaurar sesión al recargar la página
 // ═══════════════════════════════════════════════════════════════════
 let _dbReady = false;
 document.addEventListener('DOMContentLoaded', async () => {
   const btn = document.querySelector('.bl');
   if (btn) { btn.textContent = 'Conectando…'; btn.disabled = true; }
 
-  // Verificar si hay sesión activa (token guardado)
   const savedToken = TokenStore.get();
   if (savedToken) {
     try {
-      const data = await apiFetch('/api/db');
-      if (data) {
-        DB = data;
-        // Reconstruir CU desde el token
-        const payload = JSON.parse(atob(savedToken.split('.')[1]));
-        const usuario = DB.profs?.find(p => p.id === payload.id)
-          || DB.ests?.find(e => e.id === payload.id)
-          || (DB.admin?.id === payload.id ? DB.admin : null);
-        if (usuario) {
-          CU = usuario;
-          gi('ls').classList.add('hidden');
-          gi('app').classList.remove('hidden');
-          resetSessionTimer();
-          bootApp();
-          _dbReady = true;
-          return;
+      const payload = JSON.parse(atob(savedToken.split('.')[1]));
+
+      if (payload.role === 'superadmin') {
+        // Superadmin: reconstruir CU desde el token, sin llamar a /api/db
+        CU = {
+          id:            payload.id,
+          nombre:        payload.nombre,
+          usuario:       payload.id,
+          role:          'superadmin',
+          colegioId:     null,
+          colegioNombre: '',
+        };
+        DB = {
+          admin: CU, profs: [], ests: [], sals: [], mP: [], mB: [], pers: [],
+          notas: {}, dr: { s:'', e:'' }, drPer: {}, ext: { on:false, s:'', e:'' },
+          ups: {}, asist: {}, exc: [], vclases: [], recs: [], planes: [],
+          histRecs: [], histPlanes: [], audit: [], blk: {},
+        };
+        gi('ls').classList.add('hidden');
+        gi('app').classList.remove('hidden');
+        resetSessionTimer();
+        bootApp();
+      } else {
+        // Roles normales: cargar DB del colegio
+        const data = await apiFetch('/api/db');
+        if (data) {
+          DB = data;
+          DB.mP         = DB.mP         || dfP();
+          DB.mB         = DB.mB         || dfB();
+          DB.pers       = DB.pers       || dfPer();
+          DB.sals       = DB.sals       || [];
+          DB.audit      = DB.audit      || [];
+          DB.blk        = DB.blk        || {};
+          DB.dr         = DB.dr         || { s: '', e: '' };
+          DB.drPer      = DB.drPer      || {};
+          DB.ext        = DB.ext        || { on: false, s: '', e: '' };
+          DB.ups        = DB.ups        || {};
+          DB.asist      = DB.asist      || {};
+          DB.exc        = DB.exc        || [];
+          DB.profs      = DB.profs      || [];
+          DB.vclases    = DB.vclases    || [];
+          DB.recs       = DB.recs       || [];
+          DB.planes     = DB.planes     || [];
+          DB.histRecs   = DB.histRecs   || [];
+          DB.histPlanes = DB.histPlanes || [];
+          DB.estHist    = DB.estHist    || [];
+          DB.anoActual  = DB.anoActual  || String(new Date().getFullYear());
+          DB.notasPorAno = DB.notasPorAno || {};
+          DB.sals.forEach(s => { if (!Array.isArray(s.mats)) s.mats = []; });
+
+          // Reconstruir CU desde DB
+          const usuario = DB.profs?.find(p => p.id === payload.id)
+            || DB.ests?.find(e => e.id === payload.id)
+            || (DB.admin?.id === payload.id ? DB.admin : null);
+
+          if (usuario) {
+            CU = { ...usuario, colegioId: usuario.colegioId || payload.colegioId || '' };
+            gi('ls').classList.add('hidden');
+            gi('app').classList.remove('hidden');
+            resetSessionTimer();
+            bootApp();
+          } else {
+            TokenStore.clear();
+          }
         }
       }
     } catch (e) {
+      console.warn('Restaurar sesión falló:', e);
       TokenStore.clear();
     }
   }

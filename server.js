@@ -1,11 +1,11 @@
 // server.js — Servidor principal EduSistema Pro
 require('dotenv').config();
-const express  = require('express');
-const mongoose = require('mongoose');
-const cors     = require('cors');
-const helmet   = require('helmet');
+const express   = require('express');
+const mongoose  = require('mongoose');
+const cors      = require('cors');
+const helmet    = require('helmet');
 const rateLimit = require('express-rate-limit');
-const path     = require('path');
+const path      = require('path');
 const connectDB = require('./config/db');
 
 const app = express();
@@ -57,16 +57,17 @@ app.use(express.json({ limit: '25mb' }));
 app.use(express.urlencoded({ extended: true, limit: '25mb' }));
 
 // ─── Rutas API ───────────────────────────────────────────────────
-app.use('/api/auth', loginLimiter, require('./routes/auth'));
-app.use('/api/db',                 require('./routes/db'));
-app.use('/api',                    require('./routes/api'));
+app.use('/api/auth',       loginLimiter, require('./routes/auth'));
+app.use('/api/superadmin',               require('./routes/superadmin'));
+app.use('/api/db',                       require('./routes/db'));
+app.use('/api',                          require('./routes/api'));
 
 // ─── Health check ────────────────────────────────────────────────
 app.get('/health', (req, res) => {
   res.json({
-    status: 'OK',
-    db: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected',
-    uptime: Math.floor(process.uptime()) + 's',
+    status:    'OK',
+    db:        mongoose.connection.readyState === 1 ? 'connected' : 'disconnected',
+    uptime:    Math.floor(process.uptime()) + 's',
     timestamp: new Date().toISOString(),
   });
 });
@@ -90,5 +91,6 @@ const PORT = process.env.PORT || 3001;
   app.listen(PORT, () => {
     console.log(`\n🚀 Servidor corriendo en puerto ${PORT}`);
     console.log(`📡 Health check: /health`);
+    console.log(`🔐 Super Admin: POST /api/auth/login (usuario: superadmin)`);
   });
 })();

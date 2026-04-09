@@ -2,7 +2,7 @@
 const router = require('express').Router();
 const bcrypt = require('bcryptjs');
 const jwt    = require('jsonwebtoken');
-const crypto = require('crypto'); // ← Node.js nativo, NO browser API
+const crypto = require('crypto');
 const { Usuario, Bloqueo, Auditoria } = require('../models');
 
 const MAX_INTENTOS = 5;
@@ -34,7 +34,8 @@ router.post('/login', async (req, res) => {
 
     if (!ok && !sha256legacy) {
       failedAttempts[usuario] = (failedAttempts[usuario] || 0) + 1;
-      if (failedAttempts[usuario] >= MAX_INTENTOS && user.role !== 'admin') {
+      // superadmin y admin nunca se bloquean automáticamente
+      if (failedAttempts[usuario] >= MAX_INTENTOS && !['admin','superadmin'].includes(user.role)) {
         await Bloqueo.findOneAndUpdate(
           { usuario },
           { on: true, ts: new Date().toISOString() },
@@ -42,7 +43,8 @@ router.post('/login', async (req, res) => {
         );
         await Auditoria.create({
           ts: new Date().toISOString(), uid: '?', who: usuario,
-          role: '?', accion: `Cuenta bloqueada tras ${MAX_INTENTOS} intentos fallidos`, extra: ''
+          role: '?', accion: `Cuenta bloqueada tras ${MAX_INTENTOS} intentos fallidos`, extra: '',
+          colegioId: user.colegioId || ''
         });
         return res.status(403).json({ error: 'Cuenta bloqueada tras 5 intentos.' });
       }
@@ -58,7 +60,13 @@ router.post('/login', async (req, res) => {
 
     failedAttempts[usuario] = 0;
 
-    const payload = { id: user.id, role: user.role, nombre: user.nombre };
+    const payload = {
+      id:           user.id,
+      role:         user.role,
+      nombre:       user.nombre,
+      colegioId:    user.colegioId   || null,
+      colegioNombre:user.colegioNombre || ''
+    };
     const token = jwt.sign(payload, process.env.JWT_SECRET, {
       expiresIn: process.env.JWT_EXPIRES_IN || '20m'
     });
@@ -78,7 +86,6 @@ router.post('/logout', async (req, res) => {
   res.json({ ok: true });
 });
 
-// SHA-256 con crypto de Node.js — NO usa crypto.subtle (eso es solo del browser)
 function sha256Match(raw, stored) {
   try {
     const SALT = 'EduSistema_v5_2026';

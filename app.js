@@ -398,15 +398,17 @@ function resetSessionTimer(){
 /* Escuchar cualquier interacción del usuario */
 ['click','keydown','mousemove','touchstart'].forEach(ev=>
   document.addEventListener(ev,()=>{if(CU)resetSessionTimer();},{passive:true}));
-
-/* ---- Guardas de rol ---- */
+/* ── 1. AGREGAR EN ROLE_MAP (reemplaza la línea de ROLE_MAP completa) ── */
 const ROLE_MAP={
+  superadmin:new Set(['sadash','sacolegios','saestadisticas','saauditoria','samantenimiento','saplan']),
   admin:new Set(['dash','asal','apri','abac','aprf','amat','anot','areh','afec','ablk','aaud','aexp','aexc','avcl','ahist']),
   profe:new Set(['ph','pnot','past','pvir','ptar','prec','phist']),
   est:new Set(['eb','east','etare','eexc','eprof','evir','ereh','ehist'])
 };
+/* ── 2. REEMPLAZA canAccess ── */
 function canAccess(pid){
   if(!CU) return false;
+  if(CU.role==='superadmin') return ROLE_MAP.superadmin.has(pid);
   const role=CU.role==='admin'?'admin':CU.role==='profe'?'profe':'est';
   return ROLE_MAP[role]?.has(pid)??false;
 }
@@ -440,6 +442,9 @@ function logAuditAnon(usuario,msg){ /* implementado en api-layer.js */ }
    BOOT & NAVIGATION
 ============================================================ */
 const PL={
+  sadash:'Panel Global', sacolegios:'Colegios & Admins', saplan:'Plan de Estudios',
+saestadisticas:'Estadísticas Globales', saauditoria:'Auditoría Global',
+samantenimiento:'Mantenimiento',
   dash:'Panel General',asal:'Salones & Grados',apri:'Primaria (1°-5°)',abac:'Bachillerato (6°-11°)',
   aprf:'Profesores',amat:'Materias & Periodos',anot:'Gestión de Notas',areh:'Recuperaciones',
   afec:'Control de Fechas',ablk:'Usuarios Bloqueados',aaud:'Auditoría',aexp:'Exportar',ahist:'Historial Estudiantes',
@@ -457,7 +462,10 @@ function bootApp(){
   if(notasOk()){st.className='tbst tbop';st.textContent='✓ Notas Abiertas';}
   else{st.className='tbst tbcl';st.textContent='✗ Notas Cerradas';}
   gi('sbUser').innerHTML=`<div class="sbav">${(CU.nombre||'?')[0].toUpperCase()}</div>
-    <div><div class="sbun">${CU.nombre}</div><div class="sbur">${CU.role}</div></div>`;
+  <div>
+    <div class="sbun">${CU.nombre}</div>
+    <div class="sbur">${CU.role==='superadmin'?'Super Admin':(CU.colegioNombre?CU.colegioNombre+' · '+CU.role:CU.role)}</div>
+  </div>`;
   buildNav();
   goto(defPg());
   /* Notify student about extraordinary period changes */
@@ -560,9 +568,19 @@ function notifyExtPeriod(){
   }
 }
 function defPg(){
+  if(CU.role==='superadmin') return 'sadash';
   return CU.role==='admin'?'dash':CU.role==='profe'?'ph':'eb';
 }
 function navItems(){
+  if(CU.role==='superadmin') return[
+    {s:'Super Admin'},{id:'sadash',ic:'🌐',lb:'Panel Global'},
+    {id:'sacolegios',ic:'🏫',lb:'Colegios & Admins'},
+    {s:'Académico'},{id:'saplan',ic:'📖',lb:'Plan de Estudios'},
+    {s:'Supervisión'},{id:'saestadisticas',ic:'📊',lb:'Estadísticas'},
+    {id:'saauditoria',ic:'🔍',lb:'Auditoría Global'},
+    {s:'Sistema'},{id:'samantenimiento',ic:'⚙️',lb:'Mantenimiento'},
+  ];
+
   if(CU.role==='admin') return[
     {s:'Principal'},{id:'dash',ic:'📊',lb:'Panel General'},
     {s:'Académico'},{id:'asal',ic:'🏫',lb:'Salones & Grados'},
@@ -624,13 +642,17 @@ function goto(pid){
   initPg(pid);
 }
 function renderPg(pid){
+
   const map={
     dash:pgDash,asal:pgASal,apri:()=>pgAEst('primaria'),abac:()=>pgAEst('bachillerato'),
     aprf:pgAPrf,amat:pgAMat,anot:pgANot,areh:pgAReh,afec:pgAFec,
     ablk:pgABlk,aaud:pgAAud,aexp:pgAExp,aexc:pgAExc,avcl:pgAVcl,ahist:pgAHist,
     ph:pgPH,pnot:pgPNot,past:pgPAst,pvir:pgPVir,ptar:pgPTar,prec:pgPRec,phist:pgPHist,
     eb:pgEB,east:pgEAst,etare:pgETare,eexc:pgEExc,eprof:pgEProf,
-    evir:pgEVir,ereh:pgEReh,ehist:pgEHist
+    evir:pgEVir,ereh:pgEReh,ehist:pgEHist, sadash:pgSADash, sacolegios:pgSAColegios, saplan:pgSAPlan,
+saestadisticas:pgSAEstadisticas, saauditoria:pgSAAuditoria,
+samantenimiento:pgSAMantenimiento,
+    
   };
   return(map[pid]||(() =>'<div class="card"><p>No disponible.</p></div>'))();
 }
@@ -640,9 +662,12 @@ function initPg(pid){
     aprf:initAPrf,amat:initAMat,anot:initANot,areh:initAReh,aexc:initAExc,avcl:initAVcl,
     past:initPAst,eb:initEB,
     ph:()=>{ setTimeout(renderPExcR,0); }
+    ,sadash:initSADash, sacolegios:initSAColegios, saplan:initSAPlan,
+saauditoria:initSAAuditoria, samantenimiento:initSAMantenimiento,
   };
   if(map[pid]) map[pid]();
 }
+
 
 /* ============================================================
    DASHBOARD
@@ -3524,3 +3549,398 @@ function dlBoletin(estId,perFilter,anno,snapData){
 document.addEventListener('keydown',ev=>{
   if(ev.key==='Enter'&&!gi('ls').classList.contains('hidden')) doLogin();
 });
+function pgSADash(){
+  return`<div class="card" id="saDashCard">
+    <h2>🌐 Panel Global — Super Admin</h2>
+    <p style="color:#888;margin-bottom:1rem">Bienvenido, <strong>${CU.nombre}</strong>. Desde aquí supervisas todas las instituciones.</p>
+    <div id="saStatsGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:1rem">
+      <div class="card" style="text-align:center"><div style="font-size:2rem">⏳</div><p>Cargando…</p></div>
+    </div>
+    <hr style="margin:1.5rem 0">
+    <h3 style="margin-bottom:.75rem">Instituciones activas</h3>
+    <div id="saColegiosList"></div>
+  </div>`;
+}
+async function initSADash(){
+  try{
+    const stats=await apiFetch('/superadmin/stats');
+    const grid=gi('saStatsGrid');
+    if(!grid) return;
+    const totalColegios=stats.length;
+    const totalEst=stats.reduce((a,s)=>a+s.totalEst,0);
+    const totalProfs=stats.reduce((a,s)=>a+s.totalProfs,0);
+    const promGlobal=stats.length?+(stats.reduce((a,s)=>a+s.promNotas,0)/stats.length).toFixed(2):0;
+    grid.innerHTML=[
+      {ic:'🏫',lb:'Colegios',val:totalColegios},
+      {ic:'👨‍🎓',lb:'Estudiantes',val:totalEst},
+      {ic:'👩‍🏫',lb:'Profesores',val:totalProfs},
+      {ic:'📊',lb:'Prom. Notas',val:promGlobal},
+    ].map(s=>`<div class="card" style="text-align:center">
+      <div style="font-size:2rem">${s.ic}</div>
+      <div style="font-size:1.6rem;font-weight:700">${s.val}</div>
+      <div style="color:#666;font-size:.85rem">${s.lb}</div>
+    </div>`).join('');
+    const list=gi('saColegiosList');
+    if(list) list.innerHTML=`<table class="tbl"><thead><tr>
+      <th>Colegio</th><th>Estudiantes</th><th>Profesores</th><th>Prom. Notas</th><th>Estado</th>
+    </tr></thead><tbody>${stats.map(s=>`<tr>
+      <td><strong>${s.colegioNombre}</strong></td>
+      <td>${s.totalEst}</td><td>${s.totalProfs}</td><td>${s.promNotas}</td>
+      <td><span class="bdg ${s.activo?'bgr':'bred'}">${s.activo?'Activo':'Inactivo'}</span></td>
+    </tr>`).join('')}</tbody></table>`;
+  }catch(e){sw('error','Error al cargar estadísticas: '+e.message);}
+}
+
+/* ─── COLEGIOS & ADMINS ─────────────────────────────────── */
+function pgSAColegios(){
+  return`<div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem">
+      <h2>🏫 Colegios & Admins</h2>
+      <button class="btn" onclick="modalNuevoColegio()">＋ Nuevo Colegio</button>
+    </div>
+    <input id="saColSearch" class="inp" style="max-width:280px;margin-bottom:1rem" placeholder="🔍 Buscar colegio…" oninput="filtrarColegios()">
+    <div id="saColegiosTable">Cargando…</div>
+  </div>`;
+}
+async function initSAColegios(){
+  window._saColegios=await apiFetch('/superadmin/colegios');
+  renderSAColegiosTable(window._saColegios);
+}
+function filtrarColegios(){
+  const q=(gi('saColSearch')?.value||'').toLowerCase();
+  const lista=(window._saColegios||[]).filter(c=>c.nombre.toLowerCase().includes(q));
+  renderSAColegiosTable(lista);
+}
+function renderSAColegiosTable(lista){
+  const el=gi('saColegiosTable');
+  if(!el) return;
+  if(!lista.length){el.innerHTML='<p style="color:#999">No hay colegios.</p>';return;}
+  el.innerHTML=`<table class="tbl"><thead><tr>
+    <th>Nombre</th><th>Código</th><th>Admins</th><th>Estud.</th><th>Profs.</th><th>Estado</th><th>Acciones</th>
+  </tr></thead><tbody>${lista.map(c=>`<tr>
+    <td><strong>${c.nombre}</strong></td>
+    <td>${c.codigo||'—'}</td>
+    <td>${c.admins||0}</td><td>${c.ests||0}</td><td>${c.profs||0}</td>
+    <td><span class="bdg ${c.activo?'bgr':'bred'}">${c.activo?'Activo':'Inactivo'}</span></td>
+    <td style="display:flex;gap:.4rem;flex-wrap:wrap">
+      <button class="btn bsm" onclick="modalEditColegio('${c.id}')">✏️ Editar</button>
+      <button class="btn bsm" onclick="modalAdmins('${c.id}','${c.nombre.replace(/'/g,"\\'")}')">👤 Admins</button>
+      <button class="btn bsm" onclick="toggleColegio('${c.id}',${!c.activo})">${c.activo?'🔒 Desactivar':'🔓 Activar'}</button>
+    </td>
+  </tr>`).join('')}</tbody></table>`;
+}
+async function toggleColegio(id,activo){
+  const conf=await Swal.fire({title:`¿${activo?'Activar':'Desactivar'} colegio?`,icon:'question',showCancelButton:true,confirmButtonText:'Sí'});
+  if(!conf.isConfirmed) return;
+  await apiFetch(`/superadmin/colegios/${id}`,'PUT',{activo});
+  sw('success','Actualizado');
+  initSAColegios();
+}
+async function modalNuevoColegio(){
+  const {value:f}=await Swal.fire({
+    title:'Nuevo Colegio + Admin',
+    html:`
+      <input id="snNombre"  class="swal2-input" placeholder="Nombre del colegio *">
+      <input id="snCodigo"  class="swal2-input" placeholder="Código (opcional)">
+      <input id="snDir"     class="swal2-input" placeholder="Dirección">
+      <hr style="margin:.5rem 0">
+      <input id="snANombre" class="swal2-input" placeholder="Nombre del Admin *">
+      <input id="snAUser"   class="swal2-input" placeholder="Usuario Admin *">
+      <input id="snAPwd"    class="swal2-input" type="password" placeholder="Contraseña Admin *">
+    `,
+    focusConfirm:false,
+    showCancelButton:true,
+    preConfirm:()=>({
+      nombre:gi('snNombre')?.value.trim(),
+      codigo:gi('snCodigo')?.value.trim(),
+      direccion:gi('snDir')?.value.trim(),
+      adminNombre:gi('snANombre')?.value.trim(),
+      adminUsuario:gi('snAUser')?.value.trim(),
+      adminPassword:gi('snAPwd')?.value,
+    })
+  });
+  if(!f) return;
+  if(!f.nombre||!f.adminNombre||!f.adminUsuario||!f.adminPassword)
+    return sw('warning','Completa todos los campos obligatorios (*)');
+  await apiFetch('/superadmin/colegios','POST',f);
+  sw('success',`Colegio "${f.nombre}" creado`);
+  initSAColegios();
+}
+async function modalEditColegio(id){
+  const col=(window._saColegios||[]).find(c=>c.id===id);
+  if(!col) return;
+  const {value:f}=await Swal.fire({
+    title:'Editar Colegio',
+    html:`
+      <input id="enNombre"  class="swal2-input" value="${col.nombre}"       placeholder="Nombre *">
+      <input id="enCodigo"  class="swal2-input" value="${col.codigo||''}"   placeholder="Código">
+      <input id="enDir"     class="swal2-input" value="${col.direccion||''}"placeholder="Dirección">
+      <input id="enTel"     class="swal2-input" value="${col.telefono||''}" placeholder="Teléfono">
+      <input id="enSedes"   class="swal2-input" value="${(col.sedes||[]).join(', ')}" placeholder="Sedes (separadas por coma)">
+      <input id="enJornadas"class="swal2-input" value="${(col.jornadas||[]).join(', ')}" placeholder="Jornadas (separadas por coma)">
+    `,
+    focusConfirm:false,showCancelButton:true,
+    preConfirm:()=>({
+      nombre:   gi('enNombre')?.value.trim()||col.nombre,
+      codigo:   gi('enCodigo')?.value.trim(),
+      direccion:gi('enDir')?.value.trim(),
+      telefono: gi('enTel')?.value.trim(),
+      sedes:    gi('enSedes')?.value.split(',').map(s=>s.trim()).filter(Boolean),
+      jornadas: gi('enJornadas')?.value.split(',').map(s=>s.trim()).filter(Boolean),
+    })
+  });
+  if(!f) return;
+  await apiFetch(`/superadmin/colegios/${id}`,'PUT',f);
+  sw('success','Colegio actualizado');
+  initSAColegios();
+}
+async function modalAdmins(colegioId,colegioNombre){
+  const admins=await apiFetch(`/superadmin/admins?colegioId=${colegioId}`);
+  const lista=admins.map(a=>`<tr>
+    <td>${a.nombre}</td><td>${a.usuario}</td>
+    <td><span class="bdg ${a.blocked?'bred':'bgr'}">${a.blocked?'Bloqueado':'Activo'}</span></td>
+    <td><button class="btn bsm" onclick="editAdmin('${a.id}')">✏️</button>
+        <button class="btn bsm" onclick="toggleAdmin('${a.id}',${!a.blocked})">${a.blocked?'🔓':'🔒'}</button></td>
+  </tr>`).join('');
+  Swal.fire({
+    title:`Admins — ${colegioNombre}`,
+    html:`<table class="tbl"><thead><tr><th>Nombre</th><th>Usuario</th><th>Estado</th><th>Acc.</th></tr></thead>
+      <tbody>${lista||'<tr><td colspan="4">Sin admins</td></tr>'}</tbody></table>
+      <hr style="margin:.75rem 0">
+      <button class="btn" onclick="modalNuevoAdmin('${colegioId}','${colegioNombre.replace(/'/g,"\\'")}')">＋ Nuevo Admin</button>`,
+    width:620,showConfirmButton:false,showCloseButton:true
+  });
+}
+async function modalNuevoAdmin(colegioId,colegioNombre){
+  Swal.close();
+  const {value:f}=await Swal.fire({
+    title:`Nuevo Admin — ${colegioNombre}`,
+    html:`<input id="nanom" class="swal2-input" placeholder="Nombre *">
+          <input id="nausr" class="swal2-input" placeholder="Usuario *">
+          <input id="napwd" class="swal2-input" type="password" placeholder="Contraseña *">`,
+    focusConfirm:false,showCancelButton:true,
+    preConfirm:()=>({nombre:gi('nanom')?.value.trim(),usuario:gi('nausr')?.value.trim(),password:gi('napwd')?.value,colegioId})
+  });
+  if(!f||!f.nombre||!f.usuario||!f.password) return;
+  await apiFetch('/superadmin/admins','POST',f);
+  sw('success','Admin creado');
+}
+async function editAdmin(id){
+  const {value:f}=await Swal.fire({
+    title:'Editar Admin',
+    html:`<input id="eaNom" class="swal2-input" placeholder="Nuevo nombre">
+          <input id="eaPwd" class="swal2-input" type="password" placeholder="Nueva contraseña (dejar vacío = no cambiar)">`,
+    focusConfirm:false,showCancelButton:true,
+    preConfirm:()=>{const o={};const n=gi('eaNom')?.value.trim();const p=gi('eaPwd')?.value;if(n)o.nombre=n;if(p)o.password=p;return o;}
+  });
+  if(!f||!Object.keys(f).length) return;
+  await apiFetch(`/superadmin/admins/${id}`,'PUT',f);
+  sw('success','Admin actualizado');
+}
+async function toggleAdmin(id,blocked){
+  await apiFetch(`/superadmin/admins/${id}`,'PUT',{blocked});
+  sw('success',blocked?'Admin bloqueado':'Admin desbloqueado');
+}
+
+/* ─── PLAN DE ESTUDIOS ─────────────────────────────────── */
+function pgSAPlan(){
+  return`<div class="card">
+    <h2>📖 Plan de Estudios</h2>
+    <p style="color:#888;margin-bottom:1rem">Define áreas, asignaturas e intensidades horarias por colegio.</p>
+    <div style="display:flex;gap:.75rem;flex-wrap:wrap;margin-bottom:1rem">
+      <select id="saPlanCol" class="inp" style="min-width:200px" onchange="loadSAPlan()">
+        <option value="">— Selecciona colegio —</option>
+      </select>
+      <select id="saPlanCiclo" class="inp" onchange="loadSAPlan()">
+        <option value="">Todos los ciclos</option>
+        <option value="primaria">Primaria</option>
+        <option value="bachillerato">Bachillerato</option>
+      </select>
+      <button class="btn" onclick="modalNuevaMateria()">＋ Agregar Asignatura</button>
+      <button class="btn bsec" onclick="importarPlanDefecto()">📥 Plan por Defecto</button>
+    </div>
+    <div id="saPlanTable">Selecciona un colegio.</div>
+  </div>`;
+}
+async function initSAPlan(){
+  const colegios=await apiFetch('/superadmin/colegios');
+  const sel=gi('saPlanCol');
+  if(sel) sel.innerHTML='<option value="">— Selecciona colegio —</option>'+
+    colegios.map(c=>`<option value="${c.id}">${c.nombre}</option>`).join('');
+}
+async function loadSAPlan(){
+  const cid=gi('saPlanCol')?.value;
+  if(!cid){gi('saPlanTable').textContent='Selecciona un colegio.';return;}
+  const ciclo=gi('saPlanCiclo')?.value;
+  let plan=await apiFetch(`/superadmin/plan/${cid}`);
+  if(ciclo) plan=plan.filter(p=>p.ciclo===ciclo);
+  if(!plan.length){gi('saPlanTable').innerHTML='<p style="color:#999">Sin asignaturas registradas. Agrega una o importa el plan por defecto.</p>';return;}
+  gi('saPlanTable').innerHTML=`<table class="tbl"><thead><tr>
+    <th>Ciclo</th><th>Grado</th><th>Área</th><th>Asignatura</th><th>Intensidad (h/sem)</th>
+  </tr></thead><tbody>${plan.map(p=>`<tr>
+    <td>${p.ciclo}</td><td>${p.grado}</td><td>${p.area}</td><td>${p.asignatura}</td><td>${p.intensidad}</td>
+  </tr>`).join('')}</tbody></table>`;
+}
+async function modalNuevaMateria(){
+  const cid=gi('saPlanCol')?.value;
+  if(!cid) return sw('warning','Selecciona un colegio primero');
+  const {value:f}=await Swal.fire({
+    title:'Nueva Asignatura',
+    html:`<select id="nmCiclo" class="swal2-select"><option value="primaria">Primaria</option><option value="bachillerato">Bachillerato</option></select>
+          <input id="nmGrado" class="swal2-input" placeholder="Grado (ej: 1°, 6°)">
+          <input id="nmArea"  class="swal2-input" placeholder="Área (ej: Ciencias Naturales)">
+          <input id="nmAsig"  class="swal2-input" placeholder="Asignatura *">
+          <input id="nmInt"   class="swal2-input" type="number" min="0" max="40" placeholder="Intensidad h/sem">`,
+    focusConfirm:false,showCancelButton:true,
+    preConfirm:()=>({ciclo:gi('nmCiclo')?.value,grado:gi('nmGrado')?.value.trim(),
+      area:gi('nmArea')?.value.trim(),asignatura:gi('nmAsig')?.value.trim(),
+      intensidad:parseInt(gi('nmInt')?.value)||0})
+  });
+  if(!f||!f.asignatura) return;
+  await apiFetch(`/superadmin/plan/${cid}`,'POST',f);
+  sw('success','Asignatura agregada');
+  loadSAPlan();
+}
+async function importarPlanDefecto(){
+  const cid=gi('saPlanCol')?.value;
+  if(!cid) return sw('warning','Selecciona un colegio primero');
+  const conf=await Swal.fire({title:'¿Importar plan por defecto?',text:'Esto borrará el plan actual del colegio.',icon:'warning',showCancelButton:true,confirmButtonText:'Importar'});
+  if(!conf.isConfirmed) return;
+  const plan=[
+    {ciclo:'primaria',grado:'1°',area:'Matemáticas',asignatura:'Matemáticas',intensidad:5},
+    {ciclo:'primaria',grado:'1°',area:'Lenguaje',asignatura:'Español',intensidad:5},
+    {ciclo:'primaria',grado:'1°',area:'Ciencias',asignatura:'Ciencias Naturales',intensidad:3},
+    {ciclo:'primaria',grado:'1°',area:'Sociales',asignatura:'Ciencias Sociales',intensidad:3},
+    {ciclo:'primaria',grado:'1°',area:'Artística',asignatura:'Artística',intensidad:2},
+    {ciclo:'primaria',grado:'1°',area:'Ed. Física',asignatura:'Educación Física',intensidad:2},
+    {ciclo:'bachillerato',grado:'6°',area:'Matemáticas',asignatura:'Matemáticas',intensidad:5},
+    {ciclo:'bachillerato',grado:'6°',area:'Lenguaje',asignatura:'Español',intensidad:4},
+    {ciclo:'bachillerato',grado:'6°',area:'Ciencias',asignatura:'Física',intensidad:3},
+    {ciclo:'bachillerato',grado:'6°',area:'Ciencias',asignatura:'Química',intensidad:3},
+    {ciclo:'bachillerato',grado:'6°',area:'Filosofía',asignatura:'Filosofía',intensidad:2},
+    {ciclo:'bachillerato',grado:'6°',area:'Idiomas',asignatura:'Inglés',intensidad:3},
+  ];
+  await apiFetch(`/superadmin/plan/${cid}/delete`,'DELETE');
+  await apiFetch(`/superadmin/plan/${cid}`,'POST',plan);
+  sw('success','Plan importado');
+  loadSAPlan();
+}
+
+/* ─── ESTADÍSTICAS GLOBALES ─────────────────────────────── */
+function pgSAEstadisticas(){
+  return`<div class="card">
+    <h2>📊 Estadísticas Globales</h2>
+    <div id="saEstadisticasContent">Cargando…</div>
+  </div>`;
+}
+// initSAEstadisticas se puede agregar al map en initPg si se desea
+
+/* ─── AUDITORÍA GLOBAL ──────────────────────────────────── */
+function pgSAAuditoria(){
+  return`<div class="card">
+    <h2>🔍 Auditoría Global</h2>
+    <div style="display:flex;gap:.75rem;margin-bottom:1rem;flex-wrap:wrap">
+      <select id="saAudCol" class="inp" style="min-width:200px" onchange="loadSAAuditoria()">
+        <option value="">Todos los colegios</option>
+      </select>
+      <input id="saAudSearch" class="inp" placeholder="🔍 Buscar acción…" oninput="loadSAAuditoria()">
+    </div>
+    <div id="saAudTable">Cargando…</div>
+  </div>`;
+}
+async function initSAAuditoria(){
+  const colegios=await apiFetch('/superadmin/colegios');
+  const sel=gi('saAudCol');
+  if(sel) sel.innerHTML='<option value="">Todos los colegios</option>'+
+    colegios.map(c=>`<option value="${c.id}">${c.nombre}</option>`).join('');
+  loadSAAuditoria();
+}
+async function loadSAAuditoria(){
+  const cid=gi('saAudCol')?.value;
+  const q=(gi('saAudSearch')?.value||'').toLowerCase();
+  let url='/superadmin/auditoria?limit=300';
+  if(cid) url+=`&colegioId=${cid}`;
+  let logs=await apiFetch(url);
+  if(q) logs=logs.filter(l=>(l.accion||'').toLowerCase().includes(q)||(l.who||'').toLowerCase().includes(q));
+  const el=gi('saAudTable');
+  if(!el) return;
+  el.innerHTML=`<table class="tbl"><thead><tr>
+    <th>Fecha</th><th>Usuario</th><th>Rol</th><th>Acción</th><th>Colegio</th>
+  </tr></thead><tbody>${logs.slice(0,200).map(l=>`<tr>
+    <td style="font-size:.78rem">${l.ts?.slice(0,16)||''}</td>
+    <td>${l.who||l.user||''}</td>
+    <td><span class="bdg ${l.role==='superadmin'?'bpurp':l.role==='admin'?'bor':'bbl'}">${l.role||''}</span></td>
+    <td>${l.accion||''}</td>
+    <td style="font-size:.78rem">${l.colegioId||'global'}</td>
+  </tr>`).join('')}</tbody></table>`;
+}
+
+/* ─── MANTENIMIENTO TÉCNICO ─────────────────────────────── */
+function pgSAMantenimiento(){
+  return`<div class="card">
+    <h2>⚙️ Mantenimiento Técnico</h2>
+    <div style="display:grid;gap:1.5rem">
+
+      <div class="card">
+        <h3>💾 Copia de Seguridad</h3>
+        <p style="color:#888;margin-bottom:.75rem">Descarga un backup JSON de un colegio.</p>
+        <div style="display:flex;gap:.75rem;flex-wrap:wrap">
+          <select id="saBackupCol" class="inp" style="min-width:200px"></select>
+          <button class="btn" onclick="descargarBackup()">📥 Descargar Backup</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>🔑 Reset Masivo de Contraseñas</h3>
+        <p style="color:#888;margin-bottom:.75rem">Actualiza contraseñas de todos los usuarios de un colegio.</p>
+        <div style="display:flex;gap:.75rem;flex-wrap:wrap;align-items:center">
+          <select id="saResetCol" class="inp" style="min-width:200px"></select>
+          <select id="saResetRole" class="inp">
+            <option value="">Todos los roles</option>
+            <option value="est">Estudiantes</option>
+            <option value="profe">Profesores</option>
+            <option value="admin">Admins</option>
+          </select>
+          <input id="saResetPwd" class="inp" type="password" placeholder="Nueva contraseña" style="min-width:200px">
+          <button class="btn bdan" onclick="resetMasivo()">⚠️ Resetear</button>
+        </div>
+      </div>
+
+    </div>
+  </div>`;
+}
+async function initSAMantenimiento(){
+  const colegios=await apiFetch('/superadmin/colegios');
+  ['saBackupCol','saResetCol'].forEach(sid=>{
+    const sel=gi(sid);
+    if(sel) sel.innerHTML='<option value="">— Selecciona colegio —</option>'+
+      colegios.map(c=>`<option value="${c.id}">${c.nombre}</option>`).join('');
+  });
+}
+async function descargarBackup(){
+  const cid=gi('saBackupCol')?.value;
+  if(!cid) return sw('warning','Selecciona un colegio');
+  const token=window.TokenStore?.get();
+  const res=await fetch(`/api/superadmin/backup/${cid}`,{
+    method:'POST',headers:{Authorization:`Bearer ${token}`,'Content-Type':'application/json'}
+  });
+  const blob=await res.blob();
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url;a.download=`backup_${cid}_${Date.now()}.json`;a.click();
+  URL.revokeObjectURL(url);
+}
+async function resetMasivo(){
+  const cid=gi('saResetCol')?.value;
+  const role=gi('saResetRole')?.value;
+  const pwd=gi('saResetPwd')?.value;
+  if(!cid||!pwd) return sw('warning','Completa los campos requeridos');
+  const conf=await Swal.fire({
+    title:'⚠️ ¿Confirmas el reset?',
+    text:`Esto cambiará la contraseña de ${role||'todos los usuarios'} del colegio.`,
+    icon:'warning',showCancelButton:true,confirmButtonText:'Sí, resetear',confirmButtonColor:'#e53e3e'
+  });
+  if(!conf.isConfirmed) return;
+  const res=await apiFetch(`/superadmin/reset-passwords/${cid}`,'POST',{role:role||undefined,newPassword:pwd});
+  sw('success',`${res.updated} contraseñas actualizadas`);
+}
