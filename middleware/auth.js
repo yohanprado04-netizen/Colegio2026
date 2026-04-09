@@ -10,9 +10,12 @@ const authMiddleware = async (req, res, next) => {
     }
 
     const token = header.split(' ')[1];
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    // Aseguramos que use la misma clave que definiste en tu .env
+    const secret = process.env.JWT_SECRET || 'cualquier_clave_segura_aqui';
+    const decoded = jwt.verify(token, secret);
 
-   const user = await Usuario.findById(decoded.id).lean();
+    // Buscamos por el campo 'id' (String) que definiste en tu modelo
+    const user = await Usuario.findOne({ id: decoded.id }).lean();
     if (!user) return res.status(401).json({ error: 'Usuario no encontrado' });
     if (user.blocked) return res.status(403).json({ error: 'Cuenta bloqueada' });
 
