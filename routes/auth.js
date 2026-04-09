@@ -68,11 +68,8 @@ router.post('/login', async (req, res) => {
       colegioNombre:user.colegioNombre || ''
     };
    // Forzamos el uso de la clave del .env o la de seguridad
-    const secretKey = process.env.JWT_SECRET || 'cualquier_clave_segura_aqui';
-    
-    const token = jwt.sign(payload, secretKey, {
-      expiresIn: '8h' // Forzamos 8 horas para evitar el error 401 por tiempo
-    });
+    const secretKey = process.env.JWT_SECRET || 'Colegio2026_Secret_Key_Secure';
+    const decoded = jwt.verify(token, secretKey);
     const userData = user.toObject();
     delete userData.password;
     delete userData._id;
