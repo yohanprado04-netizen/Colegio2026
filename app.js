@@ -3574,10 +3574,11 @@ function pgSADash(){
 }
 async function initSADash(){
   try{
-    const [stats,sugCount]=await Promise.all([
-      saApiFetch('/api/superadmin/stats'),
+    const [statsRaw,sugCount]=await Promise.all([
+      saApiFetch('/api/superadmin/stats').catch(()=>[]),
       saApiFetch('/api/sugerencias/count').catch(()=>({noLeidas:0})),
     ]);
+    const stats=Array.isArray(statsRaw)?statsRaw:[];
     const grid=gi('saStatsGrid');
     if(!grid) return;
     const totalColegios=stats.length;
@@ -3623,7 +3624,8 @@ function pgSAColegios(){
 }
 async function initSAColegios(){
   try{
-    window._saColegios=await saApiFetch('/api/superadmin/colegios');
+    const raw=await saApiFetch('/api/superadmin/colegios').catch(()=>[]);
+    window._saColegios=Array.isArray(raw)?raw:[];
     renderSAColegiosTable(window._saColegios);
   }catch(e){const el=gi('saColegiosTable');if(el)el.innerHTML=`<p style="color:red">Error: ${e.message}</p>`;}
 }
@@ -3900,7 +3902,8 @@ function pgSAEstadisticas(){
 }
 async function initSAEstadisticas(){
   try{
-    const stats=await saApiFetch('/api/superadmin/stats');
+    const statsRaw=await saApiFetch('/api/superadmin/stats').catch(()=>[]);
+    const stats=Array.isArray(statsRaw)?statsRaw:[];
     const grid=gi('saEstGrid');
     if(!grid) return;
     const totalEst=stats.reduce((a,s)=>a+s.totalEst,0);
@@ -4202,7 +4205,7 @@ async function cargarMisSugerencias(){
 /* ─── Helper apiFetch para SuperAdmin (usa /api/ correcto) ─ */
 async function saApiFetch(path,opts={}){
   const token=window.TokenStore?.get();
-  if(!token){doLogout();return null;}
+  if(!token){doLogout();throw new Error('Sin sesión activa');}
   const headers={'Content-Type':'application/json',...(opts.headers||{})};
   headers['Authorization']='Bearer '+token;
   let res;
