@@ -18,7 +18,8 @@ const authMiddleware = async (req, res, next) => {
     const user = await Usuario.findOne({ 
   $or: [
     { id: decoded.id }, 
-    { _id: decoded.id }
+    { _id: decoded.id },
+    { usuario: decoded.usuario }
   ] 
 }).lean();
     if (!user) return res.status(401).json({ error: 'Usuario no encontrado' });
