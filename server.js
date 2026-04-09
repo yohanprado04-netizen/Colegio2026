@@ -59,13 +59,12 @@ app.use('/api/sugerencias',              require('./routes/sugerencias'));
 app.use('/api/db',                       require('./routes/db'));
 app.use('/api',                          require('./routes/api'));
 
-// ─── Health check ─────────────────────────────────────────────────
 app.get('/health', (req, res) => {
   res.json({
-    status:    'OK',
-    db:        mongoose.connection.readyState === 1 ? 'connected' : 'disconnected',
-    uptime:    Math.floor(process.uptime()) + 's',
-    timestamp: new Date().toISOString(),
+    status: 'OK',
+    db:     mongoose.connection.readyState === 1 ? 'connected' : 'disconnected',
+    uptime: Math.floor(process.uptime()) + 's',
+    ts:     new Date().toISOString(),
   });
 });
 
@@ -83,9 +82,7 @@ const PORT = process.env.PORT || 3001;
 (async () => {
   await connectDB();
   app.listen(PORT, () => {
-    console.log(`\n🚀 Servidor corriendo en puerto ${PORT}`);
+    console.log(`\n🚀 Servidor en puerto ${PORT}`);
     console.log(`📡 Health: /health`);
-    console.log(`🔐 SuperAdmin: POST /api/auth/login`);
-    console.log(`💡 Sugerencias: POST /api/sugerencias`);
   });
 })();

@@ -1,9 +1,8 @@
-// models/index.js — Todos los modelos con Sugerencia incluido
+// models/index.js
 'use strict';
 const mongoose = require('mongoose');
 const { Schema } = mongoose;
 
-// COLEGIO
 const ColegioSchema = new Schema({
   id:        { type: String, required: true, unique: true },
   nombre:    { type: String, required: true, trim: true },
@@ -17,7 +16,6 @@ const ColegioSchema = new Schema({
   createdBy: { type: String, default: 'superadmin' },
 }, { timestamps: true, collection: 'colegios' });
 
-// USUARIO
 const UsuarioSchema = new Schema({
   id:            { type: String, required: true, unique: true },
   nombre:        { type: String, required: true, trim: true },
@@ -37,9 +35,7 @@ const UsuarioSchema = new Schema({
   salonMaterias: { type: Schema.Types.Mixed, default: {} },
 }, { timestamps: true, collection: 'usuarios' });
 UsuarioSchema.index({ colegioId: 1, role: 1 });
-UsuarioSchema.index({ colegioId: 1, salon: 1 });
 
-// SALÓN
 const SalonSchema = new Schema({
   nombre:    { type: String, required: true, trim: true },
   ciclo:     { type: String, enum: ['primaria','bachillerato'], required: true },
@@ -48,7 +44,6 @@ const SalonSchema = new Schema({
 }, { timestamps: true, collection: 'salones' });
 SalonSchema.index({ nombre: 1, colegioId: 1 }, { unique: true });
 
-// CONFIGURACIÓN
 const ConfigSchema = new Schema({
   key:       { type: String, required: true },
   value:     { type: Schema.Types.Mixed, required: true },
@@ -56,7 +51,6 @@ const ConfigSchema = new Schema({
 }, { collection: 'config' });
 ConfigSchema.index({ key: 1, colegioId: 1 }, { unique: true });
 
-// PLAN DE ESTUDIOS
 const PlanEstudiosSchema = new Schema({
   colegioId:  { type: String, required: true, index: true },
   ciclo:      { type: String, enum: ['primaria','bachillerato'], required: true },
@@ -66,9 +60,7 @@ const PlanEstudiosSchema = new Schema({
   intensidad: { type: Number, default: 0 },
   periodo:    { type: String, default: '' },
 }, { timestamps: true, collection: 'plan_estudios' });
-PlanEstudiosSchema.index({ colegioId: 1, ciclo: 1, grado: 1 });
 
-// NOTAS
 const NotaPeriodoSchema = new Schema({
   periodo:    { type: String, required: true },
   materias:   { type: Schema.Types.Mixed, default: {} },
@@ -83,9 +75,7 @@ const NotaSchema = new Schema({
   colegioId:  { type: String, default: '', index: true },
 }, { timestamps: true, collection: 'notas' });
 NotaSchema.index({ estId: 1, anoLectivo: 1 }, { unique: true });
-NotaSchema.index({ colegioId: 1, anoLectivo: 1 });
 
-// ASISTENCIA
 const AsistenciaSchema = new Schema({
   fecha:     { type: String, required: true },
   salon:     { type: String, required: true },
@@ -97,7 +87,6 @@ const AsistenciaSchema = new Schema({
 }, { timestamps: true, collection: 'asistencias' });
 AsistenciaSchema.index({ fecha: 1, salon: 1, colegioId: 1 }, { unique: true });
 
-// EXCUSA
 const ExcusaSchema = new Schema({
   estId:     { type: String, required: true },
   enombre:   { type: String, required: true },
@@ -111,7 +100,6 @@ const ExcusaSchema = new Schema({
   colegioId: { type: String, default: '', index: true },
 }, { timestamps: true, collection: 'excusas' });
 
-// CLASE VIRTUAL
 const VClaseSchema = new Schema({
   id:         { type: String, required: true, unique: true },
   profId:     { type: String, required: true },
@@ -126,7 +114,6 @@ const VClaseSchema = new Schema({
   colegioId:  { type: String, default: '', index: true },
 }, { timestamps: true, collection: 'vclases' });
 
-// UPLOAD (TAREA)
 const UploadSchema = new Schema({
   id:         { type: String, required: true, unique: true },
   estId:      { type: String, required: true },
@@ -146,7 +133,6 @@ const UploadSchema = new Schema({
   colegioId:  { type: String, default: '', index: true },
 }, { timestamps: true, collection: 'uploads' });
 
-// PLAN DE RECUPERACIÓN
 const PlanSchema = new Schema({
   id:          { type: String, required: true, unique: true },
   estId:       { type: String, required: true },
@@ -171,7 +157,6 @@ const PlanSchema = new Schema({
   colegioId:   { type: String, default: '', index: true },
 }, { timestamps: true, collection: 'planes' });
 
-// RECUPERACIÓN
 const RecuperacionSchema = new Schema({
   id:          { type: String, required: true, unique: true },
   estId:       { type: String, required: true },
@@ -194,7 +179,6 @@ const RecuperacionSchema = new Schema({
   colegioId:   { type: String, default: '', index: true },
 }, { timestamps: true, collection: 'recuperaciones' });
 
-// AUDITORÍA
 const AuditoriaSchema = new Schema({
   ts:        { type: String, required: true },
   uid:       { type: String, default: '' },
@@ -210,9 +194,7 @@ const AuditoriaSchema = new Schema({
   extra:     { type: String, default: '' },
   colegioId: { type: String, default: '', index: true },
 }, { timestamps: true, collection: 'auditoria' });
-AuditoriaSchema.index({ colegioId: 1, createdAt: -1 });
 
-// HISTORIAL ESTUDIANTE
 const EstHistSchema = new Schema({
   id:              { type: String, required: true, unique: true },
   nombre:          { type: String, required: true },
@@ -233,14 +215,12 @@ const EstHistSchema = new Schema({
   colegioId:       { type: String, default: '', index: true },
 }, { timestamps: true, collection: 'est_historial' });
 
-// BLOQUEOS
 const BloqueoSchema = new Schema({
-  usuario:   { type: String, required: true, unique: true },
-  on:        { type: Boolean, default: true },
-  ts:        { type: String, default: '' },
+  usuario: { type: String, required: true, unique: true },
+  on:      { type: Boolean, default: true },
+  ts:      { type: String, default: '' },
 }, { collection: 'bloqueos' });
 
-// ESTADÍSTICAS
 const EstadisticaSchema = new Schema({
   colegioId:   { type: String, required: true },
   fecha:       { type: String, required: true },
@@ -251,9 +231,7 @@ const EstadisticaSchema = new Schema({
   ingresosMes: { type: Number, default: 0 },
 }, { timestamps: true, collection: 'estadisticas' });
 
-// ─────────────────────────────────────────────────────────────────────────────
-// SUGERENCIAS — cualquier usuario (admin/profe/est) envía → superadmin lee
-// ─────────────────────────────────────────────────────────────────────────────
+// ─── SUGERENCIAS ─────────────────────────────────────────────────────────────
 const SugerenciaSchema = new Schema({
   uid:           { type: String, required: true },
   nombre:        { type: String, required: true },
@@ -273,12 +251,8 @@ const SugerenciaSchema = new Schema({
   ts:           { type: String, default: '' },
 }, { timestamps: true, collection: 'sugerencias' });
 SugerenciaSchema.index({ leida: 1, createdAt: -1 });
-SugerenciaSchema.index({ colegioId: 1 });
 SugerenciaSchema.index({ uid: 1 });
 
-// ─────────────────────────────────────────────────────────────────────────────
-// EXPORTS
-// ─────────────────────────────────────────────────────────────────────────────
 module.exports = {
   Colegio:       mongoose.model('Colegio',       ColegioSchema),
   Usuario:       mongoose.model('Usuario',       UsuarioSchema),
