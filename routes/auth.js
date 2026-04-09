@@ -67,10 +67,12 @@ router.post('/login', async (req, res) => {
       colegioId:    user.colegioId   || null,
       colegioNombre:user.colegioNombre || ''
     };
-    const token = jwt.sign(payload, process.env.JWT_SECRET, {
-      expiresIn: process.env.JWT_EXPIRES_IN || '20m'
+   // Forzamos el uso de la clave del .env o la de seguridad
+    const secretKey = process.env.JWT_SECRET || 'cualquier_clave_segura_aqui';
+    
+    const token = jwt.sign(payload, secretKey, {
+      expiresIn: '8h' // Forzamos 8 horas para evitar el error 401 por tiempo
     });
-
     const userData = user.toObject();
     delete userData.password;
     delete userData._id;
