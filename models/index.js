@@ -1,4 +1,5 @@
 // models/index.js — Todos los modelos con índices optimizados para 50k+ estudiantes
+require('dotenv').config();
 'use strict';
 const mongoose = require('mongoose');
 const { Schema } = mongoose;
