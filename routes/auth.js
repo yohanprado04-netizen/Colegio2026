@@ -68,8 +68,8 @@ router.post('/login', async (req, res) => {
       colegioNombre:user.colegioNombre || ''
     };
    // Forzamos el uso de la clave del .env o la de seguridad
-    const secretKey = process.env.JWT_SECRET || 'Colegio2026_Secret_Key_Secure';
-    const decoded = jwt.verify(token, secretKey);
+   const secret = process.env.JWT_SECRET || 'Colegio2026_FIX_Key';
+const token = jwt.sign(payload, secret, { expiresIn: '8h' });
     const userData = user.toObject();
     delete userData.password;
     delete userData._id;
