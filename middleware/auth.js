@@ -15,7 +15,12 @@ const authMiddleware = async (req, res, next) => {
     const decoded = jwt.verify(token, secret);
 
     // Buscamos por el campo 'id' (String) que definiste en tu modelo
-    const user = await Usuario.findOne({ id: decoded.id }).lean();
+    const user = await Usuario.findOne({ 
+  $or: [
+    { id: decoded.id }, 
+    { _id: decoded.id }
+  ] 
+}).lean();
     if (!user) return res.status(401).json({ error: 'Usuario no encontrado' });
     if (user.blocked) return res.status(403).json({ error: 'Cuenta bloqueada' });
 
