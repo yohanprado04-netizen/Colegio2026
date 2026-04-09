@@ -6,7 +6,7 @@ const { verifyToken, requireRole } = require('../middleware/auth');
 const {
   Usuario, Colegio, Config, PlanEstudios,
   Nota, Asistencia, Auditoria, Salon,
-  Excusa, VClase, Upload, Plan, Recuperacion, EstHist, Bloqueo
+  Excusa, VClase, Upload, Plan, Recuperacion, EstHist, Bloqueo, Papelera
 } = require('../models');
 
 // Middleware: solo superadmin
@@ -102,12 +102,27 @@ router.put('/colegios/:id', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// DELETE /api/superadmin/colegios/:id — elimina colegio y TODOS sus datos
+// DELETE /api/superadmin/colegios/:id — elimina colegio y TODOS sus datos (guarda en papelera)
 router.delete('/colegios/:id', async (req, res) => {
   try {
     const id = req.params.id;
     const col = await Colegio.findOne({ id }).lean();
     if (!col) return res.status(404).json({ error: 'Colegio no encontrado' });
+
+    // Guardar snapshot en papelera antes de eliminar
+    const [adminsSnap, configSnap] = await Promise.all([
+      Usuario.find({ colegioId: id, role: 'admin' }, '-password').lean(),
+      Config.find({ colegioId: id }).lean(),
+    ]);
+
+    await Papelera.create({
+      tipo:         'colegio',
+      eliminadoTs:  new Date().toISOString(),
+      eliminadoPor: req.user.nombre,
+      datos:        col,
+      admins:       adminsSnap,
+      config:       configSnap,
+    });
 
     await Promise.all([
       Colegio.deleteOne({ id }),
@@ -377,6 +392,112 @@ router.post('/reset-passwords/:colegioId', async (req, res) => {
     }).catch(() => {});
 
     res.json({ ok: true, updated: result.modifiedCount });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+/* ══════════════════════════════════════════════════════════
+   PAPELERA — Restaurar colegios y admins eliminados
+══════════════════════════════════════════════════════════ */
+
+// GET /api/superadmin/papelera — ver todos los elementos eliminados
+router.get('/papelera', async (req, res) => {
+  try {
+    const filter = {};
+    if (req.query.tipo) filter.tipo = req.query.tipo;
+    const items = await Papelera.find(filter).sort({ createdAt: -1 }).limit(200).lean();
+    res.json(items);
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// POST /api/superadmin/papelera/:id/restaurar — restaurar un colegio eliminado
+router.post('/papelera/:id/restaurar', async (req, res) => {
+  try {
+    const item = await Papelera.findById(req.params.id).lean();
+    if (!item) return res.status(404).json({ error: 'Elemento no encontrado en papelera' });
+
+    if (item.tipo === 'colegio') {
+      const col = item.datos;
+
+      // Verificar que no exista ya un colegio con ese ID
+      const existe = await Colegio.findOne({ id: col.id }).lean();
+      if (existe) return res.status(409).json({ error: 'Ya existe un colegio con ese ID. No se puede restaurar.' });
+
+      // Restaurar el colegio
+      const { _id, __v, createdAt, updatedAt, ...colData } = col;
+      await Colegio.create(colData);
+
+      // Restaurar admins (sin contraseñas expuestas — se regenera una temporal)
+      const bcrypt = require('bcryptjs');
+      const tempPass = await bcrypt.hash('Temporal123!', 12);
+
+      if (item.admins && item.admins.length > 0) {
+        for (const admin of item.admins) {
+          const adminExiste = await Usuario.findOne({ usuario: admin.usuario }).lean();
+          if (!adminExiste) {
+            const { _id: _a, __v: _v, createdAt: _c, updatedAt: _u, ...adminData } = admin;
+            await Usuario.create({ ...adminData, password: tempPass, blocked: false });
+          }
+        }
+      }
+
+      // Restaurar config por defecto si no hay config guardada
+      if (item.config && item.config.length > 0) {
+        for (const cfg of item.config) {
+          try {
+            const { _id: _ci, __v: _cv, createdAt: _cc, updatedAt: _cu, ...cfgData } = cfg;
+            await Config.create(cfgData);
+          } catch (_) { /* ignorar duplicados */ }
+        }
+      }
+
+      // Eliminar de la papelera
+      await Papelera.findByIdAndDelete(req.params.id);
+
+      Auditoria.create({
+        ts: new Date().toISOString(), uid: req.user.id, who: req.user.nombre,
+        role: 'superadmin', accion: `Colegio RESTAURADO: ${col.nombre}`,
+        extra: `id: ${col.id}`, colegioId: col.id
+      }).catch(() => {});
+
+      res.json({
+        ok: true,
+        mensaje: `Colegio "${col.nombre}" restaurado. Los admins recuperados tienen contraseña temporal: Temporal123!`
+      });
+
+    } else if (item.tipo === 'admin') {
+      const admin = item.datos;
+      const existe = await Usuario.findOne({ usuario: admin.usuario }).lean();
+      if (existe) return res.status(409).json({ error: 'Ya existe un usuario con ese nombre de usuario.' });
+
+      const bcrypt = require('bcryptjs');
+      const tempPass = await bcrypt.hash('Temporal123!', 12);
+      const { _id, __v, createdAt, updatedAt, ...adminData } = admin;
+      await Usuario.create({ ...adminData, password: tempPass, blocked: false });
+
+      await Papelera.findByIdAndDelete(req.params.id);
+
+      Auditoria.create({
+        ts: new Date().toISOString(), uid: req.user.id, who: req.user.nombre,
+        role: 'superadmin', accion: `Admin RESTAURADO: ${admin.nombre}`,
+        extra: `usuario: ${admin.usuario}`, colegioId: admin.colegioId || ''
+      }).catch(() => {});
+
+      res.json({
+        ok: true,
+        mensaje: `Admin "${admin.nombre}" restaurado con contraseña temporal: Temporal123!`
+      });
+
+    } else {
+      res.status(400).json({ error: 'Tipo de elemento desconocido' });
+    }
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// DELETE /api/superadmin/papelera/:id — eliminar permanentemente de la papelera
+router.delete('/papelera/:id', async (req, res) => {
+  try {
+    await Papelera.findByIdAndDelete(req.params.id);
+    res.json({ ok: true });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 

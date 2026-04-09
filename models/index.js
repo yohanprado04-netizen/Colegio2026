@@ -282,6 +282,42 @@ const BloqueoSchema = new Schema({
 }, { collection: 'bloqueos' });
 
 // ─────────────────────────────────────────────────────────────────────────────
+// SUGERENCIAS — enviadas por cualquier usuario al superadmin
+// ─────────────────────────────────────────────────────────────────────────────
+const SugerenciaSchema = new Schema({
+  uid:           { type: String, required: true },
+  nombre:        { type: String, default: '' },
+  role:          { type: String, default: '' },
+  colegioId:     { type: String, default: '' },
+  colegioNombre: { type: String, default: '' },
+  titulo:        { type: String, default: '' },
+  mensaje:       { type: String, required: true },
+  categoria:     { type: String, default: 'general' },
+  leida:         { type: Boolean, default: false },
+  leidaTs:       { type: String, default: '' },
+  respuesta:     { type: String, default: '' },
+  respondidaTs:  { type: String, default: '' },
+  ts:            { type: String, default: '' },
+}, { timestamps: true, collection: 'sugerencias' });
+SugerenciaSchema.index({ uid: 1 });
+SugerenciaSchema.index({ leida: 1 });
+
+// ─────────────────────────────────────────────────────────────────────────────
+// PAPELERA — colegios y admins eliminados (para restauración)
+// ─────────────────────────────────────────────────────────────────────────────
+const PapeleraSchema = new Schema({
+  tipo:          { type: String, enum: ['colegio', 'admin'], required: true },
+  eliminadoTs:   { type: String, required: true },
+  eliminadoPor:  { type: String, default: '' },
+  // Snapshot completo del colegio o admin eliminado
+  datos:         { type: Schema.Types.Mixed, required: true },
+  // Datos relacionados (solo para colegios)
+  admins:        { type: Schema.Types.Mixed, default: null },
+  config:        { type: Schema.Types.Mixed, default: null },
+}, { timestamps: true, collection: 'papelera' });
+PapeleraSchema.index({ tipo: 1 });
+
+// ─────────────────────────────────────────────────────────────────────────────
 // ESTADÍSTICAS (snapshot periódico — para no recalcular siempre)
 // ─────────────────────────────────────────────────────────────────────────────
 const EstadisticaSchema = new Schema({
@@ -315,4 +351,6 @@ module.exports = {
   EstHist:       mongoose.model('EstHist',       EstHistSchema),
   Bloqueo:       mongoose.model('Bloqueo',       BloqueoSchema),
   Estadistica:   mongoose.model('Estadistica',   EstadisticaSchema),
+  Sugerencia:    mongoose.model('Sugerencia',    SugerenciaSchema),
+  Papelera:      mongoose.model('Papelera',      PapeleraSchema),
 };
