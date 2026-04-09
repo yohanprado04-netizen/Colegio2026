@@ -12,7 +12,7 @@ const authMiddleware = async (req, res, next) => {
     const token = header.split(' ')[1];
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-   const user = await Usuario.findOne({ id: decoded.id }).lean();
+   const user = await Usuario.findById(decoded.id).lean();
     if (!user) return res.status(401).json({ error: 'Usuario no encontrado' });
     if (user.blocked) return res.status(403).json({ error: 'Cuenta bloqueada' });
 
