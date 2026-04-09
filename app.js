@@ -4024,6 +4024,7 @@ async function descargarBackup(){
   if(!cid) return sw('warning','Selecciona un colegio');
   try{
     const token=window.TokenStore?.get();
+    if(!token){Swal.fire({icon:'warning',title:'Sin sesión',text:'Vuelve a iniciar sesión.'});return;}
     const res=await fetch(API_BASE+`/api/superadmin/backup/${cid}`,{
       method:'POST',headers:{Authorization:`Bearer ${token}`,'Content-Type':'application/json'}
     });
@@ -4201,12 +4202,24 @@ async function cargarMisSugerencias(){
 /* ─── Helper apiFetch para SuperAdmin (usa /api/ correcto) ─ */
 async function saApiFetch(path,opts={}){
   const token=window.TokenStore?.get();
+  if(!token){doLogout();return null;}
   const headers={'Content-Type':'application/json',...(opts.headers||{})};
-  if(token) headers['Authorization']='Bearer '+token;
-  const res=await fetch(API_BASE+path,{...opts,headers});
+  headers['Authorization']='Bearer '+token;
+  let res;
+  try{ res=await fetch(API_BASE+path,{...opts,headers}); }
+  catch(e){ throw new Error('Error de red. Verifica tu conexión.'); }
   if(res.status===401){
     const d=await res.json().catch(()=>({}));
-    if(d.expired){TokenStore.clear();doLogout();return null;}
+    if(d.expired||d.code==='TOKEN_EXPIRED'||d.code==='TOKEN_INVALID'){
+      TokenStore.clear();doLogout();
+      if(typeof Swal!=='undefined') Swal.fire({icon:'info',title:'Sesión expirada',text:'Vuelve a iniciar sesión.'});
+      return null;
+    }
+    throw new Error(d.error||'No autorizado');
+  }
+  if(res.status===403){
+    const d=await res.json().catch(()=>({}));
+    throw new Error(d.error||'Acceso denegado');
   }
   if(!res.ok){
     const err=await res.json().catch(()=>({error:`HTTP ${res.status}`}));

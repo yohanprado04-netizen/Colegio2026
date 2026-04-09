@@ -15,20 +15,46 @@ const TokenStore = {
 // ─── Fetch con auth ──────────────────────────────────────────────
 async function apiFetch(path, opts = {}) {
   const token = TokenStore.get();
+
+  // Validar que hay token antes de llamadas protegidas
+  if (!token && !path.includes('/auth/')) {
+    console.warn('[apiFetch] Sin token para:', path);
+    doLogout();
+    return null;
+  }
+
   const headers = { 'Content-Type': 'application/json', ...(opts.headers || {}) };
   if (token) headers['Authorization'] = 'Bearer ' + token;
 
-  const res = await fetch(API_BASE + path, { ...opts, headers });
+  let res;
+  try {
+    res = await fetch(API_BASE + path, { ...opts, headers });
+  } catch (networkErr) {
+    throw new Error('Error de red. Verifica tu conexión a internet.');
+  }
 
-  // Token expirado → logout automático
+  // Token expirado o inválido → logout automático
   if (res.status === 401) {
     const data = await res.json().catch(() => ({}));
-    if (data.expired) {
+    if (data.expired || data.code === 'TOKEN_EXPIRED') {
       TokenStore.clear();
       doLogout();
-      Swal.fire({ icon: 'info', title: 'Sesión expirada', text: 'Vuelve a iniciar sesión.' });
+      if (typeof Swal !== 'undefined') {
+        Swal.fire({ icon: 'info', title: 'Sesión expirada', text: 'Vuelve a iniciar sesión.' });
+      }
       return null;
     }
+    if (data.code === 'TOKEN_INVALID' || data.code === 'EMPTY_TOKEN' || data.code === 'NO_TOKEN') {
+      TokenStore.clear();
+      doLogout();
+      return null;
+    }
+    throw new Error(data.error || 'HTTP 401: No autorizado');
+  }
+
+  if (res.status === 403) {
+    const data = await res.json().catch(() => ({}));
+    throw new Error(data.error || 'Acceso denegado');
   }
 
   if (!res.ok) {

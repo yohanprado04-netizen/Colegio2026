@@ -32,7 +32,7 @@ npm install
 
 # 2. Configurar variables de entorno
 # Editar .env y poner tu contraseña real en MONGODB_URI:
-MONGODB_URI=mongodb+srv://yohanprado04_db_user:TU_PASSWORD@prado04.t4d8ob8.mongodb.net/edusistema?retryWrites=true&w=majority
+MONGODB_URI=mongodb+srv://yohanprado04_db_user:colegio2026@prado04.t4d8ob8.mongodb.net/edusistema?retryWrites=true&w=majority
 
 # 3. Cargar datos iniciales (solo la primera vez)
 node scripts/seed.js
