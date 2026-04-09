@@ -400,10 +400,10 @@ function resetSessionTimer(){
   document.addEventListener(ev,()=>{if(CU)resetSessionTimer();},{passive:true}));
 /* ── 1. AGREGAR EN ROLE_MAP (reemplaza la línea de ROLE_MAP completa) ── */
 const ROLE_MAP={
-  superadmin:new Set(['sadash','sacolegios','saestadisticas','saauditoria','samantenimiento','saplan']),
-  admin:new Set(['dash','asal','apri','abac','aprf','amat','anot','areh','afec','ablk','aaud','aexp','aexc','avcl','ahist']),
-  profe:new Set(['ph','pnot','past','pvir','ptar','prec','phist']),
-  est:new Set(['eb','east','etare','eexc','eprof','evir','ereh','ehist'])
+  superadmin:new Set(['sadash','sacolegios','saestadisticas','saauditoria','samantenimiento','saplan','sasug']),
+  admin:new Set(['dash','asal','apri','abac','aprf','amat','anot','areh','afec','ablk','aaud','aexp','aexc','avcl','ahist','asug']),
+  profe:new Set(['ph','pnot','past','pvir','ptar','prec','phist','psug']),
+  est:new Set(['eb','east','etare','eexc','eprof','evir','ereh','ehist','esug'])
 };
 /* ── 2. REEMPLAZA canAccess ── */
 function canAccess(pid){
@@ -442,17 +442,12 @@ function logAuditAnon(usuario,msg){ /* implementado en api-layer.js */ }
    BOOT & NAVIGATION
 ============================================================ */
 const PL={
-  sadash:'Panel Global', sacolegios:'Colegios & Admins', saplan:'Plan de Estudios',
+  
+sadash:'Panel Global', sacolegios:'Colegios & Admins', saplan:'Plan de Estudios',
 saestadisticas:'Estadísticas Globales', saauditoria:'Auditoría Global',
-samantenimiento:'Mantenimiento',
-  dash:'Panel General',asal:'Salones & Grados',apri:'Primaria (1°-5°)',abac:'Bachillerato (6°-11°)',
-  aprf:'Profesores',amat:'Materias & Periodos',anot:'Gestión de Notas',areh:'Recuperaciones',
-  afec:'Control de Fechas',ablk:'Usuarios Bloqueados',aaud:'Auditoría',aexp:'Exportar',ahist:'Historial Estudiantes',
-  aexc:'Excusas (Admin)',avcl:'Clases Virtuales (Admin)',
-  ph:'Mi Panel',pnot:'Ingresar Notas',past:'Asistencias',pvir:'Clases Virtuales',ptar:'Tareas Recibidas',prec:'Recuperaciones',
-  eb:'Mi Boletín',east:'Mi Asistencia',etare:'Tareas & Talleres',
-  eexc:'Excusas',eprof:'Mis Profesores',ereh:'Mi Recuperación',evir:'Mis Clases Virtuales',
-  ehist:'Historial Recuperaciones',phist:'Historial Recuperaciones'
+samantenimiento:'Mantenimiento', sasug:'Sugerencias Recibidas',
+asug:'Sugerencias', psug:'Sugerencias', esug:'Sugerencias',
+ 
 };
 
 function bootApp(){
@@ -578,7 +573,8 @@ function navItems(){
     {s:'Académico'},{id:'saplan',ic:'📖',lb:'Plan de Estudios'},
     {s:'Supervisión'},{id:'saestadisticas',ic:'📊',lb:'Estadísticas'},
     {id:'saauditoria',ic:'🔍',lb:'Auditoría Global'},
-    {s:'Sistema'},{id:'samantenimiento',ic:'⚙️',lb:'Mantenimiento'},
+     {s:'Sistema'},{id:'samantenimiento',ic:'⚙️',lb:'Mantenimiento'},
+    {id:'sasug',ic:'💡',lb:'Sugerencias Recibidas'},
   ];
 
   if(CU.role==='admin') return[
@@ -591,6 +587,7 @@ function navItems(){
     {s:'Sistema'},{id:'afec',ic:'📅',lb:'Control de Fechas'},
     {id:'ablk',ic:'🔒',lb:'Usuarios Bloqueados'},
     {id:'aaud',ic:'🔍',lb:'Auditoría'},{id:'aexp',ic:'📤',lb:'Exportar'},{id:'ahist',ic:'📚',lb:'Historial'},
+    {s:'Comunicación Extra'},{id:'asug',ic:'💡',lb:'Sugerencias'},
   ];
   if(CU.role==='profe') return[
     {s:'Mi Panel'},{id:'ph',ic:'🏠',lb:'Inicio'},
@@ -599,6 +596,7 @@ function navItems(){
     {id:'ptar',ic:'📂',lb:'Tareas Recibidas'},
     {id:'prec',ic:'🔄',lb:'Recuperaciones'},
     {id:'phist',ic:'📚',lb:'Historial Recuperaciones'},
+    {id:'psug',ic:'💡',lb:'Sugerencias'},
   ];
   /* estudiante */
   const it=[
@@ -606,6 +604,7 @@ function navItems(){
     {id:'etare',ic:'📎',lb:'Tareas & Talleres'},{id:'eexc',ic:'✉️',lb:'Excusas'},
     {id:'eprof',ic:'👩‍🏫',lb:'Mis Profesores'},{id:'evir',ic:'💻',lb:'Mis Clases Virtuales'},
     {id:'ehist',ic:'📚',lb:'Historial Recuperaciones'},
+    {id:'esug',ic:'💡',lb:'Sugerencias'},
   ];
   const mp=matPerd(CU.id);
   if(DB.ext.on&&mp.length>=1&&mp.length<=2) it.push({id:'ereh',ic:'🔄',lb:'Mi Recuperación'});
@@ -649,9 +648,11 @@ function renderPg(pid){
     ablk:pgABlk,aaud:pgAAud,aexp:pgAExp,aexc:pgAExc,avcl:pgAVcl,ahist:pgAHist,
     ph:pgPH,pnot:pgPNot,past:pgPAst,pvir:pgPVir,ptar:pgPTar,prec:pgPRec,phist:pgPHist,
     eb:pgEB,east:pgEAst,etare:pgETare,eexc:pgEExc,eprof:pgEProf,
-    evir:pgEVir,ereh:pgEReh,ehist:pgEHist, sadash:pgSADash, sacolegios:pgSAColegios, saplan:pgSAPlan,
-saestadisticas:pgSAEstadisticas, saauditoria:pgSAAuditoria,
-samantenimiento:pgSAMantenimiento,
+    evir:pgEVir,ereh:pgEReh,ehist:pgEHist,
+    sadash:pgSADash,sacolegios:pgSAColegios,saplan:pgSAPlan,
+    saestadisticas:pgSAEstadisticas,saauditoria:pgSAAuditoria,
+    samantenimiento:pgSAMantenimiento,sasug:pgSASug,
+    asug:pgSugerencias,psug:pgSugerencias,esug:pgSugerencias,
     
   };
   return(map[pid]||(() =>'<div class="card"><p>No disponible.</p></div>'))();
@@ -662,8 +663,10 @@ function initPg(pid){
     aprf:initAPrf,amat:initAMat,anot:initANot,areh:initAReh,aexc:initAExc,avcl:initAVcl,
     past:initPAst,eb:initEB,
     ph:()=>{ setTimeout(renderPExcR,0); }
-    ,sadash:initSADash, sacolegios:initSAColegios, saplan:initSAPlan,
-saauditoria:initSAAuditoria, samantenimiento:initSAMantenimiento,
+    ,sadash:initSADash,sacolegios:initSAColegios,saplan:initSAPlan,
+    saestadisticas:initSAEstadisticas,saauditoria:initSAAuditoria,
+    samantenimiento:initSAMantenimiento,sasug:initSASug,
+    asug:initSugerencias,psug:initSugerencias,esug:initSugerencias,
   };
   if(map[pid]) map[pid]();
 }
@@ -3549,21 +3552,35 @@ function dlBoletin(estId,perFilter,anno,snapData){
 document.addEventListener('keydown',ev=>{
   if(ev.key==='Enter'&&!gi('ls').classList.contains('hidden')) doLogin();
 });
+/* ════════════════════════════════════════════════════════════════
+   SUPER ADMIN — PANEL GLOBAL
+   INSTRUCCIÓN: Reemplaza todo el contenido de app.js desde la línea
+   que contiene "function pgSADash(){" hasta el final del archivo,
+   pegando este contenido completo en su lugar.
+════════════════════════════════════════════════════════════════ */
+
+/* ─── DASHBOARD ─────────────────────────────────────────── */
 function pgSADash(){
   return`<div class="card" id="saDashCard">
     <h2>🌐 Panel Global — Super Admin</h2>
     <p style="color:#888;margin-bottom:1rem">Bienvenido, <strong>${CU.nombre}</strong>. Desde aquí supervisas todas las instituciones.</p>
-    <div id="saStatsGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:1rem">
+    <div id="saStatsGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:1rem">
       <div class="card" style="text-align:center"><div style="font-size:2rem">⏳</div><p>Cargando…</p></div>
     </div>
     <hr style="margin:1.5rem 0">
-    <h3 style="margin-bottom:.75rem">Instituciones activas</h3>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.75rem">
+      <h3>Instituciones activas</h3>
+      <span id="saSugBadge" style="display:none;background:#e53e3e;color:#fff;border-radius:20px;padding:3px 10px;font-size:12px;font-weight:700;cursor:pointer" onclick="goto('sasug')">💡 Sugerencias nuevas</span>
+    </div>
     <div id="saColegiosList"></div>
   </div>`;
 }
 async function initSADash(){
   try{
-    const stats=await apiFetch('/superadmin/stats');
+    const [stats, sugCount] = await Promise.all([
+      saApiFetch('/api/superadmin/stats'),
+      saApiFetch('/api/sugerencias/count'),
+    ]);
     const grid=gi('saStatsGrid');
     if(!grid) return;
     const totalColegios=stats.length;
@@ -3582,12 +3599,18 @@ async function initSADash(){
     </div>`).join('');
     const list=gi('saColegiosList');
     if(list) list.innerHTML=`<table class="tbl"><thead><tr>
-      <th>Colegio</th><th>Estudiantes</th><th>Profesores</th><th>Prom. Notas</th><th>Estado</th>
+      <th>Colegio</th><th>Estudiantes</th><th>Profesores</th><th>Salones</th><th>Prom.</th><th>Estado</th>
     </tr></thead><tbody>${stats.map(s=>`<tr>
       <td><strong>${s.colegioNombre}</strong></td>
-      <td>${s.totalEst}</td><td>${s.totalProfs}</td><td>${s.promNotas}</td>
+      <td>${s.totalEst}</td><td>${s.totalProfs}</td><td>${s.totalSalones||0}</td><td>${s.promNotas}</td>
       <td><span class="bdg ${s.activo?'bgr':'bred'}">${s.activo?'Activo':'Inactivo'}</span></td>
     </tr>`).join('')}</tbody></table>`;
+    // Badge de sugerencias no leídas
+    const badge=gi('saSugBadge');
+    if(badge&&sugCount&&sugCount.noLeidas>0){
+      badge.textContent=`💡 ${sugCount.noLeidas} Sugerencia${sugCount.noLeidas>1?'s':''} nueva${sugCount.noLeidas>1?'s':''}`;
+      badge.style.display='inline-block';
+    }
   }catch(e){sw('error','Error al cargar estadísticas: '+e.message);}
 }
 
@@ -3603,8 +3626,10 @@ function pgSAColegios(){
   </div>`;
 }
 async function initSAColegios(){
-  window._saColegios=await apiFetch('/superadmin/colegios');
-  renderSAColegiosTable(window._saColegios);
+  try{
+    window._saColegios=await saApiFetch('/api/superadmin/colegios');
+    renderSAColegiosTable(window._saColegios);
+  }catch(e){const el=gi('saColegiosTable');if(el)el.innerHTML=`<p style="color:red">Error: ${e.message}</p>`;}
 }
 function filtrarColegios(){
   const q=(gi('saColSearch')?.value||'').toLowerCase();
@@ -3614,7 +3639,7 @@ function filtrarColegios(){
 function renderSAColegiosTable(lista){
   const el=gi('saColegiosTable');
   if(!el) return;
-  if(!lista.length){el.innerHTML='<p style="color:#999">No hay colegios.</p>';return;}
+  if(!lista.length){el.innerHTML='<p style="color:#999">No hay colegios registrados.</p>';return;}
   el.innerHTML=`<table class="tbl"><thead><tr>
     <th>Nombre</th><th>Código</th><th>Admins</th><th>Estud.</th><th>Profs.</th><th>Estado</th><th>Acciones</th>
   </tr></thead><tbody>${lista.map(c=>`<tr>
@@ -3632,9 +3657,11 @@ function renderSAColegiosTable(lista){
 async function toggleColegio(id,activo){
   const conf=await Swal.fire({title:`¿${activo?'Activar':'Desactivar'} colegio?`,icon:'question',showCancelButton:true,confirmButtonText:'Sí'});
   if(!conf.isConfirmed) return;
-  await apiFetch(`/superadmin/colegios/${id}`,'PUT',{activo});
-  sw('success','Actualizado');
-  initSAColegios();
+  try{
+    await saApiFetch(`/api/superadmin/colegios/${id}`,{method:'PUT',body:JSON.stringify({activo})});
+    sw('success','Actualizado');
+    initSAColegios();
+  }catch(e){sw('error',e.message);}
 }
 async function modalNuevoColegio(){
   const {value:f}=await Swal.fire({
@@ -3644,27 +3671,31 @@ async function modalNuevoColegio(){
       <input id="snCodigo"  class="swal2-input" placeholder="Código (opcional)">
       <input id="snDir"     class="swal2-input" placeholder="Dirección">
       <hr style="margin:.5rem 0">
+      <p style="margin:.5rem 1rem;font-size:.85rem;color:#666;text-align:left">Datos del administrador del colegio:</p>
       <input id="snANombre" class="swal2-input" placeholder="Nombre del Admin *">
-      <input id="snAUser"   class="swal2-input" placeholder="Usuario Admin *">
+      <input id="snAUser"   class="swal2-input" placeholder="Usuario Admin * (sin espacios)">
       <input id="snAPwd"    class="swal2-input" type="password" placeholder="Contraseña Admin *">
     `,
     focusConfirm:false,
     showCancelButton:true,
+    confirmButtonText:'Crear Colegio',
     preConfirm:()=>({
-      nombre:gi('snNombre')?.value.trim(),
-      codigo:gi('snCodigo')?.value.trim(),
-      direccion:gi('snDir')?.value.trim(),
-      adminNombre:gi('snANombre')?.value.trim(),
-      adminUsuario:gi('snAUser')?.value.trim(),
+      nombre:       gi('snNombre')?.value.trim(),
+      codigo:       gi('snCodigo')?.value.trim(),
+      direccion:    gi('snDir')?.value.trim(),
+      adminNombre:  gi('snANombre')?.value.trim(),
+      adminUsuario: gi('snAUser')?.value.trim(),
       adminPassword:gi('snAPwd')?.value,
     })
   });
   if(!f) return;
   if(!f.nombre||!f.adminNombre||!f.adminUsuario||!f.adminPassword)
     return sw('warning','Completa todos los campos obligatorios (*)');
-  await apiFetch('/superadmin/colegios','POST',f);
-  sw('success',`Colegio "${f.nombre}" creado`);
-  initSAColegios();
+  try{
+    await saApiFetch('/api/superadmin/colegios',{method:'POST',body:JSON.stringify(f)});
+    sw('success',`Colegio "${f.nombre}" creado correctamente`);
+    initSAColegios();
+  }catch(e){sw('error',e.message);}
 }
 async function modalEditColegio(id){
   const col=(window._saColegios||[]).find(c=>c.id===id);
@@ -3672,14 +3703,14 @@ async function modalEditColegio(id){
   const {value:f}=await Swal.fire({
     title:'Editar Colegio',
     html:`
-      <input id="enNombre"  class="swal2-input" value="${col.nombre}"       placeholder="Nombre *">
-      <input id="enCodigo"  class="swal2-input" value="${col.codigo||''}"   placeholder="Código">
-      <input id="enDir"     class="swal2-input" value="${col.direccion||''}"placeholder="Dirección">
-      <input id="enTel"     class="swal2-input" value="${col.telefono||''}" placeholder="Teléfono">
-      <input id="enSedes"   class="swal2-input" value="${(col.sedes||[]).join(', ')}" placeholder="Sedes (separadas por coma)">
-      <input id="enJornadas"class="swal2-input" value="${(col.jornadas||[]).join(', ')}" placeholder="Jornadas (separadas por coma)">
+      <input id="enNombre"   class="swal2-input" value="${col.nombre}"                placeholder="Nombre *">
+      <input id="enCodigo"   class="swal2-input" value="${col.codigo||''}"            placeholder="Código">
+      <input id="enDir"      class="swal2-input" value="${col.direccion||''}"         placeholder="Dirección">
+      <input id="enTel"      class="swal2-input" value="${col.telefono||''}"          placeholder="Teléfono">
+      <input id="enSedes"    class="swal2-input" value="${(col.sedes||[]).join(', ')}"   placeholder="Sedes (separadas por coma)">
+      <input id="enJornadas" class="swal2-input" value="${(col.jornadas||[]).join(', ')}"placeholder="Jornadas (separadas por coma)">
     `,
-    focusConfirm:false,showCancelButton:true,
+    focusConfirm:false,showCancelButton:true,confirmButtonText:'Guardar',
     preConfirm:()=>({
       nombre:   gi('enNombre')?.value.trim()||col.nombre,
       codigo:   gi('enCodigo')?.value.trim(),
@@ -3690,56 +3721,68 @@ async function modalEditColegio(id){
     })
   });
   if(!f) return;
-  await apiFetch(`/superadmin/colegios/${id}`,'PUT',f);
-  sw('success','Colegio actualizado');
-  initSAColegios();
+  try{
+    await saApiFetch(`/api/superadmin/colegios/${id}`,{method:'PUT',body:JSON.stringify(f)});
+    sw('success','Colegio actualizado');
+    initSAColegios();
+  }catch(e){sw('error',e.message);}
 }
 async function modalAdmins(colegioId,colegioNombre){
-  const admins=await apiFetch(`/superadmin/admins?colegioId=${colegioId}`);
-  const lista=admins.map(a=>`<tr>
-    <td>${a.nombre}</td><td>${a.usuario}</td>
-    <td><span class="bdg ${a.blocked?'bred':'bgr'}">${a.blocked?'Bloqueado':'Activo'}</span></td>
-    <td><button class="btn bsm" onclick="editAdmin('${a.id}')">✏️</button>
-        <button class="btn bsm" onclick="toggleAdmin('${a.id}',${!a.blocked})">${a.blocked?'🔓':'🔒'}</button></td>
-  </tr>`).join('');
-  Swal.fire({
-    title:`Admins — ${colegioNombre}`,
-    html:`<table class="tbl"><thead><tr><th>Nombre</th><th>Usuario</th><th>Estado</th><th>Acc.</th></tr></thead>
-      <tbody>${lista||'<tr><td colspan="4">Sin admins</td></tr>'}</tbody></table>
-      <hr style="margin:.75rem 0">
-      <button class="btn" onclick="modalNuevoAdmin('${colegioId}','${colegioNombre.replace(/'/g,"\\'")}')">＋ Nuevo Admin</button>`,
-    width:620,showConfirmButton:false,showCloseButton:true
-  });
+  try{
+    const admins=await saApiFetch(`/api/superadmin/admins?colegioId=${colegioId}`);
+    const lista=admins.map(a=>`<tr>
+      <td>${a.nombre}</td><td>${a.usuario}</td>
+      <td><span class="bdg ${a.blocked?'bred':'bgr'}">${a.blocked?'Bloqueado':'Activo'}</span></td>
+      <td style="display:flex;gap:.3rem">
+        <button class="btn bsm" onclick="editAdmin('${a.id}')">✏️</button>
+        <button class="btn bsm" onclick="toggleAdmin('${a.id}',${!a.blocked})">${a.blocked?'🔓':'🔒'}</button>
+      </td>
+    </tr>`).join('');
+    Swal.fire({
+      title:`Admins — ${colegioNombre}`,
+      html:`<div style="overflow-x:auto"><table class="tbl"><thead><tr><th>Nombre</th><th>Usuario</th><th>Estado</th><th>Acc.</th></tr></thead>
+        <tbody>${lista||'<tr><td colspan="4" style="text-align:center;color:#999">Sin admins adicionales</td></tr>'}</tbody></table></div>
+        <hr style="margin:.75rem 0">
+        <button class="btn" onclick="modalNuevoAdmin('${colegioId}','${colegioNombre.replace(/'/g,"\\'")}')">＋ Nuevo Admin</button>`,
+      width:640,showConfirmButton:false,showCloseButton:true
+    });
+  }catch(e){sw('error',e.message);}
 }
 async function modalNuevoAdmin(colegioId,colegioNombre){
   Swal.close();
   const {value:f}=await Swal.fire({
     title:`Nuevo Admin — ${colegioNombre}`,
-    html:`<input id="nanom" class="swal2-input" placeholder="Nombre *">
-          <input id="nausr" class="swal2-input" placeholder="Usuario *">
+    html:`<input id="nanom" class="swal2-input" placeholder="Nombre completo *">
+          <input id="nausr" class="swal2-input" placeholder="Usuario * (sin espacios)">
           <input id="napwd" class="swal2-input" type="password" placeholder="Contraseña *">`,
-    focusConfirm:false,showCancelButton:true,
+    focusConfirm:false,showCancelButton:true,confirmButtonText:'Crear Admin',
     preConfirm:()=>({nombre:gi('nanom')?.value.trim(),usuario:gi('nausr')?.value.trim(),password:gi('napwd')?.value,colegioId})
   });
   if(!f||!f.nombre||!f.usuario||!f.password) return;
-  await apiFetch('/superadmin/admins','POST',f);
-  sw('success','Admin creado');
+  try{
+    await saApiFetch('/api/superadmin/admins',{method:'POST',body:JSON.stringify(f)});
+    sw('success','Admin creado correctamente');
+  }catch(e){sw('error',e.message);}
 }
 async function editAdmin(id){
   const {value:f}=await Swal.fire({
     title:'Editar Admin',
-    html:`<input id="eaNom" class="swal2-input" placeholder="Nuevo nombre">
+    html:`<input id="eaNom" class="swal2-input" placeholder="Nuevo nombre (dejar vacío = no cambiar)">
           <input id="eaPwd" class="swal2-input" type="password" placeholder="Nueva contraseña (dejar vacío = no cambiar)">`,
     focusConfirm:false,showCancelButton:true,
     preConfirm:()=>{const o={};const n=gi('eaNom')?.value.trim();const p=gi('eaPwd')?.value;if(n)o.nombre=n;if(p)o.password=p;return o;}
   });
   if(!f||!Object.keys(f).length) return;
-  await apiFetch(`/superadmin/admins/${id}`,'PUT',f);
-  sw('success','Admin actualizado');
+  try{
+    await saApiFetch(`/api/superadmin/admins/${id}`,{method:'PUT',body:JSON.stringify(f)});
+    sw('success','Admin actualizado');
+  }catch(e){sw('error',e.message);}
 }
 async function toggleAdmin(id,blocked){
-  await apiFetch(`/superadmin/admins/${id}`,'PUT',{blocked});
-  sw('success',blocked?'Admin bloqueado':'Admin desbloqueado');
+  try{
+    await saApiFetch(`/api/superadmin/admins/${id}`,{method:'PUT',body:JSON.stringify({blocked})});
+    sw('success',blocked?'Admin bloqueado':'Admin desbloqueado');
+  }catch(e){sw('error',e.message);}
 }
 
 /* ─── PLAN DE ESTUDIOS ─────────────────────────────────── */
@@ -3758,48 +3801,78 @@ function pgSAPlan(){
       </select>
       <button class="btn" onclick="modalNuevaMateria()">＋ Agregar Asignatura</button>
       <button class="btn bsec" onclick="importarPlanDefecto()">📥 Plan por Defecto</button>
+      <button class="btn bdan" onclick="eliminarPlanCompleto()" style="margin-left:auto">🗑️ Eliminar Todo</button>
     </div>
     <div id="saPlanTable">Selecciona un colegio.</div>
   </div>`;
 }
 async function initSAPlan(){
-  const colegios=await apiFetch('/superadmin/colegios');
-  const sel=gi('saPlanCol');
-  if(sel) sel.innerHTML='<option value="">— Selecciona colegio —</option>'+
-    colegios.map(c=>`<option value="${c.id}">${c.nombre}</option>`).join('');
+  try{
+    const colegios=await saApiFetch('/api/superadmin/colegios');
+    const sel=gi('saPlanCol');
+    if(sel) sel.innerHTML='<option value="">— Selecciona colegio —</option>'+
+      colegios.map(c=>`<option value="${c.id}">${c.nombre}</option>`).join('');
+  }catch(e){sw('error',e.message);}
 }
 async function loadSAPlan(){
   const cid=gi('saPlanCol')?.value;
-  if(!cid){gi('saPlanTable').textContent='Selecciona un colegio.';return;}
-  const ciclo=gi('saPlanCiclo')?.value;
-  let plan=await apiFetch(`/superadmin/plan/${cid}`);
-  if(ciclo) plan=plan.filter(p=>p.ciclo===ciclo);
-  if(!plan.length){gi('saPlanTable').innerHTML='<p style="color:#999">Sin asignaturas registradas. Agrega una o importa el plan por defecto.</p>';return;}
-  gi('saPlanTable').innerHTML=`<table class="tbl"><thead><tr>
-    <th>Ciclo</th><th>Grado</th><th>Área</th><th>Asignatura</th><th>Intensidad (h/sem)</th>
-  </tr></thead><tbody>${plan.map(p=>`<tr>
-    <td>${p.ciclo}</td><td>${p.grado}</td><td>${p.area}</td><td>${p.asignatura}</td><td>${p.intensidad}</td>
-  </tr>`).join('')}</tbody></table>`;
+  const planTable=gi('saPlanTable');
+  if(!cid){if(planTable)planTable.textContent='Selecciona un colegio.';return;}
+  if(planTable)planTable.textContent='Cargando…';
+  try{
+    const ciclo=gi('saPlanCiclo')?.value;
+    let plan=await saApiFetch(`/api/superadmin/plan/${cid}`);
+    if(ciclo) plan=plan.filter(p=>p.ciclo===ciclo);
+    if(!plan.length){
+      if(planTable)planTable.innerHTML='<p style="color:#999">Sin asignaturas. Agrega una o importa el plan por defecto.</p>';
+      return;
+    }
+    if(planTable)planTable.innerHTML=`<table class="tbl"><thead><tr>
+      <th>Ciclo</th><th>Grado</th><th>Área</th><th>Asignatura</th><th>h/sem</th>
+    </tr></thead><tbody>${plan.map(p=>`<tr>
+      <td>${p.ciclo}</td><td>${p.grado}</td><td>${p.area}</td><td>${p.asignatura}</td><td>${p.intensidad}</td>
+    </tr>`).join('')}</tbody></table>`;
+  }catch(e){if(planTable)planTable.innerHTML=`<p style="color:red">Error: ${e.message}</p>`;}
 }
 async function modalNuevaMateria(){
   const cid=gi('saPlanCol')?.value;
   if(!cid) return sw('warning','Selecciona un colegio primero');
   const {value:f}=await Swal.fire({
     title:'Nueva Asignatura',
-    html:`<select id="nmCiclo" class="swal2-select"><option value="primaria">Primaria</option><option value="bachillerato">Bachillerato</option></select>
+    html:`<select id="nmCiclo" class="swal2-select" style="width:100%;margin:.25rem 0">
+            <option value="primaria">Primaria</option>
+            <option value="bachillerato">Bachillerato</option>
+          </select>
           <input id="nmGrado" class="swal2-input" placeholder="Grado (ej: 1°, 6°)">
           <input id="nmArea"  class="swal2-input" placeholder="Área (ej: Ciencias Naturales)">
           <input id="nmAsig"  class="swal2-input" placeholder="Asignatura *">
           <input id="nmInt"   class="swal2-input" type="number" min="0" max="40" placeholder="Intensidad h/sem">`,
-    focusConfirm:false,showCancelButton:true,
-    preConfirm:()=>({ciclo:gi('nmCiclo')?.value,grado:gi('nmGrado')?.value.trim(),
-      area:gi('nmArea')?.value.trim(),asignatura:gi('nmAsig')?.value.trim(),
-      intensidad:parseInt(gi('nmInt')?.value)||0})
+    focusConfirm:false,showCancelButton:true,confirmButtonText:'Agregar',
+    preConfirm:()=>({
+      ciclo:gi('nmCiclo')?.value,
+      grado:gi('nmGrado')?.value.trim(),
+      area:gi('nmArea')?.value.trim(),
+      asignatura:gi('nmAsig')?.value.trim(),
+      intensidad:parseInt(gi('nmInt')?.value)||0
+    })
   });
   if(!f||!f.asignatura) return;
-  await apiFetch(`/superadmin/plan/${cid}`,'POST',f);
-  sw('success','Asignatura agregada');
-  loadSAPlan();
+  try{
+    await saApiFetch(`/api/superadmin/plan/${cid}`,{method:'POST',body:JSON.stringify(f)});
+    sw('success','Asignatura agregada');
+    loadSAPlan();
+  }catch(e){sw('error',e.message);}
+}
+async function eliminarPlanCompleto(){
+  const cid=gi('saPlanCol')?.value;
+  if(!cid) return sw('warning','Selecciona un colegio primero');
+  const conf=await Swal.fire({title:'¿Eliminar todo el plan?',text:'Se borrarán todas las asignaturas del colegio.',icon:'warning',showCancelButton:true,confirmButtonText:'Sí, eliminar',confirmButtonColor:'#e53e3e'});
+  if(!conf.isConfirmed) return;
+  try{
+    await saApiFetch(`/api/superadmin/plan/${cid}`,{method:'DELETE'});
+    sw('success','Plan eliminado');
+    loadSAPlan();
+  }catch(e){sw('error',e.message);}
 }
 async function importarPlanDefecto(){
   const cid=gi('saPlanCol')?.value;
@@ -3820,20 +3893,59 @@ async function importarPlanDefecto(){
     {ciclo:'bachillerato',grado:'6°',area:'Filosofía',asignatura:'Filosofía',intensidad:2},
     {ciclo:'bachillerato',grado:'6°',area:'Idiomas',asignatura:'Inglés',intensidad:3},
   ];
-  await apiFetch(`/superadmin/plan/${cid}/delete`,'DELETE');
-  await apiFetch(`/superadmin/plan/${cid}`,'POST',plan);
-  sw('success','Plan importado');
-  loadSAPlan();
+  try{
+    await saApiFetch(`/api/superadmin/plan/${cid}`,{method:'DELETE'});
+    await saApiFetch(`/api/superadmin/plan/${cid}`,{method:'POST',body:JSON.stringify(plan)});
+    sw('success','Plan importado correctamente');
+    loadSAPlan();
+  }catch(e){sw('error',e.message);}
 }
 
 /* ─── ESTADÍSTICAS GLOBALES ─────────────────────────────── */
 function pgSAEstadisticas(){
   return`<div class="card">
     <h2>📊 Estadísticas Globales</h2>
-    <div id="saEstadisticasContent">Cargando…</div>
+    <div id="saEstadisticasContent" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:1rem;margin-bottom:1.5rem">
+      <div class="card" style="text-align:center"><div style="font-size:2rem">⏳</div><p>Cargando…</p></div>
+    </div>
+    <h3 style="margin-bottom:.75rem">Detalle por institución</h3>
+    <div id="saEstDetalle"></div>
   </div>`;
 }
-// initSAEstadisticas se puede agregar al map en initPg si se desea
+async function initSAEstadisticas(){
+  try{
+    const stats=await saApiFetch('/api/superadmin/stats');
+    const cont=gi('saEstadisticasContent');
+    if(!cont) return;
+    const totalEst=stats.reduce((a,s)=>a+s.totalEst,0);
+    const totalProfs=stats.reduce((a,s)=>a+s.totalProfs,0);
+    const totalSal=stats.reduce((a,s)=>a+(s.totalSalones||0),0);
+    const promGlobal=stats.length?+(stats.reduce((a,s)=>a+s.promNotas,0)/stats.length).toFixed(2):0;
+    cont.innerHTML=[
+      {ic:'🏫',lb:'Instituciones',val:stats.length},
+      {ic:'👨‍🎓',lb:'Estudiantes',val:totalEst},
+      {ic:'👩‍🏫',lb:'Profesores',val:totalProfs},
+      {ic:'🏛️',lb:'Salones',val:totalSal},
+      {ic:'📊',lb:'Prom. Global',val:promGlobal},
+    ].map(s=>`<div class="card" style="text-align:center">
+      <div style="font-size:2rem">${s.ic}</div>
+      <div style="font-size:1.6rem;font-weight:700">${s.val}</div>
+      <div style="color:#666;font-size:.85rem">${s.lb}</div>
+    </div>`).join('');
+    const det=gi('saEstDetalle');
+    if(det) det.innerHTML=`<table class="tbl"><thead><tr>
+      <th>Institución</th><th>Estudiantes</th><th>Profesores</th><th>Salones</th><th>Prom. Notas</th><th>Estado</th>
+    </tr></thead><tbody>${stats.map(s=>`<tr>
+      <td><strong>${s.colegioNombre}</strong></td>
+      <td>${s.totalEst}</td><td>${s.totalProfs}</td><td>${s.totalSalones||0}</td>
+      <td><span style="font-weight:700;color:${s.promNotas>=3?'#22543d':'#9b2c2c'}">${s.promNotas}</span></td>
+      <td><span class="bdg ${s.activo?'bgr':'bred'}">${s.activo?'Activo':'Inactivo'}</span></td>
+    </tr>`).join('')}</tbody></table>`;
+  }catch(e){
+    const cont=gi('saEstadisticasContent');
+    if(cont)cont.innerHTML=`<p style="color:red">Error: ${e.message}</p>`;
+  }
+}
 
 /* ─── AUDITORÍA GLOBAL ──────────────────────────────────── */
 function pgSAAuditoria(){
@@ -3849,30 +3961,35 @@ function pgSAAuditoria(){
   </div>`;
 }
 async function initSAAuditoria(){
-  const colegios=await apiFetch('/superadmin/colegios');
-  const sel=gi('saAudCol');
-  if(sel) sel.innerHTML='<option value="">Todos los colegios</option>'+
-    colegios.map(c=>`<option value="${c.id}">${c.nombre}</option>`).join('');
-  loadSAAuditoria();
+  try{
+    const colegios=await saApiFetch('/api/superadmin/colegios');
+    const sel=gi('saAudCol');
+    if(sel) sel.innerHTML='<option value="">Todos los colegios</option>'+
+      colegios.map(c=>`<option value="${c.id}">${c.nombre}</option>`).join('');
+    loadSAAuditoria();
+  }catch(e){const el=gi('saAudTable');if(el)el.innerHTML=`<p style="color:red">Error: ${e.message}</p>`;}
 }
 async function loadSAAuditoria(){
   const cid=gi('saAudCol')?.value;
   const q=(gi('saAudSearch')?.value||'').toLowerCase();
-  let url='/superadmin/auditoria?limit=300';
-  if(cid) url+=`&colegioId=${cid}`;
-  let logs=await apiFetch(url);
-  if(q) logs=logs.filter(l=>(l.accion||'').toLowerCase().includes(q)||(l.who||'').toLowerCase().includes(q));
   const el=gi('saAudTable');
   if(!el) return;
-  el.innerHTML=`<table class="tbl"><thead><tr>
-    <th>Fecha</th><th>Usuario</th><th>Rol</th><th>Acción</th><th>Colegio</th>
-  </tr></thead><tbody>${logs.slice(0,200).map(l=>`<tr>
-    <td style="font-size:.78rem">${l.ts?.slice(0,16)||''}</td>
-    <td>${l.who||l.user||''}</td>
-    <td><span class="bdg ${l.role==='superadmin'?'bpurp':l.role==='admin'?'bor':'bbl'}">${l.role||''}</span></td>
-    <td>${l.accion||''}</td>
-    <td style="font-size:.78rem">${l.colegioId||'global'}</td>
-  </tr>`).join('')}</tbody></table>`;
+  el.textContent='Cargando…';
+  try{
+    let url='/api/superadmin/auditoria?limit=300';
+    if(cid) url+=`&colegioId=${cid}`;
+    let logs=await saApiFetch(url);
+    if(q) logs=logs.filter(l=>(l.accion||'').toLowerCase().includes(q)||(l.who||'').toLowerCase().includes(q));
+    el.innerHTML=`<table class="tbl"><thead><tr>
+      <th>Fecha</th><th>Usuario</th><th>Rol</th><th>Acción</th><th>Colegio</th>
+    </tr></thead><tbody>${logs.slice(0,200).map(l=>`<tr>
+      <td style="font-size:.78rem">${l.ts?.slice(0,16)||''}</td>
+      <td>${l.who||l.user||''}</td>
+      <td><span class="bdg ${l.role==='superadmin'?'bpurp':l.role==='admin'?'bor':'bbl'}">${l.role||''}</span></td>
+      <td>${l.accion||''}</td>
+      <td style="font-size:.78rem">${l.colegioId||'global'}</td>
+    </tr>`).join('')}</tbody></table>`;
+  }catch(e){el.innerHTML=`<p style="color:red">Error: ${e.message}</p>`;}
 }
 
 /* ─── MANTENIMIENTO TÉCNICO ─────────────────────────────── */
@@ -3880,16 +3997,14 @@ function pgSAMantenimiento(){
   return`<div class="card">
     <h2>⚙️ Mantenimiento Técnico</h2>
     <div style="display:grid;gap:1.5rem">
-
       <div class="card">
         <h3>💾 Copia de Seguridad</h3>
-        <p style="color:#888;margin-bottom:.75rem">Descarga un backup JSON de un colegio.</p>
+        <p style="color:#888;margin-bottom:.75rem">Descarga un backup JSON con todos los datos de una institución.</p>
         <div style="display:flex;gap:.75rem;flex-wrap:wrap">
           <select id="saBackupCol" class="inp" style="min-width:200px"></select>
           <button class="btn" onclick="descargarBackup()">📥 Descargar Backup</button>
         </div>
       </div>
-
       <div class="card">
         <h3>🔑 Reset Masivo de Contraseñas</h3>
         <p style="color:#888;margin-bottom:.75rem">Actualiza contraseñas de todos los usuarios de un colegio.</p>
@@ -3905,30 +4020,35 @@ function pgSAMantenimiento(){
           <button class="btn bdan" onclick="resetMasivo()">⚠️ Resetear</button>
         </div>
       </div>
-
     </div>
   </div>`;
 }
 async function initSAMantenimiento(){
-  const colegios=await apiFetch('/superadmin/colegios');
-  ['saBackupCol','saResetCol'].forEach(sid=>{
-    const sel=gi(sid);
-    if(sel) sel.innerHTML='<option value="">— Selecciona colegio —</option>'+
-      colegios.map(c=>`<option value="${c.id}">${c.nombre}</option>`).join('');
-  });
+  try{
+    const colegios=await saApiFetch('/api/superadmin/colegios');
+    ['saBackupCol','saResetCol'].forEach(sid=>{
+      const sel=gi(sid);
+      if(sel) sel.innerHTML='<option value="">— Selecciona colegio —</option>'+
+        colegios.map(c=>`<option value="${c.id}">${c.nombre}</option>`).join('');
+    });
+  }catch(e){sw('error',e.message);}
 }
 async function descargarBackup(){
   const cid=gi('saBackupCol')?.value;
   if(!cid) return sw('warning','Selecciona un colegio');
-  const token=window.TokenStore?.get();
-  const res=await fetch(`/api/superadmin/backup/${cid}`,{
-    method:'POST',headers:{Authorization:`Bearer ${token}`,'Content-Type':'application/json'}
-  });
-  const blob=await res.blob();
-  const url=URL.createObjectURL(blob);
-  const a=document.createElement('a');
-  a.href=url;a.download=`backup_${cid}_${Date.now()}.json`;a.click();
-  URL.revokeObjectURL(url);
+  try{
+    const token=window.TokenStore?.get();
+    const res=await fetch(API_BASE+`/api/superadmin/backup/${cid}`,{
+      method:'POST',headers:{Authorization:`Bearer ${token}`,'Content-Type':'application/json'}
+    });
+    if(!res.ok){const e=await res.json();throw new Error(e.error||'Error al generar backup');}
+    const blob=await res.blob();
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement('a');
+    a.href=url;a.download=`backup_${cid}_${Date.now()}.json`;a.click();
+    URL.revokeObjectURL(url);
+    sw('success','Backup descargado');
+  }catch(e){sw('error',e.message);}
 }
 async function resetMasivo(){
   const cid=gi('saResetCol')?.value;
@@ -3941,6 +4061,181 @@ async function resetMasivo(){
     icon:'warning',showCancelButton:true,confirmButtonText:'Sí, resetear',confirmButtonColor:'#e53e3e'
   });
   if(!conf.isConfirmed) return;
-  const res=await apiFetch(`/superadmin/reset-passwords/${cid}`,'POST',{role:role||undefined,newPassword:pwd});
-  sw('success',`${res.updated} contraseñas actualizadas`);
+  try{
+    const res=await saApiFetch(`/api/superadmin/reset-passwords/${cid}`,{method:'POST',body:JSON.stringify({role:role||undefined,newPassword:pwd})});
+    sw('success',`${res.updated} contraseñas actualizadas`);
+    gi('saResetPwd').value='';
+  }catch(e){sw('error',e.message);}
 }
+
+/* ─── SUGERENCIAS (superadmin recibe) ──────────────────── */
+function pgSASug(){
+  return`<div class="card">
+    <h2>💡 Sugerencias Recibidas</h2>
+    <div style="display:flex;gap:.75rem;margin-bottom:1rem;flex-wrap:wrap;align-items:center">
+      <select id="saSugFiltCol" class="inp" style="min-width:180px" onchange="loadSASug()">
+        <option value="">Todos los colegios</option>
+      </select>
+      <select id="saSugFiltLeida" class="inp" onchange="loadSASug()">
+        <option value="">Todas</option>
+        <option value="false">No leídas</option>
+        <option value="true">Leídas</option>
+      </select>
+    </div>
+    <div id="saSugTable">Cargando…</div>
+  </div>`;
+}
+async function initSASug(){
+  try{
+    const colegios=await saApiFetch('/api/superadmin/colegios');
+    const sel=gi('saSugFiltCol');
+    if(sel) sel.innerHTML='<option value="">Todos los colegios</option>'+
+      colegios.map(c=>`<option value="${c.id}">${c.nombre}</option>`).join('');
+    loadSASug();
+  }catch(e){const el=gi('saSugTable');if(el)el.innerHTML=`<p style="color:red">Error: ${e.message}</p>`;}
+}
+async function loadSASug(){
+  const el=gi('saSugTable');if(!el) return;
+  el.textContent='Cargando…';
+  try{
+    const cid=gi('saSugFiltCol')?.value||'';
+    const leida=gi('saSugFiltLeida')?.value||'';
+    let url='/api/sugerencias?limit=200';
+    if(cid) url+=`&colegioId=${cid}`;
+    if(leida!=='') url+=`&leida=${leida}`;
+    const list=await saApiFetch(url);
+    if(!list.length){el.innerHTML='<p style="color:#999;text-align:center;padding:2rem">No hay sugerencias.</p>';return;}
+    el.innerHTML=list.map(s=>`<div class="card" style="margin-bottom:1rem;border-left:4px solid ${s.leida?'#cbd5e0':'#4299e1'}">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:.5rem">
+        <div>
+          <span class="bdg ${s.role==='admin'?'bor':s.role==='profe'?'bbl':'bgr'}">${s.role}</span>
+          <strong style="margin-left:.5rem">${s.nombre}</strong>
+          <span style="font-size:.78rem;color:#718096;margin-left:.5rem">${s.colegioNombre||'—'}</span>
+        </div>
+        <div style="display:flex;gap:.4rem;align-items:center">
+          <span style="font-size:.75rem;color:#718096">${(s.ts||s.createdAt||'').slice(0,10)}</span>
+          ${!s.leida?`<button class="btn bsm" onclick="marcarSugLeida('${s._id}')">✓ Leída</button>`:''}
+          <button class="btn bsm" onclick="responderSug('${s._id}','${encodeURIComponent(s.nombre)}')">💬 Responder</button>
+          <button class="btn bsm bdan" onclick="eliminarSug('${s._id}')">🗑️</button>
+        </div>
+      </div>
+      ${s.titulo?`<div style="font-weight:700;margin:.5rem 0 .25rem"><span class="bdg" style="background:#ebf4ff;color:#2b6cb0">${s.categoria||'general'}</span> ${s.titulo}</div>`:`<div style="font-size:.8rem;color:#718096;margin:.25rem 0"><span class="bdg" style="background:#ebf4ff;color:#2b6cb0">${s.categoria||'general'}</span></div>`}
+      <p style="color:#4a5568;margin:.25rem 0">${s.mensaje}</p>
+      ${s.respuesta?`<div style="background:#f0fff4;border-radius:6px;padding:.5rem .75rem;margin-top:.5rem;font-size:.87rem"><strong>✅ Tu respuesta:</strong> ${s.respuesta}</div>`:''}
+    </div>`).join('');
+  }catch(e){el.innerHTML=`<p style="color:red">Error: ${e.message}</p>`;}
+}
+async function marcarSugLeida(id){
+  try{
+    await saApiFetch(`/api/sugerencias/${id}/leer`,{method:'PUT',body:JSON.stringify({})});
+    loadSASug();
+  }catch(e){sw('error',e.message);}
+}
+async function responderSug(id,nombreEnc){
+  const nombre=decodeURIComponent(nombreEnc);
+  const {value:resp}=await Swal.fire({
+    title:`Responder a ${nombre}`,
+    input:'textarea',inputPlaceholder:'Escribe tu respuesta…',
+    showCancelButton:true,confirmButtonText:'Enviar',inputAttributes:{rows:4}
+  });
+  if(!resp) return;
+  try{
+    await saApiFetch(`/api/sugerencias/${id}/responder`,{method:'PUT',body:JSON.stringify({respuesta:resp})});
+    sw('success','Respuesta enviada');
+    loadSASug();
+  }catch(e){sw('error',e.message);}
+}
+async function eliminarSug(id){
+  const conf=await Swal.fire({title:'¿Eliminar sugerencia?',icon:'warning',showCancelButton:true,confirmButtonText:'Eliminar',confirmButtonColor:'#e53e3e'});
+  if(!conf.isConfirmed) return;
+  try{
+    await saApiFetch(`/api/sugerencias/${id}`,{method:'DELETE'});
+    loadSASug();
+  }catch(e){sw('error',e.message);}
+}
+
+/* ─── SUGERENCIAS (admin/profe/est envían) ──────────────── */
+function pgSugerencias(){
+  const histId='sugHistorial';
+  return`<div class="ph"><h2>💡 Sugerencias</h2><p>Envía sugerencias, comentarios o reportes al administrador de la plataforma.</p></div>
+  <div class="card">
+    <div class="chd"><span class="cti">Nueva Sugerencia</span></div>
+    <div class="fg">
+      <div class="fld"><label>Título (opcional)</label><input id="sugTitulo" class="inp" placeholder="Resumen breve"></div>
+      <div class="fld"><label>Categoría</label>
+        <select id="sugCat" class="inp">
+          <option value="general">General</option>
+          <option value="academico">Académico</option>
+          <option value="tecnico">Técnico</option>
+          <option value="sugerencia">Sugerencia</option>
+          <option value="felicitacion">Felicitación</option>
+          <option value="queja">Queja</option>
+        </select>
+      </div>
+    </div>
+    <div class="fld"><label>Mensaje *</label><textarea id="sugMensaje" class="inp" rows="4" style="width:100%;resize:vertical" placeholder="Describe tu sugerencia o comentario…"></textarea></div>
+    <button class="btn bg" onclick="enviarSugerencia()" style="margin-top:.5rem">📨 Enviar Sugerencia</button>
+  </div>
+  <div class="card" style="margin-top:1rem">
+    <div class="chd"><span class="cti">Mis Sugerencias Enviadas</span></div>
+    <div id="${histId}">Cargando…</div>
+  </div>`;
+}
+async function initSugerencias(){
+  await cargarMisSugerencias();
+}
+async function enviarSugerencia(){
+  const titulo=gi('sugTitulo')?.value.trim();
+  const categoria=gi('sugCat')?.value||'general';
+  const mensaje=gi('sugMensaje')?.value.trim();
+  if(!mensaje) return sw('warning','El mensaje es obligatorio');
+  try{
+    await apiFetch('/api/sugerencias',{method:'POST',body:JSON.stringify({titulo,categoria,mensaje})});
+    sw('success','¡Sugerencia enviada! Gracias por tu aportación.');
+    if(gi('sugTitulo')) gi('sugTitulo').value='';
+    if(gi('sugMensaje')) gi('sugMensaje').value='';
+    await cargarMisSugerencias();
+  }catch(e){sw('error',e.message);}
+}
+async function cargarMisSugerencias(){
+  const cont=gi('sugHistorial');
+  if(!cont) return;
+  try{
+    const list=await apiFetch('/api/sugerencias');
+    if(!list||!list.length){cont.innerHTML='<p style="color:#999;text-align:center;padding:1rem">Aún no has enviado sugerencias.</p>';return;}
+    cont.innerHTML=list.map(s=>`<div style="border-bottom:1px solid var(--bd);padding:.75rem 0">
+      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:.25rem">
+        <span class="bdg" style="background:#ebf4ff;color:#2b6cb0">${s.categoria||'general'}</span>
+        <span style="font-size:.75rem;color:#718096">${(s.ts||s.createdAt||'').slice(0,10)}</span>
+      </div>
+      ${s.titulo?`<div style="font-weight:600;margin:.25rem 0">${s.titulo}</div>`:''}
+      <p style="color:#4a5568;margin:.25rem 0;font-size:.9rem">${s.mensaje}</p>
+      ${s.respuesta?`<div style="background:#f0fff4;border-radius:6px;padding:.4rem .6rem;margin-top:.35rem;font-size:.85rem;color:#276749"><strong>💬 Respuesta:</strong> ${s.respuesta}</div>`:'<div style="font-size:.78rem;color:#a0aec0;margin-top:.25rem">Sin respuesta aún</div>'}
+    </div>`).join('');
+  }catch(e){cont.innerHTML=`<p style="color:red;font-size:.85rem">Error: ${e.message}</p>`;}
+}
+
+/* ─── Helper apiFetch exclusivo superadmin ──────────────── */
+// Evita usar el apiFetch global que puede tener problemas de scope en SA
+async function saApiFetch(path,opts={}){
+  const token=window.TokenStore?.get();
+  const headers={'Content-Type':'application/json',...(opts.headers||{})};
+  if(token) headers['Authorization']='Bearer '+token;
+  const res=await fetch(API_BASE+path,{...opts,headers});
+  if(res.status===401){
+    const d=await res.json().catch(()=>({}));
+    if(d.expired){TokenStore.clear();doLogout();return null;}
+  }
+  if(!res.ok){
+    const err=await res.json().catch(()=>({error:`HTTP ${res.status}`}));
+    throw new Error(err.error||`HTTP ${res.status}`);
+  }
+  return res.json();
+}
+
+/* ════════════════════════════════════════════════════════════════
+   KEYBOARD & INIT
+════════════════════════════════════════════════════════════════ */
+document.addEventListener('keydown',ev=>{
+  if(ev.key==='Enter'&&!gi('ls').classList.contains('hidden')) doLogin();
+});

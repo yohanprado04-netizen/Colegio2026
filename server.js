@@ -10,11 +10,9 @@ const connectDB = require('./config/db');
 
 const app = express();
 
-// ─── Servir frontend estático ─────────────────────────────────────
 app.use(express.static(path.join(__dirname)));
 app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'index.html')));
 
-// ─── Seguridad ───────────────────────────────────────────────────
 app.use(helmet({ contentSecurityPolicy: false }));
 
 const corsOptions = {
@@ -36,10 +34,9 @@ const corsOptions = {
 };
 app.use(cors(corsOptions));
 
-// ─── Rate limiting ───────────────────────────────────────────────
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 200,
+  max: 300,
   standardHeaders: true,
   legacyHeaders: false,
   message: { error: 'Demasiadas peticiones. Intenta en 15 minutos.' },
@@ -52,17 +49,17 @@ const loginLimiter = rateLimit({
   message: { error: 'Demasiados intentos de login. Espera 15 minutos.' },
 });
 
-// ─── Body parser ─────────────────────────────────────────────────
 app.use(express.json({ limit: '25mb' }));
 app.use(express.urlencoded({ extended: true, limit: '25mb' }));
 
-// ─── Rutas API ───────────────────────────────────────────────────
-app.use('/api/auth',       loginLimiter, require('./routes/auth'));
-app.use('/api/superadmin',               require('./routes/superadmin'));
-app.use('/api/db',                       require('./routes/db'));
-app.use('/api',                          require('./routes/api'));
+// ─── Rutas API ────────────────────────────────────────────────────
+app.use('/api/auth',         loginLimiter, require('./routes/auth'));
+app.use('/api/superadmin',                 require('./routes/superadmin'));
+app.use('/api/sugerencias',               require('./routes/sugerencias'));
+app.use('/api/db',                         require('./routes/db'));
+app.use('/api',                            require('./routes/api'));
 
-// ─── Health check ────────────────────────────────────────────────
+// ─── Health check ─────────────────────────────────────────────────
 app.get('/health', (req, res) => {
   res.json({
     status:    'OK',
@@ -72,18 +69,15 @@ app.get('/health', (req, res) => {
   });
 });
 
-// ─── 404 ─────────────────────────────────────────────────────────
 app.use((req, res) => {
   res.status(404).json({ error: `Ruta no encontrada: ${req.method} ${req.path}` });
 });
 
-// ─── Error handler ───────────────────────────────────────────────
 app.use((err, req, res, next) => {
   console.error('Server error:', err);
   res.status(500).json({ error: 'Error interno del servidor' });
 });
 
-// ─── Inicio ──────────────────────────────────────────────────────
 const PORT = process.env.PORT || 3001;
 
 (async () => {
@@ -91,6 +85,7 @@ const PORT = process.env.PORT || 3001;
   app.listen(PORT, () => {
     console.log(`\n🚀 Servidor corriendo en puerto ${PORT}`);
     console.log(`📡 Health check: /health`);
-    console.log(`🔐 Super Admin: POST /api/auth/login (usuario: superadmin)`);
+    console.log(`🔐 Super Admin: usuario: superadmin`);
+    console.log(`💡 Sugerencias: POST /api/sugerencias`);
   });
 })();
