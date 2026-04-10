@@ -35,11 +35,14 @@ router.get('/colegios', async (req, res) => {
 // POST /api/superadmin/colegios — crear colegio + su admin
 router.post('/colegios', async (req, res) => {
   try {
-    const { nombre, codigo, direccion, telefono, sedes, jornadas,
+    const { nombre, nit, direccion, telefono, sedes, jornadas,
             adminNombre, adminUsuario, adminPassword } = req.body;
 
-    if (!nombre || !adminNombre || !adminUsuario || !adminPassword)
-      return res.status(400).json({ error: 'Faltan campos requeridos' });
+    if (!nombre || !nit || !adminNombre || !adminUsuario || !adminPassword)
+      return res.status(400).json({ error: 'Faltan campos requeridos (nombre, NIT, admin)' });
+
+    const nitExiste = await Colegio.findOne({ nit });
+    if (nitExiste) return res.status(409).json({ error: 'Ya existe un colegio con ese NIT' });
 
     const exists = await Usuario.findOne({ usuario: adminUsuario });
     if (exists) return res.status(409).json({ error: 'Ese usuario ya existe' });
@@ -47,7 +50,7 @@ router.post('/colegios', async (req, res) => {
     const colegioId = 'col_' + Date.now();
 
     await Colegio.create({
-      id: colegioId, nombre, codigo: codigo || '', direccion: direccion || '',
+      id: colegioId, nombre, nit, direccion: direccion || '',
       telefono: telefono || '', sedes: sedes || [], jornadas: jornadas || [],
       createdBy: 'superadmin'
     });
@@ -77,7 +80,7 @@ router.post('/colegios', async (req, res) => {
     for (const c of cfgDefaults) {
       await Config.findOneAndUpdate(
         { key: c.key, colegioId },
-        { value: c.value, colegioId },
+        { $set: { value: c.value }, $setOnInsert: { key: c.key, colegioId } },
         { upsert: true }
       );
     }
@@ -95,13 +98,21 @@ router.post('/colegios', async (req, res) => {
 // PUT /api/superadmin/colegios/:id
 router.put('/colegios/:id', async (req, res) => {
   try {
-    const allowed = ['nombre','codigo','direccion','telefono','sedes','jornadas','logo','activo'];
+    const allowed = ['nombre','nit','direccion','telefono','sedes','jornadas','logo','activo'];
     const upd = {};
     allowed.forEach(k => { if (req.body[k] !== undefined) upd[k] = req.body[k]; });
     const col = await Colegio.findOneAndUpdate({ id: req.params.id }, upd, { new: true });
     if (!col) return res.status(404).json({ error: 'Colegio no encontrado' });
     if (upd.nombre) {
       await Usuario.updateMany({ colegioId: req.params.id }, { colegioNombre: upd.nombre });
+    }
+    // Si se desactiva el colegio → bloquear todos sus usuarios (excepto superadmin)
+    // Si se activa → desbloquear
+    if (upd.activo !== undefined) {
+      await Usuario.updateMany(
+        { colegioId: req.params.id, role: { $in: ['admin', 'profe', 'est'] } },
+        { blocked: !upd.activo }
+      );
     }
     res.json({ ok: true });
   } catch (err) { res.status(500).json({ error: err.message }); }

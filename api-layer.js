@@ -705,7 +705,16 @@ async function saveDisc(eid, v) {
 // saveDR() / saveDRPer()
 // ═══════════════════════════════════════════════════════════════════
 async function saveDR() {
-  DB.dr = { s: gi('drs').value, e: gi('dre').value };
+  const s = gi('drs').value;
+  const e = gi('dre').value;
+  if (s && e && e <= s) {
+    sw('error', 'Fecha inválida', 'La fecha de Fin debe ser posterior al Inicio.'); return;
+  }
+  const anoActual = DB.anoActual || String(new Date().getFullYear());
+  if (s && s.slice(0,4) !== anoActual) {
+    sw('warning', 'Año incorrecto', `El inicio (${s.slice(0,4)}) no corresponde al año lectivo activo (${anoActual}).`); return;
+  }
+  DB.dr = { s, e };
   try {
     await apiFetch('/api/config/dr', { method: 'PUT', body: JSON.stringify({ value: DB.dr }) });
     const hoy = today();
@@ -725,6 +734,13 @@ async function saveDRPer(key, per) {
   const s      = gi('dps_' + key)?.value || '';
   const e      = gi('dpe_' + key)?.value || '';
   const extPer = gi('dpex_' + key)?.value || '';
+  if (s && e && e <= s) {
+    sw('error', 'Fecha inválida', `En "${per}": la fecha Fin debe ser posterior al Inicio.`); return;
+  }
+  const anoActual = DB.anoActual || String(new Date().getFullYear());
+  if (s && s.slice(0,4) !== anoActual) {
+    sw('warning', 'Año incorrecto', `El inicio (${s.slice(0,4)}) no corresponde al año lectivo (${anoActual}).`); return;
+  }
   DB.drPer[per] = { s, e, extPer };
   try {
     await apiFetch('/api/config/drPer', { method: 'PUT', body: JSON.stringify({ value: DB.drPer }) });

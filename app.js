@@ -1287,9 +1287,14 @@ function pgAFec(){
         <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
           <label style="font-size:11px;color:var(--sl2)">Inicio</label>
           <input type="date" id="dps_${p.replace(/\s/g,'_')}" value="${dp.s}"
+            min="${DB.anoActual||new Date().getFullYear()}-01-01"
+            max="${DB.anoActual||new Date().getFullYear()}-12-31"
+            onchange="const fe=gi('dpe_${p.replace(/\s/g,'_')}');if(fe)fe.min=this.value"
             style="padding:5px 8px;border:1.5px solid var(--bd);border-radius:6px;font-size:12px">
           <label style="font-size:11px;color:var(--sl2)">Fin</label>
           <input type="date" id="dpe_${p.replace(/\s/g,'_')}" value="${dp.e}"
+            min="${dp.s||''}"
+            onchange="if(this.value&&gi('dps_${p.replace(/\s/g,'_')}')?.value&&this.value<=gi('dps_${p.replace(/\s/g,'_')}').value){sw('error','El fin debe ser posterior al inicio en ${p}');this.value='';}"
             style="padding:5px 8px;border:1.5px solid var(--bd);border-radius:6px;font-size:12px">
           <label style="font-size:11px;color:var(--sl2)">Periodo Ext.</label>
           <select id="dpex_${p.replace(/\s/g,'_')}"
@@ -1340,8 +1345,13 @@ function pgAFec(){
   <div class="g2">
     <div class="card"><div class="chd"><span class="cti">📅 Rango Global (fallback)</span></div>
       <div style="font-size:12px;color:var(--sl2);margin-bottom:10px">Se aplica cuando un periodo no tiene rango propio configurado.</div>
-      <div class="fld"><label>Fecha Inicio</label><input type="date" id="drs" value="${DB.dr.s}"></div>
-      <div class="fld"><label>Fecha Fin</label><input type="date" id="dre" value="${DB.dr.e}"></div>
+      <div class="fld"><label>Fecha Inicio</label>
+        <input type="date" id="drs" value="${DB.dr.s}" min="${DB.anoActual||new Date().getFullYear()}-01-01" max="${DB.anoActual||new Date().getFullYear()}-12-31"
+          onchange="gi('dre').min=this.value||''">
+      </div>
+      <div class="fld"><label>Fecha Fin</label>
+        <input type="date" id="dre" value="${DB.dr.e}" min="${DB.dr.s||''}" onchange="if(this.value&&gi('drs').value&&this.value<=gi('drs').value){sw('error','El fin debe ser posterior al inicio');this.value='';}">
+      </div>
       <button class="btn bn" onclick="saveDR()">Guardar Rango Global</button>
     </div>
     <div class="card"><div class="chd"><span class="cti">🔄 Periodo Extraordinario</span></div>
@@ -3768,10 +3778,10 @@ function renderSAColegiosTable(lista){
   if(!el) return;
   if(!lista.length){el.innerHTML='<p style="color:#999">No hay colegios registrados.</p>';return;}
   el.innerHTML=`<table class="tbl"><thead><tr>
-    <th>Nombre</th><th>Código</th><th>Admins</th><th>Estud.</th><th>Profs.</th><th>Estado</th><th>Acciones</th>
+    <th>Nombre</th><th>NIT</th><th>Admins</th><th>Estud.</th><th>Profs.</th><th>Estado</th><th>Acciones</th>
   </tr></thead><tbody>${lista.map(c=>`<tr>
     <td><strong>${c.nombre}</strong></td>
-    <td>${c.codigo||'—'}</td>
+    <td style="font-family:var(--mn);font-size:12px">${c.nit||'—'}</td>
     <td>${c.admins||0}</td><td>${c.ests||0}</td><td>${c.profs||0}</td>
     <td><span class="bdg ${c.activo?'bgr':'bred'}">${c.activo?'Activo':'Inactivo'}</span></td>
     <td style="display:flex;gap:.4rem;flex-wrap:wrap">
@@ -3795,8 +3805,9 @@ async function modalNuevoColegio(){
     title:'Nuevo Colegio + Admin',
     html:`
       <input id="snNombre"  class="swal2-input" placeholder="Nombre del colegio *">
-      <input id="snCodigo"  class="swal2-input" placeholder="Código (opcional)">
+      <input id="snNit"     class="swal2-input" placeholder="NIT del colegio * (ej: 900123456-7)">
       <input id="snDir"     class="swal2-input" placeholder="Dirección">
+      <input id="snTel"     class="swal2-input" placeholder="Teléfono">
       <hr style="margin:.5rem 0">
       <p style="margin:.5rem 1rem;font-size:.85rem;color:#666;text-align:left">Datos del administrador:</p>
       <input id="snANombre" class="swal2-input" placeholder="Nombre del Admin *">
@@ -3806,16 +3817,17 @@ async function modalNuevoColegio(){
     focusConfirm:false,showCancelButton:true,confirmButtonText:'Crear Colegio',
     preConfirm:()=>({
       nombre:       gi('snNombre')?.value.trim(),
-      codigo:       gi('snCodigo')?.value.trim(),
+      nit:          gi('snNit')?.value.trim(),
       direccion:    gi('snDir')?.value.trim(),
+      telefono:     gi('snTel')?.value.trim(),
       adminNombre:  gi('snANombre')?.value.trim(),
       adminUsuario: gi('snAUser')?.value.trim(),
       adminPassword:gi('snAPwd')?.value,
     })
   });
   if(!f) return;
-  if(!f.nombre||!f.adminNombre||!f.adminUsuario||!f.adminPassword)
-    return sw('warning','Completa todos los campos obligatorios (*)');
+  if(!f.nombre||!f.nit||!f.adminNombre||!f.adminUsuario||!f.adminPassword)
+    return sw('warning','Completa todos los campos obligatorios (*) incluyendo el NIT');
   try{
     await saApiFetch('/api/superadmin/colegios',{method:'POST',body:JSON.stringify(f)});
     sw('success',`Colegio "${f.nombre}" creado correctamente`);
@@ -3829,7 +3841,7 @@ async function modalEditColegio(id){
     title:'Editar Colegio',
     html:`
       <input id="enNombre"   class="swal2-input" value="${col.nombre}"                  placeholder="Nombre *">
-      <input id="enCodigo"   class="swal2-input" value="${col.codigo||''}"              placeholder="Código">
+      <input id="enNit"      class="swal2-input" value="${col.nit||''}"                 placeholder="NIT *">
       <input id="enDir"      class="swal2-input" value="${col.direccion||''}"           placeholder="Dirección">
       <input id="enTel"      class="swal2-input" value="${col.telefono||''}"            placeholder="Teléfono">
       <input id="enSedes"    class="swal2-input" value="${(col.sedes||[]).join(', ')}"  placeholder="Sedes (coma)">
@@ -3838,7 +3850,7 @@ async function modalEditColegio(id){
     focusConfirm:false,showCancelButton:true,confirmButtonText:'Guardar',
     preConfirm:()=>({
       nombre:   gi('enNombre')?.value.trim()||col.nombre,
-      codigo:   gi('enCodigo')?.value.trim(),
+      nit:      gi('enNit')?.value.trim()||col.nit,
       direccion:gi('enDir')?.value.trim(),
       telefono: gi('enTel')?.value.trim(),
       sedes:    gi('enSedes')?.value.split(',').map(s=>s.trim()).filter(Boolean),
@@ -3846,6 +3858,7 @@ async function modalEditColegio(id){
     })
   });
   if(!f) return;
+  if(!f.nit) return sw('warning','El NIT es obligatorio');
   try{
     await saApiFetch(`/api/superadmin/colegios/${id}`,{method:'PUT',body:JSON.stringify(f)});
     sw('success','Colegio actualizado');

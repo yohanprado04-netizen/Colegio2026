@@ -90,7 +90,7 @@ async function seed() {
   const colegioNombre = 'Colegio Demo';
 
   await Colegio.create({
-    id: colegioId, nombre: colegioNombre, codigo: 'DEMO-001',
+    id: colegioId, nombre: colegioNombre, nit: '900123456-1',
     direccion: 'Calle 1 # 2-3', telefono: '3001234567',
     sedes: ['Sede Principal'], jornadas: ['Mañana', 'Tarde'],
     activo: true, createdBy: 'superadmin',

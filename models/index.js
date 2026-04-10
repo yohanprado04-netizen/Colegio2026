@@ -6,7 +6,7 @@ const { Schema } = mongoose;
 const ColegioSchema = new Schema({
   id:        { type: String, required: true, unique: true },
   nombre:    { type: String, required: true, trim: true },
-  codigo:    { type: String, default: '' },
+  nit:       { type: String, required: true, unique: true, trim: true },
   direccion: { type: String, default: '' },
   telefono:  { type: String, default: '' },
   logo:      { type: String, default: '' },
