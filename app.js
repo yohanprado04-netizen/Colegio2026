@@ -3552,32 +3552,57 @@ function dlBoletin(estId,perFilter,anno,snapData){
    SUPER ADMIN — PANEL GLOBAL
 ════════════════════════════════════════════════════════════════ */
 
+/* ══ saApiFetch robusto — null-safe, maneja token expirado ══ */
+async function saApiFetch(path, opts = {}) {
+  const token = window.TokenStore?.get();
+  if (!token) { doLogout(); throw new Error('Sin sesión activa'); }
+  const headers = { 'Content-Type': 'application/json', ...(opts.headers || {}) };
+  headers['Authorization'] = 'Bearer ' + token;
+  let res;
+  try { res = await fetch(API_BASE + path, { ...opts, headers }); }
+  catch (e) { throw new Error('Error de red. Verifica tu conexión.'); }
+  if (res.status === 401) {
+    const d = await res.json().catch(() => ({}));
+    if (d.expired || d.code === 'TOKEN_EXPIRED' || d.code === 'TOKEN_INVALID') {
+      TokenStore.clear(); doLogout();
+      Swal.fire({ icon: 'info', title: 'Sesión expirada', text: 'Vuelve a iniciar sesión.' });
+      throw new Error('Sesión expirada');
+    }
+    throw new Error(d.error || 'No autorizado');
+  }
+  if (res.status === 403) {
+    const d = await res.json().catch(() => ({}));
+    throw new Error(d.error || 'Acceso denegado');
+  }
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: `HTTP ${res.status}` }));
+    throw new Error(err.error || `HTTP ${res.status}`);
+  }
+  return res.json();
+}
+
 /* ─── DASHBOARD ─────────────────────────────────────────── */
-function pgSADash(){
-  return`<div id="saDashCard">
-    <!-- Header -->
+function pgSADash() {
+  return `<div id="saDashCard">
     <div class="card" style="background:linear-gradient(135deg,#1a365d 0%,#2b6cb0 100%);color:#fff;margin-bottom:1rem">
       <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:.75rem">
         <div>
           <h2 style="color:#fff;margin-bottom:.25rem">🌐 Panel Global — Super Admin</h2>
-          <p style="opacity:.85;font-size:.9rem;margin:0">Bienvenido, <strong>${CU.nombre}</strong> · Sistema EduPro</p>
+          <p style="opacity:.85;font-size:.9rem;margin:0">Bienvenido, <strong>${CU.nombre}</strong> · EduSistema Pro</p>
         </div>
         <div style="display:flex;gap:.5rem;flex-wrap:wrap;align-items:center">
-          <span id="saSugBadge" style="display:none;background:#e53e3e;color:#fff;border-radius:20px;padding:4px 12px;font-size:12px;font-weight:700;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,.3)" onclick="goto('sasug')">💡 Sugerencias</span>
+          <span id="saSugBadge" style="display:none;background:#e53e3e;color:#fff;border-radius:20px;padding:4px 12px;font-size:12px;font-weight:700;cursor:pointer" onclick="goto('sasug')">💡 Sugerencias</span>
           <button class="btn" style="background:rgba(255,255,255,.15);color:#fff;border:1px solid rgba(255,255,255,.3);font-size:.8rem" onclick="initSADash()">🔄 Actualizar</button>
         </div>
       </div>
-      <!-- KPIs principales -->
-      <div id="saStatsGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:.75rem;margin-top:1.25rem">
-        <div style="text-align:center;opacity:.7"><div style="font-size:1.8rem">⏳</div><p style="margin:.25rem 0;font-size:.8rem">Cargando…</p></div>
+      <div id="saStatsGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(155px,1fr));gap:.75rem;margin-top:1.25rem">
+        <div style="text-align:center;opacity:.6;padding:1rem"><div style="font-size:1.6rem">⏳</div><p style="font-size:.8rem;margin:.25rem 0">Cargando estadísticas…</p></div>
       </div>
     </div>
-
-    <!-- Fila: Gráfica + Resumen rápido -->
-    <div style="display:grid;grid-template-columns:1fr 340px;gap:1rem;margin-bottom:1rem" id="saDashMidRow">
+    <div style="display:grid;grid-template-columns:1fr 320px;gap:1rem;margin-bottom:1rem" id="saDashMidRow">
       <div class="card">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.75rem">
-          <h3 style="margin:0">📊 Estudiantes por institución</h3>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.75rem;flex-wrap:wrap;gap:.5rem">
+          <h3 style="margin:0">📊 Comparativa por institución</h3>
           <select id="saDashChartMode" class="inp" style="width:auto;font-size:.8rem;padding:4px 8px" onchange="renderSADashChart(window._saStatsData||[])">
             <option value="est">Estudiantes</option>
             <option value="profs">Profesores</option>
@@ -3585,349 +3610,377 @@ function pgSADash(){
             <option value="asist">Asistencia %</option>
           </select>
         </div>
-        <div id="saDashChart" style="overflow-x:auto;min-height:180px;display:flex;align-items:flex-end"></div>
+        <div id="saDashChart" style="overflow-x:auto;min-height:160px;display:flex;align-items:flex-end;padding-bottom:4px"></div>
       </div>
-      <div class="card" style="display:flex;flex-direction:column;gap:.6rem" id="saDashQuickStats">
-        <h3 style="margin:0 0 .5rem">⚡ Resumen rápido</h3>
+      <div class="card">
+        <h3 style="margin:0 0 .75rem">⚡ Resumen rápido</h3>
         <div id="saDashQuickBody" style="color:#888;font-size:.9rem">Cargando…</div>
       </div>
     </div>
-
-    <!-- Tabla de instituciones -->
     <div class="card">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.75rem;flex-wrap:wrap;gap:.5rem">
         <h3 style="margin:0">🏫 Todas las instituciones</h3>
         <div style="display:flex;gap:.5rem;flex-wrap:wrap">
-          <input id="saDashSearch" class="inp" style="width:200px;font-size:.85rem" placeholder="🔍 Buscar…" oninput="renderSADashTable(window._saStatsData||[])">
-          <button class="btn bsec" style="font-size:.8rem" onclick="exportarSADashCSV()">📤 Exportar CSV</button>
+          <input id="saDashSearch" class="inp" style="width:180px;font-size:.85rem" placeholder="🔍 Buscar…" oninput="renderSADashTable(window._saStatsData||[])">
+          <button class="btn bsec" style="font-size:.8rem" onclick="exportarSADashCSV()">📤 CSV</button>
         </div>
       </div>
-      <div id="saColegiosList" style="overflow-x:auto">Cargando…</div>
+      <div id="saColegiosList" style="overflow-x:auto"><p style="color:#999;text-align:center;padding:1rem">Cargando…</p></div>
     </div>
   </div>`;
 }
 
-function renderSADashKPIs(stats,sugCount){
-  const grid=gi('saStatsGrid');
-  if(!grid) return;
-  const totalColegios=stats.length;
-  const activos=stats.filter(s=>s.activo).length;
-  const totalEst=stats.reduce((a,s)=>a+s.totalEst,0);
-  const totalProfs=stats.reduce((a,s)=>a+s.totalProfs,0);
-  const totalSal=stats.reduce((a,s)=>a+(s.totalSalones||0),0);
-  const promGlobal=stats.length?+(stats.reduce((a,s)=>a+s.promNotas,0)/stats.length).toFixed(2):0;
-  const promAsist=stats.length?+(stats.reduce((a,s)=>a+(s.asistPct||0),0)/stats.length).toFixed(1):0;
-  const totalIngresos=stats.reduce((a,s)=>a+(s.ingresosMes||0),0);
-  const kpis=[
-    {ic:'🏫',lb:'Instituciones',val:totalColegios,sub:`${activos} activas`,col:'#2b6cb0'},
-    {ic:'👨‍🎓',lb:'Estudiantes',val:totalEst.toLocaleString(),sub:'total sistema',col:'#276749'},
-    {ic:'👩‍🏫',lb:'Profesores',val:totalProfs.toLocaleString(),sub:'total sistema',col:'#744210'},
-    {ic:'🏛️',lb:'Salones',val:totalSal.toLocaleString(),sub:'en total',col:'#553c9a'},
-    {ic:'📊',lb:'Prom. Notas',val:promGlobal,sub:'escala 1–5',col:promGlobal>=3.5?'#276749':'#9b2c2c'},
-    {ic:'✅',lb:'Asistencia',val:promAsist+'%',sub:'promedio global',col:promAsist>=85?'#276749':'#c05621'},
-    {ic:'💰',lb:'Ingresos/Mes',val:'$'+totalIngresos.toLocaleString(),sub:'todas las sedes',col:'#2c7a7b'},
+function renderSADashKPIs(stats, sugCount) {
+  const grid = gi('saStatsGrid');
+  if (!grid) return;
+  const activos = stats.filter(s => s.activo).length;
+  const totalEst = stats.reduce((a, s) => a + (s.totalEst || 0), 0);
+  const totalProfs = stats.reduce((a, s) => a + (s.totalProfs || 0), 0);
+  const totalSal = stats.reduce((a, s) => a + (s.totalSalones || 0), 0);
+  const promNotas = stats.length ? +(stats.reduce((a, s) => a + (s.promNotas || 0), 0) / stats.length).toFixed(2) : 0;
+  const promAsist = stats.length ? +(stats.reduce((a, s) => a + (s.asistPct || 0), 0) / stats.length).toFixed(1) : 0;
+  const totalIng = stats.reduce((a, s) => a + (s.ingresosMes || 0), 0);
+  const kpis = [
+    { ic: '🏫', lb: 'Instituciones', val: stats.length, sub: `${activos} activas` },
+    { ic: '👨‍🎓', lb: 'Estudiantes', val: totalEst.toLocaleString(), sub: 'total sistema' },
+    { ic: '👩‍🏫', lb: 'Profesores', val: totalProfs.toLocaleString(), sub: 'total sistema' },
+    { ic: '🏛️', lb: 'Salones', val: totalSal.toLocaleString(), sub: 'en total' },
+    { ic: '📊', lb: 'Prom. Notas', val: promNotas, sub: promNotas >= 4 ? '🟢 Excelente' : promNotas >= 3 ? '🟡 Aceptable' : '🔴 Bajo' },
+    { ic: '✅', lb: 'Asistencia', val: promAsist + '%', sub: promAsist >= 85 ? '🟢 Buena' : '🟡 Regular' },
+    { ic: '💰', lb: 'Ingresos/Mes', val: '$' + totalIng.toLocaleString(), sub: 'total sedes' },
   ];
-  grid.innerHTML=kpis.map(k=>`
-    <div style="background:rgba(255,255,255,.12);border-radius:10px;padding:.75rem 1rem;text-align:center;backdrop-filter:blur(4px)">
-      <div style="font-size:1.6rem">${k.ic}</div>
-      <div style="font-size:1.5rem;font-weight:800;color:#fff;line-height:1.2">${k.val}</div>
-      <div style="font-size:.75rem;opacity:.85;color:#e2e8f0">${k.lb}</div>
-      <div style="font-size:.7rem;opacity:.65;color:#bee3f8">${k.sub}</div>
+  grid.innerHTML = kpis.map(k => `
+    <div style="background:rgba(255,255,255,.12);border-radius:10px;padding:.7rem .9rem;text-align:center">
+      <div style="font-size:1.5rem">${k.ic}</div>
+      <div style="font-size:1.4rem;font-weight:800;color:#fff;line-height:1.1">${k.val}</div>
+      <div style="font-size:.72rem;opacity:.85;color:#e2e8f0">${k.lb}</div>
+      <div style="font-size:.65rem;opacity:.65;color:#bee3f8">${k.sub}</div>
     </div>`).join('');
 }
 
-function renderSADashChart(stats){
-  const chart=gi('saDashChart');
-  if(!chart||!stats.length) return;
-  const mode=gi('saDashChartMode')?.value||'est';
-  const labels={est:'Estudiantes',profs:'Profesores',prom:'Prom. Notas',asist:'Asistencia %'};
-  const getData=s=>({est:s.totalEst,profs:s.totalProfs,prom:s.promNotas,asist:s.asistPct||0}[mode]);
-  const maxVal=Math.max(...stats.map(getData),1);
-  const BAR_H=160;
-  const bars=stats.map((s,i)=>{
-    const val=getData(s);
-    const h=Math.max(4,Math.round((val/maxVal)*BAR_H));
-    const colors=['#3182ce','#38a169','#d69e2e','#805ad5','#e53e3e','#319795','#dd6b20','#b83280'];
-    const c=colors[i%colors.length];
-    const name=s.colegioNombre.length>12?s.colegioNombre.slice(0,12)+'…':s.colegioNombre;
-    return`<div style="display:flex;flex-direction:column;align-items:center;gap:4px;min-width:64px;cursor:pointer" title="${s.colegioNombre}: ${val} ${labels[mode]}">
-      <div style="font-size:.7rem;font-weight:700;color:#2d3748">${val}</div>
-      <div style="width:44px;height:${h}px;background:${c};border-radius:6px 6px 0 0;transition:opacity .2s" onmouseover="this.style.opacity='.75'" onmouseout="this.style.opacity='1'"></div>
-      <div style="font-size:.65rem;text-align:center;color:#718096;max-width:64px;word-break:break-word;line-height:1.2">${name}</div>
-    </div>`;
-  }).join('');
-  chart.innerHTML=`<div style="display:flex;align-items:flex-end;gap:6px;padding-bottom:4px;min-width:max-content">${bars}</div>`;
+function renderSADashChart(stats) {
+  const chart = gi('saDashChart');
+  if (!chart) return;
+  if (!stats.length) { chart.innerHTML = '<p style="color:#999;font-size:.85rem;padding:1rem">Sin datos</p>'; return; }
+  const mode = gi('saDashChartMode')?.value || 'est';
+  const getData = s => ({ est: s.totalEst || 0, profs: s.totalProfs || 0, prom: s.promNotas || 0, asist: s.asistPct || 0 }[mode]);
+  const maxVal = Math.max(...stats.map(getData), 1);
+  const BAR_H = 140;
+  const colors = ['#3182ce','#38a169','#d69e2e','#805ad5','#e53e3e','#319795','#dd6b20','#b83280'];
+  chart.innerHTML = '<div style="display:flex;align-items:flex-end;gap:6px;min-width:max-content">' +
+    stats.map((s, i) => {
+      const val = getData(s);
+      const h = Math.max(4, Math.round((val / maxVal) * BAR_H));
+      const name = s.colegioNombre.length > 12 ? s.colegioNombre.slice(0, 12) + '…' : s.colegioNombre;
+      return `<div style="display:flex;flex-direction:column;align-items:center;gap:3px;min-width:58px" title="${s.colegioNombre}: ${val}">
+        <div style="font-size:.65rem;font-weight:700;color:#2d3748">${val}</div>
+        <div style="width:40px;height:${h}px;background:${colors[i % colors.length]};border-radius:5px 5px 0 0"></div>
+        <div style="font-size:.6rem;text-align:center;color:#718096;max-width:58px;word-break:break-word;line-height:1.2">${name}</div>
+      </div>`;
+    }).join('') + '</div>';
 }
 
-function renderSADashTable(stats){
-  const q=(gi('saDashSearch')?.value||'').toLowerCase();
-  const filtered=q?stats.filter(s=>s.colegioNombre.toLowerCase().includes(q)):stats;
-  const list=gi('saColegiosList');
-  if(!list) return;
-  if(!filtered.length){list.innerHTML='<p style="color:#999;text-align:center;padding:1.5rem">Sin resultados.</p>';return;}
-  list.innerHTML=`<table class="tbl"><thead><tr>
-    <th>Institución</th><th>Est.</th><th>Profs.</th><th>Salones</th><th>Prom.Notas</th><th>Asistencia</th><th>Ingresos/Mes</th><th>Estado</th><th>Acciones</th>
-  </tr></thead><tbody>${filtered.map(s=>`<tr>
+function renderSADashTable(stats) {
+  const q = (gi('saDashSearch')?.value || '').toLowerCase();
+  const filtered = q ? stats.filter(s => s.colegioNombre.toLowerCase().includes(q)) : stats;
+  const list = gi('saColegiosList');
+  if (!list) return;
+  if (!filtered.length) { list.innerHTML = '<p style="color:#999;text-align:center;padding:1.5rem">Sin resultados.</p>'; return; }
+  list.innerHTML = `<table class="tbl"><thead><tr>
+    <th>Institución</th><th>Est.</th><th>Profs.</th><th>Salones</th><th>Prom.Notas</th><th>Asistencia</th><th>Ingresos/Mes</th><th>Estado</th>
+  </tr></thead><tbody>${filtered.map(s => `<tr>
     <td><strong>${s.colegioNombre}</strong></td>
-    <td>${s.totalEst}</td>
-    <td>${s.totalProfs}</td>
-    <td>${s.totalSalones||0}</td>
-    <td><span style="font-weight:700;color:${s.promNotas>=3.5?'#276749':s.promNotas>=3?'#744210':'#9b2c2c'}">${s.promNotas}</span></td>
-    <td><span style="font-weight:600;color:${(s.asistPct||0)>=85?'#276749':'#c05621'}">${s.asistPct!=null?s.asistPct+'%':'—'}</span></td>
-    <td>${s.ingresosMes!=null?'$'+Number(s.ingresosMes).toLocaleString():'—'}</td>
-    <td><span class="bdg ${s.activo?'bgr':'bred'}">${s.activo?'Activo':'Inactivo'}</span></td>
-    <td style="display:flex;gap:.3rem;flex-wrap:wrap">
-      <button class="btn bsm" onclick="goto('saestadisticas')" title="Ver estadísticas">📊</button>
-      <button class="btn bsm" onclick="goto('saauditoria')" title="Ver auditoría">🔍</button>
-    </td>
+    <td>${s.totalEst || 0}</td><td>${s.totalProfs || 0}</td><td>${s.totalSalones || 0}</td>
+    <td><span style="font-weight:700;color:${(s.promNotas||0)>=3.5?'#276749':(s.promNotas||0)>=3?'#744210':'#9b2c2c'}">${s.promNotas || 0}</span></td>
+    <td><span style="font-weight:600;color:${(s.asistPct||0)>=85?'#276749':'#c05621'}">${s.asistPct != null ? s.asistPct + '%' : '—'}</span></td>
+    <td>${s.ingresosMes != null ? '$' + Number(s.ingresosMes).toLocaleString() : '—'}</td>
+    <td><span class="bdg ${s.activo ? 'bgr' : 'bred'}">${s.activo ? 'Activo' : 'Inactivo'}</span></td>
   </tr>`).join('')}</tbody></table>`;
 }
 
-function renderSADashQuick(stats){
-  const qb=gi('saDashQuickBody');
-  if(!qb) return;
-  const activos=stats.filter(s=>s.activo);
-  const top=activos.length?activos.reduce((a,b)=>a.totalEst>b.totalEst?a:b,activos[0]):null;
-  const mejor=activos.length?activos.reduce((a,b)=>a.promNotas>b.promNotas?a:b,activos[0]):null;
-  const menor=activos.length?activos.reduce((a,b)=>a.promNotas<b.promNotas?a:b,activos[0]):null;
-  const sinAsist=stats.filter(s=>!s.asistPct||s.asistPct===0).length;
-  qb.innerHTML=`
-    <div style="display:flex;flex-direction:column;gap:.5rem;font-size:.85rem">
-      ${top?`<div style="background:#ebf8ff;border-radius:8px;padding:.5rem .75rem">
-        <div style="font-size:.7rem;color:#2b6cb0;font-weight:700;text-transform:uppercase">Mayor población</div>
-        <div style="font-weight:600;color:#1a365d">${top.colegioNombre}</div>
-        <div style="color:#4a5568">${top.totalEst} estudiantes</div>
-      </div>`:''}
-      ${mejor?`<div style="background:#f0fff4;border-radius:8px;padding:.5rem .75rem">
-        <div style="font-size:.7rem;color:#276749;font-weight:700;text-transform:uppercase">Mejor rendimiento</div>
-        <div style="font-weight:600;color:#1c4532">${mejor.colegioNombre}</div>
-        <div style="color:#4a5568">Prom. ${mejor.promNotas}</div>
-      </div>`:''}
-      ${menor?`<div style="background:#fff5f5;border-radius:8px;padding:.5rem .75rem">
-        <div style="font-size:.7rem;color:#c53030;font-weight:700;text-transform:uppercase">Requiere atención</div>
-        <div style="font-weight:600;color:#742a2a">${menor.colegioNombre}</div>
-        <div style="color:#4a5568">Prom. ${menor.promNotas}</div>
-      </div>`:''}
-      <div style="background:#faf5ff;border-radius:8px;padding:.5rem .75rem">
-        <div style="font-size:.7rem;color:#553c9a;font-weight:700;text-transform:uppercase">Colegios inactivos</div>
-        <div style="font-weight:600;color:#322659">${stats.filter(s=>!s.activo).length} de ${stats.length}</div>
-      </div>
-      ${sinAsist>0?`<div style="background:#fffaf0;border-radius:8px;padding:.5rem .75rem">
-        <div style="font-size:.7rem;color:#c05621;font-weight:700;text-transform:uppercase">Sin datos asistencia</div>
-        <div style="font-weight:600;color:#7b341e">${sinAsist} institución${sinAsist>1?'es':''}</div>
-      </div>`:''}
-    </div>`;
+function renderSADashQuick(stats) {
+  const qb = gi('saDashQuickBody');
+  if (!qb) return;
+  const activos = stats.filter(s => s.activo);
+  if (!activos.length) { qb.innerHTML = '<p style="color:#999;font-size:.85rem">Sin instituciones activas.</p>'; return; }
+  const top = activos.reduce((a, b) => (a.totalEst || 0) > (b.totalEst || 0) ? a : b);
+  const mejor = activos.reduce((a, b) => (a.promNotas || 0) > (b.promNotas || 0) ? a : b);
+  const menor = activos.reduce((a, b) => (a.promNotas || 0) < (b.promNotas || 0) ? a : b);
+  qb.innerHTML = `<div style="display:flex;flex-direction:column;gap:.5rem;font-size:.85rem">
+    <div style="background:#ebf8ff;border-radius:8px;padding:.5rem .75rem">
+      <div style="font-size:.7rem;color:#2b6cb0;font-weight:700;text-transform:uppercase">Mayor población</div>
+      <div style="font-weight:600;color:#1a365d">${top.colegioNombre}</div>
+      <div style="color:#4a5568">${top.totalEst || 0} estudiantes</div>
+    </div>
+    <div style="background:#f0fff4;border-radius:8px;padding:.5rem .75rem">
+      <div style="font-size:.7rem;color:#276749;font-weight:700;text-transform:uppercase">Mejor rendimiento</div>
+      <div style="font-weight:600;color:#1c4532">${mejor.colegioNombre}</div>
+      <div style="color:#4a5568">Prom. ${mejor.promNotas || 0}</div>
+    </div>
+    ${mejor !== menor ? `<div style="background:#fff5f5;border-radius:8px;padding:.5rem .75rem">
+      <div style="font-size:.7rem;color:#c53030;font-weight:700;text-transform:uppercase">Requiere atención</div>
+      <div style="font-weight:600;color:#742a2a">${menor.colegioNombre}</div>
+      <div style="color:#4a5568">Prom. ${menor.promNotas || 0}</div>
+    </div>` : ''}
+    <div style="background:#faf5ff;border-radius:8px;padding:.5rem .75rem">
+      <div style="font-size:.7rem;color:#553c9a;font-weight:700;text-transform:uppercase">Colegios inactivos</div>
+      <div style="font-weight:600;color:#322659">${stats.filter(s => !s.activo).length} de ${stats.length}</div>
+    </div>
+  </div>`;
 }
 
-function exportarSADashCSV(){
-  const stats=window._saStatsData||[];
-  if(!stats.length) return sw('warning','No hay datos para exportar');
-  const header='Institución,Estudiantes,Profesores,Salones,Prom.Notas,Asistencia%,Ingresos/Mes,Estado';
-  const rows=stats.map(s=>`"${s.colegioNombre}",${s.totalEst},${s.totalProfs},${s.totalSalones||0},${s.promNotas},${s.asistPct||0},${s.ingresosMes||0},${s.activo?'Activo':'Inactivo'}`);
-  const csv=[header,...rows].join('\n');
-  const a=document.createElement('a');
-  a.href='data:text/csv;charset=utf-8,\uFEFF'+encodeURIComponent(csv);
-  a.download=`SuperAdmin_Estadisticas_${new Date().toISOString().slice(0,10)}.csv`;
+function exportarSADashCSV() {
+  const stats = window._saStatsData || [];
+  if (!stats.length) return sw('warning', 'No hay datos para exportar');
+  const header = 'Institución,Estudiantes,Profesores,Salones,Prom.Notas,Asistencia%,Ingresos/Mes,Estado';
+  const rows = stats.map(s => `"${s.colegioNombre}",${s.totalEst||0},${s.totalProfs||0},${s.totalSalones||0},${s.promNotas||0},${s.asistPct||0},${s.ingresosMes||0},${s.activo?'Activo':'Inactivo'}`);
+  const csv = [header, ...rows].join('\n');
+  const a = document.createElement('a');
+  a.href = 'data:text/csv;charset=utf-8,\uFEFF' + encodeURIComponent(csv);
+  a.download = `SuperAdmin_Stats_${new Date().toISOString().slice(0,10)}.csv`;
   a.click();
-  sw('success','CSV exportado correctamente');
+  sw('success', 'CSV exportado');
 }
 
-async function initSADash(){
-  try{
-    const [statsRaw,sugCount]=await Promise.all([
-      saApiFetch('/api/superadmin/stats').catch(()=>[]),
-      saApiFetch('/api/sugerencias/count').catch(()=>({noLeidas:0})),
+async function initSADash() {
+  // Reset UI a estado de carga
+  const grid = gi('saStatsGrid');
+  if (grid) grid.innerHTML = '<div style="text-align:center;opacity:.6;padding:1rem"><div style="font-size:1.6rem">⏳</div><p style="font-size:.8rem;margin:.25rem 0;color:#fff">Cargando…</p></div>';
+  const list = gi('saColegiosList');
+  if (list) list.innerHTML = '<p style="color:#999;text-align:center;padding:1rem">Cargando…</p>';
+  try {
+    const [statsRaw, sugCount] = await Promise.all([
+      saApiFetch('/api/superadmin/stats').catch(() => []),
+      saApiFetch('/api/sugerencias/count').catch(() => ({ noLeidas: 0 })),
     ]);
-    const stats=Array.isArray(statsRaw)?statsRaw:[];
-    window._saStatsData=stats;
-    renderSADashKPIs(stats,sugCount);
-    renderSADashChart(stats);
-    renderSADashTable(stats);
-    renderSADashQuick(stats);
-    // Ocultar columna ingresos si no hay datos en ninguno
-    const midRow=gi('saDashMidRow');
-    if(midRow&&window.innerWidth<768) midRow.style.gridTemplateColumns='1fr';
-    const badge=gi('saSugBadge');
-    if(badge&&sugCount&&sugCount.noLeidas>0){
-      badge.textContent=`💡 ${sugCount.noLeidas} nueva${sugCount.noLeidas>1?'s':''}`;
-      badge.style.display='inline-block';
+    const stats = Array.isArray(statsRaw) ? statsRaw : [];
+    window._saStatsData = stats;
+    if (!stats.length) {
+      if (grid) grid.innerHTML = '<div style="text-align:center;opacity:.7;padding:1rem;color:#fff"><p>Sin instituciones registradas aún.</p><button class="btn" style="background:rgba(255,255,255,.2);color:#fff;margin-top:.5rem" onclick="goto(\'sacolegios\')">＋ Crear primer colegio</button></div>';
+    } else {
+      renderSADashKPIs(stats, sugCount);
+      renderSADashChart(stats);
+      renderSADashTable(stats);
+      renderSADashQuick(stats);
     }
-  }catch(e){sw('error','Error al cargar el panel: '+e.message);}
+    const badge = gi('saSugBadge');
+    if (badge && sugCount && sugCount.noLeidas > 0) {
+      badge.textContent = `💡 ${sugCount.noLeidas} nueva${sugCount.noLeidas > 1 ? 's' : ''}`;
+      badge.style.display = 'inline-block';
+    }
+    // Responsive
+    const midRow = gi('saDashMidRow');
+    if (midRow && window.innerWidth < 768) midRow.style.gridTemplateColumns = '1fr';
+  } catch (e) {
+    if (grid) grid.innerHTML = `<div style="color:#fed7d7;padding:1rem;text-align:center">❌ Error al cargar: ${e.message}<br><button class="btn" style="background:rgba(255,255,255,.2);color:#fff;margin-top:.5rem" onclick="initSADash()">Reintentar</button></div>`;
+  }
 }
 
 /* ─── COLEGIOS & ADMINS ─────────────────────────────────── */
-function pgSAColegios(){
-  return`<div class="card">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem">
+function pgSAColegios() {
+  return `<div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;flex-wrap:wrap;gap:.5rem">
       <h2>🏫 Colegios & Admins</h2>
       <button class="btn" onclick="modalNuevoColegio()">＋ Nuevo Colegio</button>
     </div>
-    <input id="saColSearch" class="inp" style="max-width:280px;margin-bottom:1rem" placeholder="🔍 Buscar colegio…" oninput="filtrarColegios()">
-    <div id="saColegiosTable">Cargando…</div>
+    <input id="saColSearch" class="inp" style="max-width:300px;margin-bottom:1rem" placeholder="🔍 Buscar colegio…" oninput="filtrarColegios()">
+    <div id="saColegiosTable" style="overflow-x:auto">Cargando…</div>
   </div>`;
 }
-async function initSAColegios(){
-  try{
-    const raw=await saApiFetch('/api/superadmin/colegios').catch(()=>[]);
-    window._saColegios=Array.isArray(raw)?raw:[];
+
+async function initSAColegios() {
+  try {
+    const raw = await saApiFetch('/api/superadmin/colegios');
+    window._saColegios = Array.isArray(raw) ? raw : [];
     renderSAColegiosTable(window._saColegios);
-  }catch(e){const el=gi('saColegiosTable');if(el)el.innerHTML=`<p style="color:red">Error: ${e.message}</p>`;}
+  } catch (e) {
+    const el = gi('saColegiosTable');
+    if (el) el.innerHTML = `<p style="color:red">Error: ${e.message} <button class="btn bsm" onclick="initSAColegios()">Reintentar</button></p>`;
+  }
 }
-function filtrarColegios(){
-  const q=(gi('saColSearch')?.value||'').toLowerCase();
-  const lista=(window._saColegios||[]).filter(c=>c.nombre.toLowerCase().includes(q));
+
+function filtrarColegios() {
+  const q = (gi('saColSearch')?.value || '').toLowerCase();
+  const lista = (window._saColegios || []).filter(c => c.nombre.toLowerCase().includes(q));
   renderSAColegiosTable(lista);
 }
-function renderSAColegiosTable(lista){
-  const el=gi('saColegiosTable');
-  if(!el) return;
-  if(!lista.length){el.innerHTML='<p style="color:#999">No hay colegios registrados.</p>';return;}
-  el.innerHTML=`<table class="tbl"><thead><tr>
-    <th>Nombre</th><th>Código</th><th>Admins</th><th>Estud.</th><th>Profs.</th><th>Estado</th><th>Acciones</th>
-  </tr></thead><tbody>${lista.map(c=>`<tr>
+
+function renderSAColegiosTable(lista) {
+  const el = gi('saColegiosTable');
+  if (!el) return;
+  if (!lista.length) { el.innerHTML = '<p style="color:#999;text-align:center;padding:1.5rem">No hay colegios registrados.<br><button class="btn" style="margin-top:.5rem" onclick="modalNuevoColegio()">＋ Crear el primero</button></p>'; return; }
+  el.innerHTML = `<table class="tbl"><thead><tr>
+    <th>Nombre</th><th>NIT</th><th>Admins</th><th>Estud.</th><th>Profs.</th><th>Estado</th><th>Acciones</th>
+  </tr></thead><tbody>${lista.map(c => `<tr>
     <td><strong>${c.nombre}</strong></td>
-    <td>${c.codigo||'—'}</td>
-    <td>${c.admins||0}</td><td>${c.ests||0}</td><td>${c.profs||0}</td>
-    <td><span class="bdg ${c.activo?'bgr':'bred'}">${c.activo?'Activo':'Inactivo'}</span></td>
+    <td style="font-size:.82rem;color:#718096">${c.nit || c.codigo || '—'}</td>
+    <td>${c.admins || 0}</td><td>${c.ests || 0}</td><td>${c.profs || 0}</td>
+    <td><span class="bdg ${c.activo ? 'bgr' : 'bred'}">${c.activo ? 'Activo' : 'Inactivo'}</span></td>
     <td style="display:flex;gap:.4rem;flex-wrap:wrap">
       <button class="btn bsm" onclick="modalEditColegio('${c.id}')">✏️ Editar</button>
-      <button class="btn bsm" onclick="modalAdmins('${c.id}','${c.nombre.replace(/'/g,"\\'")}')">👤 Admins</button>
-      <button class="btn bsm" onclick="toggleColegio('${c.id}',${!c.activo})">${c.activo?'🔒 Desactivar':'🔓 Activar'}</button>
+      <button class="btn bsm" onclick="modalAdmins('${c.id}','${c.nombre.replace(/'/g, "\\'")}')">👤 Admins</button>
+      <button class="btn bsm" onclick="toggleColegio('${c.id}',${!c.activo})">${c.activo ? '🔒 Desactivar' : '🔓 Activar'}</button>
+      <button class="btn bsm bdan" onclick="modalEliminarColegio('${c.id}','${c.nombre.replace(/'/g, "\\'")}')">🗑️</button>
     </td>
   </tr>`).join('')}</tbody></table>`;
 }
-async function toggleColegio(id,activo){
-  const conf=await Swal.fire({title:`¿${activo?'Activar':'Desactivar'} colegio?`,icon:'question',showCancelButton:true,confirmButtonText:'Sí'});
-  if(!conf.isConfirmed) return;
-  try{
-    await saApiFetch(`/api/superadmin/colegios/${id}`,{method:'PUT',body:JSON.stringify({activo})});
-    sw('success','Actualizado');
+
+async function toggleColegio(id, activo) {
+  const conf = await Swal.fire({ title: `¿${activo ? 'Activar' : 'Desactivar'} colegio?`, icon: 'question', showCancelButton: true, confirmButtonText: 'Sí' });
+  if (!conf.isConfirmed) return;
+  try {
+    await saApiFetch(`/api/superadmin/colegios/${id}`, { method: 'PUT', body: JSON.stringify({ activo }) });
+    sw('success', activo ? 'Colegio activado' : 'Colegio desactivado');
     initSAColegios();
-  }catch(e){sw('error',e.message);}
+  } catch (e) { sw('error', e.message); }
 }
-async function modalNuevoColegio(){
-  const {value:f}=await Swal.fire({
-    title:'Nuevo Colegio + Admin',
-    html:`
+
+async function modalEliminarColegio(id, nombre) {
+  const conf = await Swal.fire({
+    title: `¿Eliminar "${nombre}"?`,
+    text: 'Se eliminarán TODOS los datos del colegio (usuarios, notas, salones). Esta acción no se puede deshacer.',
+    icon: 'warning', showCancelButton: true,
+    confirmButtonText: 'Sí, eliminar', confirmButtonColor: '#e53e3e', cancelButtonText: 'Cancelar'
+  });
+  if (!conf.isConfirmed) return;
+  try {
+    await saApiFetch(`/api/superadmin/colegios/${id}`, { method: 'DELETE' });
+    sw('success', `Colegio "${nombre}" eliminado`);
+    initSAColegios();
+  } catch (e) { sw('error', e.message); }
+}
+
+async function modalNuevoColegio() {
+  const { value: f } = await Swal.fire({
+    title: 'Nuevo Colegio + Admin',
+    html: `
       <input id="snNombre"  class="swal2-input" placeholder="Nombre del colegio *">
-      <input id="snCodigo"  class="swal2-input" placeholder="Código (opcional)">
+      <input id="snNit"     class="swal2-input" placeholder="NIT del colegio *">
       <input id="snDir"     class="swal2-input" placeholder="Dirección">
+      <input id="snTel"     class="swal2-input" placeholder="Teléfono">
       <hr style="margin:.5rem 0">
-      <p style="margin:.5rem 1rem;font-size:.85rem;color:#666;text-align:left">Datos del administrador:</p>
+      <p style="margin:.5rem 1rem;font-size:.85rem;color:#666;text-align:left">Administrador principal:</p>
       <input id="snANombre" class="swal2-input" placeholder="Nombre del Admin *">
       <input id="snAUser"   class="swal2-input" placeholder="Usuario Admin * (sin espacios)">
       <input id="snAPwd"    class="swal2-input" type="password" placeholder="Contraseña Admin *">
     `,
-    focusConfirm:false,showCancelButton:true,confirmButtonText:'Crear Colegio',
-    preConfirm:()=>({
-      nombre:       gi('snNombre')?.value.trim(),
-      codigo:       gi('snCodigo')?.value.trim(),
-      direccion:    gi('snDir')?.value.trim(),
-      adminNombre:  gi('snANombre')?.value.trim(),
-      adminUsuario: gi('snAUser')?.value.trim(),
-      adminPassword:gi('snAPwd')?.value,
+    focusConfirm: false, showCancelButton: true, confirmButtonText: 'Crear Colegio',
+    preConfirm: () => ({
+      nombre:        gi('snNombre')?.value.trim(),
+      nit:           gi('snNit')?.value.trim(),
+      direccion:     gi('snDir')?.value.trim(),
+      telefono:      gi('snTel')?.value.trim(),
+      adminNombre:   gi('snANombre')?.value.trim(),
+      adminUsuario:  gi('snAUser')?.value.trim(),
+      adminPassword: gi('snAPwd')?.value,
     })
   });
-  if(!f) return;
-  if(!f.nombre||!f.adminNombre||!f.adminUsuario||!f.adminPassword)
-    return sw('warning','Completa todos los campos obligatorios (*)');
-  try{
-    await saApiFetch('/api/superadmin/colegios',{method:'POST',body:JSON.stringify(f)});
-    sw('success',`Colegio "${f.nombre}" creado correctamente`);
+  if (!f) return;
+  if (!f.nombre || !f.nit || !f.adminNombre || !f.adminUsuario || !f.adminPassword)
+    return sw('warning', 'Completa todos los campos obligatorios (*)');
+  try {
+    await saApiFetch('/api/superadmin/colegios', { method: 'POST', body: JSON.stringify(f) });
+    sw('success', `Colegio "${f.nombre}" creado correctamente`);
     initSAColegios();
-  }catch(e){sw('error',e.message);}
+  } catch (e) { sw('error', e.message); }
 }
-async function modalEditColegio(id){
-  const col=(window._saColegios||[]).find(c=>c.id===id);
-  if(!col) return;
-  const {value:f}=await Swal.fire({
-    title:'Editar Colegio',
-    html:`
-      <input id="enNombre"   class="swal2-input" value="${col.nombre}"                  placeholder="Nombre *">
-      <input id="enCodigo"   class="swal2-input" value="${col.codigo||''}"              placeholder="Código">
-      <input id="enDir"      class="swal2-input" value="${col.direccion||''}"           placeholder="Dirección">
-      <input id="enTel"      class="swal2-input" value="${col.telefono||''}"            placeholder="Teléfono">
-      <input id="enSedes"    class="swal2-input" value="${(col.sedes||[]).join(', ')}"  placeholder="Sedes (coma)">
-      <input id="enJornadas" class="swal2-input" value="${(col.jornadas||[]).join(', ')}" placeholder="Jornadas (coma)">
+
+async function modalEditColegio(id) {
+  const col = (window._saColegios || []).find(c => c.id === id);
+  if (!col) return sw('error', 'Colegio no encontrado en lista. Recarga la página.');
+  const { value: f } = await Swal.fire({
+    title: 'Editar Colegio',
+    html: `
+      <input id="enNombre"   class="swal2-input" value="${col.nombre}"                   placeholder="Nombre *">
+      <input id="enNit"      class="swal2-input" value="${col.nit || col.codigo || ''}"  placeholder="NIT">
+      <input id="enDir"      class="swal2-input" value="${col.direccion || ''}"           placeholder="Dirección">
+      <input id="enTel"      class="swal2-input" value="${col.telefono || ''}"            placeholder="Teléfono">
+      <input id="enSedes"    class="swal2-input" value="${(col.sedes || []).join(', ')}"  placeholder="Sedes (separadas por coma)">
+      <input id="enJornadas" class="swal2-input" value="${(col.jornadas || []).join(', ')}" placeholder="Jornadas (separadas por coma)">
     `,
-    focusConfirm:false,showCancelButton:true,confirmButtonText:'Guardar',
-    preConfirm:()=>({
-      nombre:   gi('enNombre')?.value.trim()||col.nombre,
-      codigo:   gi('enCodigo')?.value.trim(),
-      direccion:gi('enDir')?.value.trim(),
-      telefono: gi('enTel')?.value.trim(),
-      sedes:    gi('enSedes')?.value.split(',').map(s=>s.trim()).filter(Boolean),
-      jornadas: gi('enJornadas')?.value.split(',').map(s=>s.trim()).filter(Boolean),
+    focusConfirm: false, showCancelButton: true, confirmButtonText: 'Guardar',
+    preConfirm: () => ({
+      nombre:    gi('enNombre')?.value.trim() || col.nombre,
+      nit:       gi('enNit')?.value.trim(),
+      direccion: gi('enDir')?.value.trim(),
+      telefono:  gi('enTel')?.value.trim(),
+      sedes:     gi('enSedes')?.value.split(',').map(s => s.trim()).filter(Boolean),
+      jornadas:  gi('enJornadas')?.value.split(',').map(s => s.trim()).filter(Boolean),
     })
   });
-  if(!f) return;
-  try{
-    await saApiFetch(`/api/superadmin/colegios/${id}`,{method:'PUT',body:JSON.stringify(f)});
-    sw('success','Colegio actualizado');
+  if (!f) return;
+  try {
+    await saApiFetch(`/api/superadmin/colegios/${id}`, { method: 'PUT', body: JSON.stringify(f) });
+    sw('success', 'Colegio actualizado');
     initSAColegios();
-  }catch(e){sw('error',e.message);}
+  } catch (e) { sw('error', e.message); }
 }
-async function modalAdmins(colegioId,colegioNombre){
-  try{
-    const admins=await saApiFetch(`/api/superadmin/admins?colegioId=${colegioId}`);
-    const lista=admins.map(a=>`<tr>
-      <td>${a.nombre}</td><td>${a.usuario}</td>
-      <td><span class="bdg ${a.blocked?'bred':'bgr'}">${a.blocked?'Bloqueado':'Activo'}</span></td>
+
+async function modalAdmins(colegioId, colegioNombre) {
+  try {
+    const admins = await saApiFetch(`/api/superadmin/admins?colegioId=${colegioId}`);
+    if (!admins) return;
+    const lista = admins.map(a => `<tr>
+      <td>${a.nombre}</td><td style="font-size:.82rem">${a.usuario}</td>
+      <td><span class="bdg ${a.blocked ? 'bred' : 'bgr'}">${a.blocked ? 'Bloqueado' : 'Activo'}</span></td>
       <td style="display:flex;gap:.3rem">
         <button class="btn bsm" onclick="editAdmin('${a.id}')">✏️</button>
-        <button class="btn bsm" onclick="toggleAdmin('${a.id}',${!a.blocked})">${a.blocked?'🔓':'🔒'}</button>
+        <button class="btn bsm" onclick="toggleAdmin('${a.id}',${!a.blocked})">${a.blocked ? '🔓' : '🔒'}</button>
       </td>
     </tr>`).join('');
     Swal.fire({
-      title:`Admins — ${colegioNombre}`,
-      html:`<div style="overflow-x:auto"><table class="tbl"><thead><tr><th>Nombre</th><th>Usuario</th><th>Estado</th><th>Acc.</th></tr></thead>
-        <tbody>${lista||'<tr><td colspan="4" style="text-align:center;color:#999">Sin admins</td></tr>'}</tbody></table></div>
+      title: `👤 Admins — ${colegioNombre}`,
+      html: `<div style="overflow-x:auto"><table class="tbl"><thead><tr><th>Nombre</th><th>Usuario</th><th>Estado</th><th>Acc.</th></tr></thead>
+        <tbody>${lista || '<tr><td colspan="4" style="text-align:center;color:#999">Sin administradores</td></tr>'}</tbody></table></div>
         <hr style="margin:.75rem 0">
-        <button class="btn" onclick="modalNuevoAdmin('${colegioId}','${colegioNombre.replace(/'/g,"\\'")}')">＋ Nuevo Admin</button>`,
-      width:640,showConfirmButton:false,showCloseButton:true
+        <button class="btn" onclick="modalNuevoAdmin('${colegioId}','${colegioNombre.replace(/'/g, "\\'")}')">＋ Nuevo Admin</button>`,
+      width: 660, showConfirmButton: false, showCloseButton: true
     });
-  }catch(e){sw('error',e.message);}
+  } catch (e) { sw('error', e.message); }
 }
-async function modalNuevoAdmin(colegioId,colegioNombre){
+
+async function modalNuevoAdmin(colegioId, colegioNombre) {
   Swal.close();
-  const {value:f}=await Swal.fire({
-    title:`Nuevo Admin — ${colegioNombre}`,
-    html:`<input id="nanom" class="swal2-input" placeholder="Nombre completo *">
-          <input id="nausr" class="swal2-input" placeholder="Usuario * (sin espacios)">
-          <input id="napwd" class="swal2-input" type="password" placeholder="Contraseña *">`,
-    focusConfirm:false,showCancelButton:true,confirmButtonText:'Crear Admin',
-    preConfirm:()=>({nombre:gi('nanom')?.value.trim(),usuario:gi('nausr')?.value.trim(),password:gi('napwd')?.value,colegioId})
+  const { value: f } = await Swal.fire({
+    title: `Nuevo Admin — ${colegioNombre}`,
+    html: `<input id="nanom" class="swal2-input" placeholder="Nombre completo *">
+           <input id="nausr" class="swal2-input" placeholder="Usuario * (sin espacios)">
+           <input id="napwd" class="swal2-input" type="password" placeholder="Contraseña *">`,
+    focusConfirm: false, showCancelButton: true, confirmButtonText: 'Crear Admin',
+    preConfirm: () => ({ nombre: gi('nanom')?.value.trim(), usuario: gi('nausr')?.value.trim(), password: gi('napwd')?.value, colegioId })
   });
-  if(!f||!f.nombre||!f.usuario||!f.password) return;
-  try{
-    await saApiFetch('/api/superadmin/admins',{method:'POST',body:JSON.stringify(f)});
-    sw('success','Admin creado correctamente');
-  }catch(e){sw('error',e.message);}
+  if (!f || !f.nombre || !f.usuario || !f.password) return;
+  try {
+    await saApiFetch('/api/superadmin/admins', { method: 'POST', body: JSON.stringify(f) });
+    sw('success', 'Admin creado correctamente');
+  } catch (e) { sw('error', e.message); }
 }
-async function editAdmin(id){
-  const {value:f}=await Swal.fire({
-    title:'Editar Admin',
-    html:`<input id="eaNom" class="swal2-input" placeholder="Nuevo nombre (vacío = no cambiar)">
-          <input id="eaPwd" class="swal2-input" type="password" placeholder="Nueva contraseña (vacío = no cambiar)">`,
-    focusConfirm:false,showCancelButton:true,
-    preConfirm:()=>{const o={};const n=gi('eaNom')?.value.trim();const p=gi('eaPwd')?.value;if(n)o.nombre=n;if(p)o.password=p;return o;}
+
+async function editAdmin(id) {
+  const { value: f } = await Swal.fire({
+    title: 'Editar Admin',
+    html: `<input id="eaNom" class="swal2-input" placeholder="Nuevo nombre (vacío = no cambiar)">
+           <input id="eaPwd" class="swal2-input" type="password" placeholder="Nueva contraseña (vacío = no cambiar)">`,
+    focusConfirm: false, showCancelButton: true,
+    preConfirm: () => { const o = {}; const n = gi('eaNom')?.value.trim(); const p = gi('eaPwd')?.value; if (n) o.nombre = n; if (p) o.password = p; return o; }
   });
-  if(!f||!Object.keys(f).length) return;
-  try{
-    await saApiFetch(`/api/superadmin/admins/${id}`,{method:'PUT',body:JSON.stringify(f)});
-    sw('success','Admin actualizado');
-  }catch(e){sw('error',e.message);}
+  if (!f || !Object.keys(f).length) return;
+  try {
+    await saApiFetch(`/api/superadmin/admins/${id}`, { method: 'PUT', body: JSON.stringify(f) });
+    sw('success', 'Admin actualizado');
+  } catch (e) { sw('error', e.message); }
 }
-async function toggleAdmin(id,blocked){
-  try{
-    await saApiFetch(`/api/superadmin/admins/${id}`,{method:'PUT',body:JSON.stringify({blocked})});
-    sw('success',blocked?'Admin bloqueado':'Admin desbloqueado');
-  }catch(e){sw('error',e.message);}
+
+async function toggleAdmin(id, blocked) {
+  try {
+    await saApiFetch(`/api/superadmin/admins/${id}`, { method: 'PUT', body: JSON.stringify({ blocked }) });
+    sw('success', blocked ? 'Admin bloqueado' : 'Admin desbloqueado');
+  } catch (e) { sw('error', e.message); }
 }
 
 /* ─── PLAN DE ESTUDIOS ─────────────────────────────────── */
-function pgSAPlan(){
-  return`<div class="card">
+function pgSAPlan() {
+  return `<div class="card">
     <h2>📖 Plan de Estudios</h2>
     <p style="color:#888;margin-bottom:1rem">Define áreas, asignaturas e intensidades horarias por colegio.</p>
     <div style="display:flex;gap:.75rem;flex-wrap:wrap;margin-bottom:1rem">
@@ -3943,102 +3996,107 @@ function pgSAPlan(){
       <button class="btn bsec" onclick="importarPlanDefecto()">📥 Plan por Defecto</button>
       <button class="btn bdan" onclick="eliminarPlanCompleto()" style="margin-left:auto">🗑️ Eliminar Todo</button>
     </div>
-    <div id="saPlanTable">Selecciona un colegio.</div>
+    <div id="saPlanTable" style="overflow-x:auto">Selecciona un colegio.</div>
   </div>`;
 }
-async function initSAPlan(){
-  try{
-    const raw=await saApiFetch('/api/superadmin/colegios').catch(()=>[]);
-    const colegios=Array.isArray(raw)?raw:[];
-    const sel=gi('saPlanCol');
-    if(sel) sel.innerHTML='<option value="">— Selecciona colegio —</option>'+
-      colegios.map(c=>`<option value="${c.id}">${c.nombre}</option>`).join('');
-    if(!colegios.length&&sel) sel.innerHTML='<option value="">Sin colegios registrados</option>';
-  }catch(e){sw('error',e.message);}
+
+async function initSAPlan() {
+  try {
+    const raw = await saApiFetch('/api/superadmin/colegios');
+    const colegios = Array.isArray(raw) ? raw : [];
+    const sel = gi('saPlanCol');
+    if (sel) sel.innerHTML = '<option value="">— Selecciona colegio —</option>' +
+      colegios.map(c => `<option value="${c.id}">${c.nombre}</option>`).join('');
+    if (!colegios.length && sel) sel.innerHTML = '<option value="">Sin colegios registrados</option>';
+  } catch (e) { sw('error', e.message); }
 }
-async function loadSAPlan(){
-  const cid=gi('saPlanCol')?.value;
-  const pt=gi('saPlanTable');
-  if(!cid){if(pt)pt.textContent='Selecciona un colegio.';return;}
-  if(pt)pt.textContent='Cargando…';
-  try{
-    const ciclo=gi('saPlanCiclo')?.value;
-    let plan=await saApiFetch(`/api/superadmin/plan/${cid}`);
-    if(ciclo) plan=plan.filter(p=>p.ciclo===ciclo);
-    if(!plan.length){if(pt)pt.innerHTML='<p style="color:#999">Sin asignaturas. Agrega una o usa Plan por Defecto.</p>';return;}
-    if(pt)pt.innerHTML=`<table class="tbl"><thead><tr>
+
+async function loadSAPlan() {
+  const cid = gi('saPlanCol')?.value;
+  const pt = gi('saPlanTable');
+  if (!cid) { if (pt) pt.textContent = 'Selecciona un colegio.'; return; }
+  if (pt) pt.textContent = 'Cargando…';
+  try {
+    const ciclo = gi('saPlanCiclo')?.value;
+    let plan = await saApiFetch(`/api/superadmin/plan/${cid}`);
+    if (!plan) return;
+    if (ciclo) plan = plan.filter(p => p.ciclo === ciclo);
+    if (!plan.length) { if (pt) pt.innerHTML = '<p style="color:#999">Sin asignaturas. Agrega una o usa <strong>Plan por Defecto</strong>.</p>'; return; }
+    if (pt) pt.innerHTML = `<table class="tbl"><thead><tr>
       <th>Ciclo</th><th>Grado</th><th>Área</th><th>Asignatura</th><th>h/sem</th>
-    </tr></thead><tbody>${plan.map(p=>`<tr>
-      <td>${p.ciclo}</td><td>${p.grado}</td><td>${p.area}</td><td>${p.asignatura}</td><td>${p.intensidad}</td>
-    </tr>`).join('')}</tbody></table>`;
-  }catch(e){if(pt)pt.innerHTML=`<p style="color:red">Error: ${e.message}</p>`;}
+    </tr></thead><tbody>${plan.map(p => `<tr>
+      <td><span class="bdg ${p.ciclo === 'primaria' ? 'bgr' : 'bbl'}">${p.ciclo}</span></td>
+      <td>${p.grado}</td><td>${p.area}</td><td>${p.asignatura}</td><td>${p.intensidad}</td>
+    </tr>`).join('')}</tbody></table>
+    <p style="font-size:.78rem;color:#a0aec0;margin-top:.5rem">${plan.length} asignatura${plan.length > 1 ? 's' : ''}</p>`;
+  } catch (e) { if (pt) pt.innerHTML = `<p style="color:red">Error: ${e.message} <button class="btn bsm" onclick="loadSAPlan()">Reintentar</button></p>`; }
 }
-async function modalNuevaMateria(){
-  const cid=gi('saPlanCol')?.value;
-  if(!cid) return sw('warning','Selecciona un colegio primero');
-  const {value:f}=await Swal.fire({
-    title:'Nueva Asignatura',
-    html:`<select id="nmCiclo" class="swal2-select" style="width:100%;margin:.25rem 0">
-            <option value="primaria">Primaria</option><option value="bachillerato">Bachillerato</option>
-          </select>
-          <input id="nmGrado" class="swal2-input" placeholder="Grado (ej: 1°, 6°)">
-          <input id="nmArea"  class="swal2-input" placeholder="Área (ej: Ciencias Naturales)">
-          <input id="nmAsig"  class="swal2-input" placeholder="Asignatura *">
-          <input id="nmInt"   class="swal2-input" type="number" min="0" max="40" placeholder="Intensidad h/sem">`,
-    focusConfirm:false,showCancelButton:true,confirmButtonText:'Agregar',
-    preConfirm:()=>({ciclo:gi('nmCiclo')?.value,grado:gi('nmGrado')?.value.trim(),
-      area:gi('nmArea')?.value.trim(),asignatura:gi('nmAsig')?.value.trim(),
-      intensidad:parseInt(gi('nmInt')?.value)||0})
+
+async function modalNuevaMateria() {
+  const cid = gi('saPlanCol')?.value;
+  if (!cid) return sw('warning', 'Selecciona un colegio primero');
+  const { value: f } = await Swal.fire({
+    title: 'Nueva Asignatura',
+    html: `<select id="nmCiclo" class="swal2-select" style="width:100%;margin:.25rem 0">
+             <option value="primaria">Primaria</option><option value="bachillerato">Bachillerato</option>
+           </select>
+           <input id="nmGrado" class="swal2-input" placeholder="Grado (ej: 1°, 6°)">
+           <input id="nmArea"  class="swal2-input" placeholder="Área (ej: Ciencias Naturales)">
+           <input id="nmAsig"  class="swal2-input" placeholder="Asignatura *">
+           <input id="nmInt"   class="swal2-input" type="number" min="0" max="40" placeholder="Intensidad h/sem">`,
+    focusConfirm: false, showCancelButton: true, confirmButtonText: 'Agregar',
+    preConfirm: () => ({ ciclo: gi('nmCiclo')?.value, grado: gi('nmGrado')?.value.trim(), area: gi('nmArea')?.value.trim(), asignatura: gi('nmAsig')?.value.trim(), intensidad: parseInt(gi('nmInt')?.value) || 0 })
   });
-  if(!f||!f.asignatura) return;
-  try{
-    await saApiFetch(`/api/superadmin/plan/${cid}`,{method:'POST',body:JSON.stringify(f)});
-    sw('success','Asignatura agregada');
+  if (!f || !f.asignatura) return;
+  try {
+    await saApiFetch(`/api/superadmin/plan/${cid}`, { method: 'POST', body: JSON.stringify(f) });
+    sw('success', 'Asignatura agregada');
     loadSAPlan();
-  }catch(e){sw('error',e.message);}
+  } catch (e) { sw('error', e.message); }
 }
-async function eliminarPlanCompleto(){
-  const cid=gi('saPlanCol')?.value;
-  if(!cid) return sw('warning','Selecciona un colegio primero');
-  const conf=await Swal.fire({title:'¿Eliminar todo el plan?',text:'Se borrarán todas las asignaturas del colegio.',icon:'warning',showCancelButton:true,confirmButtonText:'Sí, eliminar',confirmButtonColor:'#e53e3e'});
-  if(!conf.isConfirmed) return;
-  try{
-    await saApiFetch(`/api/superadmin/plan/${cid}`,{method:'DELETE'});
-    sw('success','Plan eliminado');
+
+async function eliminarPlanCompleto() {
+  const cid = gi('saPlanCol')?.value;
+  if (!cid) return sw('warning', 'Selecciona un colegio primero');
+  const conf = await Swal.fire({ title: '¿Eliminar todo el plan?', text: 'Se borrarán todas las asignaturas.', icon: 'warning', showCancelButton: true, confirmButtonText: 'Sí, eliminar', confirmButtonColor: '#e53e3e' });
+  if (!conf.isConfirmed) return;
+  try {
+    await saApiFetch(`/api/superadmin/plan/${cid}`, { method: 'DELETE' });
+    sw('success', 'Plan eliminado');
     loadSAPlan();
-  }catch(e){sw('error',e.message);}
+  } catch (e) { sw('error', e.message); }
 }
-async function importarPlanDefecto(){
-  const cid=gi('saPlanCol')?.value;
-  if(!cid) return sw('warning','Selecciona un colegio primero');
-  const conf=await Swal.fire({title:'¿Importar plan por defecto?',text:'Esto borrará el plan actual del colegio.',icon:'warning',showCancelButton:true,confirmButtonText:'Importar'});
-  if(!conf.isConfirmed) return;
-  const plan=[
-    {ciclo:'primaria',grado:'1°',area:'Matemáticas',asignatura:'Matemáticas',intensidad:5},
-    {ciclo:'primaria',grado:'1°',area:'Lenguaje',asignatura:'Español',intensidad:5},
-    {ciclo:'primaria',grado:'1°',area:'Ciencias',asignatura:'Ciencias Naturales',intensidad:3},
-    {ciclo:'primaria',grado:'1°',area:'Sociales',asignatura:'Ciencias Sociales',intensidad:3},
-    {ciclo:'primaria',grado:'1°',area:'Artística',asignatura:'Artística',intensidad:2},
-    {ciclo:'primaria',grado:'1°',area:'Ed. Física',asignatura:'Educación Física',intensidad:2},
-    {ciclo:'bachillerato',grado:'6°',area:'Matemáticas',asignatura:'Matemáticas',intensidad:5},
-    {ciclo:'bachillerato',grado:'6°',area:'Lenguaje',asignatura:'Español',intensidad:4},
-    {ciclo:'bachillerato',grado:'6°',area:'Ciencias',asignatura:'Física',intensidad:3},
-    {ciclo:'bachillerato',grado:'6°',area:'Ciencias',asignatura:'Química',intensidad:3},
-    {ciclo:'bachillerato',grado:'6°',area:'Filosofía',asignatura:'Filosofía',intensidad:2},
-    {ciclo:'bachillerato',grado:'6°',area:'Idiomas',asignatura:'Inglés',intensidad:3},
+
+async function importarPlanDefecto() {
+  const cid = gi('saPlanCol')?.value;
+  if (!cid) return sw('warning', 'Selecciona un colegio primero');
+  const conf = await Swal.fire({ title: '¿Importar plan por defecto?', text: 'Esto borrará el plan actual del colegio.', icon: 'warning', showCancelButton: true, confirmButtonText: 'Importar' });
+  if (!conf.isConfirmed) return;
+  const plan = [
+    { ciclo: 'primaria', grado: '1°', area: 'Matemáticas', asignatura: 'Matemáticas', intensidad: 5 },
+    { ciclo: 'primaria', grado: '1°', area: 'Lenguaje', asignatura: 'Español', intensidad: 5 },
+    { ciclo: 'primaria', grado: '1°', area: 'Ciencias', asignatura: 'Ciencias Naturales', intensidad: 3 },
+    { ciclo: 'primaria', grado: '1°', area: 'Sociales', asignatura: 'Ciencias Sociales', intensidad: 3 },
+    { ciclo: 'primaria', grado: '1°', area: 'Artística', asignatura: 'Artística', intensidad: 2 },
+    { ciclo: 'primaria', grado: '1°', area: 'Ed. Física', asignatura: 'Educación Física', intensidad: 2 },
+    { ciclo: 'bachillerato', grado: '6°', area: 'Matemáticas', asignatura: 'Matemáticas', intensidad: 5 },
+    { ciclo: 'bachillerato', grado: '6°', area: 'Lenguaje', asignatura: 'Español', intensidad: 4 },
+    { ciclo: 'bachillerato', grado: '6°', area: 'Ciencias', asignatura: 'Física', intensidad: 3 },
+    { ciclo: 'bachillerato', grado: '6°', area: 'Ciencias', asignatura: 'Química', intensidad: 3 },
+    { ciclo: 'bachillerato', grado: '6°', area: 'Filosofía', asignatura: 'Filosofía', intensidad: 2 },
+    { ciclo: 'bachillerato', grado: '6°', area: 'Idiomas', asignatura: 'Inglés', intensidad: 3 },
   ];
-  try{
-    await saApiFetch(`/api/superadmin/plan/${cid}`,{method:'DELETE'});
-    await saApiFetch(`/api/superadmin/plan/${cid}`,{method:'POST',body:JSON.stringify(plan)});
-    sw('success','Plan importado correctamente');
+  try {
+    await saApiFetch(`/api/superadmin/plan/${cid}`, { method: 'DELETE' });
+    await saApiFetch(`/api/superadmin/plan/${cid}`, { method: 'POST', body: JSON.stringify(plan) });
+    sw('success', 'Plan importado correctamente');
     loadSAPlan();
-  }catch(e){sw('error',e.message);}
+  } catch (e) { sw('error', e.message); }
 }
 
 /* ─── ESTADÍSTICAS GLOBALES ─────────────────────────────── */
-function pgSAEstadisticas(){
-  return`<div id="saEstPage">
-    <!-- Header con KPIs -->
+function pgSAEstadisticas() {
+  return `<div id="saEstPage">
     <div class="card" style="background:linear-gradient(135deg,#1a365d 0%,#2b6cb0 100%);color:#fff;margin-bottom:1rem">
       <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:.5rem;margin-bottom:1rem">
         <h2 style="color:#fff;margin:0">📊 Estadísticas Globales del Sistema</h2>
@@ -4048,11 +4106,9 @@ function pgSAEstadisticas(){
         </div>
       </div>
       <div id="saEstGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(155px,1fr));gap:.75rem">
-        <div style="text-align:center;opacity:.7"><div style="font-size:1.8rem">⏳</div><p style="font-size:.8rem;margin:.25rem 0">Cargando…</p></div>
+        <div style="text-align:center;opacity:.6;padding:1rem"><div style="font-size:1.5rem">⏳</div><p style="font-size:.8rem;margin:.25rem 0">Cargando…</p></div>
       </div>
     </div>
-
-    <!-- Filtros y controles -->
     <div class="card" style="margin-bottom:1rem">
       <div style="display:flex;gap:.75rem;flex-wrap:wrap;align-items:center">
         <input id="saEstSearch" class="inp" style="width:200px;font-size:.85rem" placeholder="🔍 Buscar institución…" oninput="renderEstDetalle(window._saEstData||[])">
@@ -4062,7 +4118,7 @@ function pgSAEstadisticas(){
           <option value="inactivo">Solo inactivos</option>
         </select>
         <select id="saEstOrden" class="inp" style="width:auto;font-size:.85rem" onchange="renderEstDetalle(window._saEstData||[])">
-          <option value="nombre">Ordenar por nombre</option>
+          <option value="nombre">Por nombre</option>
           <option value="est_desc">↓ Más estudiantes</option>
           <option value="prom_desc">↓ Mejor promedio</option>
           <option value="asist_desc">↓ Mejor asistencia</option>
@@ -4070,20 +4126,16 @@ function pgSAEstadisticas(){
         </select>
       </div>
     </div>
-
-    <!-- Gráficas comparativas -->
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1rem" id="saEstChartsRow">
       <div class="card">
-        <h3 style="margin:0 0 .75rem;font-size:.95rem">📈 Promedio de Notas por Institución</h3>
-        <div id="saEstChartNotas" style="overflow-x:auto;min-height:140px;display:flex;align-items:flex-end"></div>
+        <h3 style="margin:0 0 .75rem;font-size:.95rem">📈 Promedio de Notas</h3>
+        <div id="saEstChartNotas" style="overflow-x:auto;min-height:130px;display:flex;align-items:flex-end"></div>
       </div>
       <div class="card">
-        <h3 style="margin:0 0 .75rem;font-size:.95rem">✅ Asistencia % por Institución</h3>
-        <div id="saEstChartAsist" style="overflow-x:auto;min-height:140px;display:flex;align-items:flex-end"></div>
+        <h3 style="margin:0 0 .75rem;font-size:.95rem">✅ Asistencia %</h3>
+        <div id="saEstChartAsist" style="overflow-x:auto;min-height:130px;display:flex;align-items:flex-end"></div>
       </div>
     </div>
-
-    <!-- Tabla detallada completa -->
     <div class="card">
       <h3 style="margin:0 0 .75rem">📋 Detalle completo por institución</h3>
       <div id="saEstDetalle" style="overflow-x:auto">Cargando…</div>
@@ -4091,197 +4143,192 @@ function pgSAEstadisticas(){
   </div>`;
 }
 
-function renderEstKPIs(stats){
-  const grid=gi('saEstGrid');
-  if(!grid) return;
-  const activos=stats.filter(s=>s.activo).length;
-  const totalEst=stats.reduce((a,s)=>a+s.totalEst,0);
-  const totalProfs=stats.reduce((a,s)=>a+s.totalProfs,0);
-  const totalSal=stats.reduce((a,s)=>a+(s.totalSalones||0),0);
-  const promNotas=stats.length?+(stats.reduce((a,s)=>a+s.promNotas,0)/stats.length).toFixed(2):0;
-  const promAsist=stats.length?+(stats.reduce((a,s)=>a+(s.asistPct||0),0)/stats.length).toFixed(1):0;
-  const totalIng=stats.reduce((a,s)=>a+(s.ingresosMes||0),0);
-  const promIng=stats.length?Math.round(totalIng/stats.length):0;
-  const kpis=[
-    {ic:'🏫',lb:'Instituciones',val:stats.length,sub:`${activos} activas · ${stats.length-activos} inactivas`},
-    {ic:'👨‍🎓',lb:'Estudiantes',val:totalEst.toLocaleString(),sub:`~${stats.length?Math.round(totalEst/stats.length):0} por inst.`},
-    {ic:'👩‍🏫',lb:'Profesores',val:totalProfs.toLocaleString(),sub:`~${stats.length?Math.round(totalProfs/stats.length):0} por inst.`},
-    {ic:'🏛️',lb:'Salones',val:totalSal.toLocaleString(),sub:`~${stats.length?Math.round(totalSal/stats.length):0} por inst.`},
-    {ic:'📊',lb:'Prom. Notas Global',val:promNotas,sub:promNotas>=4?'🟢 Excelente':promNotas>=3?'🟡 Aceptable':'🔴 Bajo'},
-    {ic:'✅',lb:'Asistencia Global',val:promAsist+'%',sub:promAsist>=90?'🟢 Excelente':promAsist>=75?'🟡 Regular':'🔴 Baja'},
-    {ic:'💰',lb:'Ingresos Totales/Mes',val:'$'+totalIng.toLocaleString(),sub:`Prom $${promIng.toLocaleString()}/inst.`},
+function renderEstKPIs(stats) {
+  const grid = gi('saEstGrid');
+  if (!grid) return;
+  const activos = stats.filter(s => s.activo).length;
+  const totalEst = stats.reduce((a, s) => a + (s.totalEst || 0), 0);
+  const totalProfs = stats.reduce((a, s) => a + (s.totalProfs || 0), 0);
+  const totalSal = stats.reduce((a, s) => a + (s.totalSalones || 0), 0);
+  const promNotas = stats.length ? +(stats.reduce((a, s) => a + (s.promNotas || 0), 0) / stats.length).toFixed(2) : 0;
+  const promAsist = stats.length ? +(stats.reduce((a, s) => a + (s.asistPct || 0), 0) / stats.length).toFixed(1) : 0;
+  const totalIng = stats.reduce((a, s) => a + (s.ingresosMes || 0), 0);
+  const kpis = [
+    { ic: '🏫', lb: 'Instituciones', val: stats.length, sub: `${activos} activas · ${stats.length - activos} inactivas` },
+    { ic: '👨‍🎓', lb: 'Estudiantes', val: totalEst.toLocaleString(), sub: `~${stats.length ? Math.round(totalEst / stats.length) : 0} por inst.` },
+    { ic: '👩‍🏫', lb: 'Profesores', val: totalProfs.toLocaleString(), sub: `~${stats.length ? Math.round(totalProfs / stats.length) : 0} por inst.` },
+    { ic: '🏛️', lb: 'Salones', val: totalSal.toLocaleString(), sub: `~${stats.length ? Math.round(totalSal / stats.length) : 0} por inst.` },
+    { ic: '📊', lb: 'Prom. Notas Global', val: promNotas, sub: promNotas >= 4 ? '🟢 Excelente' : promNotas >= 3 ? '🟡 Aceptable' : '🔴 Bajo' },
+    { ic: '✅', lb: 'Asistencia Global', val: promAsist + '%', sub: promAsist >= 90 ? '🟢 Excelente' : promAsist >= 75 ? '🟡 Regular' : '🔴 Baja' },
+    { ic: '💰', lb: 'Ingresos Tot./Mes', val: '$' + totalIng.toLocaleString(), sub: `Prom $${stats.length ? Math.round(totalIng / stats.length).toLocaleString() : 0}/inst.` },
   ];
-  grid.innerHTML=kpis.map(k=>`
-    <div style="background:rgba(255,255,255,.12);border-radius:10px;padding:.75rem 1rem;text-align:center">
-      <div style="font-size:1.5rem">${k.ic}</div>
-      <div style="font-size:1.4rem;font-weight:800;color:#fff;line-height:1.1">${k.val}</div>
-      <div style="font-size:.72rem;opacity:.85;color:#e2e8f0;margin:.15rem 0">${k.lb}</div>
-      <div style="font-size:.65rem;opacity:.65;color:#bee3f8">${k.sub}</div>
+  grid.innerHTML = kpis.map(k => `
+    <div style="background:rgba(255,255,255,.12);border-radius:10px;padding:.7rem .9rem;text-align:center">
+      <div style="font-size:1.4rem">${k.ic}</div>
+      <div style="font-size:1.3rem;font-weight:800;color:#fff;line-height:1.1">${k.val}</div>
+      <div style="font-size:.7rem;opacity:.85;color:#e2e8f0;margin:.1rem 0">${k.lb}</div>
+      <div style="font-size:.62rem;opacity:.65;color:#bee3f8">${k.sub}</div>
     </div>`).join('');
 }
 
-function renderEstChart(stats,containerId,field,label,maxOverride){
-  const chart=gi(containerId);
-  if(!chart||!stats.length) return;
-  const maxVal=maxOverride||Math.max(...stats.map(s=>s[field]||0),1);
-  const BAR_H=120;
-  const bars=stats.map((s,i)=>{
-    const val=s[field]||0;
-    const h=Math.max(4,Math.round((val/maxVal)*BAR_H));
-    const pct=maxOverride?Math.round((val/maxVal)*100):null;
-    const colors=['#3182ce','#38a169','#d69e2e','#805ad5','#e53e3e','#319795','#dd6b20','#b83280'];
-    const c=colors[i%colors.length];
-    const name=s.colegioNombre.length>11?s.colegioNombre.slice(0,11)+'…':s.colegioNombre;
-    return`<div style="display:flex;flex-direction:column;align-items:center;gap:3px;min-width:56px" title="${s.colegioNombre}: ${val}${maxOverride?'%':''}">
-      <div style="font-size:.65rem;font-weight:700;color:#2d3748">${val}${maxOverride?'%':''}</div>
-      <div style="width:38px;height:${h}px;background:${c};border-radius:5px 5px 0 0"></div>
-      <div style="font-size:.6rem;text-align:center;color:#718096;max-width:56px;word-break:break-word;line-height:1.2">${name}</div>
-    </div>`;
-  }).join('');
-  chart.innerHTML=`<div style="display:flex;align-items:flex-end;gap:5px;padding-bottom:4px;min-width:max-content">${bars}</div>`;
+function renderEstChart(stats, containerId, field, maxOverride) {
+  const chart = gi(containerId);
+  if (!chart) return;
+  if (!stats.length) { chart.innerHTML = '<p style="color:#999;font-size:.85rem;padding:.5rem">Sin datos</p>'; return; }
+  const maxVal = maxOverride || Math.max(...stats.map(s => s[field] || 0), 1);
+  const BAR_H = 110;
+  const colors = ['#3182ce','#38a169','#d69e2e','#805ad5','#e53e3e','#319795','#dd6b20','#b83280'];
+  chart.innerHTML = '<div style="display:flex;align-items:flex-end;gap:5px;min-width:max-content">' +
+    stats.map((s, i) => {
+      const val = s[field] || 0;
+      const h = Math.max(4, Math.round((val / maxVal) * BAR_H));
+      const name = s.colegioNombre.length > 11 ? s.colegioNombre.slice(0, 11) + '…' : s.colegioNombre;
+      return `<div style="display:flex;flex-direction:column;align-items:center;gap:3px;min-width:54px" title="${s.colegioNombre}: ${val}${maxOverride ? '%' : ''}">
+        <div style="font-size:.62rem;font-weight:700;color:#2d3748">${val}${maxOverride ? '%' : ''}</div>
+        <div style="width:38px;height:${h}px;background:${colors[i % colors.length]};border-radius:5px 5px 0 0"></div>
+        <div style="font-size:.58rem;text-align:center;color:#718096;max-width:54px;word-break:break-word;line-height:1.2">${name}</div>
+      </div>`;
+    }).join('') + '</div>';
 }
 
-function renderEstDetalle(stats){
-  const q=(gi('saEstSearch')?.value||'').toLowerCase();
-  const estado=gi('saEstFiltroEstado')?.value||'';
-  const orden=gi('saEstOrden')?.value||'nombre';
-  let filtered=stats
-    .filter(s=>!q||s.colegioNombre.toLowerCase().includes(q))
-    .filter(s=>!estado||(estado==='activo'?s.activo:!s.activo));
-  if(orden==='est_desc') filtered.sort((a,b)=>b.totalEst-a.totalEst);
-  else if(orden==='prom_desc') filtered.sort((a,b)=>b.promNotas-a.promNotas);
-  else if(orden==='asist_desc') filtered.sort((a,b)=>(b.asistPct||0)-(a.asistPct||0));
-  else if(orden==='ing_desc') filtered.sort((a,b)=>(b.ingresosMes||0)-(a.ingresosMes||0));
-  else filtered.sort((a,b)=>a.colegioNombre.localeCompare(b.colegioNombre));
-  const det=gi('saEstDetalle');
-  if(!det) return;
-  if(!filtered.length){det.innerHTML='<p style="color:#999;text-align:center;padding:2rem">Sin resultados con los filtros aplicados.</p>';return;}
-  const hayAsist=filtered.some(s=>s.asistPct!=null&&s.asistPct>0);
-  const hayIng=filtered.some(s=>s.ingresosMes!=null&&s.ingresosMes>0);
-  det.innerHTML=`<table class="tbl"><thead><tr>
+function renderEstDetalle(stats) {
+  const q = (gi('saEstSearch')?.value || '').toLowerCase();
+  const estado = gi('saEstFiltroEstado')?.value || '';
+  const orden = gi('saEstOrden')?.value || 'nombre';
+  let filtered = stats
+    .filter(s => !q || s.colegioNombre.toLowerCase().includes(q))
+    .filter(s => !estado || (estado === 'activo' ? s.activo : !s.activo));
+  if (orden === 'est_desc') filtered.sort((a, b) => (b.totalEst || 0) - (a.totalEst || 0));
+  else if (orden === 'prom_desc') filtered.sort((a, b) => (b.promNotas || 0) - (a.promNotas || 0));
+  else if (orden === 'asist_desc') filtered.sort((a, b) => (b.asistPct || 0) - (a.asistPct || 0));
+  else if (orden === 'ing_desc') filtered.sort((a, b) => (b.ingresosMes || 0) - (a.ingresosMes || 0));
+  else filtered.sort((a, b) => a.colegioNombre.localeCompare(b.colegioNombre));
+  const det = gi('saEstDetalle');
+  if (!det) return;
+  if (!filtered.length) { det.innerHTML = '<p style="color:#999;text-align:center;padding:2rem">Sin resultados con los filtros aplicados.</p>'; return; }
+  const hayAsist = filtered.some(s => s.asistPct != null && s.asistPct > 0);
+  const hayIng = filtered.some(s => s.ingresosMes != null && s.ingresosMes > 0);
+  det.innerHTML = `<table class="tbl"><thead><tr>
     <th>#</th><th>Institución</th><th>Estudiantes</th><th>Profesores</th><th>Salones</th>
-    <th>Prom. Notas</th>${hayAsist?'<th>Asistencia</th>':''}${hayIng?'<th>Ingresos/Mes</th>':''}
+    <th>Prom. Notas</th>${hayAsist ? '<th>Asistencia</th>' : ''}${hayIng ? '<th>Ingresos/Mes</th>' : ''}
     <th>Estado</th>
-  </tr></thead><tbody>${filtered.map((s,i)=>{
-    const notaColor=s.promNotas>=4?'#276749':s.promNotas>=3?'#744210':'#9b2c2c';
-    const asistColor=(s.asistPct||0)>=90?'#276749':(s.asistPct||0)>=75?'#744210':'#9b2c2c';
-    return`<tr>
-      <td style="color:#a0aec0;font-size:.8rem">${i+1}</td>
+  </tr></thead><tbody>${filtered.map((s, i) => {
+    const nc = (s.promNotas || 0) >= 4 ? '#276749' : (s.promNotas || 0) >= 3 ? '#744210' : '#9b2c2c';
+    const ac = (s.asistPct || 0) >= 90 ? '#276749' : (s.asistPct || 0) >= 75 ? '#744210' : '#9b2c2c';
+    return `<tr>
+      <td style="color:#a0aec0;font-size:.8rem">${i + 1}</td>
       <td><strong>${s.colegioNombre}</strong></td>
-      <td><span style="font-weight:600">${s.totalEst}</span></td>
-      <td>${s.totalProfs}</td>
-      <td>${s.totalSalones||0}</td>
-      <td>
-        <div style="display:flex;align-items:center;gap:.4rem">
-          <div style="flex:1;height:6px;background:#e2e8f0;border-radius:3px;min-width:40px">
-            <div style="width:${Math.min(100,s.promNotas/5*100)}%;height:100%;background:${notaColor};border-radius:3px"></div>
-          </div>
-          <span style="font-weight:700;color:${notaColor};font-size:.9rem">${s.promNotas}</span>
-        </div>
-      </td>
-      ${hayAsist?`<td>
-        ${s.asistPct!=null?`<div style="display:flex;align-items:center;gap:.4rem">
-          <div style="flex:1;height:6px;background:#e2e8f0;border-radius:3px;min-width:40px">
-            <div style="width:${Math.min(100,s.asistPct)}%;height:100%;background:${asistColor};border-radius:3px"></div>
-          </div>
-          <span style="font-weight:600;color:${asistColor};font-size:.9rem">${s.asistPct}%</span>
-        </div>`:'<span style="color:#a0aec0">—</span>'}
-      </td>`:''}
-      ${hayIng?`<td>${s.ingresosMes!=null?'<span style="font-weight:600;color:#2c7a7b">$'+Number(s.ingresosMes).toLocaleString()+'</span>':'<span style="color:#a0aec0">—</span>'}</td>`:''}
-      <td><span class="bdg ${s.activo?'bgr':'bred'}">${s.activo?'Activo':'Inactivo'}</span></td>
+      <td>${s.totalEst || 0}</td><td>${s.totalProfs || 0}</td><td>${s.totalSalones || 0}</td>
+      <td><div style="display:flex;align-items:center;gap:.4rem">
+        <div style="flex:1;height:6px;background:#e2e8f0;border-radius:3px;min-width:36px"><div style="width:${Math.min(100,(s.promNotas||0)/5*100)}%;height:100%;background:${nc};border-radius:3px"></div></div>
+        <span style="font-weight:700;color:${nc};font-size:.88rem">${s.promNotas || 0}</span>
+      </div></td>
+      ${hayAsist ? `<td>${s.asistPct != null ? `<div style="display:flex;align-items:center;gap:.4rem"><div style="flex:1;height:6px;background:#e2e8f0;border-radius:3px;min-width:36px"><div style="width:${Math.min(100,s.asistPct||0)}%;height:100%;background:${ac};border-radius:3px"></div></div><span style="font-weight:600;color:${ac};font-size:.88rem">${s.asistPct}%</span></div>` : '<span style="color:#a0aec0">—</span>'}</td>` : ''}
+      ${hayIng ? `<td>${s.ingresosMes != null ? '<span style="font-weight:600;color:#2c7a7b">$' + Number(s.ingresosMes).toLocaleString() + '</span>' : '<span style="color:#a0aec0">—</span>'}</td>` : ''}
+      <td><span class="bdg ${s.activo ? 'bgr' : 'bred'}">${s.activo ? 'Activo' : 'Inactivo'}</span></td>
     </tr>`;
   }).join('')}</tbody></table>
-  <p style="font-size:.75rem;color:#a0aec0;margin-top:.5rem;text-align:right">Mostrando ${filtered.length} de ${stats.length} instituciones · Datos del seed Atlas</p>`;
+  <p style="font-size:.75rem;color:#a0aec0;margin-top:.5rem;text-align:right">Mostrando ${filtered.length} de ${stats.length} instituciones</p>`;
 }
 
-function exportarEstCSV(){
-  const stats=window._saEstData||[];
-  if(!stats.length) return sw('warning','Sin datos para exportar');
-  const header='Institución,Estudiantes,Profesores,Salones,Prom.Notas,Asistencia%,IngresosMes,Estado';
-  const rows=stats.map(s=>`"${s.colegioNombre}",${s.totalEst},${s.totalProfs},${s.totalSalones||0},${s.promNotas},${s.asistPct||0},${s.ingresosMes||0},${s.activo?'Activo':'Inactivo'}`);
-  const csv=[header,...rows].join('\n');
-  const a=document.createElement('a');
-  a.href='data:text/csv;charset=utf-8,\uFEFF'+encodeURIComponent(csv);
-  a.download=`Estadisticas_Atlas_${new Date().toISOString().slice(0,10)}.csv`;
+function exportarEstCSV() {
+  const stats = window._saEstData || [];
+  if (!stats.length) return sw('warning', 'Sin datos para exportar');
+  const header = 'Institución,Estudiantes,Profesores,Salones,Prom.Notas,Asistencia%,IngresosMes,Estado';
+  const rows = stats.map(s => `"${s.colegioNombre}",${s.totalEst||0},${s.totalProfs||0},${s.totalSalones||0},${s.promNotas||0},${s.asistPct||0},${s.ingresosMes||0},${s.activo?'Activo':'Inactivo'}`);
+  const csv = [header, ...rows].join('\n');
+  const a = document.createElement('a');
+  a.href = 'data:text/csv;charset=utf-8,\uFEFF' + encodeURIComponent(csv);
+  a.download = `Estadisticas_${new Date().toISOString().slice(0,10)}.csv`;
   a.click();
-  sw('success','CSV con datos Atlas exportado');
+  sw('success', 'CSV exportado');
 }
 
-async function initSAEstadisticas(){
-  try{
-    const statsRaw=await saApiFetch('/api/superadmin/stats').catch(()=>[]);
-    const stats=Array.isArray(statsRaw)?statsRaw:[];
-    window._saEstData=stats;
+async function initSAEstadisticas() {
+  const grid = gi('saEstGrid');
+  if (grid) grid.innerHTML = '<div style="text-align:center;opacity:.6;padding:1rem;color:#fff">⏳ Cargando…</div>';
+  try {
+    const statsRaw = await saApiFetch('/api/superadmin/stats');
+    const stats = Array.isArray(statsRaw) ? statsRaw : [];
+    window._saEstData = stats;
+    if (!stats.length) {
+      if (grid) grid.innerHTML = '<div style="color:#fff;opacity:.7;padding:1rem;text-align:center">Sin instituciones registradas.</div>';
+      const det = gi('saEstDetalle');
+      if (det) det.innerHTML = '<p style="color:#999;text-align:center;padding:2rem">Sin datos disponibles.</p>';
+      return;
+    }
     renderEstKPIs(stats);
-    renderEstChart(stats,'saEstChartNotas','promNotas','Prom. Notas',5);
-    renderEstChart(stats,'saEstChartAsist','asistPct','Asistencia %',100);
+    renderEstChart(stats, 'saEstChartNotas', 'promNotas', 5);
+    renderEstChart(stats, 'saEstChartAsist', 'asistPct', 100);
     renderEstDetalle(stats);
-    const chartsRow=gi('saEstChartsRow');
-    if(chartsRow&&window.innerWidth<640) chartsRow.style.gridTemplateColumns='1fr';
-  }catch(e){
-    const g=gi('saEstGrid');
-    if(g)g.innerHTML=`<p style="color:#fff;opacity:.7">Error al cargar: ${e.message}</p>`;
+    const chartsRow = gi('saEstChartsRow');
+    if (chartsRow && window.innerWidth < 640) chartsRow.style.gridTemplateColumns = '1fr';
+  } catch (e) {
+    if (grid) grid.innerHTML = `<div style="color:#fed7d7;padding:1rem;text-align:center">❌ Error: ${e.message}<br><button class="btn" style="background:rgba(255,255,255,.2);color:#fff;margin-top:.5rem" onclick="initSAEstadisticas()">Reintentar</button></div>`;
   }
 }
 
 /* ─── AUDITORÍA GLOBAL ──────────────────────────────────── */
-function pgSAAuditoria(){
-  return`<div class="card">
+function pgSAAuditoria() {
+  return `<div class="card">
     <h2>🔍 Auditoría Global</h2>
     <div style="display:flex;gap:.75rem;margin-bottom:1rem;flex-wrap:wrap">
       <select id="saAudCol" class="inp" style="min-width:200px" onchange="loadSAAuditoria()">
         <option value="">Todos los colegios</option>
       </select>
-      <input id="saAudSearch" class="inp" placeholder="🔍 Buscar acción…" oninput="loadSAAuditoria()">
+      <input id="saAudSearch" class="inp" placeholder="🔍 Buscar acción o usuario…" oninput="loadSAAuditoria()">
     </div>
-    <div id="saAudTable">Cargando…</div>
+    <div id="saAudTable" style="overflow-x:auto">Cargando…</div>
   </div>`;
 }
-async function initSAAuditoria(){
-  try{
-    const raw=await saApiFetch('/api/superadmin/colegios').catch(()=>[]);
-    const colegios=Array.isArray(raw)?raw:[];
-    const sel=gi('saAudCol');
-    if(sel) sel.innerHTML='<option value="">Todos los colegios</option>'+
-      colegios.map(c=>`<option value="${c.id}">${c.nombre}</option>`).join('');
+
+async function initSAAuditoria() {
+  try {
+    const raw = await saApiFetch('/api/superadmin/colegios');
+    const colegios = Array.isArray(raw) ? raw : [];
+    const sel = gi('saAudCol');
+    if (sel) sel.innerHTML = '<option value="">Todos los colegios</option>' +
+      colegios.map(c => `<option value="${c.id}">${c.nombre}</option>`).join('');
     loadSAAuditoria();
-  }catch(e){const el=gi('saAudTable');if(el)el.innerHTML=`<p style="color:red">Error: ${e.message}</p>`;}
+  } catch (e) { const el = gi('saAudTable'); if (el) el.innerHTML = `<p style="color:red">Error: ${e.message}</p>`; }
 }
-async function loadSAAuditoria(){
-  const cid=gi('saAudCol')?.value;
-  const q=(gi('saAudSearch')?.value||'').toLowerCase();
-  const el=gi('saAudTable');
-  if(!el) return;
-  el.textContent='Cargando…';
-  try{
-    let url='/api/superadmin/auditoria?limit=300';
-    if(cid) url+=`&colegioId=${cid}`;
-    const raw=await saApiFetch(url).catch(()=>[]);
-    let logs=Array.isArray(raw)?raw:[];
-    if(q) logs=logs.filter(l=>(l.accion||'').toLowerCase().includes(q)||(l.who||'').toLowerCase().includes(q));
-    if(!logs.length){el.innerHTML='<p style="color:#888;text-align:center;padding:2rem">Sin registros de auditoría.</p>';return;}
-    el.innerHTML=`<table class="tbl"><thead><tr>
+
+async function loadSAAuditoria() {
+  const cid = gi('saAudCol')?.value;
+  const q = (gi('saAudSearch')?.value || '').toLowerCase();
+  const el = gi('saAudTable');
+  if (!el) return;
+  el.textContent = 'Cargando…';
+  try {
+    let url = '/api/superadmin/auditoria?limit=300';
+    if (cid) url += `&colegioId=${cid}`;
+    const raw = await saApiFetch(url);
+    let logs = Array.isArray(raw) ? raw : [];
+    if (q) logs = logs.filter(l => (l.accion || '').toLowerCase().includes(q) || (l.who || '').toLowerCase().includes(q));
+    if (!logs.length) { el.innerHTML = '<p style="color:#888;text-align:center;padding:2rem">Sin registros de auditoría.</p>'; return; }
+    el.innerHTML = `<table class="tbl"><thead><tr>
       <th>Fecha</th><th>Usuario</th><th>Rol</th><th>Acción</th><th>Colegio</th>
-    </tr></thead><tbody>${logs.slice(0,200).map(l=>`<tr>
-      <td style="font-size:.78rem">${l.ts?.slice(0,16)||''}</td>
-      <td>${l.who||l.user||''}</td>
-      <td><span class="bdg ${l.role==='superadmin'?'bpurp':l.role==='admin'?'bor':'bbl'}">${l.role||''}</span></td>
-      <td>${l.accion||''}</td>
-      <td style="font-size:.78rem">${l.colegioId||'global'}</td>
-    </tr>`).join('')}</tbody></table>`;
-  }catch(e){el.innerHTML=`<p style="color:red">Error: ${e.message}</p>`;}
+    </tr></thead><tbody>${logs.slice(0, 200).map(l => `<tr>
+      <td style="font-size:.78rem">${(l.ts || '').slice(0, 16)}</td>
+      <td>${l.who || l.user || ''}</td>
+      <td><span class="bdg ${l.role === 'superadmin' ? 'bpurp' : l.role === 'admin' ? 'bor' : 'bbl'}">${l.role || ''}</span></td>
+      <td>${l.accion || ''}</td>
+      <td style="font-size:.78rem;color:#718096">${l.colegioId || 'global'}</td>
+    </tr>`).join('')}</tbody></table>
+    <p style="font-size:.75rem;color:#a0aec0;margin-top:.5rem;text-align:right">Mostrando ${Math.min(200, logs.length)} de ${logs.length} registros</p>`;
+  } catch (e) { el.innerHTML = `<p style="color:red">Error: ${e.message} <button class="btn bsm" onclick="loadSAAuditoria()">Reintentar</button></p>`; }
 }
 
 /* ─── MANTENIMIENTO TÉCNICO ─────────────────────────────── */
-function pgSAMantenimiento(){
-  return`<div class="card">
+function pgSAMantenimiento() {
+  return `<div class="card">
     <h2>⚙️ Mantenimiento Técnico</h2>
     <div style="display:grid;gap:1.5rem">
       <div class="card">
         <h3>💾 Copia de Seguridad</h3>
-        <p style="color:#888;margin-bottom:.75rem">Descarga un backup JSON de una institución.</p>
+        <p style="color:#888;margin-bottom:.75rem">Descarga un backup JSON completo de una institución.</p>
         <div style="display:flex;gap:.75rem;flex-wrap:wrap">
-          <select id="saBackupCol" class="inp" style="min-width:200px"></select>
+          <select id="saBackupCol" class="inp" style="min-width:200px"><option value="">— Selecciona colegio —</option></select>
           <button class="btn" onclick="descargarBackup()">📥 Descargar Backup</button>
         </div>
       </div>
@@ -4289,71 +4336,75 @@ function pgSAMantenimiento(){
         <h3>🔑 Reset Masivo de Contraseñas</h3>
         <p style="color:#888;margin-bottom:.75rem">Actualiza contraseñas de todos los usuarios de un colegio.</p>
         <div style="display:flex;gap:.75rem;flex-wrap:wrap;align-items:center">
-          <select id="saResetCol" class="inp" style="min-width:200px"></select>
+          <select id="saResetCol" class="inp" style="min-width:200px"><option value="">— Selecciona colegio —</option></select>
           <select id="saResetRole" class="inp">
             <option value="">Todos los roles</option>
             <option value="est">Estudiantes</option>
             <option value="profe">Profesores</option>
             <option value="admin">Admins</option>
           </select>
-          <input id="saResetPwd" class="inp" type="password" placeholder="Nueva contraseña" style="min-width:200px">
+          <input id="saResetPwd" class="inp" type="password" placeholder="Nueva contraseña" style="min-width:180px">
           <button class="btn bdan" onclick="resetMasivo()">⚠️ Resetear</button>
         </div>
       </div>
     </div>
   </div>`;
 }
-async function initSAMantenimiento(){
-  try{
-    const raw=await saApiFetch('/api/superadmin/colegios').catch(()=>[]);
-    const colegios=Array.isArray(raw)?raw:[];
-    ['saBackupCol','saResetCol'].forEach(sid=>{
-      const sel=gi(sid);
-      if(sel) sel.innerHTML='<option value="">— Selecciona colegio —</option>'+
-        colegios.map(c=>`<option value="${c.id}">${c.nombre}</option>`).join('');
-      if(!colegios.length&&sel) sel.innerHTML='<option value="">Sin colegios registrados</option>';
+
+async function initSAMantenimiento() {
+  try {
+    const raw = await saApiFetch('/api/superadmin/colegios');
+    const colegios = Array.isArray(raw) ? raw : [];
+    ['saBackupCol', 'saResetCol'].forEach(sid => {
+      const sel = gi(sid);
+      if (!sel) return;
+      sel.innerHTML = '<option value="">— Selecciona colegio —</option>' +
+        colegios.map(c => `<option value="${c.id}">${c.nombre}</option>`).join('');
     });
-  }catch(e){sw('error',e.message);}
+  } catch (e) { sw('error', e.message); }
 }
-async function descargarBackup(){
-  const cid=gi('saBackupCol')?.value;
-  if(!cid) return sw('warning','Selecciona un colegio');
-  try{
-    const token=window.TokenStore?.get();
-    if(!token){Swal.fire({icon:'warning',title:'Sin sesión',text:'Vuelve a iniciar sesión.'});return;}
-    const res=await fetch(API_BASE+`/api/superadmin/backup/${cid}`,{
-      method:'POST',headers:{Authorization:`Bearer ${token}`,'Content-Type':'application/json'}
+
+async function descargarBackup() {
+  const cid = gi('saBackupCol')?.value;
+  if (!cid) return sw('warning', 'Selecciona un colegio');
+  try {
+    const token = window.TokenStore?.get();
+    if (!token) return sw('warning', 'Sin sesión activa');
+    const res = await fetch(API_BASE + `/api/superadmin/backup/${cid}`, {
+      method: 'POST', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }
     });
-    if(!res.ok){const e=await res.json().catch(()=>({}));throw new Error(e.error||'Error backup');}
-    const blob=await res.blob();
-    const url=URL.createObjectURL(blob);
-    const a=document.createElement('a');
-    a.href=url;a.download=`backup_${cid}_${Date.now()}.json`;a.click();
+    if (!res.ok) { const e = await res.json().catch(() => ({})); throw new Error(e.error || 'Error backup'); }
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = `backup_${cid}_${Date.now()}.json`; a.click();
     URL.revokeObjectURL(url);
-    sw('success','Backup descargado');
-  }catch(e){sw('error',e.message);}
+    sw('success', 'Backup descargado');
+  } catch (e) { sw('error', e.message); }
 }
-async function resetMasivo(){
-  const cid=gi('saResetCol')?.value;
-  const role=gi('saResetRole')?.value;
-  const pwd=gi('saResetPwd')?.value;
-  if(!cid||!pwd) return sw('warning','Completa los campos requeridos');
-  const conf=await Swal.fire({
-    title:'⚠️ ¿Confirmas el reset?',
-    text:`Esto cambiará la contraseña de ${role||'todos los usuarios'} del colegio.`,
-    icon:'warning',showCancelButton:true,confirmButtonText:'Sí, resetear',confirmButtonColor:'#e53e3e'
+
+async function resetMasivo() {
+  const cid = gi('saResetCol')?.value;
+  const role = gi('saResetRole')?.value;
+  const pwd = gi('saResetPwd')?.value;
+  if (!cid || !pwd) return sw('warning', 'Completa los campos requeridos');
+  const conf = await Swal.fire({
+    title: '⚠️ ¿Confirmas el reset?',
+    text: `Esto cambiará la contraseña de ${role || 'TODOS los usuarios'} del colegio seleccionado.`,
+    icon: 'warning', showCancelButton: true, confirmButtonText: 'Sí, resetear', confirmButtonColor: '#e53e3e'
   });
-  if(!conf.isConfirmed) return;
-  try{
-    const res=await saApiFetch(`/api/superadmin/reset-passwords/${cid}`,{method:'POST',body:JSON.stringify({role:role||undefined,newPassword:pwd})});
-    sw('success',`${res.updated} contraseñas actualizadas`);
-    gi('saResetPwd').value='';
-  }catch(e){sw('error',e.message);}
+  if (!conf.isConfirmed) return;
+  try {
+    const res = await saApiFetch(`/api/superadmin/reset-passwords/${cid}`, { method: 'POST', body: JSON.stringify({ role: role || undefined, newPassword: pwd }) });
+    if (!res) return;
+    sw('success', `${res.updated} contraseñas actualizadas`);
+    const inp = gi('saResetPwd'); if (inp) inp.value = '';
+  } catch (e) { sw('error', e.message); }
 }
 
 /* ─── SUGERENCIAS — superadmin recibe ──────────────────── */
-function pgSASug(){
-  return`<div class="card">
+function pgSASug() {
+  return `<div class="card">
     <h2>💡 Sugerencias Recibidas</h2>
     <div style="display:flex;gap:.75rem;margin-bottom:1rem;flex-wrap:wrap;align-items:center">
       <select id="saSugFiltCol" class="inp" style="min-width:180px" onchange="loadSASug()">
@@ -4368,88 +4419,88 @@ function pgSASug(){
     <div id="saSugTable">Cargando…</div>
   </div>`;
 }
-async function initSASug(){
-  try{
-    const raw=await saApiFetch('/api/superadmin/colegios').catch(()=>[]);
-    const colegios=Array.isArray(raw)?raw:[];
-    const sel=gi('saSugFiltCol');
-    if(sel) sel.innerHTML='<option value="">Todos los colegios</option>'+
-      colegios.map(c=>`<option value="${c.id}">${c.nombre}</option>`).join('');
+
+async function initSASug() {
+  try {
+    const raw = await saApiFetch('/api/superadmin/colegios');
+    const colegios = Array.isArray(raw) ? raw : [];
+    const sel = gi('saSugFiltCol');
+    if (sel) sel.innerHTML = '<option value="">Todos los colegios</option>' +
+      colegios.map(c => `<option value="${c.id}">${c.nombre}</option>`).join('');
     loadSASug();
-  }catch(e){const el=gi('saSugTable');if(el)el.innerHTML=`<p style="color:red">Error: ${e.message}</p>`;}
+  } catch (e) { const el = gi('saSugTable'); if (el) el.innerHTML = `<p style="color:red">Error: ${e.message}</p>`; }
 }
-async function loadSASug(){
-  const el=gi('saSugTable');if(!el) return;
-  el.textContent='Cargando…';
-  try{
-    const cid=gi('saSugFiltCol')?.value||'';
-    const leida=gi('saSugFiltLeida')?.value||'';
-    let url='/api/sugerencias?limit=200';
-    if(cid) url+=`&colegioId=${cid}`;
-    if(leida!=='') url+=`&leida=${leida}`;
-    const raw=await saApiFetch(url).catch(()=>[]);
-    const list=Array.isArray(raw)?raw:[];
-    if(!list.length){el.innerHTML='<p style="color:#999;text-align:center;padding:2rem">No hay sugerencias.</p>';return;}
-    el.innerHTML=list.map(s=>`<div class="card" style="margin-bottom:1rem;border-left:4px solid ${s.leida?'#cbd5e0':'#4299e1'}">
+
+async function loadSASug() {
+  const el = gi('saSugTable'); if (!el) return;
+  el.textContent = 'Cargando…';
+  try {
+    const cid = gi('saSugFiltCol')?.value || '';
+    const leida = gi('saSugFiltLeida')?.value || '';
+    let url = '/api/sugerencias?limit=200';
+    if (cid) url += `&colegioId=${cid}`;
+    if (leida !== '') url += `&leida=${leida}`;
+    const raw = await saApiFetch(url);
+    const list = Array.isArray(raw) ? raw : [];
+    if (!list.length) { el.innerHTML = '<p style="color:#999;text-align:center;padding:2rem">No hay sugerencias.</p>'; return; }
+    el.innerHTML = list.map(s => `<div class="card" style="margin-bottom:.75rem;border-left:4px solid ${s.leida ? '#cbd5e0' : '#4299e1'}">
       <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:.5rem">
         <div>
-          <span class="bdg ${s.role==='admin'?'bor':s.role==='profe'?'bbl':'bgr'}">${s.role}</span>
+          <span class="bdg ${s.role === 'admin' ? 'bor' : s.role === 'profe' ? 'bbl' : 'bgr'}">${s.role}</span>
           <strong style="margin-left:.5rem">${s.nombre}</strong>
-          <span style="font-size:.78rem;color:#718096;margin-left:.5rem">${s.colegioNombre||'—'}</span>
+          <span style="font-size:.78rem;color:#718096;margin-left:.5rem">${s.colegioNombre || '—'}</span>
         </div>
         <div style="display:flex;gap:.4rem;align-items:center;flex-wrap:wrap">
-          <span style="font-size:.75rem;color:#718096">${(s.ts||'').slice(0,10)}</span>
-          ${!s.leida?`<button class="btn bsm" onclick="marcarSugLeida('${s._id}')">✓ Leída</button>`:''}
+          <span style="font-size:.75rem;color:#718096">${(s.ts || '').slice(0, 10)}</span>
+          ${!s.leida ? `<button class="btn bsm" onclick="marcarSugLeida('${s._id}')">✓ Leída</button>` : ''}
           <button class="btn bsm" onclick="responderSug('${s._id}','${encodeURIComponent(s.nombre)}')">💬 Responder</button>
           <button class="btn bsm bdan" onclick="eliminarSug('${s._id}')">🗑️</button>
         </div>
       </div>
-      ${s.titulo?`<div style="font-weight:700;margin:.5rem 0 .25rem"><span class="bdg" style="background:#ebf4ff;color:#2b6cb0">${s.categoria||'general'}</span> ${s.titulo}</div>`:`<div style="font-size:.8rem;color:#718096;margin:.25rem 0"><span class="bdg" style="background:#ebf4ff;color:#2b6cb0">${s.categoria||'general'}</span></div>`}
-      <p style="color:#4a5568;margin:.25rem 0">${s.mensaje}</p>
-      ${s.respuesta?`<div style="background:#f0fff4;border-radius:6px;padding:.5rem .75rem;margin-top:.5rem;font-size:.87rem"><strong>✅ Tu respuesta:</strong> ${s.respuesta}</div>`:''}
+      ${s.titulo ? `<div style="font-weight:700;margin:.4rem 0 .2rem"><span class="bdg" style="background:#ebf4ff;color:#2b6cb0">${s.categoria || 'general'}</span> ${s.titulo}</div>` : `<div style="font-size:.8rem;color:#718096;margin:.2rem 0"><span class="bdg" style="background:#ebf4ff;color:#2b6cb0">${s.categoria || 'general'}</span></div>`}
+      <p style="color:#4a5568;margin:.2rem 0">${s.mensaje}</p>
+      ${s.respuesta ? `<div style="background:#f0fff4;border-radius:6px;padding:.5rem .75rem;margin-top:.4rem;font-size:.87rem"><strong>✅ Tu respuesta:</strong> ${s.respuesta}</div>` : ''}
     </div>`).join('');
-  }catch(e){el.innerHTML=`<p style="color:red">Error: ${e.message}</p>`;}
+  } catch (e) { el.innerHTML = `<p style="color:red">Error: ${e.message} <button class="btn bsm" onclick="loadSASug()">Reintentar</button></p>`; }
 }
-async function marcarSugLeida(id){
-  try{await saApiFetch(`/api/sugerencias/${id}/leer`,{method:'PUT',body:JSON.stringify({})});loadSASug();}
-  catch(e){sw('error',e.message);}
+
+async function marcarSugLeida(id) {
+  try { await saApiFetch(`/api/sugerencias/${id}/leer`, { method: 'PUT', body: JSON.stringify({}) }); loadSASug(); }
+  catch (e) { sw('error', e.message); }
 }
-async function responderSug(id,nombreEnc){
-  const nombre=decodeURIComponent(nombreEnc);
-  const {value:resp}=await Swal.fire({
-    title:`Responder a ${nombre}`,
-    input:'textarea',inputPlaceholder:'Escribe tu respuesta…',
-    showCancelButton:true,confirmButtonText:'Enviar',inputAttributes:{rows:4}
+
+async function responderSug(id, nombreEnc) {
+  const nombre = decodeURIComponent(nombreEnc);
+  const { value: resp } = await Swal.fire({
+    title: `Responder a ${nombre}`, input: 'textarea', inputPlaceholder: 'Escribe tu respuesta…',
+    showCancelButton: true, confirmButtonText: 'Enviar', inputAttributes: { rows: 4 }
   });
-  if(!resp) return;
-  try{
-    await saApiFetch(`/api/sugerencias/${id}/responder`,{method:'PUT',body:JSON.stringify({respuesta:resp})});
-    sw('success','Respuesta enviada');
-    loadSASug();
-  }catch(e){sw('error',e.message);}
+  if (!resp) return;
+  try {
+    await saApiFetch(`/api/sugerencias/${id}/responder`, { method: 'PUT', body: JSON.stringify({ respuesta: resp }) });
+    sw('success', 'Respuesta enviada'); loadSASug();
+  } catch (e) { sw('error', e.message); }
 }
-async function eliminarSug(id){
-  const conf=await Swal.fire({title:'¿Eliminar sugerencia?',icon:'warning',showCancelButton:true,confirmButtonText:'Eliminar',confirmButtonColor:'#e53e3e'});
-  if(!conf.isConfirmed) return;
-  try{await saApiFetch(`/api/sugerencias/${id}`,{method:'DELETE'});loadSASug();}
-  catch(e){sw('error',e.message);}
+
+async function eliminarSug(id) {
+  const conf = await Swal.fire({ title: '¿Eliminar sugerencia?', icon: 'warning', showCancelButton: true, confirmButtonText: 'Eliminar', confirmButtonColor: '#e53e3e' });
+  if (!conf.isConfirmed) return;
+  try { await saApiFetch(`/api/sugerencias/${id}`, { method: 'DELETE' }); loadSASug(); }
+  catch (e) { sw('error', e.message); }
 }
 
 /* ─── SUGERENCIAS — admin/profe/est envían ──────────────── */
-function pgSugerencias(){
-  return`<div class="ph"><h2>💡 Sugerencias</h2><p>Envía sugerencias, comentarios o reportes al super administrador de la plataforma.</p></div>
+function pgSugerencias() {
+  return `<div class="ph"><h2>💡 Sugerencias</h2><p>Envía sugerencias, comentarios o reportes al super administrador de la plataforma.</p></div>
   <div class="card">
     <div class="chd"><span class="cti">Nueva Sugerencia</span></div>
     <div class="fg">
       <div class="fld"><label>Título (opcional)</label><input id="sugTitulo" class="inp" placeholder="Resumen breve"></div>
       <div class="fld"><label>Categoría</label>
         <select id="sugCat" class="inp">
-          <option value="general">General</option>
-          <option value="academico">Académico</option>
-          <option value="tecnico">Técnico</option>
-          <option value="sugerencia">Sugerencia</option>
-          <option value="felicitacion">Felicitación</option>
-          <option value="queja">Queja</option>
+          <option value="general">General</option><option value="academico">Académico</option>
+          <option value="tecnico">Técnico</option><option value="sugerencia">Sugerencia</option>
+          <option value="felicitacion">Felicitación</option><option value="queja">Queja</option>
         </select>
       </div>
     </div>
@@ -4463,67 +4514,38 @@ function pgSugerencias(){
     <div id="sugHistorial">Cargando…</div>
   </div>`;
 }
-async function initSugerencias(){
-  await cargarMisSugerencias();
-}
-async function enviarSugerencia(){
-  const titulo=(gi('sugTitulo')?.value||'').trim();
-  const categoria=gi('sugCat')?.value||'general';
-  const mensaje=(gi('sugMensaje')?.value||'').trim();
-  if(!mensaje) return sw('warning','El mensaje es obligatorio');
-  try{
-    await apiFetch('/api/sugerencias',{method:'POST',body:JSON.stringify({titulo,categoria,mensaje})});
-    sw('success','¡Sugerencia enviada correctamente!');
-    if(gi('sugTitulo')) gi('sugTitulo').value='';
-    if(gi('sugMensaje')) gi('sugMensaje').value='';
+
+async function initSugerencias() { await cargarMisSugerencias(); }
+
+async function enviarSugerencia() {
+  const titulo = (gi('sugTitulo')?.value || '').trim();
+  const categoria = gi('sugCat')?.value || 'general';
+  const mensaje = (gi('sugMensaje')?.value || '').trim();
+  if (!mensaje) return sw('warning', 'El mensaje es obligatorio');
+  try {
+    await apiFetch('/api/sugerencias', { method: 'POST', body: JSON.stringify({ titulo, categoria, mensaje }) });
+    sw('success', '¡Sugerencia enviada correctamente!');
+    if (gi('sugTitulo')) gi('sugTitulo').value = '';
+    if (gi('sugMensaje')) gi('sugMensaje').value = '';
     await cargarMisSugerencias();
-  }catch(e){sw('error',e.message);}
-}
-async function cargarMisSugerencias(){
-  const cont=gi('sugHistorial');
-  if(!cont) return;
-  try{
-    const list=await apiFetch('/api/sugerencias');
-    if(!list||!list.length){cont.innerHTML='<p style="color:#999;text-align:center;padding:1rem">Aún no has enviado sugerencias.</p>';return;}
-    cont.innerHTML=list.map(s=>`<div style="border-bottom:1px solid var(--bd);padding:.75rem 0">
-      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:.25rem">
-        <span class="bdg" style="background:#ebf4ff;color:#2b6cb0">${s.categoria||'general'}</span>
-        <span style="font-size:.75rem;color:#718096">${(s.ts||'').slice(0,10)}</span>
-      </div>
-      ${s.titulo?`<div style="font-weight:600;margin:.25rem 0">${s.titulo}</div>`:''}
-      <p style="color:#4a5568;margin:.25rem 0;font-size:.9rem">${s.mensaje}</p>
-      ${s.respuesta?`<div style="background:#f0fff4;border-radius:6px;padding:.4rem .6rem;margin-top:.35rem;font-size:.85rem;color:#276749"><strong>💬 Respuesta del Admin:</strong> ${s.respuesta}</div>`:'<div style="font-size:.78rem;color:#a0aec0;margin-top:.25rem">Pendiente de respuesta</div>'}
-    </div>`).join('');
-  }catch(e){cont.innerHTML=`<p style="color:red;font-size:.85rem">Error cargando sugerencias: ${e.message}</p>`;}
+  } catch (e) { sw('error', e.message); }
 }
 
-/* ─── Helper apiFetch para SuperAdmin (usa /api/ correcto) ─ */
-async function saApiFetch(path,opts={}){
-  const token=window.TokenStore?.get();
-  if(!token){doLogout();throw new Error('Sin sesión activa');}
-  const headers={'Content-Type':'application/json',...(opts.headers||{})};
-  headers['Authorization']='Bearer '+token;
-  let res;
-  try{ res=await fetch(API_BASE+path,{...opts,headers}); }
-  catch(e){ throw new Error('Error de red. Verifica tu conexión.'); }
-  if(res.status===401){
-    const d=await res.json().catch(()=>({}));
-    if(d.expired||d.code==='TOKEN_EXPIRED'||d.code==='TOKEN_INVALID'){
-      TokenStore.clear();doLogout();
-      if(typeof Swal!=='undefined') Swal.fire({icon:'info',title:'Sesión expirada',text:'Vuelve a iniciar sesión.'});
-      return null;
-    }
-    throw new Error(d.error||'No autorizado');
-  }
-  if(res.status===403){
-    const d=await res.json().catch(()=>({}));
-    throw new Error(d.error||'Acceso denegado');
-  }
-  if(!res.ok){
-    const err=await res.json().catch(()=>({error:`HTTP ${res.status}`}));
-    throw new Error(err.error||`HTTP ${res.status}`);
-  }
-  return res.json();
+async function cargarMisSugerencias() {
+  const cont = gi('sugHistorial'); if (!cont) return;
+  try {
+    const list = await apiFetch('/api/sugerencias');
+    if (!list || !list.length) { cont.innerHTML = '<p style="color:#999;text-align:center;padding:1rem">Aún no has enviado sugerencias.</p>'; return; }
+    cont.innerHTML = list.map(s => `<div style="border-bottom:1px solid var(--bd);padding:.75rem 0">
+      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:.25rem">
+        <span class="bdg" style="background:#ebf4ff;color:#2b6cb0">${s.categoria || 'general'}</span>
+        <span style="font-size:.75rem;color:#718096">${(s.ts || '').slice(0, 10)}</span>
+      </div>
+      ${s.titulo ? `<div style="font-weight:600;margin:.25rem 0">${s.titulo}</div>` : ''}
+      <p style="color:#4a5568;margin:.25rem 0;font-size:.9rem">${s.mensaje}</p>
+      ${s.respuesta ? `<div style="background:#f0fff4;border-radius:6px;padding:.4rem .6rem;margin-top:.35rem;font-size:.85rem;color:#276749"><strong>💬 Respuesta:</strong> ${s.respuesta}</div>` : '<div style="font-size:.78rem;color:#a0aec0;margin-top:.25rem">Pendiente de respuesta</div>'}
+    </div>`).join('');
+  } catch (e) { cont.innerHTML = `<p style="color:red;font-size:.85rem">Error: ${e.message}</p>`; }
 }
 
 /* ════════════════════════════════════════════════════════════════

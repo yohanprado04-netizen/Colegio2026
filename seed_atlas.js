@@ -14,7 +14,7 @@ const { Schema } = mongoose;
 
 // ── Modelos mínimos para el seed ────────────────────────────────
 const ColegioSchema = new Schema({
-  id: String, nombre: String, codigo: String, direccion: String,
+  id: String, nombre: String, nit: String, direccion: String,
   telefono: String, sedes: [String], jornadas: [String],
   activo: { type: Boolean, default: true }, createdBy: String,
 }, { timestamps: true, collection: 'colegios' });
@@ -95,7 +95,7 @@ async function seed() {
     sedes: ['Sede Principal'], jornadas: ['Mañana', 'Tarde'],
     activo: true, createdBy: 'superadmin',
   });
-  console.log(`🏫 Colegio Demo      → id: ${colegioId}`);
+  console.log(`🏫 Colegio Demo      → id: ${colegioId} / nit: 900123456-1`);
 
   // ── Admin del Colegio Demo ─────────────────────────────────────
   await Usuario.create({
@@ -193,6 +193,11 @@ async function seed() {
 
 seed().catch(err => {
   console.error('\n❌ Error en seed:', err.message);
+  if (err.errors) {
+    Object.entries(err.errors).forEach(([field, e]) =>
+      console.error(`   → Campo "${field}": ${e.message}`)
+    );
+  }
   if (err.message.includes('ENOTFOUND') || err.message.includes('getaddrinfo')) {
     console.error('   → No se pudo resolver el host de Atlas.');
     console.error('   → Verifica tu conexión a internet y el string de conexión.');

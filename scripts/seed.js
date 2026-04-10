@@ -51,7 +51,7 @@ async function seed() {
   await Colegio.create({
     id:        colegioId,
     nombre:    colegioNombre,
-    codigo:    'DEMO-001',
+    nit:       '900123456-1',        // ✅ campo requerido por el modelo
     direccion: 'Calle 1 # 2-3',
     telefono:  '3001234567',
     sedes:     ['Sede Principal'],
@@ -59,7 +59,7 @@ async function seed() {
     activo:    true,
     createdBy: 'superadmin',
   });
-  console.log(`🏫 Colegio Demo → id: ${colegioId}`);
+  console.log(`🏫 Colegio Demo → id: ${colegioId} / nit: 900123456-1`);
 
   // ── Admin del Colegio Demo ────────────────────────────────────────
   await Usuario.create({
@@ -162,4 +162,12 @@ async function seed() {
   process.exit(0);
 }
 
-seed().catch(err => { console.error('❌ Error en seed:', err); process.exit(1); });
+seed().catch(err => {
+  console.error('❌ Error en seed:', err.message || err);
+  if (err.errors) {
+    Object.entries(err.errors).forEach(([field, e]) =>
+      console.error(`   → Campo "${field}": ${e.message}`)
+    );
+  }
+  process.exit(1);
+});
