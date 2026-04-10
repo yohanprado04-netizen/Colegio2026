@@ -248,7 +248,7 @@ function scC(n){n=+n;if(n===0)return'sc scz';if(n<3)return'sc scr';if(n<4)return
 function scCol(n){n=+n;if(n===0)return'#a0aec0';if(n<3)return'var(--red)';if(n<4)return'var(--ora)';if(n<=4.5)return'var(--grn)';return'var(--nsc)';}
 function today(){return new Date().toISOString().split('T')[0];}
 function notasOk(per){
-  if(CU?.role==='admin') return true;
+  if(CU?.role==='admin'||CU?.role==='superadmin') return true;
   const t=today();
   /* Extraordinary period active → only open the period mapped as extPer */
   if(CU?.role==='profe'&&DB.ext?.on){
@@ -271,7 +271,7 @@ function notasOk(per){
     if(s&&e) return t>=s&&t<=e;
   }
   /* Global range fallback */
-  const{s,e}=DB.dr;if(!s||!e) return true;
+  const dr=DB.dr||{};const{s,e}=dr;if(!s||!e) return true;
   return t>=s&&t<=e;
 }
 /* Excusas window: open 18:00–07:00 */
@@ -456,6 +456,8 @@ const PL={
 };
 
 function bootApp(){
+  if(!CU||!CU.role){console.error('[bootApp] CU no disponible');return;}
+  if(!DB) DB={dr:{s:'',e:''},drPer:{},ext:{on:false,s:'',e:''},pers:[],mP:[],mB:[],sals:[],profs:[],ests:[],notas:{},asist:{},exc:[],vclases:[],recs:[],planes:[],histRecs:[],histPlanes:[],audit:[],blk:{},ups:{}};
   gi('tbDate').textContent=new Date().toLocaleDateString('es-CO',
     {weekday:'short',year:'numeric',month:'short',day:'numeric'});
   const st=gi('tbStatus');
