@@ -3,8 +3,8 @@
 const jwt = require('jsonwebtoken');
 const { Usuario } = require('../models');
 
-const JWT_SECRET = process.env.JWT_SECRET || '937de67300b008518a38bb94b513681c7f3d6a1f522212011b188125c931344de15f323e61fab6f2d1b20b1dafaae7515a7d4a6d377a4f209ce64383dcf614ee';
-if (!process.env.JWT_SECRET) console.warn('[auth] ADVERTENCIA: JWT_SECRET no está en variables de entorno. Usando clave por defecto (solo para desarrollo).');
+const JWT_SECRET = process.env.JWT_SECRET;
+if (!JWT_SECRET) throw new Error('JWT_SECRET no está definido en .env — el servidor no puede iniciar sin él.');
 
 const authMiddleware = async (req, res, next) => {
   try {
