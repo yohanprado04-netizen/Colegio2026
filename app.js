@@ -23,28 +23,7 @@
  */
 'use strict';
 
-/**
- * app.js — Lógica principal de EduSistema Pro v5
- * ──────────────────────────────────────────────
- * Este archivo contiene toda la UI, cálculos de notas, generación de PDFs/Excel,
- * manejo de sesión y la lógica de vistas.
- *
- * BASE DE DATOS:
- *   Los datos académicos van a MongoDB vía api-layer.js.
- *   Solo se usa localStorage para preferencias de UI (notificaciones).
- *   Las dos funciones clave son:
- *     - dbLoad()  → carga DB al iniciar
- *     - dbSave()  → guarda DB tras cada cambio
- *
- *   api-layer.js SOBREESCRIBE estas funciones para conectar con MongoDB.
- *   Carga api-layer.js DESPUÉS de este archivo (ya está configurado en index.html).
- *
- * DEPENDENCIAS (cargadas en index.html antes que este script):
- *   - SweetAlert2    → alertas y modales
- *   - SheetJS (xlsx) → exportar a Excel
- *   - html2pdf.js    → generar boletines en PDF
- */
-'use strict';
+
 /* ============================================================
    BASE DE DATOS — GUÍA DE INTEGRACIÓN EXTERNA
    ============================================================

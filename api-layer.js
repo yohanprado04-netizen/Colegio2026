@@ -457,7 +457,7 @@ async function addVClase() {
   try {
     const vc = await apiFetch('/api/vclases', {
       method: 'POST',
-      body: JSON.stringify({ id: 'vc_' + Date.now(), salon: s, fecha: f, hora: h, link: l, desc: d, ts: new Date().toISOString() })
+      body: JSON.stringify({ id: 'vc_' + Date.now(), profId: CU.id, profNombre: CU.nombre, salon: s, fecha: f, hora: h, link: l, desc: d, ts: new Date().toISOString() })
     });
     DB.vclases.push(vc);
     goto('pvir');
