@@ -16,6 +16,7 @@ const TokenStore = {
   set:    (t)   => sessionStorage.setItem('edu_jwt', t),
   clear:  ()    => sessionStorage.removeItem('edu_jwt'),
 };
+window.TokenStore = TokenStore; // exponer globalmente para app.js
 
 // ─── Fetch con auth ──────────────────────────────────────────────
 async function apiFetch(path, opts = {}) {
