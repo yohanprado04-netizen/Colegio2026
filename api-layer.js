@@ -16,7 +16,6 @@ const TokenStore = {
   set:    (t)   => sessionStorage.setItem('edu_jwt', t),
   clear:  ()    => sessionStorage.removeItem('edu_jwt'),
 };
-window.TokenStore = TokenStore; // exponer globalmente para app.js
 
 // ─── Fetch con auth ──────────────────────────────────────────────
 async function apiFetch(path, opts = {}) {
@@ -705,16 +704,7 @@ async function saveDisc(eid, v) {
 // saveDR() / saveDRPer()
 // ═══════════════════════════════════════════════════════════════════
 async function saveDR() {
-  const s = gi('drs').value;
-  const e = gi('dre').value;
-  if (s && e && e <= s) {
-    sw('error', 'Fecha inválida', 'La fecha de Fin debe ser posterior al Inicio.'); return;
-  }
-  const anoActual = DB.anoActual || String(new Date().getFullYear());
-  if (s && s.slice(0,4) !== anoActual) {
-    sw('warning', 'Año incorrecto', `El inicio (${s.slice(0,4)}) no corresponde al año lectivo activo (${anoActual}).`); return;
-  }
-  DB.dr = { s, e };
+  DB.dr = { s: gi('drs').value, e: gi('dre').value };
   try {
     await apiFetch('/api/config/dr', { method: 'PUT', body: JSON.stringify({ value: DB.dr }) });
     const hoy = today();
@@ -734,13 +724,6 @@ async function saveDRPer(key, per) {
   const s      = gi('dps_' + key)?.value || '';
   const e      = gi('dpe_' + key)?.value || '';
   const extPer = gi('dpex_' + key)?.value || '';
-  if (s && e && e <= s) {
-    sw('error', 'Fecha inválida', `En "${per}": la fecha Fin debe ser posterior al Inicio.`); return;
-  }
-  const anoActual = DB.anoActual || String(new Date().getFullYear());
-  if (s && s.slice(0,4) !== anoActual) {
-    sw('warning', 'Año incorrecto', `El inicio (${s.slice(0,4)}) no corresponde al año lectivo (${anoActual}).`); return;
-  }
   DB.drPer[per] = { s, e, extPer };
   try {
     await apiFetch('/api/config/drPer', { method: 'PUT', body: JSON.stringify({ value: DB.drPer }) });
@@ -912,6 +895,424 @@ function validateSession() {
 // INICIALIZACIÓN — restaurar sesión al recargar la página
 // ═══════════════════════════════════════════════════════════════════
 let _dbReady = false;
+
+// ═══════════════════════════════════════════════════════════════════
+// CARGA MASIVA CSV — Estudiantes y Profesores
+// ═══════════════════════════════════════════════════════════════════
+
+// ── Parser CSV robusto (maneja comillas, comas dentro de campos) ──
+function parseCSV(text) {
+  const lines = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n').split('\n');
+  const result = [];
+  for (const line of lines) {
+    if (!line.trim()) continue;
+    const row = [];
+    let field = '';
+    let inQuotes = false;
+    for (let i = 0; i < line.length; i++) {
+      const ch = line[i];
+      if (ch === '"') {
+        if (inQuotes && line[i+1] === '"') { field += '"'; i++; }
+        else inQuotes = !inQuotes;
+      } else if (ch === ',' && !inQuotes) {
+        row.push(field.trim());
+        field = '';
+      } else {
+        field += ch;
+      }
+    }
+    row.push(field.trim());
+    result.push(row);
+  }
+  return result;
+}
+
+// ── Leer archivo CSV con input file ──────────────────────────────
+function leerArchivoCSV(onData) {
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = '.csv,text/csv';
+  input.onchange = () => {
+    const file = input.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = e => onData(e.target.result, file.name);
+    reader.readAsText(file, 'UTF-8');
+  };
+  input.click();
+}
+
+// ── Descargar plantilla CSV ───────────────────────────────────────
+function descargarPlantillaCSV(tipo, ciclo) {
+  let header, ejemplo1, ejemplo2;
+  if (tipo === 'est') {
+    header = 'nombre,ti,salon,usuario,password';
+    ejemplo1 = 'Juan Pérez García,TI-1001234,6A,juan.perez,pass123';
+    ejemplo2 = 'María Torres López,TI-1001235,6A,maria.torres,pass456';
+  } else {
+    if (ciclo === 'primaria') {
+      header = 'nombre,ti,usuario,password,salones';
+      ejemplo1 = 'Ana García,CC-50012345,ana.garcia,prof123,1A';
+      ejemplo2 = 'Luis Rojas,CC-50067890,luis.rojas,prof456,"1A,2A"';
+    } else {
+      header = 'nombre,ti,usuario,password,salones';
+      ejemplo1 = 'Carlos López,CC-71234567,carlos.lopez,prof789,6A';
+      ejemplo2 = 'Rosa Méndez,CC-71890123,rosa.mendez,prof000,"6A,11A"';
+    }
+  }
+  const csv = [header, ejemplo1, ejemplo2].join('\n');
+  const a = document.createElement('a');
+  a.href = 'data:text/csv;charset=utf-8,\uFEFF' + encodeURIComponent(csv);
+  a.download = `plantilla_${tipo}_${ciclo || ''}.csv`;
+  a.click();
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// abrirCSVEst() — carga masiva de estudiantes
+// ═══════════════════════════════════════════════════════════════════
+function abrirCSVEst(ciclo) {
+  const salonesDisp = DB.sals.filter(s => s.ciclo === ciclo).map(s => s.nombre);
+
+  Swal.fire({
+    title: `📂 Carga Masiva — Estudiantes ${ciclo === 'primaria' ? 'Primaria' : 'Bachillerato'}`,
+    width: 620,
+    html: `
+      <div style="text-align:left;font-family:var(--fn);font-size:13px">
+        <div style="background:#ebf8ff;border-radius:8px;padding:10px 14px;margin-bottom:14px;border-left:4px solid #3182ce">
+          <strong style="color:#2b6cb0">Formato requerido del CSV:</strong>
+          <code style="display:block;margin-top:6px;font-size:12px;color:#2d3748;background:#fff;padding:6px;border-radius:4px">
+            nombre, ti, salon, usuario, password
+          </code>
+          <div style="margin-top:8px;font-size:12px;color:#4a5568">
+            <strong>nombre</strong> — Nombre completo del estudiante *<br>
+            <strong>ti</strong> — Tarjeta de identidad (ej: TI-1001234)<br>
+            <strong>salon</strong> — Salón donde queda asignado (debe existir). Salones disponibles: <strong>${salonesDisp.join(', ') || 'Ninguno creado aún'}</strong><br>
+            <strong>usuario</strong> — Nombre de usuario para login * (sin espacios)<br>
+            <strong>password</strong> — Contraseña inicial *
+          </div>
+        </div>
+        <div style="display:flex;gap:8px;margin-bottom:12px">
+          <button class="btn bg sm" onclick="descargarPlantillaCSV('est','${ciclo}')">⬇️ Descargar plantilla</button>
+        </div>
+        <div style="border:2px dashed #cbd5e0;border-radius:8px;padding:16px;text-align:center;cursor:pointer;background:#f7fafc"
+          id="csvDropZoneEst" onclick="document.getElementById('csvInputEst').click()">
+          <div style="font-size:2rem">📄</div>
+          <div style="color:#4a5568;font-size:13px">Haz clic para seleccionar el archivo CSV</div>
+          <div style="color:#a0aec0;font-size:11px;margin-top:4px">Solo archivos .csv — codificación UTF-8</div>
+          <input type="file" id="csvInputEst" accept=".csv" style="display:none"
+            onchange="previsualizarCSVEst(this.files[0],'${ciclo}')">
+        </div>
+        <div id="csvPreviewEst" style="margin-top:12px"></div>
+      </div>
+    `,
+    showCancelButton: true,
+    confirmButtonText: '✅ Importar',
+    cancelButtonText: 'Cancelar',
+    confirmButtonColor: 'var(--nv)',
+    preConfirm: () => {
+      const data = window._csvDataEst;
+      if (!data || !data.length) {
+        Swal.showValidationMessage('Primero selecciona y previsualiza un archivo CSV válido');
+        return false;
+      }
+      return data;
+    }
+  }).then(async r => {
+    if (!r.isConfirmed) return;
+    await importarEstudiantesCSV(r.value, ciclo);
+    window._csvDataEst = null;
+  });
+}
+
+function previsualizarCSVEst(file, ciclo) {
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    const rows = parseCSV(e.target.result);
+    if (rows.length < 2) {
+      gi('csvPreviewEst').innerHTML = '<div style="color:red;font-size:12px">⚠️ El archivo está vacío o solo tiene encabezado.</div>';
+      return;
+    }
+    // Detectar si tiene encabezado
+    const header = rows[0].map(h => h.toLowerCase());
+    const tieneHeader = header.includes('nombre') || header.includes('usuario');
+    const data = tieneHeader ? rows.slice(1) : rows;
+    
+    // Validar y mapear columnas
+    const colIdx = tieneHeader ? {
+      nombre: header.indexOf('nombre'),
+      ti:     header.includes('ti') ? header.indexOf('ti') : -1,
+      salon:  header.includes('salon') ? header.indexOf('salon') : header.includes('salón') ? header.indexOf('salón') : -1,
+      usuario:header.indexOf('usuario'),
+      password:header.includes('password') ? header.indexOf('password') : header.includes('contraseña') ? header.indexOf('contraseña') : -1,
+    } : { nombre:0, ti:1, salon:2, usuario:3, password:4 };
+
+    const salonesDisp = new Set(DB.sals.filter(s => s.ciclo === ciclo).map(s => s.nombre));
+    const parsed = [];
+    const errores = [];
+
+    data.forEach((row, i) => {
+      if (!row.filter(Boolean).length) return;
+      const nombre   = (colIdx.nombre  >= 0 ? row[colIdx.nombre]   : '').trim();
+      const ti       = (colIdx.ti      >= 0 ? row[colIdx.ti]       : '').trim();
+      const salon    = (colIdx.salon   >= 0 ? row[colIdx.salon]    : '').trim();
+      const usuario  = (colIdx.usuario >= 0 ? row[colIdx.usuario]  : '').trim();
+      const password = (colIdx.password>= 0 ? row[colIdx.password] : '').trim();
+
+      const fila = i + (tieneHeader ? 2 : 1);
+      if (!nombre) { errores.push(`Fila ${fila}: falta nombre`); return; }
+      if (!usuario) { errores.push(`Fila ${fila}: falta usuario`); return; }
+      if (!password) { errores.push(`Fila ${fila}: falta contraseña`); return; }
+      if (salon && !salonesDisp.has(salon)) { errores.push(`Fila ${fila}: salón "${salon}" no existe`); return; }
+      if (uExists(usuario)) { errores.push(`Fila ${fila}: usuario "${usuario}" ya existe`); return; }
+      parsed.push({ nombre, ti, salon, usuario, password });
+    });
+
+    window._csvDataEst = parsed;
+
+    const preview = parsed.slice(0, 5).map(r =>
+      `<tr><td>${r.nombre}</td><td style="font-family:monospace;font-size:11px">${r.ti||'—'}</td><td>${r.salon||'—'}</td><td style="font-family:monospace;font-size:11px">${r.usuario}</td></tr>`
+    ).join('');
+
+    gi('csvPreviewEst').innerHTML = `
+      ${errores.length ? `<div style="background:#fff5f5;border-radius:6px;padding:8px 12px;margin-bottom:8px;font-size:12px;color:#c53030">
+        ⚠️ ${errores.length} fila(s) con errores (se omitirán):<br>${errores.slice(0,5).map(e=>`• ${e}`).join('<br>')}
+        ${errores.length>5?`<br>... y ${errores.length-5} más`:''}
+      </div>` : ''}
+      <div style="background:#f0fff4;border-radius:6px;padding:8px 12px;font-size:12px;color:#276749;margin-bottom:8px">
+        ✅ <strong>${parsed.length}</strong> estudiante(s) listos para importar
+      </div>
+      ${parsed.length ? `<div style="overflow-x:auto"><table class="tbl" style="font-size:12px">
+        <thead><tr><th>Nombre</th><th>T.I.</th><th>Salón</th><th>Usuario</th></tr></thead>
+        <tbody>${preview}</tbody>
+      </table>${parsed.length > 5 ? `<div style="font-size:11px;color:#718096;padding:4px 8px">... y ${parsed.length-5} más</div>` : ''}</div>` : ''}
+    `;
+  };
+  reader.readAsText(file, 'UTF-8');
+}
+
+async function importarEstudiantesCSV(rows, ciclo) {
+  let ok = 0, fail = 0;
+  const fecha = new Date().toLocaleDateString('es-CO');
+
+  // Mostrar progreso
+  Swal.fire({
+    title: 'Importando estudiantes…',
+    html: `<div id="csvProgreso">0 / ${rows.length}</div>`,
+    allowOutsideClick: false, showConfirmButton: false,
+    didOpen: () => Swal.showLoading()
+  });
+
+  for (let i = 0; i < rows.length; i++) {
+    const r = rows[i];
+    const id = 'est_' + Date.now() + '_' + i;
+    try {
+      await apiFetch('/api/usuarios', {
+        method: 'POST',
+        body: JSON.stringify({ id, nombre: r.nombre, ti: r.ti, usuario: r.usuario,
+          password: r.password, role: 'est', salon: r.salon || '', blocked: false, registrado: fecha })
+      });
+      DB.ests.push({ id, nombre: r.nombre, ti: r.ti, usuario: r.usuario,
+        role: 'est', salon: r.salon || '', blocked: false, registrado: fecha });
+      DB.notas[id] = {};
+      DB.pers.forEach(per => {
+        DB.notas[id][per] = {};
+        getMats(id).forEach(m => { DB.notas[id][per][m] = { a:0, c:0, r:0 }; });
+      });
+      DB.estHist = DB.estHist || [];
+      DB.estHist.push({ id, nombre: r.nombre, ti: r.ti, salon: r.salon || '', registrado: fecha, activo: true });
+      ok++;
+      const el = gi('csvProgreso');
+      if (el) el.textContent = `${ok + fail} / ${rows.length} — ${ok} exitosos`;
+    } catch (err) {
+      console.warn('CSV import error row', i, err.message);
+      fail++;
+    }
+  }
+
+  renderEstTabla(ciclo);
+  Swal.fire({
+    icon: fail === 0 ? 'success' : 'warning',
+    title: 'Importación completada',
+    html: `<div style="font-size:14px">
+      ✅ <strong>${ok}</strong> estudiante(s) importados correctamente<br>
+      ${fail ? `❌ <strong>${fail}</strong> fila(s) con error (revisa la consola)` : ''}
+    </div>`,
+    confirmButtonText: 'Aceptar'
+  });
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// abrirCSVPrf() — carga masiva de profesores
+// ═══════════════════════════════════════════════════════════════════
+function abrirCSVPrf(ciclo) {
+  const salonesDisp = DB.sals.filter(s => s.ciclo === ciclo).map(s => s.nombre);
+
+  Swal.fire({
+    title: `📂 Carga Masiva — Profesores ${ciclo === 'primaria' ? 'Primaria' : 'Bachillerato'}`,
+    width: 640,
+    html: `
+      <div style="text-align:left;font-family:var(--fn);font-size:13px">
+        <div style="background:#faf5ff;border-radius:8px;padding:10px 14px;margin-bottom:14px;border-left:4px solid #805ad5">
+          <strong style="color:#553c9a">Formato requerido del CSV:</strong>
+          <code style="display:block;margin-top:6px;font-size:12px;color:#2d3748;background:#fff;padding:6px;border-radius:4px">
+            nombre, ti, usuario, password, salones
+          </code>
+          <div style="margin-top:8px;font-size:12px;color:#4a5568">
+            <strong>nombre</strong> — Nombre completo del profesor *<br>
+            <strong>ti</strong> — Cédula/T.I. del profesor<br>
+            <strong>usuario</strong> — Nombre de usuario para login * (sin espacios)<br>
+            <strong>password</strong> — Contraseña inicial *<br>
+            <strong>salones</strong> — Salón(es) asignados separados por punto y coma (ej: <code>6A;11A</code>)${ciclo==='primaria'?' — máx. 1':''}<br>
+            <br>Salones disponibles: <strong>${salonesDisp.join(', ') || 'Ninguno creado aún'}</strong>
+          </div>
+        </div>
+        <div style="display:flex;gap:8px;margin-bottom:12px">
+          <button class="btn bg sm" onclick="descargarPlantillaCSV('prf','${ciclo}')">⬇️ Descargar plantilla</button>
+        </div>
+        <div style="border:2px dashed #cbd5e0;border-radius:8px;padding:16px;text-align:center;cursor:pointer;background:#f7fafc"
+          onclick="document.getElementById('csvInputPrf').click()">
+          <div style="font-size:2rem">📄</div>
+          <div style="color:#4a5568;font-size:13px">Haz clic para seleccionar el archivo CSV</div>
+          <input type="file" id="csvInputPrf" accept=".csv" style="display:none"
+            onchange="previsualizarCSVPrf(this.files[0],'${ciclo}')">
+        </div>
+        <div id="csvPreviewPrf" style="margin-top:12px"></div>
+      </div>
+    `,
+    showCancelButton: true,
+    confirmButtonText: '✅ Importar',
+    cancelButtonText: 'Cancelar',
+    confirmButtonColor: '#805ad5',
+    preConfirm: () => {
+      const data = window._csvDataPrf;
+      if (!data || !data.length) {
+        Swal.showValidationMessage('Primero selecciona y previsualiza un archivo CSV válido');
+        return false;
+      }
+      return data;
+    }
+  }).then(async r => {
+    if (!r.isConfirmed) return;
+    await importarProfesoresCSV(r.value, ciclo);
+    window._csvDataPrf = null;
+  });
+}
+
+function previsualizarCSVPrf(file, ciclo) {
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    const rows = parseCSV(e.target.result);
+    if (rows.length < 2) {
+      gi('csvPreviewPrf').innerHTML = '<div style="color:red;font-size:12px">⚠️ Archivo vacío o solo encabezado.</div>';
+      return;
+    }
+    const header = rows[0].map(h => h.toLowerCase().trim());
+    const tieneHeader = header.includes('nombre') || header.includes('usuario');
+    const data = tieneHeader ? rows.slice(1) : rows;
+
+    const colIdx = tieneHeader ? {
+      nombre:   header.indexOf('nombre'),
+      ti:       header.includes('ti') ? header.indexOf('ti') : -1,
+      usuario:  header.indexOf('usuario'),
+      password: header.includes('password') ? header.indexOf('password') : header.includes('contraseña') ? header.indexOf('contraseña') : -1,
+      salones:  header.includes('salones') ? header.indexOf('salones') : header.includes('salon') ? header.indexOf('salon') : -1,
+    } : { nombre:0, ti:1, usuario:2, password:3, salones:4 };
+
+    const salonesDisp = new Set(DB.sals.filter(s => s.ciclo === ciclo).map(s => s.nombre));
+    const MAX = ciclo === 'primaria' ? 1 : Infinity;
+    const parsed = [];
+    const errores = [];
+
+    data.forEach((row, i) => {
+      if (!row.filter(Boolean).length) return;
+      const nombre   = (colIdx.nombre   >= 0 ? row[colIdx.nombre]   : '').trim();
+      const ti       = (colIdx.ti       >= 0 ? row[colIdx.ti]       : '').trim();
+      const usuario  = (colIdx.usuario  >= 0 ? row[colIdx.usuario]  : '').trim();
+      const password = (colIdx.password >= 0 ? row[colIdx.password] : '').trim();
+      const salonesRaw = (colIdx.salones >= 0 ? row[colIdx.salones] : '').trim();
+      const salones = salonesRaw ? salonesRaw.split(/[;,|]/).map(s => s.trim()).filter(Boolean) : [];
+
+      const fila = i + (tieneHeader ? 2 : 1);
+      if (!nombre)   { errores.push(`Fila ${fila}: falta nombre`); return; }
+      if (!usuario)  { errores.push(`Fila ${fila}: falta usuario`); return; }
+      if (!password) { errores.push(`Fila ${fila}: falta contraseña`); return; }
+      if (salones.length > MAX) { errores.push(`Fila ${fila}: primaria solo permite 1 salón (tiene ${salones.length})`); return; }
+      const invalidos = salones.filter(s => !salonesDisp.has(s));
+      if (invalidos.length) { errores.push(`Fila ${fila}: salón(es) no existen: ${invalidos.join(', ')}`); return; }
+      if (uExists(usuario)) { errores.push(`Fila ${fila}: usuario "${usuario}" ya existe`); return; }
+      parsed.push({ nombre, ti, usuario, password, salones });
+    });
+
+    window._csvDataPrf = parsed;
+
+    const preview = parsed.slice(0, 5).map(r =>
+      `<tr><td>${r.nombre}</td><td style="font-family:monospace;font-size:11px">${r.ti||'—'}</td><td style="font-family:monospace;font-size:11px">${r.usuario}</td><td>${r.salones.join(', ')||'—'}</td></tr>`
+    ).join('');
+
+    gi('csvPreviewPrf').innerHTML = `
+      ${errores.length ? `<div style="background:#fff5f5;border-radius:6px;padding:8px 12px;margin-bottom:8px;font-size:12px;color:#c53030">
+        ⚠️ ${errores.length} fila(s) con errores:<br>${errores.slice(0,5).map(e=>`• ${e}`).join('<br>')}
+        ${errores.length>5?`<br>... y ${errores.length-5} más`:''}
+      </div>` : ''}
+      <div style="background:#f0fff4;border-radius:6px;padding:8px 12px;font-size:12px;color:#276749;margin-bottom:8px">
+        ✅ <strong>${parsed.length}</strong> profesor(es) listos para importar
+      </div>
+      ${parsed.length ? `<div style="overflow-x:auto"><table class="tbl" style="font-size:12px">
+        <thead><tr><th>Nombre</th><th>T.I./CC</th><th>Usuario</th><th>Salones</th></tr></thead>
+        <tbody>${preview}</tbody>
+      </table>${parsed.length > 5 ? `<div style="font-size:11px;color:#718096;padding:4px 8px">... y ${parsed.length-5} más</div>` : ''}</div>` : ''}
+    `;
+  };
+  reader.readAsText(file, 'UTF-8');
+}
+
+async function importarProfesoresCSV(rows, ciclo) {
+  let ok = 0, fail = 0;
+
+  Swal.fire({
+    title: 'Importando profesores…',
+    html: `<div id="csvProgresoPrf">0 / ${rows.length}</div>`,
+    allowOutsideClick: false, showConfirmButton: false,
+    didOpen: () => Swal.showLoading()
+  });
+
+  for (let i = 0; i < rows.length; i++) {
+    const r = rows[i];
+    const id = 'prf_' + Date.now() + '_' + i;
+    try {
+      await apiFetch('/api/usuarios', {
+        method: 'POST',
+        body: JSON.stringify({ id, nombre: r.nombre, ti: r.ti, usuario: r.usuario,
+          password: r.password, role: 'profe', ciclo, salones: r.salones,
+          blocked: false, materias: [], materia: '', salonMaterias: {} })
+      });
+      DB.profs.push({ id, nombre: r.nombre, ti: r.ti, usuario: r.usuario,
+        role: 'profe', ciclo, salones: r.salones,
+        blocked: false, materias: [], materia: '', salonMaterias: {} });
+      ok++;
+      const el = gi('csvProgresoPrf');
+      if (el) el.textContent = `${ok + fail} / ${rows.length} — ${ok} exitosos`;
+    } catch (err) {
+      console.warn('CSV prof import error row', i, err.message);
+      fail++;
+    }
+  }
+
+  renderPrfTbl();
+  Swal.fire({
+    icon: fail === 0 ? 'success' : 'warning',
+    title: 'Importación completada',
+    html: `<div style="font-size:14px">
+      ✅ <strong>${ok}</strong> profesor(es) importados correctamente<br>
+      ${fail ? `❌ <strong>${fail}</strong> fila(s) con error` : ''}
+      ${ok > 0 && ciclo === 'bachillerato' ? '<br><br>💡 Recuerda asignar materias por salón a cada profesor.' : ''}
+    </div>`,
+    confirmButtonText: 'Aceptar'
+  });
+}
+
 document.addEventListener('DOMContentLoaded', async () => {
   const btn = document.querySelector('.bl');
   if (btn) { btn.textContent = 'Conectando…'; btn.disabled = true; }
