@@ -34,17 +34,17 @@ const SalonSchema = new Schema({
 
 const ConfigSchema = new Schema({
   key: String, value: Schema.Types.Mixed, colegioId: String,
-}, { timestamps: true, collection: 'configs' });
+}, { timestamps: true, collection: 'config' });
 
 const PlanEstudiosSchema = new Schema({
   colegioId: String, ciclo: String, grado: String,
   area: String, asignatura: String, intensidad: Number,
-}, { timestamps: true, collection: 'planestudios' });
+}, { timestamps: true, collection: 'plan_estudios' });
 
 const EstHistSchema = new Schema({
   id: String, nombre: String, ti: String, salon: String,
   registrado: String, activo: Boolean, colegioId: String,
-}, { timestamps: true, collection: 'esthists' });
+}, { timestamps: true, collection: 'est_historial' });
 
 const Colegio       = mongoose.model('Colegio',       ColegioSchema);
 const Usuario       = mongoose.model('Usuario',       UsuarioSchema);

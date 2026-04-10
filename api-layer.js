@@ -159,6 +159,25 @@ async function doLogin() {
     TokenStore.set(data.token);
     CU = data.user;
 
+    // Guard: si el servidor no devolvió user, reconstruir desde el token
+    if (!CU || !CU.role) {
+      try {
+        const payload = JSON.parse(atob(data.token.split('.')[1]));
+        CU = {
+          id:            payload.id,
+          nombre:        payload.nombre || payload.usuario || 'Usuario',
+          usuario:       payload.usuario || payload.id,
+          role:          payload.role,
+          colegioId:     payload.colegioId     || null,
+          colegioNombre: payload.colegioNombre || '',
+        };
+      } catch (_) {
+        show('Error al procesar la respuesta del servidor. Intenta de nuevo.');
+        TokenStore.clear();
+        return;
+      }
+    }
+
     if (CU.role === 'superadmin') {
       // Superadmin: inicializa DB mínimo, no necesita /api/db
       DB = {
