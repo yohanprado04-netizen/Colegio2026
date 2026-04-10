@@ -1011,5 +1011,5 @@ document.addEventListener('DOMContentLoaded', async () => {
   if (btn) { btn.textContent = 'Ingresar →'; btn.disabled = false; }
 });
 
-console.log('✅ EduSistema Pro — API Layer cargado. Backend:', API_BASE);/ /   f o r c e   r e d e p l o y   0 4 / 1 0 / 2 0 2 6   0 8 : 1 8 : 2 9  
- 
+console.log('✅ EduSistema Pro — API Layer cargado. Backend:', API_BASE);
+// force redeploy 04/10/2026
