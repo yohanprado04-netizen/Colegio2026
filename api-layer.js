@@ -885,16 +885,49 @@ document.addEventListener('DOMContentLoaded', async () => {
     try {
       const payload = JSON.parse(atob(savedToken.split('.')[1]));
 
+      // Verificar que el token no esté expirado antes de restaurar sesión
+      const now = Math.floor(Date.now() / 1000);
+      if (payload.exp && payload.exp < now) {
+        console.warn('[sesión] Token expirado, limpiando...');
+        TokenStore.clear();
+        if (btn) { btn.textContent = 'Ingresar →'; btn.disabled = false; }
+        return;
+      }
+
       if (payload.role === 'superadmin') {
-        // Superadmin: reconstruir CU desde el token, sin llamar a /api/db
-        CU = {
-          id:            payload.id,
-          nombre:        payload.nombre,
-          usuario:       payload.id,
-          role:          'superadmin',
-          colegioId:     null,
-          colegioNombre: '',
-        };
+        // Superadmin: verificar token contra el servidor antes de restaurar
+        try {
+          const verifyRes = await fetch(API_BASE + '/api/auth/verify', {
+            headers: { 'Authorization': 'Bearer ' + savedToken }
+          });
+          if (!verifyRes.ok) {
+            console.warn('[sesión] Token inválido en servidor, limpiando...');
+            TokenStore.clear();
+            if (btn) { btn.textContent = 'Ingresar →'; btn.disabled = false; }
+            return;
+          }
+          const verifyData = await verifyRes.json().catch(() => ({}));
+          // Usar datos frescos del servidor si están disponibles
+          const freshUser = verifyData.user || {};
+          CU = {
+            id:            freshUser.id            || payload.id,
+            nombre:        freshUser.nombre        || payload.nombre || 'Super Administrador',
+            usuario:       freshUser.usuario       || payload.usuario || payload.id,
+            role:          'superadmin',
+            colegioId:     null,
+            colegioNombre: '',
+          };
+        } catch (_) {
+          // Si el servidor no responde, usar datos del token como fallback
+          CU = {
+            id:            payload.id,
+            nombre:        payload.nombre || payload.usuario || 'Super Administrador',
+            usuario:       payload.usuario || payload.id,
+            role:          'superadmin',
+            colegioId:     null,
+            colegioNombre: '',
+          };
+        }
         DB = {
           admin: CU, profs: [], ests: [], sals: [], mP: [], mB: [], pers: [],
           notas: {}, dr: { s:'', e:'' }, drPer: {}, ext: { on:false, s:'', e:'' },
