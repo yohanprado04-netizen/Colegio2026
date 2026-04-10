@@ -437,12 +437,15 @@ const PL={
 function bootApp(){
   if(!CU||!CU.role){console.error('[bootApp] CU no disponible');return;}
   if(!DB) DB={dr:{s:'',e:''},drPer:{},ext:{on:false,s:'',e:''},pers:[],mP:[],mB:[],sals:[],profs:[],ests:[],notas:{},asist:{},exc:[],vclases:[],recs:[],planes:[],histRecs:[],histPlanes:[],audit:[],blk:{},ups:{}};
-  gi('tbDate').textContent=new Date().toLocaleDateString('es-CO',
-    {weekday:'short',year:'numeric',month:'short',day:'numeric'});
+  const _tbDate=gi('tbDate');
+  if(_tbDate) _tbDate.textContent=new Date().toLocaleDateString('es-CO',{weekday:'short',year:'numeric',month:'short',day:'numeric'});
   const st=gi('tbStatus');
-  if(notasOk()){st.className='tbst tbop';st.textContent='✓ Notas Abiertas';}
-  else{st.className='tbst tbcl';st.textContent='✗ Notas Cerradas';}
-  gi('sbUser').innerHTML=`<div class="sbav">${(CU.nombre||'?')[0].toUpperCase()}</div>
+  if(st){
+    if(notasOk()){st.className='tbst tbop';st.textContent='✓ Notas Abiertas';}
+    else{st.className='tbst tbcl';st.textContent='✗ Notas Cerradas';}
+  }
+  const _sbUser=gi('sbUser');
+  if(_sbUser) _sbUser.innerHTML=`<div class="sbav">${(CU.nombre||'?')[0].toUpperCase()}</div>
   <div>
     <div class="sbun">${CU.nombre}</div>
     <div class="sbur">${CU.role==='superadmin'?'Super Admin':(CU.colegioNombre?CU.colegioNombre+' · '+CU.role:CU.role)}</div>
