@@ -3804,10 +3804,12 @@ function pgSAPlan(){
 }
 async function initSAPlan(){
   try{
-    const colegios=await saApiFetch('/api/superadmin/colegios');
+    const raw=await saApiFetch('/api/superadmin/colegios').catch(()=>[]);
+    const colegios=Array.isArray(raw)?raw:[];
     const sel=gi('saPlanCol');
     if(sel) sel.innerHTML='<option value="">— Selecciona colegio —</option>'+
       colegios.map(c=>`<option value="${c.id}">${c.nombre}</option>`).join('');
+    if(!colegios.length&&sel) sel.innerHTML='<option value="">Sin colegios registrados</option>';
   }catch(e){sw('error',e.message);}
 }
 async function loadSAPlan(){
@@ -3951,7 +3953,8 @@ function pgSAAuditoria(){
 }
 async function initSAAuditoria(){
   try{
-    const colegios=await saApiFetch('/api/superadmin/colegios');
+    const raw=await saApiFetch('/api/superadmin/colegios').catch(()=>[]);
+    const colegios=Array.isArray(raw)?raw:[];
     const sel=gi('saAudCol');
     if(sel) sel.innerHTML='<option value="">Todos los colegios</option>'+
       colegios.map(c=>`<option value="${c.id}">${c.nombre}</option>`).join('');
@@ -3967,8 +3970,10 @@ async function loadSAAuditoria(){
   try{
     let url='/api/superadmin/auditoria?limit=300';
     if(cid) url+=`&colegioId=${cid}`;
-    let logs=await saApiFetch(url);
+    const raw=await saApiFetch(url).catch(()=>[]);
+    let logs=Array.isArray(raw)?raw:[];
     if(q) logs=logs.filter(l=>(l.accion||'').toLowerCase().includes(q)||(l.who||'').toLowerCase().includes(q));
+    if(!logs.length){el.innerHTML='<p style="color:#888;text-align:center;padding:2rem">Sin registros de auditoría.</p>';return;}
     el.innerHTML=`<table class="tbl"><thead><tr>
       <th>Fecha</th><th>Usuario</th><th>Rol</th><th>Acción</th><th>Colegio</th>
     </tr></thead><tbody>${logs.slice(0,200).map(l=>`<tr>
@@ -4014,11 +4019,13 @@ function pgSAMantenimiento(){
 }
 async function initSAMantenimiento(){
   try{
-    const colegios=await saApiFetch('/api/superadmin/colegios');
+    const raw=await saApiFetch('/api/superadmin/colegios').catch(()=>[]);
+    const colegios=Array.isArray(raw)?raw:[];
     ['saBackupCol','saResetCol'].forEach(sid=>{
       const sel=gi(sid);
       if(sel) sel.innerHTML='<option value="">— Selecciona colegio —</option>'+
         colegios.map(c=>`<option value="${c.id}">${c.nombre}</option>`).join('');
+      if(!colegios.length&&sel) sel.innerHTML='<option value="">Sin colegios registrados</option>';
     });
   }catch(e){sw('error',e.message);}
 }
@@ -4077,7 +4084,8 @@ function pgSASug(){
 }
 async function initSASug(){
   try{
-    const colegios=await saApiFetch('/api/superadmin/colegios');
+    const raw=await saApiFetch('/api/superadmin/colegios').catch(()=>[]);
+    const colegios=Array.isArray(raw)?raw:[];
     const sel=gi('saSugFiltCol');
     if(sel) sel.innerHTML='<option value="">Todos los colegios</option>'+
       colegios.map(c=>`<option value="${c.id}">${c.nombre}</option>`).join('');
@@ -4093,8 +4101,9 @@ async function loadSASug(){
     let url='/api/sugerencias?limit=200';
     if(cid) url+=`&colegioId=${cid}`;
     if(leida!=='') url+=`&leida=${leida}`;
-    const list=await saApiFetch(url);
-    if(!list||!list.length){el.innerHTML='<p style="color:#999;text-align:center;padding:2rem">No hay sugerencias.</p>';return;}
+    const raw=await saApiFetch(url).catch(()=>[]);
+    const list=Array.isArray(raw)?raw:[];
+    if(!list.length){el.innerHTML='<p style="color:#999;text-align:center;padding:2rem">No hay sugerencias.</p>';return;}
     el.innerHTML=list.map(s=>`<div class="card" style="margin-bottom:1rem;border-left:4px solid ${s.leida?'#cbd5e0':'#4299e1'}">
       <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:.5rem">
         <div>
