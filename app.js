@@ -3539,20 +3539,184 @@ function dlBoletin(estId,perFilter,anno,snapData){
 
 /* ─── DASHBOARD ─────────────────────────────────────────── */
 function pgSADash(){
-  return`<div class="card" id="saDashCard">
-    <h2>🌐 Panel Global — Super Admin</h2>
-    <p style="color:#888;margin-bottom:1rem">Bienvenido, <strong>${CU.nombre}</strong>. Desde aquí supervisas todas las instituciones.</p>
-    <div id="saStatsGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:1rem">
-      <div class="card" style="text-align:center"><div style="font-size:2rem">⏳</div><p>Cargando…</p></div>
+  return`<div id="saDashCard">
+    <!-- Header -->
+    <div class="card" style="background:linear-gradient(135deg,#1a365d 0%,#2b6cb0 100%);color:#fff;margin-bottom:1rem">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:.75rem">
+        <div>
+          <h2 style="color:#fff;margin-bottom:.25rem">🌐 Panel Global — Super Admin</h2>
+          <p style="opacity:.85;font-size:.9rem;margin:0">Bienvenido, <strong>${CU.nombre}</strong> · Sistema EduPro</p>
+        </div>
+        <div style="display:flex;gap:.5rem;flex-wrap:wrap;align-items:center">
+          <span id="saSugBadge" style="display:none;background:#e53e3e;color:#fff;border-radius:20px;padding:4px 12px;font-size:12px;font-weight:700;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,.3)" onclick="goto('sasug')">💡 Sugerencias</span>
+          <button class="btn" style="background:rgba(255,255,255,.15);color:#fff;border:1px solid rgba(255,255,255,.3);font-size:.8rem" onclick="initSADash()">🔄 Actualizar</button>
+        </div>
+      </div>
+      <!-- KPIs principales -->
+      <div id="saStatsGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:.75rem;margin-top:1.25rem">
+        <div style="text-align:center;opacity:.7"><div style="font-size:1.8rem">⏳</div><p style="margin:.25rem 0;font-size:.8rem">Cargando…</p></div>
+      </div>
     </div>
-    <hr style="margin:1.5rem 0">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.75rem">
-      <h3>Instituciones activas</h3>
-      <span id="saSugBadge" style="display:none;background:#e53e3e;color:#fff;border-radius:20px;padding:3px 10px;font-size:12px;font-weight:700;cursor:pointer" onclick="goto('sasug')">💡 Sugerencias nuevas</span>
+
+    <!-- Fila: Gráfica + Resumen rápido -->
+    <div style="display:grid;grid-template-columns:1fr 340px;gap:1rem;margin-bottom:1rem" id="saDashMidRow">
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.75rem">
+          <h3 style="margin:0">📊 Estudiantes por institución</h3>
+          <select id="saDashChartMode" class="inp" style="width:auto;font-size:.8rem;padding:4px 8px" onchange="renderSADashChart(window._saStatsData||[])">
+            <option value="est">Estudiantes</option>
+            <option value="profs">Profesores</option>
+            <option value="prom">Prom. Notas</option>
+            <option value="asist">Asistencia %</option>
+          </select>
+        </div>
+        <div id="saDashChart" style="overflow-x:auto;min-height:180px;display:flex;align-items:flex-end"></div>
+      </div>
+      <div class="card" style="display:flex;flex-direction:column;gap:.6rem" id="saDashQuickStats">
+        <h3 style="margin:0 0 .5rem">⚡ Resumen rápido</h3>
+        <div id="saDashQuickBody" style="color:#888;font-size:.9rem">Cargando…</div>
+      </div>
     </div>
-    <div id="saColegiosList"></div>
+
+    <!-- Tabla de instituciones -->
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.75rem;flex-wrap:wrap;gap:.5rem">
+        <h3 style="margin:0">🏫 Todas las instituciones</h3>
+        <div style="display:flex;gap:.5rem;flex-wrap:wrap">
+          <input id="saDashSearch" class="inp" style="width:200px;font-size:.85rem" placeholder="🔍 Buscar…" oninput="renderSADashTable(window._saStatsData||[])">
+          <button class="btn bsec" style="font-size:.8rem" onclick="exportarSADashCSV()">📤 Exportar CSV</button>
+        </div>
+      </div>
+      <div id="saColegiosList" style="overflow-x:auto">Cargando…</div>
+    </div>
   </div>`;
 }
+
+function renderSADashKPIs(stats,sugCount){
+  const grid=gi('saStatsGrid');
+  if(!grid) return;
+  const totalColegios=stats.length;
+  const activos=stats.filter(s=>s.activo).length;
+  const totalEst=stats.reduce((a,s)=>a+s.totalEst,0);
+  const totalProfs=stats.reduce((a,s)=>a+s.totalProfs,0);
+  const totalSal=stats.reduce((a,s)=>a+(s.totalSalones||0),0);
+  const promGlobal=stats.length?+(stats.reduce((a,s)=>a+s.promNotas,0)/stats.length).toFixed(2):0;
+  const promAsist=stats.length?+(stats.reduce((a,s)=>a+(s.asistPct||0),0)/stats.length).toFixed(1):0;
+  const totalIngresos=stats.reduce((a,s)=>a+(s.ingresosMes||0),0);
+  const kpis=[
+    {ic:'🏫',lb:'Instituciones',val:totalColegios,sub:`${activos} activas`,col:'#2b6cb0'},
+    {ic:'👨‍🎓',lb:'Estudiantes',val:totalEst.toLocaleString(),sub:'total sistema',col:'#276749'},
+    {ic:'👩‍🏫',lb:'Profesores',val:totalProfs.toLocaleString(),sub:'total sistema',col:'#744210'},
+    {ic:'🏛️',lb:'Salones',val:totalSal.toLocaleString(),sub:'en total',col:'#553c9a'},
+    {ic:'📊',lb:'Prom. Notas',val:promGlobal,sub:'escala 1–5',col:promGlobal>=3.5?'#276749':'#9b2c2c'},
+    {ic:'✅',lb:'Asistencia',val:promAsist+'%',sub:'promedio global',col:promAsist>=85?'#276749':'#c05621'},
+    {ic:'💰',lb:'Ingresos/Mes',val:'$'+totalIngresos.toLocaleString(),sub:'todas las sedes',col:'#2c7a7b'},
+  ];
+  grid.innerHTML=kpis.map(k=>`
+    <div style="background:rgba(255,255,255,.12);border-radius:10px;padding:.75rem 1rem;text-align:center;backdrop-filter:blur(4px)">
+      <div style="font-size:1.6rem">${k.ic}</div>
+      <div style="font-size:1.5rem;font-weight:800;color:#fff;line-height:1.2">${k.val}</div>
+      <div style="font-size:.75rem;opacity:.85;color:#e2e8f0">${k.lb}</div>
+      <div style="font-size:.7rem;opacity:.65;color:#bee3f8">${k.sub}</div>
+    </div>`).join('');
+}
+
+function renderSADashChart(stats){
+  const chart=gi('saDashChart');
+  if(!chart||!stats.length) return;
+  const mode=gi('saDashChartMode')?.value||'est';
+  const labels={est:'Estudiantes',profs:'Profesores',prom:'Prom. Notas',asist:'Asistencia %'};
+  const getData=s=>({est:s.totalEst,profs:s.totalProfs,prom:s.promNotas,asist:s.asistPct||0}[mode]);
+  const maxVal=Math.max(...stats.map(getData),1);
+  const BAR_H=160;
+  const bars=stats.map((s,i)=>{
+    const val=getData(s);
+    const h=Math.max(4,Math.round((val/maxVal)*BAR_H));
+    const colors=['#3182ce','#38a169','#d69e2e','#805ad5','#e53e3e','#319795','#dd6b20','#b83280'];
+    const c=colors[i%colors.length];
+    const name=s.colegioNombre.length>12?s.colegioNombre.slice(0,12)+'…':s.colegioNombre;
+    return`<div style="display:flex;flex-direction:column;align-items:center;gap:4px;min-width:64px;cursor:pointer" title="${s.colegioNombre}: ${val} ${labels[mode]}">
+      <div style="font-size:.7rem;font-weight:700;color:#2d3748">${val}</div>
+      <div style="width:44px;height:${h}px;background:${c};border-radius:6px 6px 0 0;transition:opacity .2s" onmouseover="this.style.opacity='.75'" onmouseout="this.style.opacity='1'"></div>
+      <div style="font-size:.65rem;text-align:center;color:#718096;max-width:64px;word-break:break-word;line-height:1.2">${name}</div>
+    </div>`;
+  }).join('');
+  chart.innerHTML=`<div style="display:flex;align-items:flex-end;gap:6px;padding-bottom:4px;min-width:max-content">${bars}</div>`;
+}
+
+function renderSADashTable(stats){
+  const q=(gi('saDashSearch')?.value||'').toLowerCase();
+  const filtered=q?stats.filter(s=>s.colegioNombre.toLowerCase().includes(q)):stats;
+  const list=gi('saColegiosList');
+  if(!list) return;
+  if(!filtered.length){list.innerHTML='<p style="color:#999;text-align:center;padding:1.5rem">Sin resultados.</p>';return;}
+  list.innerHTML=`<table class="tbl"><thead><tr>
+    <th>Institución</th><th>Est.</th><th>Profs.</th><th>Salones</th><th>Prom.Notas</th><th>Asistencia</th><th>Ingresos/Mes</th><th>Estado</th><th>Acciones</th>
+  </tr></thead><tbody>${filtered.map(s=>`<tr>
+    <td><strong>${s.colegioNombre}</strong></td>
+    <td>${s.totalEst}</td>
+    <td>${s.totalProfs}</td>
+    <td>${s.totalSalones||0}</td>
+    <td><span style="font-weight:700;color:${s.promNotas>=3.5?'#276749':s.promNotas>=3?'#744210':'#9b2c2c'}">${s.promNotas}</span></td>
+    <td><span style="font-weight:600;color:${(s.asistPct||0)>=85?'#276749':'#c05621'}">${s.asistPct!=null?s.asistPct+'%':'—'}</span></td>
+    <td>${s.ingresosMes!=null?'$'+Number(s.ingresosMes).toLocaleString():'—'}</td>
+    <td><span class="bdg ${s.activo?'bgr':'bred'}">${s.activo?'Activo':'Inactivo'}</span></td>
+    <td style="display:flex;gap:.3rem;flex-wrap:wrap">
+      <button class="btn bsm" onclick="goto('saestadisticas')" title="Ver estadísticas">📊</button>
+      <button class="btn bsm" onclick="goto('saauditoria')" title="Ver auditoría">🔍</button>
+    </td>
+  </tr>`).join('')}</tbody></table>`;
+}
+
+function renderSADashQuick(stats){
+  const qb=gi('saDashQuickBody');
+  if(!qb) return;
+  const activos=stats.filter(s=>s.activo);
+  const top=activos.length?activos.reduce((a,b)=>a.totalEst>b.totalEst?a:b,activos[0]):null;
+  const mejor=activos.length?activos.reduce((a,b)=>a.promNotas>b.promNotas?a:b,activos[0]):null;
+  const menor=activos.length?activos.reduce((a,b)=>a.promNotas<b.promNotas?a:b,activos[0]):null;
+  const sinAsist=stats.filter(s=>!s.asistPct||s.asistPct===0).length;
+  qb.innerHTML=`
+    <div style="display:flex;flex-direction:column;gap:.5rem;font-size:.85rem">
+      ${top?`<div style="background:#ebf8ff;border-radius:8px;padding:.5rem .75rem">
+        <div style="font-size:.7rem;color:#2b6cb0;font-weight:700;text-transform:uppercase">Mayor población</div>
+        <div style="font-weight:600;color:#1a365d">${top.colegioNombre}</div>
+        <div style="color:#4a5568">${top.totalEst} estudiantes</div>
+      </div>`:''}
+      ${mejor?`<div style="background:#f0fff4;border-radius:8px;padding:.5rem .75rem">
+        <div style="font-size:.7rem;color:#276749;font-weight:700;text-transform:uppercase">Mejor rendimiento</div>
+        <div style="font-weight:600;color:#1c4532">${mejor.colegioNombre}</div>
+        <div style="color:#4a5568">Prom. ${mejor.promNotas}</div>
+      </div>`:''}
+      ${menor?`<div style="background:#fff5f5;border-radius:8px;padding:.5rem .75rem">
+        <div style="font-size:.7rem;color:#c53030;font-weight:700;text-transform:uppercase">Requiere atención</div>
+        <div style="font-weight:600;color:#742a2a">${menor.colegioNombre}</div>
+        <div style="color:#4a5568">Prom. ${menor.promNotas}</div>
+      </div>`:''}
+      <div style="background:#faf5ff;border-radius:8px;padding:.5rem .75rem">
+        <div style="font-size:.7rem;color:#553c9a;font-weight:700;text-transform:uppercase">Colegios inactivos</div>
+        <div style="font-weight:600;color:#322659">${stats.filter(s=>!s.activo).length} de ${stats.length}</div>
+      </div>
+      ${sinAsist>0?`<div style="background:#fffaf0;border-radius:8px;padding:.5rem .75rem">
+        <div style="font-size:.7rem;color:#c05621;font-weight:700;text-transform:uppercase">Sin datos asistencia</div>
+        <div style="font-weight:600;color:#7b341e">${sinAsist} institución${sinAsist>1?'es':''}</div>
+      </div>`:''}
+    </div>`;
+}
+
+function exportarSADashCSV(){
+  const stats=window._saStatsData||[];
+  if(!stats.length) return sw('warning','No hay datos para exportar');
+  const header='Institución,Estudiantes,Profesores,Salones,Prom.Notas,Asistencia%,Ingresos/Mes,Estado';
+  const rows=stats.map(s=>`"${s.colegioNombre}",${s.totalEst},${s.totalProfs},${s.totalSalones||0},${s.promNotas},${s.asistPct||0},${s.ingresosMes||0},${s.activo?'Activo':'Inactivo'}`);
+  const csv=[header,...rows].join('\n');
+  const a=document.createElement('a');
+  a.href='data:text/csv;charset=utf-8,\uFEFF'+encodeURIComponent(csv);
+  a.download=`SuperAdmin_Estadisticas_${new Date().toISOString().slice(0,10)}.csv`;
+  a.click();
+  sw('success','CSV exportado correctamente');
+}
+
 async function initSADash(){
   try{
     const [statsRaw,sugCount]=await Promise.all([
@@ -3560,36 +3724,20 @@ async function initSADash(){
       saApiFetch('/api/sugerencias/count').catch(()=>({noLeidas:0})),
     ]);
     const stats=Array.isArray(statsRaw)?statsRaw:[];
-    const grid=gi('saStatsGrid');
-    if(!grid) return;
-    const totalColegios=stats.length;
-    const totalEst=stats.reduce((a,s)=>a+s.totalEst,0);
-    const totalProfs=stats.reduce((a,s)=>a+s.totalProfs,0);
-    const promGlobal=stats.length?+(stats.reduce((a,s)=>a+s.promNotas,0)/stats.length).toFixed(2):0;
-    grid.innerHTML=[
-      {ic:'🏫',lb:'Colegios',val:totalColegios},
-      {ic:'👨‍🎓',lb:'Estudiantes',val:totalEst},
-      {ic:'👩‍🏫',lb:'Profesores',val:totalProfs},
-      {ic:'📊',lb:'Prom. Notas',val:promGlobal},
-    ].map(s=>`<div class="card" style="text-align:center">
-      <div style="font-size:2rem">${s.ic}</div>
-      <div style="font-size:1.6rem;font-weight:700">${s.val}</div>
-      <div style="color:#666;font-size:.85rem">${s.lb}</div>
-    </div>`).join('');
-    const list=gi('saColegiosList');
-    if(list) list.innerHTML=`<table class="tbl"><thead><tr>
-      <th>Colegio</th><th>Estudiantes</th><th>Profesores</th><th>Salones</th><th>Prom.</th><th>Estado</th>
-    </tr></thead><tbody>${stats.map(s=>`<tr>
-      <td><strong>${s.colegioNombre}</strong></td>
-      <td>${s.totalEst}</td><td>${s.totalProfs}</td><td>${s.totalSalones||0}</td><td>${s.promNotas}</td>
-      <td><span class="bdg ${s.activo?'bgr':'bred'}">${s.activo?'Activo':'Inactivo'}</span></td>
-    </tr>`).join('')}</tbody></table>`;
+    window._saStatsData=stats;
+    renderSADashKPIs(stats,sugCount);
+    renderSADashChart(stats);
+    renderSADashTable(stats);
+    renderSADashQuick(stats);
+    // Ocultar columna ingresos si no hay datos en ninguno
+    const midRow=gi('saDashMidRow');
+    if(midRow&&window.innerWidth<768) midRow.style.gridTemplateColumns='1fr';
     const badge=gi('saSugBadge');
     if(badge&&sugCount&&sugCount.noLeidas>0){
-      badge.textContent=`💡 ${sugCount.noLeidas} Sugerencia${sugCount.noLeidas>1?'s':''} nueva${sugCount.noLeidas>1?'s':''}`;
+      badge.textContent=`💡 ${sugCount.noLeidas} nueva${sugCount.noLeidas>1?'s':''}`;
       badge.style.display='inline-block';
     }
-  }catch(e){sw('error','Error al cargar estadísticas: '+e.message);}
+  }catch(e){sw('error','Error al cargar el panel: '+e.message);}
 }
 
 /* ─── COLEGIOS & ADMINS ─────────────────────────────────── */
@@ -3874,48 +4022,190 @@ async function importarPlanDefecto(){
 
 /* ─── ESTADÍSTICAS GLOBALES ─────────────────────────────── */
 function pgSAEstadisticas(){
-  return`<div class="card">
-    <h2>📊 Estadísticas Globales</h2>
-    <div id="saEstGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:1rem;margin-bottom:1.5rem">
-      <div class="card" style="text-align:center"><div style="font-size:2rem">⏳</div><p>Cargando…</p></div>
+  return`<div id="saEstPage">
+    <!-- Header con KPIs -->
+    <div class="card" style="background:linear-gradient(135deg,#1a365d 0%,#2b6cb0 100%);color:#fff;margin-bottom:1rem">
+      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:.5rem;margin-bottom:1rem">
+        <h2 style="color:#fff;margin:0">📊 Estadísticas Globales del Sistema</h2>
+        <div style="display:flex;gap:.5rem;flex-wrap:wrap">
+          <button class="btn" style="background:rgba(255,255,255,.15);color:#fff;border:1px solid rgba(255,255,255,.3);font-size:.8rem" onclick="initSAEstadisticas()">🔄 Actualizar</button>
+          <button class="btn" style="background:rgba(255,255,255,.15);color:#fff;border:1px solid rgba(255,255,255,.3);font-size:.8rem" onclick="exportarEstCSV()">📤 CSV</button>
+        </div>
+      </div>
+      <div id="saEstGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(155px,1fr));gap:.75rem">
+        <div style="text-align:center;opacity:.7"><div style="font-size:1.8rem">⏳</div><p style="font-size:.8rem;margin:.25rem 0">Cargando…</p></div>
+      </div>
     </div>
-    <h3 style="margin-bottom:.75rem">Detalle por institución</h3>
-    <div id="saEstDetalle"></div>
+
+    <!-- Filtros y controles -->
+    <div class="card" style="margin-bottom:1rem">
+      <div style="display:flex;gap:.75rem;flex-wrap:wrap;align-items:center">
+        <input id="saEstSearch" class="inp" style="width:200px;font-size:.85rem" placeholder="🔍 Buscar institución…" oninput="renderEstDetalle(window._saEstData||[])">
+        <select id="saEstFiltroEstado" class="inp" style="width:auto;font-size:.85rem" onchange="renderEstDetalle(window._saEstData||[])">
+          <option value="">Todos los estados</option>
+          <option value="activo">Solo activos</option>
+          <option value="inactivo">Solo inactivos</option>
+        </select>
+        <select id="saEstOrden" class="inp" style="width:auto;font-size:.85rem" onchange="renderEstDetalle(window._saEstData||[])">
+          <option value="nombre">Ordenar por nombre</option>
+          <option value="est_desc">↓ Más estudiantes</option>
+          <option value="prom_desc">↓ Mejor promedio</option>
+          <option value="asist_desc">↓ Mejor asistencia</option>
+          <option value="ing_desc">↓ Mayores ingresos</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Gráficas comparativas -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1rem" id="saEstChartsRow">
+      <div class="card">
+        <h3 style="margin:0 0 .75rem;font-size:.95rem">📈 Promedio de Notas por Institución</h3>
+        <div id="saEstChartNotas" style="overflow-x:auto;min-height:140px;display:flex;align-items:flex-end"></div>
+      </div>
+      <div class="card">
+        <h3 style="margin:0 0 .75rem;font-size:.95rem">✅ Asistencia % por Institución</h3>
+        <div id="saEstChartAsist" style="overflow-x:auto;min-height:140px;display:flex;align-items:flex-end"></div>
+      </div>
+    </div>
+
+    <!-- Tabla detallada completa -->
+    <div class="card">
+      <h3 style="margin:0 0 .75rem">📋 Detalle completo por institución</h3>
+      <div id="saEstDetalle" style="overflow-x:auto">Cargando…</div>
+    </div>
   </div>`;
 }
+
+function renderEstKPIs(stats){
+  const grid=gi('saEstGrid');
+  if(!grid) return;
+  const activos=stats.filter(s=>s.activo).length;
+  const totalEst=stats.reduce((a,s)=>a+s.totalEst,0);
+  const totalProfs=stats.reduce((a,s)=>a+s.totalProfs,0);
+  const totalSal=stats.reduce((a,s)=>a+(s.totalSalones||0),0);
+  const promNotas=stats.length?+(stats.reduce((a,s)=>a+s.promNotas,0)/stats.length).toFixed(2):0;
+  const promAsist=stats.length?+(stats.reduce((a,s)=>a+(s.asistPct||0),0)/stats.length).toFixed(1):0;
+  const totalIng=stats.reduce((a,s)=>a+(s.ingresosMes||0),0);
+  const promIng=stats.length?Math.round(totalIng/stats.length):0;
+  const kpis=[
+    {ic:'🏫',lb:'Instituciones',val:stats.length,sub:`${activos} activas · ${stats.length-activos} inactivas`},
+    {ic:'👨‍🎓',lb:'Estudiantes',val:totalEst.toLocaleString(),sub:`~${stats.length?Math.round(totalEst/stats.length):0} por inst.`},
+    {ic:'👩‍🏫',lb:'Profesores',val:totalProfs.toLocaleString(),sub:`~${stats.length?Math.round(totalProfs/stats.length):0} por inst.`},
+    {ic:'🏛️',lb:'Salones',val:totalSal.toLocaleString(),sub:`~${stats.length?Math.round(totalSal/stats.length):0} por inst.`},
+    {ic:'📊',lb:'Prom. Notas Global',val:promNotas,sub:promNotas>=4?'🟢 Excelente':promNotas>=3?'🟡 Aceptable':'🔴 Bajo'},
+    {ic:'✅',lb:'Asistencia Global',val:promAsist+'%',sub:promAsist>=90?'🟢 Excelente':promAsist>=75?'🟡 Regular':'🔴 Baja'},
+    {ic:'💰',lb:'Ingresos Totales/Mes',val:'$'+totalIng.toLocaleString(),sub:`Prom $${promIng.toLocaleString()}/inst.`},
+  ];
+  grid.innerHTML=kpis.map(k=>`
+    <div style="background:rgba(255,255,255,.12);border-radius:10px;padding:.75rem 1rem;text-align:center">
+      <div style="font-size:1.5rem">${k.ic}</div>
+      <div style="font-size:1.4rem;font-weight:800;color:#fff;line-height:1.1">${k.val}</div>
+      <div style="font-size:.72rem;opacity:.85;color:#e2e8f0;margin:.15rem 0">${k.lb}</div>
+      <div style="font-size:.65rem;opacity:.65;color:#bee3f8">${k.sub}</div>
+    </div>`).join('');
+}
+
+function renderEstChart(stats,containerId,field,label,maxOverride){
+  const chart=gi(containerId);
+  if(!chart||!stats.length) return;
+  const maxVal=maxOverride||Math.max(...stats.map(s=>s[field]||0),1);
+  const BAR_H=120;
+  const bars=stats.map((s,i)=>{
+    const val=s[field]||0;
+    const h=Math.max(4,Math.round((val/maxVal)*BAR_H));
+    const pct=maxOverride?Math.round((val/maxVal)*100):null;
+    const colors=['#3182ce','#38a169','#d69e2e','#805ad5','#e53e3e','#319795','#dd6b20','#b83280'];
+    const c=colors[i%colors.length];
+    const name=s.colegioNombre.length>11?s.colegioNombre.slice(0,11)+'…':s.colegioNombre;
+    return`<div style="display:flex;flex-direction:column;align-items:center;gap:3px;min-width:56px" title="${s.colegioNombre}: ${val}${maxOverride?'%':''}">
+      <div style="font-size:.65rem;font-weight:700;color:#2d3748">${val}${maxOverride?'%':''}</div>
+      <div style="width:38px;height:${h}px;background:${c};border-radius:5px 5px 0 0"></div>
+      <div style="font-size:.6rem;text-align:center;color:#718096;max-width:56px;word-break:break-word;line-height:1.2">${name}</div>
+    </div>`;
+  }).join('');
+  chart.innerHTML=`<div style="display:flex;align-items:flex-end;gap:5px;padding-bottom:4px;min-width:max-content">${bars}</div>`;
+}
+
+function renderEstDetalle(stats){
+  const q=(gi('saEstSearch')?.value||'').toLowerCase();
+  const estado=gi('saEstFiltroEstado')?.value||'';
+  const orden=gi('saEstOrden')?.value||'nombre';
+  let filtered=stats
+    .filter(s=>!q||s.colegioNombre.toLowerCase().includes(q))
+    .filter(s=>!estado||(estado==='activo'?s.activo:!s.activo));
+  if(orden==='est_desc') filtered.sort((a,b)=>b.totalEst-a.totalEst);
+  else if(orden==='prom_desc') filtered.sort((a,b)=>b.promNotas-a.promNotas);
+  else if(orden==='asist_desc') filtered.sort((a,b)=>(b.asistPct||0)-(a.asistPct||0));
+  else if(orden==='ing_desc') filtered.sort((a,b)=>(b.ingresosMes||0)-(a.ingresosMes||0));
+  else filtered.sort((a,b)=>a.colegioNombre.localeCompare(b.colegioNombre));
+  const det=gi('saEstDetalle');
+  if(!det) return;
+  if(!filtered.length){det.innerHTML='<p style="color:#999;text-align:center;padding:2rem">Sin resultados con los filtros aplicados.</p>';return;}
+  const hayAsist=filtered.some(s=>s.asistPct!=null&&s.asistPct>0);
+  const hayIng=filtered.some(s=>s.ingresosMes!=null&&s.ingresosMes>0);
+  det.innerHTML=`<table class="tbl"><thead><tr>
+    <th>#</th><th>Institución</th><th>Estudiantes</th><th>Profesores</th><th>Salones</th>
+    <th>Prom. Notas</th>${hayAsist?'<th>Asistencia</th>':''}${hayIng?'<th>Ingresos/Mes</th>':''}
+    <th>Estado</th>
+  </tr></thead><tbody>${filtered.map((s,i)=>{
+    const notaColor=s.promNotas>=4?'#276749':s.promNotas>=3?'#744210':'#9b2c2c';
+    const asistColor=(s.asistPct||0)>=90?'#276749':(s.asistPct||0)>=75?'#744210':'#9b2c2c';
+    return`<tr>
+      <td style="color:#a0aec0;font-size:.8rem">${i+1}</td>
+      <td><strong>${s.colegioNombre}</strong></td>
+      <td><span style="font-weight:600">${s.totalEst}</span></td>
+      <td>${s.totalProfs}</td>
+      <td>${s.totalSalones||0}</td>
+      <td>
+        <div style="display:flex;align-items:center;gap:.4rem">
+          <div style="flex:1;height:6px;background:#e2e8f0;border-radius:3px;min-width:40px">
+            <div style="width:${Math.min(100,s.promNotas/5*100)}%;height:100%;background:${notaColor};border-radius:3px"></div>
+          </div>
+          <span style="font-weight:700;color:${notaColor};font-size:.9rem">${s.promNotas}</span>
+        </div>
+      </td>
+      ${hayAsist?`<td>
+        ${s.asistPct!=null?`<div style="display:flex;align-items:center;gap:.4rem">
+          <div style="flex:1;height:6px;background:#e2e8f0;border-radius:3px;min-width:40px">
+            <div style="width:${Math.min(100,s.asistPct)}%;height:100%;background:${asistColor};border-radius:3px"></div>
+          </div>
+          <span style="font-weight:600;color:${asistColor};font-size:.9rem">${s.asistPct}%</span>
+        </div>`:'<span style="color:#a0aec0">—</span>'}
+      </td>`:''}
+      ${hayIng?`<td>${s.ingresosMes!=null?'<span style="font-weight:600;color:#2c7a7b">$'+Number(s.ingresosMes).toLocaleString()+'</span>':'<span style="color:#a0aec0">—</span>'}</td>`:''}
+      <td><span class="bdg ${s.activo?'bgr':'bred'}">${s.activo?'Activo':'Inactivo'}</span></td>
+    </tr>`;
+  }).join('')}</tbody></table>
+  <p style="font-size:.75rem;color:#a0aec0;margin-top:.5rem;text-align:right">Mostrando ${filtered.length} de ${stats.length} instituciones · Datos del seed Atlas</p>`;
+}
+
+function exportarEstCSV(){
+  const stats=window._saEstData||[];
+  if(!stats.length) return sw('warning','Sin datos para exportar');
+  const header='Institución,Estudiantes,Profesores,Salones,Prom.Notas,Asistencia%,IngresosMes,Estado';
+  const rows=stats.map(s=>`"${s.colegioNombre}",${s.totalEst},${s.totalProfs},${s.totalSalones||0},${s.promNotas},${s.asistPct||0},${s.ingresosMes||0},${s.activo?'Activo':'Inactivo'}`);
+  const csv=[header,...rows].join('\n');
+  const a=document.createElement('a');
+  a.href='data:text/csv;charset=utf-8,\uFEFF'+encodeURIComponent(csv);
+  a.download=`Estadisticas_Atlas_${new Date().toISOString().slice(0,10)}.csv`;
+  a.click();
+  sw('success','CSV con datos Atlas exportado');
+}
+
 async function initSAEstadisticas(){
   try{
     const statsRaw=await saApiFetch('/api/superadmin/stats').catch(()=>[]);
     const stats=Array.isArray(statsRaw)?statsRaw:[];
-    const grid=gi('saEstGrid');
-    if(!grid) return;
-    const totalEst=stats.reduce((a,s)=>a+s.totalEst,0);
-    const totalProfs=stats.reduce((a,s)=>a+s.totalProfs,0);
-    const totalSal=stats.reduce((a,s)=>a+(s.totalSalones||0),0);
-    const promGlobal=stats.length?+(stats.reduce((a,s)=>a+s.promNotas,0)/stats.length).toFixed(2):0;
-    grid.innerHTML=[
-      {ic:'🏫',lb:'Instituciones',val:stats.length},
-      {ic:'👨‍🎓',lb:'Estudiantes',val:totalEst},
-      {ic:'👩‍🏫',lb:'Profesores',val:totalProfs},
-      {ic:'🏛️',lb:'Salones',val:totalSal},
-      {ic:'📊',lb:'Prom. Global',val:promGlobal},
-    ].map(s=>`<div class="card" style="text-align:center">
-      <div style="font-size:2rem">${s.ic}</div>
-      <div style="font-size:1.6rem;font-weight:700">${s.val}</div>
-      <div style="color:#666;font-size:.85rem">${s.lb}</div>
-    </div>`).join('');
-    const det=gi('saEstDetalle');
-    if(det) det.innerHTML=`<table class="tbl"><thead><tr>
-      <th>Institución</th><th>Estudiantes</th><th>Profesores</th><th>Salones</th><th>Prom. Notas</th><th>Estado</th>
-    </tr></thead><tbody>${stats.map(s=>`<tr>
-      <td><strong>${s.colegioNombre}</strong></td>
-      <td>${s.totalEst}</td><td>${s.totalProfs}</td><td>${s.totalSalones||0}</td>
-      <td><span style="font-weight:700;color:${s.promNotas>=3?'#22543d':'#9b2c2c'}">${s.promNotas}</span></td>
-      <td><span class="bdg ${s.activo?'bgr':'bred'}">${s.activo?'Activo':'Inactivo'}</span></td>
-    </tr>`).join('')}</tbody></table>`;
+    window._saEstData=stats;
+    renderEstKPIs(stats);
+    renderEstChart(stats,'saEstChartNotas','promNotas','Prom. Notas',5);
+    renderEstChart(stats,'saEstChartAsist','asistPct','Asistencia %',100);
+    renderEstDetalle(stats);
+    const chartsRow=gi('saEstChartsRow');
+    if(chartsRow&&window.innerWidth<640) chartsRow.style.gridTemplateColumns='1fr';
   }catch(e){
     const g=gi('saEstGrid');
-    if(g)g.innerHTML=`<p style="color:red">Error: ${e.message}</p>`;
+    if(g)g.innerHTML=`<p style="color:#fff;opacity:.7">Error al cargar: ${e.message}</p>`;
   }
 }
 
