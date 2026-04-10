@@ -16,6 +16,8 @@ const TokenStore = {
   set:    (t)   => sessionStorage.setItem('edu_jwt', t),
   clear:  ()    => sessionStorage.removeItem('edu_jwt'),
 };
+// CRÍTICO: exponer globalmente — app.js usa window.TokenStore en validateSession y saApiFetch
+window.TokenStore = TokenStore;
 
 // ─── Fetch con auth ──────────────────────────────────────────────
 async function apiFetch(path, opts = {}) {
@@ -1399,8 +1401,9 @@ document.addEventListener('DOMContentLoaded', async () => {
           DB.histRecs   = DB.histRecs   || [];
           DB.histPlanes = DB.histPlanes || [];
           DB.estHist    = DB.estHist    || [];
-          DB.anoActual  = DB.anoActual  || String(new Date().getFullYear());
+          DB.anoActual   = DB.anoActual   || String(new Date().getFullYear());
           DB.notasPorAno = DB.notasPorAno || {};
+          DB.colegioLogo = DB.colegioLogo || '';  // logo del colegio para PDFs
           DB.sals.forEach(s => { if (!Array.isArray(s.mats)) s.mats = []; });
 
           // Reconstruir CU desde DB

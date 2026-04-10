@@ -2133,10 +2133,13 @@ function dlRptProf(salon,per,matFilter){
     </div>`;
   }).join('');
 
+  const _logoProfe = DB.colegioLogo || '';
+  const _nomProfe  = CU.colegioNombre || '';
   box.innerHTML=`<div style="font-family:'Outfit',sans-serif;background:#fff;max-width:780px">
     <!-- HEADER -->
-    <div style="background:linear-gradient(135deg,#0b1e33,#1a3a5c);color:#fff;padding:24px 28px;position:relative;overflow:hidden">
-      <div style="position:absolute;right:16px;top:50%;transform:translateY(-50%);font-size:80px;opacity:.07;line-height:1">🏛️</div>
+    <div style="background:linear-gradient(135deg,#0b1e33,#1a3a5c);color:#fff;padding:20px 28px;position:relative;overflow:hidden">
+      ${_logoProfe ? `<img src="${_logoProfe}" style="position:absolute;right:18px;top:50%;transform:translateY(-50%);height:52px;width:auto;object-fit:contain;opacity:.92;border-radius:6px;background:rgba(255,255,255,.1);padding:4px" alt="">` : '<div style="position:absolute;right:16px;top:50%;transform:translateY(-50%);font-size:80px;opacity:.07;line-height:1">🏛️</div>'}
+      ${_nomProfe ? `<div style="font-size:10px;text-transform:uppercase;letter-spacing:.1em;opacity:.7;margin-bottom:2px;font-weight:600">${_nomProfe}</div>` : ''}
       <div style="font-size:10px;text-transform:uppercase;letter-spacing:.15em;opacity:.5;margin-bottom:5px">EduSistema Pro · Reporte Docente</div>
       <h1 style="font-size:19px;font-weight:900;margin-bottom:4px">Informe de Calificaciones</h1>
       <p style="font-size:12px;opacity:.7">Salón: ${salon} &nbsp;·&nbsp; ${per} &nbsp;·&nbsp; Prof. ${CU.nombre} &nbsp;·&nbsp; ${cicloLabel}</p>
@@ -3485,10 +3488,13 @@ function dlBoletin(estId,perFilter,anno,snapData){
   const perPromVal=!isTodos?+(mats.reduce((s,m)=>s+def(notas[decodeURIComponent(perFilter)]?.[m]||{a:0,c:0,r:0}),0)/mats.length).toFixed(2):0;
   const perPuestoVal=e&&!isTodos?puestoP(estId,decodeURIComponent(perFilter)):'—';
 
+  const _colegioLogo = DB.colegioLogo || '';
+  const _colegioNombreLabel = CU.colegioNombre || '';
   box.innerHTML=`<div style="font-family:'Outfit',sans-serif;background:#fff;max-width:760px">
     <!-- HEADER -->
-    <div style="background:linear-gradient(135deg,#0b1e33 0%,#1a3a5c 100%);color:#fff;padding:24px 28px;position:relative;overflow:hidden">
-      <div style="position:absolute;right:16px;top:50%;transform:translateY(-50%);font-size:80px;opacity:.08;line-height:1">🏛️</div>
+    <div style="background:linear-gradient(135deg,#0b1e33 0%,#1a3a5c 100%);color:#fff;padding:20px 28px;position:relative;overflow:hidden">
+      ${_colegioLogo ? `<img src="${_colegioLogo}" style="position:absolute;right:20px;top:50%;transform:translateY(-50%);height:56px;width:auto;object-fit:contain;opacity:.92;border-radius:6px;background:rgba(255,255,255,.12);padding:4px" alt="Logo">` : '<div style="position:absolute;right:16px;top:50%;transform:translateY(-50%);font-size:80px;opacity:.08;line-height:1">🏛️</div>'}
+      ${_colegioNombreLabel ? `<div style="font-size:10px;text-transform:uppercase;letter-spacing:.1em;opacity:.7;margin-bottom:2px;font-weight:600">${_colegioNombreLabel}</div>` : ''}
       <div style="font-size:10px;text-transform:uppercase;letter-spacing:.15em;opacity:.55;margin-bottom:6px">EduSistema Pro · Documento Oficial${snap?'  ·  ARCHIVO HISTÓRICO':''}</div>
       <h1 style="font-size:20px;font-weight:900;margin-bottom:4px;letter-spacing:-.3px">BOLETÍN DE CALIFICACIONES</h1>
       <p style="font-size:11px;opacity:.65">${subtitle} · Emitido: ${fechaGen}</p>
@@ -3812,7 +3818,12 @@ function renderSAColegiosTable(lista) {
   el.innerHTML = `<table class="tbl"><thead><tr>
     <th>Nombre</th><th>NIT</th><th>Admins</th><th>Estud.</th><th>Profs.</th><th>Estado</th><th>Acciones</th>
   </tr></thead><tbody>${lista.map(c => `<tr>
-    <td><strong>${c.nombre}</strong></td>
+    <td>
+      <div style="display:flex;align-items:center;gap:8px">
+        ${c.logo ? `<img src="${c.logo}" style="width:32px;height:32px;object-fit:contain;border-radius:5px;border:1px solid #e2e8f0;background:#f7fafc;flex-shrink:0" title="Logo ${c.nombre}">` : '<div style="width:32px;height:32px;border-radius:5px;background:#e2e8f0;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0">🏫</div>'}
+        <strong>${c.nombre}</strong>
+      </div>
+    </td>
     <td style="font-size:.82rem;color:#718096">${c.nit || c.codigo || '—'}</td>
     <td>${c.admins || 0}</td><td>${c.ests || 0}</td><td>${c.profs || 0}</td>
     <td><span class="bdg ${c.activo ? 'bgr' : 'bred'}">${c.activo ? 'Activo' : 'Inactivo'}</span></td>
@@ -3853,11 +3864,37 @@ async function modalEliminarColegio(id, nombre) {
 async function modalNuevoColegio() {
   const { value: f } = await Swal.fire({
     title: 'Nuevo Colegio + Admin',
+    width: 560,
     html: `
       <input id="snNombre"  class="swal2-input" placeholder="Nombre del colegio *">
-      <input id="snNit"     class="swal2-input" placeholder="NIT del colegio *">
+      <input id="snNit"     class="swal2-input" placeholder="NIT del colegio * (ej: 900123456-7)">
       <input id="snDir"     class="swal2-input" placeholder="Dirección">
       <input id="snTel"     class="swal2-input" placeholder="Teléfono">
+      <div style="margin:.4rem 1rem .6rem;text-align:left">
+        <label style="font-size:11px;font-weight:700;color:#4a5568;text-transform:uppercase;letter-spacing:.05em;display:block;margin-bottom:5px">Logo del colegio (opcional)</label>
+        <div style="display:flex;align-items:center;gap:10px">
+          <label style="cursor:pointer;background:#edf2f7;border:1.5px dashed #a0aec0;border-radius:8px;padding:8px 14px;font-size:12px;color:#4a5568;flex:1;text-align:center;transition:background .15s"
+            onmouseover="this.style.background='#e2e8f0'" onmouseout="this.style.background='#edf2f7'">
+            📁 Seleccionar imagen
+            <input type="file" id="snLogo" accept="image/png,image/jpeg,image/svg+xml,image/webp" style="display:none"
+              onchange="(function(inp){
+                const file=inp.files[0];if(!file)return;
+                if(file.size>600000){sw('error','El logo supera 600 KB. Usa una imagen más pequeña.');inp.value='';return;}
+                const reader=new FileReader();
+                reader.onload=function(ev){
+                  window._snLogoB64=ev.target.result;
+                  const prev=document.getElementById('snLogoPreview');
+                  if(prev){prev.src=ev.target.result;prev.style.display='block';}
+                  const lbl=document.getElementById('snLogoLabel');
+                  if(lbl) lbl.textContent=file.name;
+                };
+                reader.readAsDataURL(file);
+              })(this)">
+          </label>
+          <img id="snLogoPreview" src="" alt="preview" style="display:none;width:52px;height:52px;object-fit:contain;border-radius:8px;border:1.5px solid #e2e8f0;background:#f7fafc">
+        </div>
+        <div id="snLogoLabel" style="font-size:11px;color:#a0aec0;margin-top:3px">PNG, JPG, SVG o WEBP · máx 600 KB</div>
+      </div>
       <hr style="margin:.5rem 0">
       <p style="margin:.5rem 1rem;font-size:.85rem;color:#666;text-align:left">Administrador principal:</p>
       <input id="snANombre" class="swal2-input" placeholder="Nombre del Admin *">
@@ -3865,11 +3902,13 @@ async function modalNuevoColegio() {
       <input id="snAPwd"    class="swal2-input" type="password" placeholder="Contraseña Admin *">
     `,
     focusConfirm: false, showCancelButton: true, confirmButtonText: 'Crear Colegio',
+    didOpen: () => { window._snLogoB64 = null; },
     preConfirm: () => ({
       nombre:        gi('snNombre')?.value.trim(),
       nit:           gi('snNit')?.value.trim(),
       direccion:     gi('snDir')?.value.trim(),
       telefono:      gi('snTel')?.value.trim(),
+      logo:          window._snLogoB64 || '',
       adminNombre:   gi('snANombre')?.value.trim(),
       adminUsuario:  gi('snAUser')?.value.trim(),
       adminPassword: gi('snAPwd')?.value,
@@ -3890,15 +3929,41 @@ async function modalEditColegio(id) {
   if (!col) return sw('error', 'Colegio no encontrado en lista. Recarga la página.');
   const { value: f } = await Swal.fire({
     title: 'Editar Colegio',
+    width: 560,
     html: `
       <input id="enNombre"   class="swal2-input" value="${col.nombre}"                   placeholder="Nombre *">
-      <input id="enNit"      class="swal2-input" value="${col.nit || col.codigo || ''}"  placeholder="NIT">
+      <input id="enNit"      class="swal2-input" value="${col.nit || col.codigo || ''}"  placeholder="NIT *">
       <input id="enDir"      class="swal2-input" value="${col.direccion || ''}"           placeholder="Dirección">
       <input id="enTel"      class="swal2-input" value="${col.telefono || ''}"            placeholder="Teléfono">
       <input id="enSedes"    class="swal2-input" value="${(col.sedes || []).join(', ')}"  placeholder="Sedes (separadas por coma)">
       <input id="enJornadas" class="swal2-input" value="${(col.jornadas || []).join(', ')}" placeholder="Jornadas (separadas por coma)">
+      <div style="margin:.4rem 1rem .6rem;text-align:left">
+        <label style="font-size:11px;font-weight:700;color:#4a5568;text-transform:uppercase;letter-spacing:.05em;display:block;margin-bottom:5px">Logo del colegio</label>
+        <div style="display:flex;align-items:center;gap:10px">
+          ${col.logo ? `<img src="${col.logo}" style="width:48px;height:48px;object-fit:contain;border-radius:7px;border:1.5px solid #e2e8f0;background:#f7fafc" title="Logo actual">` : ''}
+          <label style="cursor:pointer;background:#edf2f7;border:1.5px dashed #a0aec0;border-radius:8px;padding:7px 12px;font-size:12px;color:#4a5568;flex:1;text-align:center"
+            onmouseover="this.style.background='#e2e8f0'" onmouseout="this.style.background='#edf2f7'">
+            ${col.logo ? '🔄 Cambiar logo' : '📁 Subir logo'}
+            <input type="file" id="enLogo" accept="image/png,image/jpeg,image/svg+xml,image/webp" style="display:none"
+              onchange="(function(inp){
+                const file=inp.files[0];if(!file)return;
+                if(file.size>600000){sw('error','El logo supera 600 KB.');inp.value='';return;}
+                const reader=new FileReader();
+                reader.onload=function(ev){
+                  window._enLogoB64=ev.target.result;
+                  const prev=document.getElementById('enLogoPreview');
+                  if(prev){prev.src=ev.target.result;prev.style.display='block';}
+                };
+                reader.readAsDataURL(file);
+              })(this)">
+          </label>
+          <img id="enLogoPreview" src="" alt="" style="display:none;width:52px;height:52px;object-fit:contain;border-radius:8px;border:1.5px solid #38a169;background:#f0fff4">
+        </div>
+        ${col.logo ? '<div style="font-size:11px;color:#a0aec0;margin-top:3px">Deja vacío para mantener el logo actual</div>' : '<div style="font-size:11px;color:#a0aec0;margin-top:3px">PNG, JPG, SVG o WEBP · máx 600 KB</div>'}
+      </div>
     `,
     focusConfirm: false, showCancelButton: true, confirmButtonText: 'Guardar',
+    didOpen: () => { window._enLogoB64 = null; },
     preConfirm: () => ({
       nombre:    gi('enNombre')?.value.trim() || col.nombre,
       nit:       gi('enNit')?.value.trim(),
@@ -3906,9 +3971,11 @@ async function modalEditColegio(id) {
       telefono:  gi('enTel')?.value.trim(),
       sedes:     gi('enSedes')?.value.split(',').map(s => s.trim()).filter(Boolean),
       jornadas:  gi('enJornadas')?.value.split(',').map(s => s.trim()).filter(Boolean),
+      logo:      window._enLogoB64 || col.logo || '',
     })
   });
   if (!f) return;
+  if (!f.nit) return sw('warning', 'El NIT es obligatorio');
   try {
     await saApiFetch(`/api/superadmin/colegios/${id}`, { method: 'PUT', body: JSON.stringify(f) });
     sw('success', 'Colegio actualizado');

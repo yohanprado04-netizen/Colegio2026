@@ -26,7 +26,7 @@ router.get('/colegios', async (req, res) => {
         Usuario.countDocuments({ colegioId: c.id, role: 'profe'  }),
         Usuario.countDocuments({ colegioId: c.id, role: 'est'    }),
       ]);
-      return { ...c, admins, profs, ests };
+      return { ...c, admins, profs, ests, logo: c.logo || '' };
     }));
     res.json(result);
   } catch (err) { res.status(500).json({ error: err.message }); }

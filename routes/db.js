@@ -154,6 +154,13 @@ router.get('/', authMiddleware, async (req, res) => {
       // Info del tenant — útil para el header del frontend
       colegioId:    cid,
       colegioNombre: req.user.colegioNombre || '',
+      colegioLogo:  await (async () => {
+        try {
+          const { Colegio } = require('../models');
+          const col = await Colegio.findOne({ id: cid }).select('logo').lean();
+          return col?.logo || '';
+        } catch (_) { return ''; }
+      })(),
     });
   } catch (err) {
     console.error('GET /db error:', err);
