@@ -4,7 +4,7 @@ const router = require('express').Router();
 const bcrypt = require('bcryptjs');
 const jwt    = require('jsonwebtoken');
 const crypto = require('crypto');
-const { Usuario, Bloqueo, Auditoria } = require('../models');
+const { Usuario, Bloqueo, Auditoria, Colegio } = require('../models');
 
 const MAX_INTENTOS = 5;
 const LOCKOUT_MS   = 30 * 60 * 1000;
@@ -21,6 +21,17 @@ router.post('/login', async (req, res) => {
       return res.status(400).json({ error: 'Usuario y contraseña requeridos' });
 
     // Verificar bloqueo temporal
+    // Verificar si el colegio del usuario está activo (no aplica a superadmin)
+    if (!['superadmin'].includes((await Usuario.findOne({ usuario }).select('role colegioId').lean())?.role)) {
+      const userLight = await Usuario.findOne({ usuario }).select('role colegioId').lean();
+      if (userLight?.colegioId) {
+        const col = await Colegio.findOne({ id: userLight.colegioId }).select('activo').lean();
+        if (col && !col.activo) {
+          return res.status(403).json({ error: 'Tu institución está desactivada. Contacta al administrador.' });
+        }
+      }
+    }
+
     const blk = await Bloqueo.findOne({ usuario, on: true });
     if (blk) {
       const elapsed = Date.now() - new Date(blk.ts).getTime();
