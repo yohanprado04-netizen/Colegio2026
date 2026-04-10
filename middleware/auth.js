@@ -1,82 +1,157 @@
-// middleware/auth.js — Verificación de JWT
+// routes/auth.js — Login / Logout
 'use strict';
-const jwt = require('jsonwebtoken');
-const { Usuario } = require('../models');
+const router = require('express').Router();
+const bcrypt = require('bcryptjs');
+const jwt    = require('jsonwebtoken');
+const crypto = require('crypto');
+const { Usuario, Bloqueo, Auditoria, Colegio } = require('../models');
 
-const JWT_SECRET = process.env.JWT_SECRET;
-if (!JWT_SECRET) throw new Error('JWT_SECRET no está definido en .env — el servidor no puede iniciar sin él.');
+const MAX_INTENTOS = 5;
+const LOCKOUT_MS   = 30 * 60 * 1000;
+const failedAttempts = {};
 
-const authMiddleware = async (req, res, next) => {
+// Usamos siempre la misma variable para que sea consistente con auth.js
+const JWT_SECRET     = process.env.JWT_SECRET || 'cualquier_clave_segura_aqui';
+const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '8h';
+
+router.post('/login', async (req, res) => {
+  try {
+    const { usuario, password } = req.body;
+    if (!usuario || !password)
+      return res.status(400).json({ error: 'Usuario y contraseña requeridos' });
+
+    // Verificar bloqueo temporal
+    // Verificar si el colegio del usuario está activo (no aplica a superadmin)
+    if (!['superadmin'].includes((await Usuario.findOne({ usuario }).select('role colegioId').lean())?.role)) {
+      const userLight = await Usuario.findOne({ usuario }).select('role colegioId').lean();
+      if (userLight?.colegioId) {
+        const col = await Colegio.findOne({ id: userLight.colegioId }).select('activo').lean();
+        if (col && !col.activo) {
+          return res.status(403).json({ error: 'Tu institución está desactivada. Contacta al administrador.' });
+        }
+      }
+    }
+
+    const blk = await Bloqueo.findOne({ usuario, on: true });
+    if (blk) {
+      const elapsed = Date.now() - new Date(blk.ts).getTime();
+      if (elapsed < LOCKOUT_MS) {
+        const remaining = Math.ceil((LOCKOUT_MS - elapsed) / 60000);
+        return res.status(403).json({ error: `Cuenta bloqueada. Espera ${remaining} min.` });
+      }
+      // Desbloqueo automático al expirar
+      blk.on = false;
+      await blk.save();
+    }
+
+    const user = await Usuario.findOne({ usuario });
+    if (!user) {
+      // No revelar si el usuario existe o no
+      return res.status(401).json({ error: 'Credenciales incorrectas' });
+    }
+
+    // Verificar contraseña (bcrypt primero, luego legacy sha256)
+    const ok = await bcrypt.compare(password, user.password).catch(() => false);
+    const sha256legacy = !ok && sha256Match(password, user.password);
+
+    if (!ok && !sha256legacy) {
+      failedAttempts[usuario] = (failedAttempts[usuario] || 0) + 1;
+
+      // superadmin y admin nunca se bloquean automáticamente
+      if (failedAttempts[usuario] >= MAX_INTENTOS && !['admin', 'superadmin'].includes(user.role)) {
+        await Bloqueo.findOneAndUpdate(
+          { usuario },
+          { on: true, ts: new Date().toISOString() },
+          { upsert: true }
+        );
+        await Auditoria.create({
+          ts: new Date().toISOString(), uid: user.id || '?', who: usuario,
+          role: user.role || '?', accion: `Cuenta bloqueada tras ${MAX_INTENTOS} intentos fallidos`,
+          extra: '', colegioId: user.colegioId || ''
+        });
+        failedAttempts[usuario] = 0;
+        return res.status(403).json({ error: 'Cuenta bloqueada tras 5 intentos. Contacta al administrador.' });
+      }
+
+      return res.status(401).json({
+        error: `Credenciales incorrectas. Intento ${failedAttempts[usuario]} de ${MAX_INTENTOS}.`
+      });
+    }
+
+    // Migrar contraseña legacy a bcrypt
+    if (sha256legacy) {
+      user.password = await bcrypt.hash(password, 12);
+      await user.save();
+    }
+
+    // Resetear intentos fallidos
+    failedAttempts[usuario] = 0;
+
+    // Generar JWT con payload consistente con lo que auth.js espera
+    const payload = {
+      id:            user.id,
+      usuario:       user.usuario,
+      role:          user.role,
+      nombre:        user.nombre,
+      colegioId:     user.colegioId     || null,
+      colegioNombre: user.colegioNombre || ''
+    };
+
+    const token = jwt.sign(payload, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN });
+
+    // Devolver usuario sin datos sensibles
+    const userData = user.toObject();
+    delete userData.password;
+    delete userData._id;
+    delete userData.__v;
+
+    res.json({ token, user: userData });
+  } catch (err) {
+    console.error('[auth/login] Error:', err);
+    res.status(500).json({ error: 'Error interno del servidor' });
+  }
+});
+
+router.post('/logout', (req, res) => {
+  // El logout en JWT es del lado del cliente (limpiar sessionStorage)
+  res.json({ ok: true });
+});
+
+// ─── Verificar si el token actual sigue siendo válido ───────────────
+router.get('/verify', async (req, res) => {
   try {
     const header = req.headers.authorization;
-
-    if (!header) {
-      return res.status(401).json({ error: 'Token no provisto', code: 'NO_TOKEN' });
+    if (!header || !header.startsWith('Bearer ')) {
+      return res.status(401).json({ valid: false, error: 'Token no provisto' });
     }
-    if (!header.startsWith('Bearer ')) {
-      return res.status(401).json({ error: 'Formato de token inválido. Usa: Bearer <token>', code: 'BAD_FORMAT' });
-    }
-
     const token = header.split(' ')[1];
-    if (!token || token === 'null' || token === 'undefined') {
-      return res.status(401).json({ error: 'Token vacío o inválido', code: 'EMPTY_TOKEN' });
-    }
+    const decoded = jwt.verify(token, JWT_SECRET);
 
-    let decoded;
-    try {
-      decoded = jwt.verify(token, JWT_SECRET);
-    } catch (err) {
-      if (err.name === 'TokenExpiredError') {
-        return res.status(401).json({ error: 'Sesión expirada. Vuelve a iniciar sesión.', expired: true, code: 'TOKEN_EXPIRED' });
-      }
-      if (err.name === 'JsonWebTokenError') {
-        return res.status(401).json({ error: 'Token inválido o manipulado', code: 'TOKEN_INVALID' });
-      }
-      return res.status(401).json({ error: 'Error verificando token', code: 'TOKEN_ERROR' });
-    }
+    const user = await Usuario.findOne({ $or: [{ id: decoded.id }, { usuario: decoded.usuario }] }).lean();
+    if (!user) return res.status(401).json({ valid: false, error: 'Usuario no encontrado' });
+    if (user.blocked) return res.status(403).json({ valid: false, error: 'Cuenta bloqueada' });
 
-    const user = await Usuario.findOne({
-      $or: [
-        { id: decoded.id },
-        { usuario: decoded.usuario }
-      ]
-    }).lean();
+    const userData = { ...user };
+    delete userData.password;
+    delete userData._id;
+    delete userData.__v;
 
-    if (!user) {
-      return res.status(401).json({ error: 'Usuario no encontrado o eliminado', code: 'USER_NOT_FOUND' });
-    }
-
-    if (user.blocked) {
-      return res.status(403).json({ error: 'Cuenta bloqueada. Contacta al administrador.', code: 'ACCOUNT_BLOCKED' });
-    }
-
-    req.user = user;
-    req.colegioId = user.colegioId || null;
-    next();
+    res.json({ valid: true, user: userData });
   } catch (err) {
-    console.error('[auth] Error inesperado:', err.message);
-    return res.status(500).json({ error: 'Error interno de autenticación' });
+    if (err.name === 'TokenExpiredError') {
+      return res.status(401).json({ valid: false, expired: true, error: 'Sesión expirada' });
+    }
+    return res.status(401).json({ valid: false, error: 'Token inválido' });
   }
-};
+});
 
-const verifyToken = authMiddleware;
+// ─── Función de comparación legacy SHA256 ───────────────────────────
+function sha256Match(raw, stored) {
+  try {
+    const SALT = 'EduSistema_v5_2026';
+    const hash = crypto.createHash('sha256').update(SALT + raw).digest('hex');
+    return hash === stored || raw === stored;
+  } catch { return false; }
+}
 
-const requireRole = (...roles) => (req, res, next) => {
-  if (!req.user) {
-    return res.status(401).json({ error: 'No autenticado', code: 'NOT_AUTHENTICATED' });
-  }
-  if (!roles.includes(req.user.role)) {
-    return res.status(403).json({
-      error: `Acceso no autorizado. Se requiere rol: ${roles.join(' o ')}`,
-      code: 'FORBIDDEN'
-    });
-  }
-  next();
-};
-
-const scopeFilter = (req) => {
-  if (req.user.role === 'superadmin') return {};
-  return { colegioId: req.user.colegioId };
-};
-
-module.exports = { authMiddleware, verifyToken, requireRole, scopeFilter };
+module.exports = router;
