@@ -81,8 +81,15 @@ router.get('/', authMiddleware, async (req, res) => {
           : Object.entries(p.materias || {})
         ).forEach(([m, v]) => { mats[m] = v; });
         notasObj[n.estId][p.periodo] = mats;
-        if (p.disciplina) notasObj[n.estId].disciplina = p.disciplina;
+        // Guardar disciplina por periodo también
+        if (p.disciplina != null && !isNaN(p.disciplina))
+          notasObj[n.estId][p.periodo]._disciplina = p.disciplina;
       });
+      // Usar campo raíz nota.disciplina (promedio global calculado) — puede ser 0
+      if (n.disciplina != null && !isNaN(n.disciplina))
+        notasObj[n.estId].disciplina = n.disciplina;
+      else if (typeof n.disciplina === 'undefined')
+        notasObj[n.estId].disciplina = 0;
     });
 
     // ── notasPorAno ──────────────────────────────────────────────────────────
@@ -98,8 +105,10 @@ router.get('/', authMiddleware, async (req, res) => {
           : Object.entries(p.materias || {})
         ).forEach(([m, v]) => { mats[m] = v; });
         estNotas[p.periodo] = mats;
-        if (p.disciplina) estNotas.disciplina = p.disciplina;
       });
+      // Disciplina global del documento raíz
+      if (n.disciplina != null && !isNaN(n.disciplina))
+        estNotas.disciplina = n.disciplina;
       notasPorAno[yr][n.estId] = estNotas;
     });
 

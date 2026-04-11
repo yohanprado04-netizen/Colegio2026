@@ -2249,35 +2249,40 @@ function loadPN(){
   const ests=ebySalon(salon);
   const el=gi('pnW');
   if(!ests.length){el.innerHTML='<div class="mty"><div class="ei">🎓</div><p>Sin estudiantes en este salón</p></div>';return;}
-  /* Inicializar notas de todos los estudiantes antes de calcular materias */
+  /* Inicializar notas de TODOS los estudiantes antes de calcular materias */
   ests.forEach(e=>syncN(e.id));
-  let mats;
-  if(CU.ciclo==='bachillerato'){
-    /* Use per-salon assigned materias */
-    const salonMats=getProfMatsSalon(CU.id,salon);
-    /* Fallback: intentar con cada estudiante hasta encontrar materias */
-    let fallbackMats=[];
-    if(!salonMats.length){
-      for(const e of ests){
-        const m=getMats(e.id);
-        if(m.length){fallbackMats=m;break;}
-      }
+  /* ── Resolución de materias con cascada de fallbacks ── */
+  let mats=[];
+  const ciclo=CU.ciclo||cicloOf(salon);
+  if(ciclo==='bachillerato'){
+    // 1) Materias específicas del prof en este salón
+    mats=getProfMatsSalon(CU.id,salon);
+    // 2) Materias del salón (union de todos los profs)
+    if(!mats.length) mats=getSalonMats(salon);
+    // 3) Materias del primer estudiante con notas
+    if(!mats.length){
+      for(const e of ests){ const m=getMats(e.id); if(m.length){mats=m;break;} }
     }
-    mats=matSel?[matSel]:(salonMats.length?salonMats:fallbackMats);
+    // 4) Lista global de bachillerato
+    if(!mats.length) mats=[...DB.mB];
   } else {
-    /* Primaria: buscar materias del primer estudiante que las tenga */
-    let primMats=[];
-    for(const e of ests){
-      const m=getMats(e.id);
-      if(m.length){primMats=m;break;}
+    // 1) Materias del salón (puede tener lista personalizada)
+    const sal=DB.sals.find(s=>s.nombre===salon);
+    if(sal?.mats?.length) mats=[...sal.mats];
+    // 2) Materias del primer estudiante
+    if(!mats.length){
+      for(const e of ests){ const m=getMats(e.id); if(m.length){mats=m;break;} }
     }
-    mats=primMats;
+    // 3) Lista global de primaria
+    if(!mats.length) mats=[...DB.mP];
   }
+  // Filtrar por materia seleccionada si aplica
+  if(matSel) mats=[matSel];
   /* Si aún no hay materias, mostrar advertencia clara */
   if(!mats.length){
     el.innerHTML=`<div class="al aly" style="margin-top:10px">
       ⚠️ <strong>No se encontraron materias para el salón ${salon}.</strong><br>
-      Verifica que el salón tenga materias asignadas en la configuración.
+      Verifica que el salón tenga materias asignadas en la configuración del sistema.
     </div>`;
     return;
   }
@@ -2314,16 +2319,17 @@ function loadPN(){
         <td id="dc_${e.id}_${em}_${ep}" style="background:#f0f8ff;padding:5px">
           <span class="${scC(d)}" style="font-size:11px">${d.toFixed(2)}</span></td>`;
     }).join('');
+    const discVal=typeof DB.notas[e.id]?.disciplina==='number'?DB.notas[e.id].disciplina:0;
     tr.innerHTML=`<td><strong>${e.nombre}</strong></td>${cells}
       <td style="padding:4px">
         <input type="number" class="ni" min="0" max="5" step="0.1"
           style="width:62px;text-align:center"
-          value="${typeof DB.notas[e.id]?.disciplina==='number'?DB.notas[e.id].disciplina.toFixed(1):''}"
-          placeholder="0-5"
+          value="${discVal.toFixed(1)}"
+          placeholder="0.0"
           title="Disciplina 0.0-5.0 — se promedia entre todos los periodos"
           onchange="saveDisc('${e.id}',this.value,'${ep}')">
         <div style="font-size:10px;color:var(--sl3);text-align:center">
-          ${typeof DB.notas[e.id]?.disciplina==='number'?discLabel(DB.notas[e.id].disciplina):'—'}
+          ${discLabel(discVal)}
         </div>
       </td>
       <td id="apr_${e.id}"><span class="${scC(pp)}">${pp.toFixed(2)}</span></td>`;
