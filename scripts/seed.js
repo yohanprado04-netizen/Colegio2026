@@ -86,18 +86,37 @@ async function seed() {
     { key: 'ext',       value: { on: false, s: '', e: '' } },
     { key: 'anoActual', value: String(new Date().getFullYear()) },
   ];
-  await Config.insertMany(configItems.map(c => ({ ...c, colegioId })));
-  console.log('⚙️  Config del Colegio Demo creada');
+  for (const c of configItems) {
+    await Config.findOneAndUpdate(
+      { key: c.key, colegioId },
+      { $set: { value: c.value }, $setOnInsert: { key: c.key, colegioId } },
+      { upsert: true }
+    );
+  }
+  console.log('⚙️  Config del Colegio Demo creada (upsert)');
 
   // ── Salones ───────────────────────────────────────────────────────
   const salones = [
-    { nombre: '1A', ciclo: 'primaria',     colegioId },
-    { nombre: '2A', ciclo: 'primaria',     colegioId },
-    { nombre: '6A', ciclo: 'bachillerato', colegioId },
-    { nombre: '11A',ciclo: 'bachillerato', colegioId },
+    { nombre: '1A',  ciclo: 'primaria',     mats: [] },
+    { nombre: '2A',  ciclo: 'primaria',     mats: [] },
+    { nombre: '3A',  ciclo: 'primaria',     mats: [] },
+    { nombre: '4A',  ciclo: 'primaria',     mats: [] },
+    { nombre: '5A',  ciclo: 'primaria',     mats: [] },
+    { nombre: '6A',  ciclo: 'bachillerato', mats: [] },
+    { nombre: '7A',  ciclo: 'bachillerato', mats: [] },
+    { nombre: '8A',  ciclo: 'bachillerato', mats: [] },
+    { nombre: '9A',  ciclo: 'bachillerato', mats: [] },
+    { nombre: '10A', ciclo: 'bachillerato', mats: [] },
+    { nombre: '11A', ciclo: 'bachillerato', mats: [] },
   ];
-  await Salon.insertMany(salones);
-  console.log('🏫 Salones creados:', salones.map(s => s.nombre).join(', '));
+  for (const s of salones) {
+    await Salon.findOneAndUpdate(
+      { nombre: s.nombre, colegioId },
+      { $setOnInsert: { nombre: s.nombre, ciclo: s.ciclo, mats: s.mats, colegioId } },
+      { upsert: true, new: false }
+    ).catch(() => {});
+  }
+  console.log('🏛️  Salones creados (upsert):', salones.map(s => s.nombre).join(', '));
 
   // ── Profesores ────────────────────────────────────────────────────
   const profs = [

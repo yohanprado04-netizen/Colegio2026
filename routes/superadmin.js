@@ -85,6 +85,28 @@ router.post('/colegios', async (req, res) => {
       );
     }
 
+    // Salones por defecto — upsert para no duplicar si ya existen
+    const salonesDefault = [
+      { nombre: '1A',  ciclo: 'primaria',     mats: [] },
+      { nombre: '2A',  ciclo: 'primaria',     mats: [] },
+      { nombre: '3A',  ciclo: 'primaria',     mats: [] },
+      { nombre: '4A',  ciclo: 'primaria',     mats: [] },
+      { nombre: '5A',  ciclo: 'primaria',     mats: [] },
+      { nombre: '6A',  ciclo: 'bachillerato', mats: [] },
+      { nombre: '7A',  ciclo: 'bachillerato', mats: [] },
+      { nombre: '8A',  ciclo: 'bachillerato', mats: [] },
+      { nombre: '9A',  ciclo: 'bachillerato', mats: [] },
+      { nombre: '10A', ciclo: 'bachillerato', mats: [] },
+      { nombre: '11A', ciclo: 'bachillerato', mats: [] },
+    ];
+    for (const s of salonesDefault) {
+      await Salon.findOneAndUpdate(
+        { nombre: s.nombre, colegioId },
+        { $setOnInsert: { nombre: s.nombre, ciclo: s.ciclo, mats: s.mats, colegioId } },
+        { upsert: true, new: false }
+      ).catch(() => {});
+    }
+
     Auditoria.create({
       ts: new Date().toISOString(), uid: 'superadmin', who: 'superadmin',
       role: 'superadmin', accion: `Colegio creado: ${nombre}`,
