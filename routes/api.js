@@ -118,13 +118,49 @@ router.get('/salones', authMiddleware, async (req, res) => {
 
 router.post('/salones', authMiddleware, requireRole('admin', 'superadmin'), async (req, res) => {
   try {
-    const cid = tenantId(req) || req.user.colegioId;
-    // Guardar siempre con colegioNombre para que quede vinculado al colegio por nombre
-    const colegioNombre = req.user.colegioNombre || req.body.colegioNombre || '';
-    const s = await Salon.create({ ...req.body, colegioId: cid, colegioNombre });
+    // ── Determinar colegioId con fallbacks robustos ──────────────────────────
+    const cid = (
+      tenantId(req) ||
+      req.user.colegioId ||
+      req.body.colegioId ||
+      ''
+    ).trim();
+
+    // Seguridad: nunca crear un salón sin colegioId — evita colisiones cross-tenant
+    if (!cid) {
+      return res.status(400).json({ error: 'No se pudo determinar el colegio. Vuelve a iniciar sesión.' });
+    }
+
+    const colegioNombre = (
+      req.user.colegioNombre ||
+      req.body.colegioNombre ||
+      ''
+    ).trim();
+
+    const nombreSalon = (req.body.nombre || '').trim().toUpperCase();
+
+    if (!nombreSalon) {
+      return res.status(400).json({ error: 'El nombre del salón es obligatorio.' });
+    }
+
+    // ── Verificación explícita antes de insertar (evita el error E11000 de Mongo) ──
+    const yaExiste = await Salon.findOne({ nombre: nombreSalon, colegioId: cid }).lean();
+    if (yaExiste) {
+      return res.status(409).json({ error: `El salón "${nombreSalon}" ya existe en este colegio.` });
+    }
+
+    const s = await Salon.create({
+      ...req.body,
+      nombre: nombreSalon,
+      colegioId: cid,
+      colegioNombre,
+    });
     res.status(201).json(s);
   } catch (err) {
-    if (err.code === 11000) return res.status(409).json({ error: 'Salón ya existe en este colegio' });
+    // Doble seguridad: captura race condition E11000 si dos peticiones llegan simultáneas
+    if (err.code === 11000) {
+      return res.status(409).json({ error: `El salón ya existe en este colegio.` });
+    }
     res.status(500).json({ error: err.message });
   }
 });
