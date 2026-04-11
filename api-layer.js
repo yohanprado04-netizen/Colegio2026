@@ -388,11 +388,27 @@ async function addSal() {
   const n = gi('nsn').value.trim().toUpperCase();
   const c = gi('nsc').value;
   if (!n) { sw('error', 'Nombre obligatorio'); return; }
-  // La validación de duplicado la hace el backend con {nombre + colegioId}
-  // Así un salón "1A" en Colegio A NO bloquea crear "1A" en Colegio B
+
+  // Validación local previa: evita llamada al servidor si el salón ya existe en DB local
+  if (DB.sals.some(s => s.nombre === n && (s.colegioId || '') === (CU.colegioId || ''))) {
+    sw('error', `El salón "${n}" ya existe en este colegio.`);
+    return;
+  }
+
+  // CORRECCIÓN: siempre enviar colegioId y colegioNombre en el body como respaldo al token.
+  // Garantiza que el backend identifica el tenant aunque el token del admin
+  // tenga colegioId vacío (bug en usuarios creados sin colegioId asignado).
+  const payload = {
+    nombre:        n,
+    ciclo:         c,
+    mats:          [],
+    colegioId:     CU.colegioId     || '',
+    colegioNombre: CU.colegioNombre || '',
+  };
+
   try {
-    const s = await apiFetch('/api/salones', { method: 'POST', body: JSON.stringify({ nombre: n, ciclo: c, mats: [] }) });
-    DB.sals.push({ nombre: n, ciclo: c, mats: [], colegioId: CU.colegioId || '' });
+    const s = await apiFetch('/api/salones', { method: 'POST', body: JSON.stringify(payload) });
+    DB.sals.push({ nombre: n, ciclo: c, mats: [], colegioId: CU.colegioId || '', colegioNombre: CU.colegioNombre || '' });
     gi('nsn').value = '';
     renderSals();
     sw('success', `Salón ${n} creado`, '', 2000);

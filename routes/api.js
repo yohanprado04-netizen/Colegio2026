@@ -126,12 +126,15 @@ router.get('/salones', authMiddleware, async (req, res) => {
 router.post('/salones', authMiddleware, requireRole('admin', 'superadmin'), async (req, res) => {
   try {
     // ── Determinar colegioId con fallbacks robustos ──────────────────────────
-    const cid = (
-      tenantId(req) ||
-      req.user.colegioId ||
-      req.body.colegioId ||
-      ''
-    ).trim();
+    // Para superadmin: el colegioId viene siempre del body/query (elige qué colegio gestionar).
+    // Para admin/profe: viene del token; si está vacío (usuario creado sin colegioId),
+    //   se usa el body como respaldo — el frontend siempre lo envía desde CU.colegioId.
+    let cid = '';
+    if (req.user.role === 'superadmin') {
+      cid = (req.body.colegioId || req.query.colegioId || '').trim();
+    } else {
+      cid = (req.user.colegioId || req.body.colegioId || '').trim();
+    }
 
     // Seguridad: nunca crear un salón sin colegioId — evita colisiones cross-tenant
     if (!cid) {
