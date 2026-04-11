@@ -739,7 +739,21 @@ async function saveDisc(eid, v) {
 // saveDR() / saveDRPer()
 // ═══════════════════════════════════════════════════════════════════
 async function saveDR() {
-  DB.dr = { s: gi('drs').value, e: gi('dre').value };
+  const s = gi('drs').value;
+  const e = gi('dre').value;
+  const ano = DB.anoActual || String(new Date().getFullYear());
+  // Validar que las fechas pertenezcan al año activo
+  if (s && !s.startsWith(ano)) {
+    sw('error', `Fecha de inicio inválida`, `Solo se permiten fechas del año ${ano}.`); return;
+  }
+  if (e && !e.startsWith(ano)) {
+    sw('error', `Fecha de fin inválida`, `Solo se permiten fechas del año ${ano}.`); return;
+  }
+  // Validar que inicio sea antes que fin
+  if (s && e && s >= e) {
+    sw('error', 'Rango inválido', 'La fecha de inicio debe ser anterior a la fecha de fin.'); return;
+  }
+  DB.dr = { s, e };
   try {
     await apiFetch('/api/config/dr', { method: 'PUT', body: JSON.stringify({ value: DB.dr }) });
     const hoy = today();
@@ -759,6 +773,18 @@ async function saveDRPer(key, per) {
   const s      = gi('dps_' + key)?.value || '';
   const e      = gi('dpe_' + key)?.value || '';
   const extPer = gi('dpex_' + key)?.value || '';
+  const ano    = DB.anoActual || String(new Date().getFullYear());
+  // Validar que las fechas pertenezcan al año activo
+  if (s && !s.startsWith(ano)) {
+    sw('error', `Fecha de inicio inválida`, `Solo se permiten fechas del año ${ano}.`); return;
+  }
+  if (e && !e.startsWith(ano)) {
+    sw('error', `Fecha de fin inválida`, `Solo se permiten fechas del año ${ano}.`); return;
+  }
+  // Validar que inicio sea antes que fin
+  if (s && e && s >= e) {
+    sw('error', 'Rango inválido', `En "${per}" la fecha de inicio debe ser anterior a la fecha de fin.`); return;
+  }
   DB.drPer[per] = { s, e, extPer };
   try {
     await apiFetch('/api/config/drPer', { method: 'PUT', body: JSON.stringify({ value: DB.drPer }) });
