@@ -1140,10 +1140,26 @@ function pgAMat(){
     </div><div id="perL"></div>
   </div>`;
 }
-function initAMat(){
-  // Reload DB para asegurar materias del colegio actual
-  if(typeof dbLoad==='function') dbLoad().catch(()=>{}).finally(()=>renderMats());
-  else renderMats();
+async function initAMat(){
+  try{
+    // Cargar materias directamente desde /api/materias para garantizar aislamiento por colegio
+    const [mP, mB] = await Promise.all([
+      apiFetch('/api/materias?ciclo=primaria').catch(()=>null),
+      apiFetch('/api/materias?ciclo=bachillerato').catch(()=>null),
+    ]);
+    // Si el colegio tiene materias en la colección Materias, usarlas
+    if(mP && mP.length > 0) DB.mP = mP.map(m=>m.nombre);
+    if(mB && mB.length > 0) DB.mB = mB.map(m=>m.nombre);
+    // Si no hay en colección Materias, cargar desde Config (fallback)
+    if((!mP || mP.length===0) || (!mB || mB.length===0)){
+      const cfg = await apiFetch('/api/config').catch(()=>null);
+      if(cfg){
+        if((!mP||mP.length===0) && cfg.mP) DB.mP = cfg.mP;
+        if((!mB||mB.length===0) && cfg.mB) DB.mB = cfg.mB;
+      }
+    }
+  }catch(e){ console.warn('initAMat error:', e); }
+  renderMats();
 }
 function matItem(v,delFn,ciclo){
   return`<div style="display:flex;justify-content:space-between;align-items:center;
@@ -1164,10 +1180,54 @@ function renderMats(){
       <button class="btn xs bd" onclick="delPer('${p}')">🗑</button>
     </div>`).join('');
 }
-function addMP(){const v=gi('nmp').value.trim();if(!v||DB.mP.includes(v))return;DB.mP.push(v);patchMats('primaria',v);dbSave();gi('nmp').value='';renderMats();}
-function addMB(){const v=gi('nmb').value.trim();if(!v||DB.mB.includes(v))return;DB.mB.push(v);patchMats('bachillerato',v);dbSave();gi('nmb').value='';renderMats();}
-function delMP(m){if(DB.mP.length<=1){sw('error','Mínimo 1 materia');return;}DB.mP=DB.mP.filter(x=>x!==m);dbSave();renderMats();}
-function delMB(m){if(DB.mB.length<=1){sw('error','Mínimo 1 materia');return;}DB.mB=DB.mB.filter(x=>x!==m);dbSave();renderMats();}
+async function addMP(){
+  const v=gi('nmp').value.trim();
+  if(!v){sw('error','Escribe el nombre de la materia');return;}
+  if(DB.mP.includes(v)){sw('warning','Esa materia ya existe en Primaria');return;}
+  try{
+    // Guardar vía API para persistencia real en MongoDB
+    await apiFetch('/api/materias',{method:'POST',body:JSON.stringify({nombre:v,ciclo:'primaria',orden:DB.mP.length})});
+    DB.mP.push(v);
+    patchMats('primaria',v);
+    // Sincronizar Config.mP también
+    await apiFetch('/api/config/mP',{method:'PUT',body:JSON.stringify({value:DB.mP})}).catch(()=>{});
+    gi('nmp').value='';
+    renderMats();
+    sw('success',`Materia "${v}" agregada a Primaria`,'',1400);
+  }catch(e){sw('error','Error al guardar: '+e.message);}
+}
+async function addMB(){
+  const v=gi('nmb').value.trim();
+  if(!v){sw('error','Escribe el nombre de la materia');return;}
+  if(DB.mB.includes(v)){sw('warning','Esa materia ya existe en Bachillerato');return;}
+  try{
+    await apiFetch('/api/materias',{method:'POST',body:JSON.stringify({nombre:v,ciclo:'bachillerato',orden:DB.mB.length})});
+    DB.mB.push(v);
+    patchMats('bachillerato',v);
+    await apiFetch('/api/config/mB',{method:'PUT',body:JSON.stringify({value:DB.mB})}).catch(()=>{});
+    gi('nmb').value='';
+    renderMats();
+    sw('success',`Materia "${v}" agregada a Bachillerato`,'',1400);
+  }catch(e){sw('error','Error al guardar: '+e.message);}
+}
+async function delMP(m){
+  if(DB.mP.length<=1){sw('error','Mínimo 1 materia');return;}
+  try{
+    await apiFetch(`/api/materias/${encodeURIComponent(m)}/primaria`,{method:'DELETE'});
+    DB.mP=DB.mP.filter(x=>x!==m);
+    await apiFetch('/api/config/mP',{method:'PUT',body:JSON.stringify({value:DB.mP})}).catch(()=>{});
+    renderMats();
+  }catch(e){sw('error','Error al eliminar: '+e.message);}
+}
+async function delMB(m){
+  if(DB.mB.length<=1){sw('error','Mínimo 1 materia');return;}
+  try{
+    await apiFetch(`/api/materias/${encodeURIComponent(m)}/bachillerato`,{method:'DELETE'});
+    DB.mB=DB.mB.filter(x=>x!==m);
+    await apiFetch('/api/config/mB',{method:'PUT',body:JSON.stringify({value:DB.mB})}).catch(()=>{});
+    renderMats();
+  }catch(e){sw('error','Error al eliminar: '+e.message);}
+}
 function patchMats(ciclo,m){
   DB.ests.forEach(e=>{
     if(cicloOf(e.salon)!==ciclo) return;
@@ -1175,30 +1235,53 @@ function patchMats(ciclo,m){
   });
 }
 function renameMat(ciclo,old){
-  Swal.fire({title:'Renombrar Materia',input:'text',inputValue:old,showCancelButton:true,confirmButtonText:'Guardar'}).then(r=>{
+  Swal.fire({title:'Renombrar Materia',input:'text',inputValue:old,showCancelButton:true,confirmButtonText:'Guardar'}).then(async r=>{
     if(!r.isConfirmed||!r.value.trim()) return;
     const nw=r.value.trim();
+    if(nw===old) return;
     const arr=ciclo==='primaria'?DB.mP:DB.mB;
-    const i=arr.indexOf(old);if(i<0)return;arr[i]=nw;
-    DB.ests.forEach(e=>{DB.pers.forEach(p=>{
-      if(DB.notas[e.id]?.[p]?.[old]){DB.notas[e.id][p][nw]=DB.notas[e.id][p][old];delete DB.notas[e.id][p][old];}
-    });});
-    dbSave();renderMats();sw('success','Renombrada','',1400);
+    const i=arr.indexOf(old);if(i<0)return;
+    try{
+      // 1. Crear nueva materia
+      await apiFetch('/api/materias',{method:'POST',body:JSON.stringify({nombre:nw,ciclo,orden:i})}).catch(()=>{});
+      // 2. Eliminar la vieja
+      await apiFetch(`/api/materias/${encodeURIComponent(old)}/${ciclo}`,{method:'DELETE'}).catch(()=>{});
+      // 3. Actualizar array local y notas
+      arr[i]=nw;
+      DB.ests.forEach(e=>{DB.pers.forEach(p=>{
+        if(DB.notas[e.id]?.[p]?.[old]){DB.notas[e.id][p][nw]=DB.notas[e.id][p][old];delete DB.notas[e.id][p][old];}
+      });});
+      // 4. Persistir lista actualizada
+      const key=ciclo==='primaria'?'mP':'mB';
+      await apiFetch(`/api/config/${key}`,{method:'PUT',body:JSON.stringify({value:arr})}).catch(()=>{});
+      renderMats();
+      sw('success',`Renombrada de "${old}" a "${nw}"`,'',1400);
+    }catch(e){sw('error','Error: '+e.message);}
   });
 }
-function addPer(){
-  const v=gi('nper').value.trim();if(!v||DB.pers.includes(v))return;
+async function addPer(){
+  const v=gi('nper').value.trim();
+  if(!v){sw('error','Escribe el nombre del periodo');return;}
+  if(DB.pers.includes(v)){sw('warning','Ese periodo ya existe');return;}
   DB.pers.push(v);
   DB.ests.forEach(e=>{
     if(!DB.notas[e.id]) DB.notas[e.id]={};
     DB.notas[e.id][v]={};
     getMats(e.id).forEach(m=>{DB.notas[e.id][v][m]={a:0,c:0,r:0};});
   });
-  dbSave();gi('nper').value='';renderMats();
+  try{
+    await apiFetch('/api/config/pers',{method:'PUT',body:JSON.stringify({value:DB.pers})});
+    gi('nper').value='';renderMats();
+    sw('success',`Periodo "${v}" agregado`,'',1400);
+  }catch(e){DB.pers=DB.pers.filter(x=>x!==v);sw('error','Error al guardar: '+e.message);}
 }
-function delPer(p){
+async function delPer(p){
   if(DB.pers.length<=1){sw('error','Mínimo 1 periodo');return;}
-  DB.pers=DB.pers.filter(x=>x!==p);dbSave();renderMats();
+  DB.pers=DB.pers.filter(x=>x!==p);
+  try{
+    await apiFetch('/api/config/pers',{method:'PUT',body:JSON.stringify({value:DB.pers})});
+    renderMats();
+  }catch(e){sw('error','Error al guardar: '+e.message);}
 }
 
 /* ============================================================

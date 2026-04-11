@@ -388,14 +388,15 @@ async function addSal() {
   const n = gi('nsn').value.trim().toUpperCase();
   const c = gi('nsc').value;
   if (!n) { sw('error', 'Nombre obligatorio'); return; }
-  if (DB.sals.find(s => s.nombre === n)) { sw('error', 'Ya existe'); return; }
+  // La validación de duplicado la hace el backend con {nombre + colegioId}
+  // Así un salón "1A" en Colegio A NO bloquea crear "1A" en Colegio B
   try {
-    await apiFetch('/api/salones', { method: 'POST', body: JSON.stringify({ nombre: n, ciclo: c, mats: [] }) });
-    DB.sals.push({ nombre: n, ciclo: c, mats: [] });
+    const s = await apiFetch('/api/salones', { method: 'POST', body: JSON.stringify({ nombre: n, ciclo: c, mats: [] }) });
+    DB.sals.push({ nombre: n, ciclo: c, mats: [], colegioId: CU.colegioId || '' });
     gi('nsn').value = '';
     renderSals();
     sw('success', `Salón ${n} creado`, '', 2000);
-  } catch (e) { sw('error', 'Error: ' + e.message); }
+  } catch (e) { sw('error', e.message); }
 }
 
 function delSal(n) {
