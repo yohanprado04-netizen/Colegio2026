@@ -61,8 +61,13 @@ router.post('/usuarios', authMiddleware, requireRole('admin', 'superadmin'), asy
   try {
     const d = { ...req.body };
     if (!d.id) return res.status(400).json({ error: 'El campo id es requerido' });
-    const cid = tenantId(req);
-    if (cid) { d.colegioId = cid; d.colegioNombre = req.user.colegioNombre || d.colegioNombre || ''; }
+    // Siempre asignar colegioId — usar el del token, luego el body, nunca dejar vacío
+    const cid = tenantId(req) || req.user.colegioId || d.colegioId || '';
+    d.colegioId    = cid;
+    d.colegioNombre = req.user.colegioNombre || d.colegioNombre || '';
+    if (!cid) {
+      console.error(`[usuarios:POST] ⚠️  Creando usuario sin colegioId — usuario="${req.user.usuario}" rol="${req.user.role}"`);
+    }
     const exists = await Usuario.findOne({ $or: [{ usuario: d.usuario }, { id: d.id }] }).lean();
     if (exists) return res.status(409).json({ error: 'Ese usuario o ID ya existe' });
     d.password = await hashPwd(d.password || 'changeme123');
