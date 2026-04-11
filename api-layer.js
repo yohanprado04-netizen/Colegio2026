@@ -508,6 +508,22 @@ async function subirTarea() {
   if (!m || !p) { sw('warning', 'Selecciona materia y periodo'); return; }
   if (!f) { sw('warning', 'Selecciona un archivo'); return; }
   if (f.size > 5 * 1024 * 1024) { sw('error', 'Archivo muy grande (máx 5 MB)'); return; }
+
+  // Validar que el periodo esté abierto según las fechas configuradas
+  const hoy = today();
+  const rp = (DB.drPer || {})[p];
+  const rg = DB.dr || { s: '', e: '' };
+  // Usar rango del periodo si existe, si no el rango global
+  const rs = rp?.s || rg.s;
+  const re = rp?.e || rg.e;
+  if (rs && hoy < rs) {
+    sw('warning', `El periodo "${p}" aún no está abierto`, `Se abre el ${rs}`);
+    return;
+  }
+  if (re && hoy > re) {
+    sw('error', `El periodo "${p}" está cerrado`, `Cerró el ${re}. Contacta a tu docente.`);
+    return;
+  }
   const prof = DB.profs.find(x => x.id === profId);
   const reader = new FileReader();
   reader.onload = async ev => {
