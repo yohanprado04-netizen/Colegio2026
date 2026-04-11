@@ -1,0 +1,89 @@
+// routes/sugerencias.js — Sugerencias: cualquier usuario → superadmin
+'use strict';
+const router = require('express').Router();
+const { authMiddleware } = require('../middleware/auth');
+const { Sugerencia } = require('../models');
+
+// POST /api/sugerencias
+router.post('/', authMiddleware, async (req, res) => {
+  try {
+    const { titulo, mensaje, categoria } = req.body;
+    if (!mensaje || !mensaje.trim())
+      return res.status(400).json({ error: 'El mensaje es requerido' });
+    const s = await Sugerencia.create({
+      uid:           req.user.id,
+      nombre:        req.user.nombre,
+      role:          req.user.role,
+      colegioId:     req.user.colegioId || '',
+      colegioNombre: req.user.colegioNombre || '',
+      titulo:        (titulo || '').trim(),
+      mensaje:       mensaje.trim(),
+      categoria:     categoria || 'general',
+      leida:         false,
+      ts:            new Date().toISOString(),
+    });
+    res.status(201).json({ ok: true, id: s._id });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// GET /api/sugerencias
+router.get('/', authMiddleware, async (req, res) => {
+  try {
+    const filter = {};
+    if (req.user.role !== 'superadmin') {
+      filter.uid = req.user.id;
+    } else {
+      if (req.query.colegioId) filter.colegioId = req.query.colegioId;
+      if (req.query.leida !== undefined && req.query.leida !== '')
+        filter.leida = req.query.leida === 'true';
+    }
+    const limit = Math.min(200, parseInt(req.query.limit) || 100);
+    const list  = await Sugerencia.find(filter).sort({ createdAt: -1 }).limit(limit).lean();
+    res.json(list);
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// GET /api/sugerencias/count
+router.get('/count', authMiddleware, async (req, res) => {
+  try {
+    if (req.user.role !== 'superadmin') return res.json({ noLeidas: 0 });
+    const noLeidas = await Sugerencia.countDocuments({ leida: false });
+    res.json({ noLeidas });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// PUT /api/sugerencias/:id/leer
+router.put('/:id/leer', authMiddleware, async (req, res) => {
+  try {
+    if (req.user.role !== 'superadmin')
+      return res.status(403).json({ error: 'Solo el super admin' });
+    await Sugerencia.findByIdAndUpdate(req.params.id, { leida: true, leidaTs: new Date().toISOString() });
+    res.json({ ok: true });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// PUT /api/sugerencias/:id/responder
+router.put('/:id/responder', authMiddleware, async (req, res) => {
+  try {
+    if (req.user.role !== 'superadmin')
+      return res.status(403).json({ error: 'Solo el super admin' });
+    await Sugerencia.findByIdAndUpdate(req.params.id, {
+      respuesta: req.body.respuesta || '',
+      respondidaTs: new Date().toISOString(),
+      leida: true, leidaTs: new Date().toISOString(),
+    });
+    res.json({ ok: true });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// DELETE /api/sugerencias/:id
+router.delete('/:id', authMiddleware, async (req, res) => {
+  try {
+    if (req.user.role !== 'superadmin')
+      return res.status(403).json({ error: 'Sin autorización' });
+    await Sugerencia.findByIdAndDelete(req.params.id);
+    res.json({ ok: true });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+module.exports = router;
