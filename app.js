@@ -129,9 +129,19 @@ function mkN(pers,mats){
 function syncN(eid){
   if(!DB.notas[eid]) DB.notas[eid]={};
   const mats=getMats(eid);
+  /* Si getMats retorna vacío (estudiante nuevo sin materias aún),
+     intentar con materias del salón directamente como fallback */
+  const est=DB.ests.find(e=>e.id===eid);
+  let matsEfectivas=mats;
+  if(!matsEfectivas.length&&est?.salon){
+    const salonMats=getSalonMats(est.salon);
+    if(salonMats.length) matsEfectivas=salonMats;
+    else if(cicloOf(est.salon)==='primaria') matsEfectivas=[...DB.mP];
+    else matsEfectivas=[...DB.mB];
+  }
   DB.pers.forEach(p=>{
     if(!DB.notas[eid][p]) DB.notas[eid][p]={};
-    mats.forEach(m=>{
+    matsEfectivas.forEach(m=>{
       if(!DB.notas[eid][p][m]||typeof DB.notas[eid][p][m]!=='object')
         DB.notas[eid][p][m]={a:0,c:0,r:0};
     });
@@ -2021,16 +2031,106 @@ function initAExc(){
   const el=gi('aexcB');if(!el)return;
   const list=(DB.exc||[]).slice().reverse();
   if(!list.length){el.innerHTML='<div class="mty"><div class="ei">✉️</div><p>Sin excusas</p></div>';return;}
-  el.innerHTML=`<div class="card"><div class="tw"><table>
-    <thead><tr><th>Fecha</th><th>Estudiante</th><th>Dirigida a</th><th>Causa</th><th>Descripción</th><th>Hora</th></tr></thead>
-    <tbody>${list.map(x=>`<tr>
-      <td style="font-family:var(--mn);font-size:12px">${x.fecha}</td>
-      <td><strong>${x.enombre}</strong><br><span style="font-size:11px;color:var(--sl3)">${x.salon||'—'}</span></td>
-      <td><span class="bdg bbl">${x.dest}</span></td>
-      <td><span class="bdg bor">${x.causa}</span></td>
-      <td style="font-size:12px;color:var(--sl2);max-width:200px">${x.desc||'—'}</td>
-      <td style="font-family:var(--mn);font-size:11px">${x.ts?.split(',')[1]?.trim()||'—'}</td>
-    </tr>`).join('')}</tbody></table></div></div>`;
+  el.innerHTML=list.map(x=>{
+    const yaRespondida=!!(x.respProf);
+    const talleresList=(x.talleres||[]).map(t=>`<div style="font-size:11px;padding:3px 7px;background:#ebf8ff;border-radius:5px;display:inline-block;margin:2px">📎 ${t.nombre}</div>`).join('');
+    return`<div class="card" style="margin-bottom:12px">
+      <div class="chd" style="display:flex;justify-content:space-between;align-items:center">
+        <span class="cti">✉️ ${x.enombre} <span class="bdg bgy" style="font-size:10px">${x.salon||'—'}</span></span>
+        <span class="bdg ${yaRespondida?'bgr':'bor'}">${yaRespondida?'✅ Respondida':'⏳ Sin respuesta'}</span>
+      </div>
+      <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:8px">
+        <span style="font-size:12px">📅 <strong>Fecha:</strong> ${x.fecha}</span>
+        <span style="font-size:12px">👤 <strong>Dirigida a:</strong> ${x.dest}</span>
+        <span style="font-size:12px">📋 <strong>Causa:</strong> <span class="bdg bor">${x.causa}</span></span>
+        <span style="font-size:12px">🕐 ${x.ts?.split(',')[1]?.trim()||'—'}</span>
+      </div>
+      ${x.desc?`<div style="font-size:12px;color:var(--sl2);margin-bottom:8px">💬 ${x.desc}</div>`:''}
+      ${yaRespondida?`<div style="background:#f0fff4;border-radius:8px;padding:10px;margin-bottom:8px;font-size:12px">
+        <strong>✅ Respuesta de ${x.respProfNombre||'Profesor'}:</strong> ${x.respProf}
+        ${x.diasExtra>0?`<br>⏰ <strong>Tiempo prolongado:</strong> ${x.diasExtra} día(s) extra — Entrega límite: ${x.fechaLimite||'—'}`:''}
+        ${talleresList?`<br><div style="margin-top:5px">📚 Talleres adjuntos:<br>${talleresList}</div>`:''}
+        <div style="font-size:10px;color:var(--sl3);margin-top:4px">${x.respTs||''} ${x.respLeida?'<span class=\'bdg bgr\' style=\'font-size:9px\'>Vista por estudiante</span>':''}</div>
+      </div>`:''}
+      <button class="btn ${yaRespondida?'bs':'bn'} sm" onclick="responderExcusa('${x._id}')">
+        ${yaRespondida?'✏️ Editar respuesta':'📨 Responder con talleres'}
+      </button>
+    </div>`;
+  }).join('');
+}
+async function responderExcusa(excId){
+  const exc=(DB.exc||[]).find(x=>x._id===excId||x.id===excId);
+  if(!exc){sw('error','Excusa no encontrada');return;}
+  // Construir html del modal
+  const html=`<div style="text-align:left;font-family:var(--fn)">
+    <div style="background:#ebf8ff;border-radius:8px;padding:10px;margin-bottom:12px;font-size:12px">
+      <strong>Estudiante:</strong> ${exc.enombre} (${exc.salon||'—'})<br>
+      <strong>Causa:</strong> ${exc.causa} — <strong>Fecha:</strong> ${exc.fecha}
+    </div>
+    <div class="fld" style="margin-bottom:10px">
+      <label style="font-size:11px;font-weight:700;color:var(--sl);text-transform:uppercase">Respuesta / instrucciones para el estudiante</label>
+      <textarea id="rpResp" style="width:100%;padding:9px;border:1.5px solid var(--bd);border-radius:var(--r);font-size:13px;min-height:80px" placeholder="Escribe las instrucciones o actividades que debe realizar...">${exc.respProf||''}</textarea>
+    </div>
+    <div style="display:flex;gap:10px;margin-bottom:10px">
+      <div class="fld" style="flex:1;margin:0">
+        <label style="font-size:11px;font-weight:700;color:var(--sl);text-transform:uppercase">Días extra de tiempo</label>
+        <input type="number" id="rpDias" min="0" max="30" value="${exc.diasExtra||0}" style="width:100%;padding:9px;border:1.5px solid var(--bd);border-radius:var(--r);font-size:13px">
+      </div>
+      <div class="fld" style="flex:1;margin:0">
+        <label style="font-size:11px;font-weight:700;color:var(--sl);text-transform:uppercase">Fecha límite entrega</label>
+        <input type="date" id="rpFecha" value="${exc.fechaLimite||''}" style="width:100%;padding:9px;border:1.5px solid var(--bd);border-radius:var(--r);font-size:13px">
+      </div>
+    </div>
+    <div class="fld" style="margin-bottom:8px">
+      <label style="font-size:11px;font-weight:700;color:var(--sl);text-transform:uppercase">Adjuntar talleres/archivos (opcional)</label>
+      <input type="file" id="rpFiles" multiple accept=".pdf,.doc,.docx,.jpg,.png,.xlsx,.txt"
+        style="width:100%;padding:8px;border:1.5px solid var(--bd);border-radius:var(--r);font-size:12px;background:var(--bg2)">
+      <div id="rpFileList" style="margin-top:6px">
+        ${(exc.talleres||[]).map(t=>`<div style="font-size:11px;padding:3px 7px;background:#ebf8ff;border-radius:5px;display:inline-block;margin:2px">📎 ${t.nombre}</div>`).join('')}
+      </div>
+    </div>
+  </div>`;
+  const res=await Swal.fire({
+    title:'📨 Responder Excusa',width:520,html,showCancelButton:true,
+    confirmButtonText:'✅ Enviar respuesta',cancelButtonText:'Cancelar',
+    confirmButtonColor:'#2b6cb0',
+    preConfirm:async()=>{
+      const resp=gi('rpResp')?.value.trim();
+      if(!resp){Swal.showValidationMessage('Escribe una respuesta al estudiante');return false;}
+      const dias=parseInt(gi('rpDias')?.value)||0;
+      const fecha=gi('rpFecha')?.value||'';
+      // Leer archivos
+      const fileInput=gi('rpFiles');
+      const talleres=[];
+      if(fileInput?.files?.length){
+        for(const f of fileInput.files){
+          const b64=await new Promise((ok,fail)=>{
+            const r=new FileReader();
+            r.onload=()=>ok(r.result.split(',')[1]);
+            r.onerror=()=>fail(new Error('Error leyendo archivo'));
+            r.readAsDataURL(f);
+          });
+          talleres.push({nombre:f.name,tipo:f.type,base64:b64,tamanio:(f.size/1024).toFixed(1)+'KB'});
+        }
+      }
+      // Si no se adjuntaron archivos nuevos pero había anteriores, conservar
+      if(!talleres.length&&(exc.talleres||[]).length) talleres.push(...exc.talleres);
+      return{resp,dias,fecha,talleres};
+    }
+  });
+  if(!res.isConfirmed||!res.value)return;
+  const{resp,dias,fecha,talleres}=res.value;
+  try{
+    const updated=await apiFetch(`/api/excusas/${excId}/responder`,{
+      method:'PUT',
+      body:JSON.stringify({respProf:resp,diasExtra:dias,fechaLimite:fecha,talleres})
+    });
+    // Actualizar en DB local
+    const idx=(DB.exc||[]).findIndex(x=>x._id===excId||x.id===excId);
+    if(idx>=0) DB.exc[idx]=updated;
+    sw('success','Respuesta enviada al estudiante','',1600);
+    initAExc();
+  }catch(e){sw('error','Error: '+e.message);}
 }
 
 /* ============================================================
@@ -2147,16 +2247,40 @@ function loadPN(){
   if(!notasOk(per)){sw('error','Ingreso de notas cerrado para este periodo');return;}
   const matSel=gi('pnm')?.value;
   const ests=ebySalon(salon);
+  const el=gi('pnW');
+  if(!ests.length){el.innerHTML='<div class="mty"><div class="ei">🎓</div><p>Sin estudiantes en este salón</p></div>';return;}
+  /* Inicializar notas de todos los estudiantes antes de calcular materias */
+  ests.forEach(e=>syncN(e.id));
   let mats;
   if(CU.ciclo==='bachillerato'){
     /* Use per-salon assigned materias */
     const salonMats=getProfMatsSalon(CU.id,salon);
-    mats=matSel?[matSel]:(salonMats.length?salonMats:getMats(ests[0]?.id||''));
+    /* Fallback: intentar con cada estudiante hasta encontrar materias */
+    let fallbackMats=[];
+    if(!salonMats.length){
+      for(const e of ests){
+        const m=getMats(e.id);
+        if(m.length){fallbackMats=m;break;}
+      }
+    }
+    mats=matSel?[matSel]:(salonMats.length?salonMats:fallbackMats);
   } else {
-    mats=getMats(ests[0]?.id||'');
+    /* Primaria: buscar materias del primer estudiante que las tenga */
+    let primMats=[];
+    for(const e of ests){
+      const m=getMats(e.id);
+      if(m.length){primMats=m;break;}
+    }
+    mats=primMats;
   }
-  const el=gi('pnW');
-  if(!ests.length){el.innerHTML='<div class="mty"><div class="ei">🎓</div><p>Sin estudiantes</p></div>';return;}
+  /* Si aún no hay materias, mostrar advertencia clara */
+  if(!mats.length){
+    el.innerHTML=`<div class="al aly" style="margin-top:10px">
+      ⚠️ <strong>No se encontraron materias para el salón ${salon}.</strong><br>
+      Verifica que el salón tenga materias asignadas en la configuración.
+    </div>`;
+    return;
+  }
   el.innerHTML=`<div class="tw"><table>
     <thead>
       <tr><th>Estudiante</th>
@@ -3258,16 +3382,40 @@ function pgEExc(){
     <button class="btn bn" ${!ventanaOk?'disabled':''} onclick="envExcusa()">📨 Enviar Excusa</button>
   </div>
   <div class="card"><div class="chd"><span class="cti">📬 Mis Excusas</span></div>
-  ${mis.length?`<div class="tw"><table><thead>
-    <tr><th>Fecha</th><th>Dirigida a</th><th>Causa</th><th>Descripción</th><th>Estado</th></tr></thead>
-    <tbody>${mis.map(x=>`<tr>
-      <td style="font-family:var(--mn);font-size:12px">${x.fecha}</td>
-      <td><span class="bdg bbl">${x.dest}</span></td>
-      <td><span class="bdg bor">${x.causa}</span></td>
-      <td style="font-size:12px;color:var(--sl2)">${x.desc||'—'}</td>
-      <td><span class="bdg bwa">Enviada</span></td>
-    </tr>`).join('')}</tbody></table></div>`
-  :'<div class="mty"><div class="ei">📬</div><p>Sin excusas</p></div>'}
+  ${mis.length
+    ? mis.map(x=>{
+        const tieneResp=!!(x.respProf);
+        const talleresHtml=(x.talleres||[]).map(t=>
+          `<div style="display:flex;align-items:center;gap:8px;padding:6px 10px;background:#ebf8ff;border-radius:6px;margin-top:4px">
+            <span>📎</span>
+            <span style="font-size:12px;flex:1">${t.nombre} <span style="font-size:10px;color:var(--sl3)">(${t.tamanio||''})</span></span>
+            <button class="btn xs bb" onclick="descargarTallerExcusa('${x._id||x.id}','${encodeURIComponent(t.nombre)}')">⬇️ Descargar</button>
+          </div>`).join('');
+        return`<div style="border:1.5px solid ${tieneResp?'#68d391':'var(--bd)'};border-radius:10px;padding:12px;margin-bottom:10px;background:${tieneResp?'#f0fff4':'var(--bg2)'}">
+          <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px;margin-bottom:6px">
+            <div>
+              <span style="font-size:12px;font-family:var(--mn)">📅 ${x.fecha}</span>&nbsp;
+              <span class="bdg bbl">${x.dest}</span>&nbsp;
+              <span class="bdg bor">${x.causa}</span>
+            </div>
+            <span class="bdg ${tieneResp?'bgr':'bwa'}">${tieneResp?'✅ Respondida':'⏳ Pendiente'}</span>
+          </div>
+          ${x.desc?`<div style="font-size:12px;color:var(--sl2);margin-bottom:6px">💬 ${x.desc}</div>`:''}
+          ${tieneResp?`<div style="background:#e6fffa;border-radius:8px;padding:10px;margin-top:6px">
+            <div style="font-size:12px;font-weight:700;color:#276749;margin-bottom:4px">📩 Respuesta de ${x.respProfNombre||'tu profesor'}:</div>
+            <div style="font-size:13px;color:#234e52">${x.respProf}</div>
+            ${x.diasExtra>0?`<div style="margin-top:6px;font-size:12px">⏰ <strong>Tiempo extra:</strong> ${x.diasExtra} día(s) — <strong>Fecha límite:</strong> ${x.fechaLimite||'—'}</div>`:''}
+            ${talleresHtml?`<div style="margin-top:8px"><strong style="font-size:12px">📚 Talleres a realizar:</strong>${talleresHtml}</div>`:''}
+            <div style="margin-top:10px;padding:10px;background:#fffbeb;border:1.5px solid #f6ad55;border-radius:8px;font-size:12px;font-weight:700;color:#c05621">
+              ⚠️ Debe enviar el taller en el apartado <strong>Talleres y Tareas</strong>
+            </div>
+            ${!x.respLeida
+              ?("<button class=\"btn xs bg\" style=\"margin-top:8px\" onclick=\"marcarRespLeida('"+( x._id||x.id)+"')\">👁️ Marcar como leída</button>")
+              :"<div style=\"font-size:10px;color:var(--sl3);margin-top:6px\">✓ Vista el "+(x.respTs||"")+"</div>"}
+          </div>`:''}
+        </div>`;
+      }).join('')
+    :'<div class="mty"><div class="ei">📬</div><p>Sin excusas</p></div>'}
   </div>`;
 }
 /* ── SOBREESCRITA por api-layer.js ── */
@@ -3276,16 +3424,30 @@ async function envExcusa(){ /* implementado en api-layer.js */ }
 /* Show excusas to professor in their home panel */
 function renderPExcR(){
   const el=gi('pExcR');if(!el)return;
-  const mis=DB.exc.filter(x=>x.dest===CU.nombre||(CU.salones||[]).includes(x.salon)).slice(-10).reverse();
-  el.innerHTML=mis.length?`<div class="tw"><table><thead>
-    <tr><th>Fecha</th><th>Estudiante</th><th>Causa</th><th>Descripción</th></tr></thead>
-    <tbody>${mis.map(x=>`<tr>
-      <td style="font-family:var(--mn);font-size:12px">${x.fecha}</td>
-      <td><strong>${x.enombre}</strong></td>
-      <td><span class="bdg bor">${x.causa}</span></td>
-      <td style="font-size:12px;color:var(--sl2)">${x.desc||'—'}</td>
-    </tr>`).join('')}</tbody></table></div>`
-  :'<div class="mty" style="padding:16px"><div class="ei">📬</div><p>Sin excusas recibidas</p></div>';
+  const mis=DB.exc.filter(x=>x.dest===CU.nombre||(CU.salones||[]).includes(x.salon)).slice(-20).reverse();
+  if(!mis.length){el.innerHTML='<div class="mty" style="padding:16px"><div class="ei">📬</div><p>Sin excusas recibidas</p></div>';return;}
+  el.innerHTML=mis.map(x=>{
+    const yaResp=!!(x.respProf);
+    return`<div style="border:1px solid var(--bd);border-radius:8px;padding:10px;margin-bottom:8px;background:${yaResp?'#f0fff4':'var(--bg2)'}">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:6px">
+        <div>
+          <strong style="font-size:13px">${x.enombre}</strong>
+          <span class="bdg bgy" style="font-size:10px">${x.salon||'—'}</span><br>
+          <span style="font-size:11px;color:var(--sl2)">📅 ${x.fecha} &nbsp;·&nbsp; 📋 <span class="bdg bor" style="font-size:10px">${x.causa}</span></span>
+          ${x.desc?`<div style="font-size:11px;color:var(--sl3);margin-top:2px">💬 ${x.desc}</div>`:''}
+        </div>
+        <button class="btn ${yaResp?'bs':'bn'} sm" onclick="responderExcusa('${x._id||x.id}')">
+          ${yaResp?'✏️ Editar':'📨 Responder'}
+        </button>
+      </div>
+      ${yaResp?`<div style="margin-top:6px;font-size:11px;background:#e6fffa;border-radius:6px;padding:6px">
+        ✅ <strong>Tu respuesta:</strong> ${x.respProf}
+        ${x.diasExtra>0?`<br>⏰ ${x.diasExtra} día(s) extra — Límite: ${x.fechaLimite||'—'}`:''}
+        ${(x.talleres||[]).length?`<br>📎 ${x.talleres.length} taller(es) adjunto(s)`:''}
+        ${x.respLeida?'<span class=\"bdg bgr\" style=\"font-size:9px;margin-left:4px\">✓ Vista</span>':''}
+      </div>`:''}
+    </div>`;
+  }).join('');
 }
 
 /* ============================================================

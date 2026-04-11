@@ -101,16 +101,33 @@ const AsistenciaSchema = new Schema({
 AsistenciaSchema.index({ fecha: 1, salon: 1, colegioId: 1 }, { unique: true });
 
 const ExcusaSchema = new Schema({
-  estId:     { type: String, required: true },
-  enombre:   { type: String, required: true },
-  salon:     { type: String, default: '' },
-  fecha:     { type: String, required: true },
-  dest:      { type: String, required: true },
-  causa:     { type: String, required: true },
-  desc:      { type: String, default: '' },
-  leida:     { type: Boolean, default: false },
-  ts:        { type: String, default: '' },
-  colegioId: { type: String, default: '', index: true },
+  estId:          { type: String, required: true },
+  enombre:        { type: String, required: true },
+  salon:          { type: String, default: '' },
+  fecha:          { type: String, required: true },
+  dest:           { type: String, required: true },
+  causa:          { type: String, required: true },
+  desc:           { type: String, default: '' },
+  leida:          { type: Boolean, default: false },
+  ts:             { type: String, default: '' },
+  colegioId:      { type: String, default: '', index: true },
+  // Respuesta del profesor
+  respProf:       { type: String, default: '' },        // texto de respuesta
+  respProfNombre: { type: String, default: '' },        // nombre del prof que respondió
+  respTs:         { type: String, default: '' },        // timestamp respuesta
+  // Tiempo prolongado (días extra)
+  diasExtra:      { type: Number, default: 0 },
+  fechaLimite:    { type: String, default: '' },        // fecha límite para entregar talleres
+  // Archivos de talleres adjuntados por el profesor
+  talleres: [{
+    nombre:    { type: String, default: '' },
+    tipo:      { type: String, default: '' },
+    base64:    { type: String, default: '' },
+    tamanio:   { type: String, default: '' },
+    _id: false,
+  }],
+  // Estado lectura de respuesta por parte del estudiante
+  respLeida: { type: Boolean, default: false },
 }, { timestamps: true, collection: 'excusas' });
 
 const VClaseSchema = new Schema({

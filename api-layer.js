@@ -469,6 +469,71 @@ async function envExcusa() {
 }
 
 // ═══════════════════════════════════════════════════════════════════
+// marcarRespLeida() — estudiante marca la respuesta del prof como leída
+// ═══════════════════════════════════════════════════════════════════
+async function marcarRespLeida(excId) {
+  try {
+    const updated = await apiFetch(`/api/excusas/${excId}/leida`, { method: 'PUT', body: JSON.stringify({}) });
+    const idx = (DB.exc || []).findIndex(x => x._id === excId || x.id === excId);
+    if (idx >= 0) DB.exc[idx] = updated;
+    // Aviso automático al marcar como leída
+    await Swal.fire({
+      icon: 'info',
+      title: '📚 Recuerda',
+      html: `<div style="font-size:14px;line-height:1.6">
+        Debes enviar el taller o actividad asignada en el apartado<br>
+        <strong style="color:#2b6cb0;font-size:16px">📎 Talleres y Tareas</strong>
+        <br><br>
+        <div style="background:#fffbeb;border:1.5px solid #f6ad55;border-radius:8px;padding:10px;font-size:13px;color:#c05621">
+          ⚠️ No olvides enviar antes de la fecha límite indicada por tu profesor.
+        </div>
+      </div>`,
+      confirmButtonText: '✅ Entendido, ir a Talleres y Tareas',
+      confirmButtonColor: '#2b6cb0',
+      showCancelButton: true,
+      cancelButtonText: 'Cerrar',
+    }).then(r => { if (r.isConfirmed) goto('etare'); });
+    // Refrescar la vista
+    if (typeof pgEExc === 'function') {
+      const el = document.getElementById('main') || document.getElementById('content');
+      if (el) { const html = pgEExc(); if (html) el.innerHTML = html; }
+    }
+  } catch (e) { sw('error', 'Error: ' + e.message); }
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// descargarTallerExcusa() — descarga un archivo adjunto de excusa
+// ═══════════════════════════════════════════════════════════════════
+function descargarTallerExcusa(excId, nombreEnc) {
+  const nombre = decodeURIComponent(nombreEnc);
+  const exc = (DB.exc || []).find(x => x._id === excId || x.id === excId);
+  if (!exc) { sw('error', 'Excusa no encontrada'); return; }
+  const taller = (exc.talleres || []).find(t => t.nombre === nombre);
+  if (!taller || !taller.base64) { sw('error', 'Archivo no disponible'); return; }
+  // Convertir base64 a blob y descargar
+  try {
+    const byteChars = atob(taller.base64);
+    const byteNums = new Array(byteChars.length);
+    for (let i = 0; i < byteChars.length; i++) byteNums[i] = byteChars.charCodeAt(i);
+    const blob = new Blob([new Uint8Array(byteNums)], { type: taller.tipo || 'application/octet-stream' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = taller.nombre;
+    document.body.appendChild(a); a.click();
+    setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(url); }, 1000);
+    // Aviso de envío
+    setTimeout(() => {
+      Swal.fire({
+        icon: 'warning', title: '⚠️ Recuerda',
+        html: `<div style="font-size:14px">Debes enviar el taller completado en el apartado<br><strong style="color:#2b6cb0">📎 Talleres y Tareas</strong></div>`,
+        confirmButtonText: 'Ir a Talleres y Tareas', confirmButtonColor: '#2b6cb0',
+        showCancelButton: true, cancelButtonText: 'Cerrar',
+      }).then(r => { if (r.isConfirmed) goto('etare'); });
+    }, 600);
+  } catch (e) { sw('error', 'Error al descargar: ' + e.message); }
+}
+
+// ═══════════════════════════════════════════════════════════════════
 // addVClase() / delVClase()
 // ═══════════════════════════════════════════════════════════════════
 async function addVClase() {

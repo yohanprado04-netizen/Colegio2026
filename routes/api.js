@@ -432,6 +432,41 @@ router.post('/excusas', authMiddleware, requireRole('est'), async (req, res) => 
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
+// Profesor responde excusa: texto + días extra + archivos de talleres
+router.put('/excusas/:id/responder', authMiddleware, requireRole('profe', 'admin', 'superadmin'), async (req, res) => {
+  try {
+    const { respProf, diasExtra, fechaLimite, talleres } = req.body;
+    const exc = await Excusa.findOneAndUpdate(
+      { _id: req.params.id, colegioId: tenantId(req) || req.user.colegioId || '' },
+      {
+        respProf:       respProf       || '',
+        respProfNombre: req.user.nombre,
+        respTs:         new Date().toLocaleString('es-CO'),
+        diasExtra:      Number(diasExtra) || 0,
+        fechaLimite:    fechaLimite || '',
+        talleres:       talleres    || [],
+        respLeida:      false,
+      },
+      { new: true }
+    );
+    if (!exc) return res.status(404).json({ error: 'Excusa no encontrada' });
+    res.json(exc);
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// Marcar respuesta del profesor como leída por el estudiante
+router.put('/excusas/:id/leida', authMiddleware, requireRole('est'), async (req, res) => {
+  try {
+    const exc = await Excusa.findOneAndUpdate(
+      { _id: req.params.id, estId: req.user.id, colegioId: req.user.colegioId || '' },
+      { respLeida: true },
+      { new: true }
+    );
+    if (!exc) return res.status(404).json({ error: 'Excusa no encontrada' });
+    res.json(exc);
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
 // ═══════════════════════════════════════════════════════════════════
 // CLASES VIRTUALES
 // ═══════════════════════════════════════════════════════════════════
