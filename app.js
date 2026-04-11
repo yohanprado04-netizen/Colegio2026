@@ -717,7 +717,11 @@ function pgASal(){
     <div class="card"><div class="chd"><span class="cti">🎓 Bachillerato</span></div><div id="slB"></div></div>
   </div>`;
 }
-function initASal(){renderSals();}
+function initASal(){
+  // Reload DB para asegurar que salones son solo del colegio actual
+  if(typeof dbLoad==='function') dbLoad().catch(()=>{}).finally(()=>renderSals());
+  else renderSals();
+}
 function renderSals(){
   ['primaria','bachillerato'].forEach(c=>{
     const el=gi(c==='primaria'?'slP':'slB');if(!el) return;
@@ -862,7 +866,11 @@ function pgAEst(ciclo){
     <div id="et${ciclo}"></div>
   </div>`;
 }
-function initAEst(c){renderEstTabla(c);}
+function initAEst(c){
+  // Reload DB fresh para asegurar aislamiento de salones/materias por colegio
+  if(typeof dbLoad==='function') dbLoad().catch(()=>{}).finally(()=>renderEstTabla(c));
+  else renderEstTabla(c);
+}
 function filterEst(c){renderEstTabla(c,gi('se'+c)?.value||'');}
 function renderEstTabla(ciclo,filter=''){
   const el=gi('et'+ciclo);if(!el) return;
@@ -1132,7 +1140,11 @@ function pgAMat(){
     </div><div id="perL"></div>
   </div>`;
 }
-function initAMat(){renderMats();}
+function initAMat(){
+  // Reload DB para asegurar materias del colegio actual
+  if(typeof dbLoad==='function') dbLoad().catch(()=>{}).finally(()=>renderMats());
+  else renderMats();
+}
 function matItem(v,delFn,ciclo){
   return`<div style="display:flex;justify-content:space-between;align-items:center;
     padding:9px 12px;background:var(--bg2);border-radius:8px;margin-bottom:7px;border:1px solid var(--bd)">
@@ -2357,7 +2369,7 @@ function pgPTar(){
     <tr><th>Estudiante</th><th>Salón</th><th>Archivo</th><th>Materia</th><th>Periodo</th><th>Descripción</th><th>Fecha</th><th>Estado</th><th>Acción</th></tr></thead>
     <tbody id="ptarB">${todas.map((u,i)=>{
       const est=DB.ests.find(e=>e.id===u.estId);
-      const canOpen=!!u.dataUrl;
+      const canOpen=!!(u.id||u.dataUrl); // siempre abrir si hay id — fetch lazy
       return`<tr data-salon="${est?.salon||''}" style="background:${!u.revisado?'':'#f9fff9'}">
         <td><strong style="font-size:13px">${u.estNombre||'—'}</strong></td>
         <td><span class="bdg bgy">${est?.salon||'—'}</span></td>
@@ -2388,24 +2400,44 @@ function getPTarList(){
   });
   return todas.sort((a,b)=>(b.id||'').localeCompare(a.id||''));
 }
-function abrirArchivo(idx){
+async function abrirArchivo(idx){
   const lista=getPTarList();
-  const u=lista[idx];if(!u||!u.dataUrl){sw('error','Archivo no disponible');return;}
-  /* Open in new tab */
+  const u=lista[idx];if(!u){sw('error','Archivo no encontrado');return;}
+  // Si no tiene dataUrl en memoria, fetch lazy desde el servidor
+  if(!u.dataUrl){
+    try{
+      sw('info','Cargando archivo…','',1000);
+      const data=await apiFetch(`/api/uploads/${u.id}/data`);
+      if(!data||!data.dataUrl){sw('error','El archivo no está disponible en el servidor');return;}
+      u.dataUrl=data.dataUrl;
+      if(!u.type&&data.type) u.type=data.type;
+      if(!u.nombre&&data.nombre) u.nombre=data.nombre;
+    }catch(e){sw('error','Error al cargar el archivo: '+e.message);return;}
+  }
+  _abrirDataUrl(u.dataUrl,u.type,u.nombre);
+}
+function _abrirDataUrl(dataUrl,type,nombre){
   const w=window.open();
-  if(!w){sw('error','Bloqueo de popups. Permite ventanas emergentes.');return;}
-  const isPdf=u.type==='application/pdf';
-  const isImg=u.type&&u.type.startsWith('image/');
+  if(!w){
+    // Fallback sin popup: crear link y hacer click
+    const a=document.createElement('a');
+    a.href=dataUrl;a.download=nombre||'archivo';
+    document.body.appendChild(a);a.click();
+    document.body.removeChild(a);
+    return;
+  }
+  const isPdf=type==='application/pdf';
+  const isImg=type&&type.startsWith('image/');
   if(isPdf||isImg){
-    w.document.write(`<html><head><title>${u.nombre}</title></head>
-      <body style="margin:0;background:#222">
-      <${isPdf?'embed':'img'} src="${u.dataUrl}" style="width:100%;height:100vh;${isPdf?'':'max-height:100vh;object-fit:contain'}" 
+    w.document.write(`<html><head><title>${nombre||'Archivo'}</title></head>
+      <body style="margin:0;background:#1a202c;display:flex;align-items:center;justify-content:center;min-height:100vh">
+      <${isPdf?'embed':'img'} src="${dataUrl}" style="width:100%;height:100vh;${isPdf?'':'max-height:100vh;object-fit:contain'}" 
         ${isPdf?'type="application/pdf"':''}></${isPdf?'embed':'img'}>
       </body></html>`);
+    w.document.close();
   } else {
-    /* For word/excel: trigger download */
     const a=w.document.createElement('a');
-    a.href=u.dataUrl;a.download=u.nombre;
+    a.href=dataUrl;a.download=nombre||'archivo';
     w.document.body.appendChild(a);a.click();
     w.close();
   }
@@ -2582,7 +2614,7 @@ function pgPRec(){
                   ${r.revisado?`<div style="font-size:10px;color:var(--sl3)">${r.revisadoTs||''}</div>`:''}
                 </td>
                 <td style="display:flex;flex-direction:column;gap:4px">
-                  ${r.dataUrl?`<button class="btn xs bb" onclick="abrirRec(${idx})">📂 Abrir</button>`:''}
+                  ${(r.id||r.dataUrl)?`<button class="btn xs bb" onclick="abrirRec(${idx})">📂 Abrir</button>`:''}
                   ${!r.revisado?`<button class="btn xs bs" onclick="marcarRecRevisado('${r.id}')">✓ Revisado</button>`:''}
                 </td>
               </tr>`;}).join('')}
@@ -2727,17 +2759,20 @@ function abrirEnviarPlan(estId,materia,salon){
 function getRecList(){
   return(DB.recs||[]).filter(r=>r.profId===CU.id).slice().reverse();
 }
-function abrirRec(idx){
+async function abrirRec(idx){
   const lista=getRecList();const r=lista[idx];
-  if(!r||!r.dataUrl){sw('error','Archivo no disponible');return;}
-  const w=window.open();if(!w){sw('error','Permite ventanas emergentes');return;}
-  const isPdf=r.type==='application/pdf';const isImg=r.type?.startsWith('image/');
-  if(isPdf||isImg){
-    w.document.write(`<html><head><title>${r.nombre}</title></head>
-      <body style="margin:0;background:#222">
-      <${isPdf?'embed':'img'} src="${r.dataUrl}" style="width:100%;height:100vh" ${isPdf?'type="application/pdf"':''}></${isPdf?'embed':'img'}>
-      </body></html>`);
-  }else{const a=w.document.createElement('a');a.href=r.dataUrl;a.download=r.nombre;w.document.body.appendChild(a);a.click();w.close();}
+  if(!r){sw('error','Recuperación no encontrada');return;}
+  if(!r.dataUrl){
+    try{
+      sw('info','Cargando archivo…','',1000);
+      const data=await apiFetch(`/api/recuperaciones/${r.id}/data`);
+      if(!data||!data.dataUrl){sw('error','El archivo no está disponible');return;}
+      r.dataUrl=data.dataUrl;
+      if(!r.type&&data.type) r.type=data.type;
+      if(!r.nombre&&data.nombre) r.nombre=data.nombre;
+    }catch(e){sw('error','Error al cargar: '+e.message);return;}
+  }
+  _abrirDataUrl(r.dataUrl,r.type,r.nombre);
 }
 /* ── SOBREESCRITA por api-layer.js ── */
 async function marcarRecRevisado(id){ /* implementado en api-layer.js */ }
@@ -2768,7 +2803,7 @@ function pgEHist(){
             <td style="font-size:12px;color:var(--sl2);max-width:110px">${r.desc||'—'}</td>
             <td style="font-family:var(--mn);font-size:11px">${r.fecha}</td>
             <td><span class="bdg ${r.revisado?'bgr':'brd'}">${r.revisado?`✓ Revisado ${r.revisadoTs||''}`:'✗ No revisado'}</span></td>
-            <td>${r.dataUrl?`<button class="btn xs bb" onclick="abrirHistRec('histRecs',${(DB.histRecs||[]).indexOf(r)})">📂 Abrir</button>`:'—'}</td>
+            <td>${(r.id||r.dataUrl)?`<button class="btn xs bb" onclick="abrirHistRec('histRecs',${(DB.histRecs||[]).indexOf(r)})">📂 Abrir</button>`:'—'}</td>
           </tr>`;
         }).join('')}
       </tbody></table></div>
@@ -2822,7 +2857,7 @@ function pgPHist(){
               <td style="font-family:var(--mn);font-size:11px">${r.fecha}</td>
               <td><span class="bdg ${r.revisado?'bgr':'brd'}">${r.revisado?`✓ Revisado`:'✗ Sin revisar'}</span>
                 ${r.revisado?`<div style="font-size:10px;color:var(--sl3)">${r.revisadoTs||''}</div>`:''}</td>
-              <td>${r.dataUrl?`<button class="btn xs bb" onclick="abrirHistRec('histRecs',${globalIdx})">📂 Abrir</button>`:'—'}</td>
+              <td>${(r.id||r.dataUrl)?`<button class="btn xs bb" onclick="abrirHistRec('histRecs',${globalIdx})">📂 Abrir</button>`:'—'}</td>
             </tr>`;
           }).join('')}
         </tbody></table></div>
@@ -2843,17 +2878,20 @@ function filtrarHistProf(){
   });
 }
 /* Open archived file */
-function abrirHistRec(db,idx){
+async function abrirHistRec(db,idx){
   const r=(DB[db]||[])[idx];
-  if(!r||!r.dataUrl){sw('error','Archivo no disponible en el historial');return;}
-  const w=window.open();if(!w){sw('error','Permite ventanas emergentes');return;}
-  const isPdf=r.type==='application/pdf';const isImg=r.type?.startsWith('image/');
-  if(isPdf||isImg){
-    w.document.write(`<html><head><title>${r.nombre}</title></head>
-      <body style="margin:0;background:#222">
-      <${isPdf?'embed':'img'} src="${r.dataUrl}" style="width:100%;height:100vh" ${isPdf?'type="application/pdf"':''}></${isPdf?'embed':'img'}>
-      </body></html>`);
-  }else{const a=w.document.createElement('a');a.href=r.dataUrl;a.download=r.nombre;w.document.body.appendChild(a);a.click();w.close();}
+  if(!r){sw('error','Archivo no encontrado en historial');return;}
+  if(!r.dataUrl){
+    try{
+      sw('info','Cargando archivo…','',1000);
+      const data=await apiFetch(`/api/recuperaciones/${r.id}/data`);
+      if(!data||!data.dataUrl){sw('error','El archivo no está disponible');return;}
+      r.dataUrl=data.dataUrl;
+      if(!r.type&&data.type) r.type=data.type;
+      if(!r.nombre&&data.nombre) r.nombre=data.nombre;
+    }catch(e){sw('error','Error al cargar: '+e.message);return;}
+  }
+  _abrirDataUrl(r.dataUrl,r.type,r.nombre);
 }
 
 function pgEB(){return`<div class="ph"><h2>Mi Boletín</h2><button class="btn xs bg" onclick="showHelp('eb')">❓ Ayuda</button></div><div id="ebB"></div>`;}

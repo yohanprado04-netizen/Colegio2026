@@ -1315,6 +1315,9 @@ async function importarProfesoresCSV(rows, ciclo) {
   });
 }
 
+// Exponer dbLoad para uso en app.js
+if (typeof dbLoad === 'function') window.dbLoad = dbLoad;
+
 document.addEventListener('DOMContentLoaded', async () => {
   const btn = document.querySelector('.bl');
   if (btn) { btn.textContent = 'Conectando…'; btn.disabled = true; }

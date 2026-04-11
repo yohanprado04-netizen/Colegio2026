@@ -52,7 +52,7 @@ router.get('/', authMiddleware, async (req, res) => {
       // Uploads: excluir dataUrl del listado masivo para no saturar memoria
       Upload.find(cf, '-dataUrl').lean(),
       Plan.find(cf).lean(),
-      Recuperacion.find(cf).lean(),
+      Recuperacion.find(cf, '-dataUrl').lean(), // dataUrl se carga lazy via /recuperaciones/:id/data
       Auditoria.find(cf).sort({ createdAt: -1 }).limit(500).lean(),
       EstHist.find(cf).lean(),
       Bloqueo.find(cf).lean(),

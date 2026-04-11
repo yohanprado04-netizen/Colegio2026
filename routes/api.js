@@ -155,9 +155,13 @@ router.get('/config', authMiddleware, async (req, res) => {
 router.put('/config/:key', authMiddleware, requireRole('admin', 'superadmin'), async (req, res) => {
   try {
     const cid = tenantId(req) || req.user.colegioId || 'global';
+    // Usar $set + $setOnInsert para evitar E11000 en upsert con índice único {key, colegioId}
     const cfg = await Config.findOneAndUpdate(
       { key: req.params.key, colegioId: cid },
-      { value: req.body.value, colegioId: cid },
+      {
+        $set:           { value: req.body.value },
+        $setOnInsert:   { key: req.params.key, colegioId: cid }
+      },
       { upsert: true, new: true }
     );
     res.json(cfg);
@@ -411,6 +415,15 @@ router.post('/planes/archivar', authMiddleware, requireRole('admin', 'superadmin
 // ═══════════════════════════════════════════════════════════════════
 // RECUPERACIONES
 // ═══════════════════════════════════════════════════════════════════
+// GET lazy dataUrl de una recuperación específica
+router.get('/recuperaciones/:id/data', authMiddleware, async (req, res) => {
+  try {
+    const r = await Recuperacion.findOne({ id: req.params.id }, 'dataUrl type nombre').lean();
+    if (!r) return res.status(404).json({ error: 'No encontrado' });
+    res.json(r);
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
 router.get('/recuperaciones', authMiddleware, async (req, res) => {
   try {
     const filter = { archivado: false, ...tenantFilter(req) };
