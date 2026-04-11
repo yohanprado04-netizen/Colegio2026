@@ -747,14 +747,25 @@ async function unblk(u) {
 // ═══════════════════════════════════════════════════════════════════
 // saveDisc()
 // ═══════════════════════════════════════════════════════════════════
-async function saveDisc(eid, v) {
+async function saveDisc(eid, v, periodo) {
   if (!validateSession() || !['admin', 'profe'].includes(CU.role)) return;
+  const val = parseFloat(v);
+  if (isNaN(val) || val < 0 || val > 5) {
+    sw('error', 'Disciplina inválida', 'Ingresa un valor entre 0.0 y 5.0'); return;
+  }
   syncN(eid);
-  DB.notas[eid].disciplina = v;
+  // Guardar en el periodo actual si se conoce
+  if (periodo && DB.notas[eid]) {
+    if (!DB.notas[eid][periodo]) DB.notas[eid][periodo] = {};
+    DB.notas[eid][periodo].disciplina = val;
+  }
   try {
-    await apiFetch(`/api/notas/${eid}/disciplina`, {
-      method: 'PUT', body: JSON.stringify({ disciplina: v })
+    const res = await apiFetch(`/api/notas/${eid}/disciplina`, {
+      method: 'PUT', body: JSON.stringify({ disciplina: val, periodo: periodo || '' })
     });
+    // Actualizar promedio global en memoria
+    if (res && res.disciplinaGlobal != null) DB.notas[eid].disciplina = res.disciplinaGlobal;
+    else DB.notas[eid].disciplina = val;
   } catch (e) { console.warn('saveDisc error:', e); }
 }
 
@@ -1394,6 +1405,184 @@ async function importarProfesoresCSV(rows, ciclo) {
       ${ok > 0 && ciclo === 'bachillerato' ? '<br><br>💡 Recuerda asignar materias por salón a cada profesor.' : ''}
     </div>`,
     confirmButtonText: 'Aceptar'
+  });
+}
+
+
+// ═══════════════════════════════════════════════════════════════════
+// eliminarTodosEsts(ciclo) — elimina TODOS los estudiantes del ciclo
+// ═══════════════════════════════════════════════════════════════════
+async function eliminarTodosEsts(ciclo) {
+  const lista = DB.ests.filter(e => cicloOf(e.salon) === ciclo);
+  if (!lista.length) { sw('info', 'No hay estudiantes en este ciclo'); return; }
+  const conf = await Swal.fire({
+    title: `⚠️ ¿Eliminar TODOS los estudiantes de ${ciclo === 'primaria' ? 'Primaria' : 'Bachillerato'}?`,
+    html: `<div style="font-size:14px">
+      <p>Se eliminarán <strong>${lista.length} estudiante(s)</strong> permanentemente.</p>
+      <p style="color:#c53030">Esta acción no se puede deshacer. Quedarán en el historial.</p>
+    </div>`,
+    icon: 'warning',
+    showCancelButton: true,
+    confirmButtonText: `Sí, eliminar ${lista.length} estudiantes`,
+    confirmButtonColor: '#e53e3e',
+    cancelButtonText: 'Cancelar'
+  });
+  if (!conf.isConfirmed) return;
+
+  Swal.fire({
+    title: 'Eliminando estudiantes…',
+    html: '<div id="delProg">0 / ' + lista.length + '</div>',
+    allowOutsideClick: false, showConfirmButton: false,
+    didOpen: () => Swal.showLoading()
+  });
+
+  let ok = 0, fail = 0;
+  const fecha = new Date().toLocaleDateString('es-CO');
+  for (let i = 0; i < lista.length; i++) {
+    const est = lista[i];
+    try {
+      await apiFetch(`/api/usuarios/${est.id}`, { method: 'DELETE' });
+      // Marcar en historial
+      const h = (DB.estHist || []).find(x => x.id === est.id);
+      if (h) {
+        h.activo = false; h.eliminado = fecha;
+        h.snapNotas = JSON.parse(JSON.stringify(DB.notas[est.id] || {}));
+        h.snapMats  = getMats(est.id); h.snapSalon = est.salon || '';
+        await apiFetch(`/api/est-hist/${est.id}`, { method: 'PUT', body: JSON.stringify(h) }).catch(() => {});
+      }
+      DB.ests = DB.ests.filter(x => x.id !== est.id);
+      delete DB.notas[est.id];
+      ok++;
+    } catch (_) { fail++; }
+    const el = gi('delProg');
+    if (el) el.textContent = `${ok + fail} / ${lista.length}`;
+  }
+
+  renderEstTabla(ciclo);
+  Swal.fire({
+    icon: fail === 0 ? 'success' : 'warning',
+    title: 'Eliminación completada',
+    html: `✅ <strong>${ok}</strong> eliminados${fail ? `<br>❌ <strong>${fail}</strong> con error` : ''}`,
+  });
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// promoverEstudiantes(ciclo) — promueve/repite año según resultados
+// Regla: perdió ≥3 materias → repite | ganó → siguiente salón
+//        11° → GRADUADO (se elimina con historial)
+// ═══════════════════════════════════════════════════════════════════
+async function promoverEstudiantes(ciclo) {
+  const lista = DB.ests.filter(e => cicloOf(e.salon) === ciclo);
+  if (!lista.length) { sw('info', 'No hay estudiantes en este ciclo'); return; }
+
+  // Calcular resultado para cada estudiante
+  const resultados = lista.map(e => {
+    const mp = matPerdAnio ? matPerdAnio(e.id) : matPerd(e.id);
+    const pierde = mp.length >= 3;
+    const sig = siguienteSalon ? siguienteSalon(e.salon) : null;
+    return {
+      est: e,
+      pierde,
+      matsPerdidas: mp,
+      siguienteSalon: pierde ? e.salon : (sig || e.salon),
+      graduado: !pierde && sig === 'GRADUADO'
+    };
+  });
+
+  const promueven   = resultados.filter(r => !r.pierde && !r.graduado);
+  const repiten     = resultados.filter(r => r.pierde);
+  const graduados   = resultados.filter(r => r.graduado);
+
+  const conf = await Swal.fire({
+    title: '🎓 Promover año — Resumen',
+    width: 600,
+    html: `<div style="text-align:left;font-size:13px;font-family:var(--fn)">
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:14px">
+        <div style="background:#f0fff4;border-radius:8px;padding:10px;text-align:center">
+          <div style="font-size:1.6rem">⬆️</div>
+          <div style="font-size:1.4rem;font-weight:800;color:#276749">${promueven.length}</div>
+          <div style="font-size:11px;color:#4a5568">Promueven</div>
+        </div>
+        <div style="background:#fff5f5;border-radius:8px;padding:10px;text-align:center">
+          <div style="font-size:1.6rem">🔁</div>
+          <div style="font-size:1.4rem;font-weight:800;color:#c53030">${repiten.length}</div>
+          <div style="font-size:11px;color:#4a5568">Repiten</div>
+        </div>
+        <div style="background:#ebf8ff;border-radius:8px;padding:10px;text-align:center">
+          <div style="font-size:1.6rem">🎓</div>
+          <div style="font-size:1.4rem;font-weight:800;color:#2b6cb0">${graduados.length}</div>
+          <div style="font-size:11px;color:#4a5568">Graduados</div>
+        </div>
+      </div>
+      ${repiten.length ? `<div style="background:#fff5f5;border-radius:8px;padding:10px;margin-bottom:8px">
+        <strong style="color:#c53030">🔁 Repiten (≥3 materias perdidas):</strong><br>
+        ${repiten.slice(0,5).map(r=>`• ${r.est.nombre} (${r.est.salon}) — ${r.matsPerdidas.length} mat.`).join('<br>')}
+        ${repiten.length>5?`<br><em>... y ${repiten.length-5} más</em>`:''}
+      </div>` : ''}
+      ${promueven.length ? `<div style="background:#f0fff4;border-radius:8px;padding:10px;margin-bottom:8px">
+        <strong style="color:#276749">⬆️ Promovidos:</strong><br>
+        ${promueven.slice(0,5).map(r=>`• ${r.est.nombre}: ${r.est.salon} → ${r.siguienteSalon}`).join('<br>')}
+        ${promueven.length>5?`<br><em>... y ${promueven.length-5} más</em>`:''}
+      </div>` : ''}
+      ${graduados.length ? `<div style="background:#ebf8ff;border-radius:8px;padding:10px">
+        <strong style="color:#2b6cb0">🎓 Graduados (pasan al historial):</strong><br>
+        ${graduados.map(r=>`• ${r.est.nombre}`).join('<br>')}
+      </div>` : ''}
+    </div>`,
+    showCancelButton: true,
+    confirmButtonText: '✅ Aplicar cambios',
+    confirmButtonColor: 'var(--nv)',
+    cancelButtonText: 'Cancelar'
+  });
+  if (!conf.isConfirmed) return;
+
+  Swal.fire({
+    title: 'Aplicando cambios…', allowOutsideClick: false,
+    showConfirmButton: false, didOpen: () => Swal.showLoading()
+  });
+
+  const fecha = new Date().toLocaleDateString('es-CO');
+  let ok = 0, fail = 0;
+
+  for (const r of resultados) {
+    try {
+      if (r.graduado) {
+        // Graduados: eliminar del sistema y pasar a historial
+        await apiFetch(`/api/usuarios/${r.est.id}`, { method: 'DELETE' });
+        const h = (DB.estHist || []).find(x => x.id === r.est.id);
+        if (h) {
+          h.activo = false; h.eliminado = fecha;
+          h.snapNotas = JSON.parse(JSON.stringify(DB.notas[r.est.id] || {}));
+          h.snapMats  = getMats(r.est.id); h.snapSalon = r.est.salon || '';
+          h.graduado  = true;
+          await apiFetch(`/api/est-hist/${r.est.id}`, { method: 'PUT', body: JSON.stringify(h) }).catch(() => {});
+        }
+        DB.ests = DB.ests.filter(x => x.id !== r.est.id);
+        delete DB.notas[r.est.id];
+      } else if (!r.pierde && r.est.salon !== r.siguienteSalon) {
+        // Promovido: cambiar de salón
+        const update = { salon: r.siguienteSalon };
+        await apiFetch(`/api/usuarios/${r.est.id}`, { method: 'PUT', body: JSON.stringify(update) });
+        r.est.salon = r.siguienteSalon;
+        // Actualizar historial
+        const h = (DB.estHist || []).find(x => x.id === r.est.id);
+        if (h) { h.salon = r.siguienteSalon; await apiFetch(`/api/est-hist/${r.est.id}`, { method: 'PUT', body: JSON.stringify(h) }).catch(() => {}); }
+      }
+      // Repiten: no se mueven, no hace falta hacer nada
+      ok++;
+    } catch (_) { fail++; }
+  }
+
+  renderEstTabla(ciclo);
+  Swal.fire({
+    icon: fail === 0 ? 'success' : 'warning',
+    title: 'Año promovido',
+    html: `<div style="font-size:14px">
+      ✅ Promovidos: <strong>${promueven.length}</strong><br>
+      🔁 Repiten: <strong>${repiten.length}</strong><br>
+      🎓 Graduados: <strong>${graduados.length}</strong>
+      ${fail ? `<br>❌ Errores: <strong>${fail}</strong>` : ''}
+    </div>`
   });
 }
 

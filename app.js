@@ -233,6 +233,47 @@ function puestoP(eid,per){
 function scC(n){n=+n;if(n===0)return'sc scz';if(n<3)return'sc scr';if(n<4)return'sc sco';if(n<=4.5)return'sc scg';return'sc scb';}
 function scCol(n){n=+n;if(n===0)return'#a0aec0';if(n<3)return'var(--red)';if(n<4)return'var(--ora)';if(n<=4.5)return'var(--grn)';return'var(--nsc)';}
 function today(){return new Date().toISOString().split('T')[0];}
+
+// Categoría de disciplina numérica
+function discLabel(n){
+  n=+n;
+  if(isNaN(n)||n===0) return '—';
+  if(n>=4.5) return 'Excelente';
+  if(n>=4.0) return 'Bueno';
+  if(n>=3.0) return 'Básico';
+  return 'Bajo';
+}
+
+// Siguiente salón en la progresión
+function siguienteSalon(salon){
+  if(!salon) return null;
+  // Extraer número y sufijo: "1A" → num=1, suf="A"
+  const m=salon.match(/^(\d+)([A-Z]*)$/i);
+  if(!m) return null;
+  const num=parseInt(m[1]);
+  const suf=(m[2]||'A').toUpperCase();
+  const siguiente=num+1;
+  // 11x → graduado (eliminar)
+  if(num>=11) return 'GRADUADO';
+  // 5x primaria → 6x bachillerato
+  const nombreSig=`${siguiente}${suf}`;
+  return nombreSig;
+}
+
+// Materias perdidas en el año completo (promedio todos los periodos < 3)
+function matPerdAnio(eid){
+  return getMats(eid).filter(m=>{
+    const act=DB.pers.filter(p=>{const t=DB.notas[eid]?.[p]?.[m];return t&&(t.a>0||t.c>0||t.r>0);});
+    if(!act.length) return false;
+    const prom=act.reduce((s,p)=>s+def(DB.notas[eid][p][m]),0)/act.length;
+    return prom<3;
+  });
+}
+
+/* ── SOBREESCRITA por api-layer.js ── */
+async function eliminarTodosEsts(ciclo){ /* implementado en api-layer.js */ }
+/* ── SOBREESCRITA por api-layer.js ── */
+async function promoverEstudiantes(ciclo){ /* implementado en api-layer.js */ }
 function notasOk(per){
   if(CU?.role==='admin'||CU?.role==='superadmin') return true;
   const t=today();
@@ -864,7 +905,11 @@ function pgAEst(ciclo){
   </div>
   <div class="card">
     <div class="chd"><span class="cti">📋 Lista</span>
-      <button class="btn bg sm" onclick="expEstXls('${ciclo}')">📤 Excel</button>
+      <div style="display:flex;gap:6px;flex-wrap:wrap">
+        <button class="btn bg sm" onclick="expEstXls('${ciclo}')">📤 Excel</button>
+        <button class="btn bn sm" onclick="promoverEstudiantes('${ciclo}')" title="Promover/Repetir año a todos los estudiantes según resultados">🎓 Promover Año</button>
+        <button class="btn bd sm" onclick="eliminarTodosEsts('${ciclo}')" title="Eliminar TODOS los estudiantes de este ciclo">🗑️ Eliminar Todo</button>
+      </div>
     </div>
     <div class="srch"><span style="color:var(--sl3);font-size:15px">🔍</span>
       <input id="se${ciclo}" placeholder="Buscar por nombre, T.I., salón..."
@@ -1348,9 +1393,17 @@ function renderANotTbl(salon,per,list){
           <span class="${scC(d)}" style="font-size:11px">${d.toFixed(2)}</span></td>`;
     }).join('');
     tr.innerHTML=`<td><strong>${e.nombre}</strong></td>${cells}
-      <td><select class="ni" style="width:110px" onchange="saveDisc('${e.id}',this.value)">
-        ${['Excelente','Bueno','Regular','Deficiente'].map(dd=>`<option ${(DB.notas[e.id].disciplina||'')==dd?'selected':''}>${dd}</option>`).join('')}
-      </select></td>
+      <td style="padding:4px">
+        <input type="number" class="ni" min="0" max="5" step="0.1"
+          style="width:62px;text-align:center"
+          value="${typeof DB.notas[e.id]?.disciplina==='number'?DB.notas[e.id].disciplina.toFixed(1):''}"
+          placeholder="0-5"
+          title="Disciplina 0.0-5.0 — se promedia entre todos los periodos"
+          onchange="saveDisc('${e.id}',this.value,'${ep}')">
+        <div style="font-size:10px;color:var(--sl3);text-align:center">
+          ${typeof DB.notas[e.id]?.disciplina==='number'?discLabel(DB.notas[e.id].disciplina):'—'}
+        </div>
+      </td>
       <td id="apr_${e.id}"><span class="${scC(pp)}">${pp.toFixed(2)}</span></td>`;
     body.appendChild(tr);
   });
@@ -2138,9 +2191,17 @@ function loadPN(){
           <span class="${scC(d)}" style="font-size:11px">${d.toFixed(2)}</span></td>`;
     }).join('');
     tr.innerHTML=`<td><strong>${e.nombre}</strong></td>${cells}
-      <td><select class="ni" style="width:110px" onchange="saveDisc('${e.id}',this.value)">
-        ${['Excelente','Bueno','Regular','Deficiente'].map(dd=>`<option ${(DB.notas[e.id].disciplina||'')==dd?'selected':''}>${dd}</option>`).join('')}
-      </select></td>
+      <td style="padding:4px">
+        <input type="number" class="ni" min="0" max="5" step="0.1"
+          style="width:62px;text-align:center"
+          value="${typeof DB.notas[e.id]?.disciplina==='number'?DB.notas[e.id].disciplina.toFixed(1):''}"
+          placeholder="0-5"
+          title="Disciplina 0.0-5.0 — se promedia entre todos los periodos"
+          onchange="saveDisc('${e.id}',this.value,'${ep}')">
+        <div style="font-size:10px;color:var(--sl3);text-align:center">
+          ${typeof DB.notas[e.id]?.disciplina==='number'?discLabel(DB.notas[e.id].disciplina):'—'}
+        </div>
+      </td>
       <td id="apr_${e.id}"><span class="${scC(pp)}">${pp.toFixed(2)}</span></td>`;
     body.appendChild(tr);
   });
@@ -3566,38 +3627,77 @@ function dlBoletin(estId,perFilter,anno,snapData){
   const fechaGen=new Date().toLocaleDateString('es-CO',{year:'numeric',month:'long',day:'numeric'});
   const subtitle=isTodos?`Año Lectivo ${anno} — Todos los Periodos`:`Año Lectivo ${anno} — ${decodeURIComponent(perFilter)}`;
 
-  /* Build period tables */
-  const persHTML=pers2render.map(per=>{
+  /* ─── TODOS: una sola tabla consolidada ─────────────────── */
+  let persHTML;
+  if(isTodos){
+    // Calcular definitiva final por materia (promedio de todos los periodos con datos)
+    const defFinal=(m)=>{
+      const act=pers2render.filter(p=>{const t=notas[p]?.[m];return t&&(t.a>0||t.c>0||t.r>0);});
+      if(!act.length) return 0;
+      return+(act.reduce((s,p)=>s+def(notas[p]?.[m]||{a:0,c:0,r:0}),0)/act.length).toFixed(2);
+    };
+    // Promedios por periodo
+    const ppPer=pers2render.map(per=>+(mats.reduce((s,m)=>s+def(notas[per]?.[m]||{a:0,c:0,r:0}),0)/mats.length).toFixed(2));
+    // Disciplina por periodo
+    const discPer=pers2render.map(per=>{
+      const dv=notas[per]?.disciplina??notas[per]?.disc??null;
+      return typeof dv==='number'?dv:null;
+    });
+    const discConVal=discPer.filter(d=>d!==null);
+    const discProm=discConVal.length?+(discConVal.reduce((s,d)=>s+d,0)/discConVal.length).toFixed(2):null;
+    // Estado general (columnas de cabecera)
+    const thPers=pers2render.map(p=>`<th style="background:#2d5286;color:#fff;padding:5px 7px;text-align:center;font-size:11px;white-space:nowrap">${p}<br><span style="font-weight:400;opacity:.75">${ppPer[pers2render.indexOf(p)].toFixed(2)}</span></th>`).join('');
+    const rows=mats.map((m,idx)=>{
+      const perCells=pers2render.map(per=>{
+        const d=def(notas[per]?.[m]||{a:0,c:0,r:0});
+        return`<td style="padding:5px 7px;border-bottom:1px solid #e2e8f0;text-align:center;font-weight:700;font-size:12px;color:${d===0?'#a0aec0':scCol(d)}">${d===0?'—':d.toFixed(2)}</td>`;
+      }).join('');
+      const df=defFinal(m);
+      const prf=profForMat(m,salon);
+      return`<tr style="background:${idx%2===0?'#f7fafc':'#fff'}">
+        <td style="padding:5px 7px;border-bottom:1px solid #e2e8f0;font-weight:600;font-size:12px">${m}</td>
+        ${perCells}
+        <td style="padding:5px 7px;border-bottom:1px solid #e2e8f0;text-align:center;font-weight:900;font-size:13px;color:${scCol(df)};background:${df>=3?'#f0fff4':'#fff5f5'}">${df.toFixed(2)}</td>
+        <td style="padding:5px 7px;border-bottom:1px solid #e2e8f0;text-align:center;font-size:11px;color:${df===0?'#a0aec0':df>=4.5?'#276749':df>=4?'#276749':df>=3?'#744210':'#c53030'};font-weight:700">${df===0?'—':df>=4.5?'Superior':df>=4.0?'Alto':df>=3.0?'Básico':'Bajo'}</td>
+        <td style="padding:5px 7px;border-bottom:1px solid #e2e8f0;font-size:10px;color:#4a5568">${prf?prf.nombre:'—'}</td>
+      </tr>`;
+    }).join('');
+    // Fila de disciplina
+    const discPerCells=pers2render.map(per=>{
+      const dv=notas[per]?.disciplina??notas[per]?.disc??null;
+      const d=typeof dv==='number'?dv:null;
+      return`<td style="padding:5px 7px;border-bottom:1px solid #e2e8f0;text-align:center;font-style:italic;color:${d===null?'#a0aec0':scCol(d)}">${d===null?'—':d.toFixed(1)}</td>`;
+    }).join('');
+    const discFinalCell=discProm!==null
+      ?`<td style="padding:5px 7px;font-weight:900;text-align:center;color:${scCol(discProm)};background:${discProm>=3?'#f0fff4':'#fff5f5'}">${discProm.toFixed(2)}</td>
+         <td style="padding:5px 7px;text-align:center;font-size:11px;color:${discProm>=3?'#276749':'#c53030'};font-weight:700">${discProm>=4.5?'Superior':discProm>=4.0?'Alto':discProm>=3.0?'Básico':'Bajo'}</td>`
+      :`<td colspan="2" style="color:#a0aec0;text-align:center">—</td>`;
+    persHTML=`<table style="width:100%;border-collapse:collapse;font-size:11px;margin-bottom:16px">
+      <thead>
+        <tr>
+          <th style="background:#0b1e33;color:#fff;padding:7px 9px;text-align:left;font-size:12px">Materia</th>
+          ${thPers}
+          <th style="background:#0b1e33;color:#fff;padding:7px 9px;text-align:center;font-size:12px;white-space:nowrap">Def. Final</th>
+          <th style="background:#0b1e33;color:#fff;padding:7px 9px;text-align:center;font-size:11px">Desempeño</th>
+          <th style="background:#2d5286;color:#fff;padding:7px 9px;text-align:left;font-size:11px">Docente</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${rows}
+        <tr style="background:#eef6fb">
+          <td style="padding:5px 7px;font-weight:700;font-size:11px;color:#2b6cb0;font-style:italic">📐 Disciplina</td>
+          ${discPerCells}
+          ${discFinalCell}
+          <td style="padding:5px 7px;font-size:10px;color:#718096">Comportamiento</td>
+        </tr>
+      </tbody>
+    </table>`;
+  } else {
+    /* Build period tables (individual period) */
+    persHTML=pers2render.map(per=>{
     const pp=e?pprom(estId,per):+(mats.reduce((s,m)=>s+def(notas[per]?.[m]||{a:0,c:0,r:0}),0)/mats.length).toFixed(2);
     const ppu=e?puestoP(estId,per):'—';
-
-    if(isTodos){
-      /* Compact: only definitivas + subjects + professor */
-      return`<div style="margin-bottom:16px;page-break-inside:avoid">
-        <div style="background:#1a3a5c;color:#fff;padding:8px 12px;border-radius:6px 6px 0 0;display:flex;justify-content:space-between;align-items:center">
-          <strong style="font-size:13px">${per}</strong>
-          <span style="font-size:11px;opacity:.8">Promedio: ${pp.toFixed(2)} &nbsp;|&nbsp; Puesto: ${ppu}${ppu!=='—'?'°':''}</span>
-        </div>
-        <table style="width:100%;border-collapse:collapse;font-size:11px">
-          <thead><tr>
-            <th style="background:#2d5286;color:#fff;padding:6px 9px;text-align:left">Materia</th>
-            <th style="background:#2d5286;color:#fff;padding:6px 9px;text-align:center">Definitiva</th>
-            <th style="background:#2d5286;color:#fff;padding:6px 9px;text-align:center">Estado</th>
-            <th style="background:#2d5286;color:#fff;padding:6px 9px;text-align:left">Profesor(a)</th>
-          </tr></thead>
-          <tbody>${mats.map((m,idx)=>{
-            const d=def(notas[per]?.[m]||{a:0,c:0,r:0});
-            const prf=profForMat(m,salon);
-            return`<tr style="background:${idx%2===0?'#f7fafc':'#fff'}">
-              <td style="padding:6px 9px;border-bottom:1px solid #e2e8f0">${m}</td>
-              <td style="padding:6px 9px;border-bottom:1px solid #e2e8f0;text-align:center;font-weight:800;color:${scCol(d)}">${d.toFixed(2)}</td>
-              <td style="padding:6px 9px;border-bottom:1px solid #e2e8f0;text-align:center;color:${d===0?'#a0aec0':d>=3?'#276749':'#c53030'};font-weight:600">${d===0?'Sin nota':d>=3?'✓ Aprobado':'✗ Reprobado'}</td>
-              <td style="padding:6px 9px;border-bottom:1px solid #e2e8f0;font-size:11px;color:#4a5568">${prf?prf.nombre:'Sin asignar'}</td>
-            </tr>`;
-          }).join('')}</tbody>
-        </table>
-      </div>`;
-    } else {
+    {
       /* Detailed: full tripartita breakdown */
       return`<div style="margin-bottom:18px;page-break-inside:avoid">
         <div style="background:#1a3a5c;color:#fff;padding:8px 12px;border-radius:6px 6px 0 0;display:flex;justify-content:space-between;align-items:center">
@@ -3630,7 +3730,8 @@ function dlBoletin(estId,perFilter,anno,snapData){
         </table>
       </div>`;
     }
-  }).join('');
+    }).join('');
+  } // end else (individual period)
 
   const rehabHTML=(isTodos&&DB.ext.on&&mp.length>=1&&mp.length<=2)
     ?`<div style="background:#fffff0;border:2px solid #f6e05e;padding:12px 16px;border-radius:8px;font-size:12px;margin:12px 0">

@@ -77,14 +77,14 @@ const PlanEstudiosSchema = new Schema({
 const NotaPeriodoSchema = new Schema({
   periodo:    { type: String, required: true },
   materias:   { type: Schema.Types.Mixed, default: {} },
-  disciplina: { type: String, default: '' },
+  disciplina: { type: Number, default: null }, // 0.0-5.0 disciplina por periodo
 }, { _id: false });
 
 const NotaSchema = new Schema({
   estId:      { type: String, required: true },
   anoLectivo: { type: String, required: true, default: () => String(new Date().getFullYear()) },
   periodos:   [NotaPeriodoSchema],
-  disciplina: { type: String, default: '' },
+  disciplina: { type: Number, default: null }, // promedio calculado
   colegioId:  { type: String, default: '', index: true },
 }, { timestamps: true, collection: 'notas' });
 NotaSchema.index({ estId: 1, anoLectivo: 1, colegioId: 1 }, { unique: true }); // multi-tenant: un estudiante puede existir en 2 colegios distintos

@@ -356,15 +356,31 @@ router.put('/notas/:estId/:periodo/:materia', authMiddleware, async (req, res) =
 
 router.put('/notas/:estId/disciplina', authMiddleware, async (req, res) => {
   try {
-    const cid = tenantId(req) || req.user.colegioId || '';
-    const cfg = await Config.findOne({ key: 'anoActual', colegioId: cid }).lean();
-    const ano = cfg?.value || String(new Date().getFullYear());
-    await Nota.findOneAndUpdate(
-      { estId: req.params.estId, anoLectivo: ano, colegioId: cid },
-      { disciplina: req.body.disciplina, colegioId: cid },
-      { upsert: true }
-    );
-    res.json({ ok: true });
+    const cid     = tenantId(req) || req.user.colegioId || '';
+    const cfg     = await Config.findOne({ key: 'anoActual', colegioId: cid }).lean();
+    const ano     = cfg?.value || String(new Date().getFullYear());
+    const { disciplina, periodo } = req.body;
+    const val     = parseFloat(disciplina);
+    if (isNaN(val) || val < 0 || val > 5)
+      return res.status(400).json({ error: 'Disciplina debe ser número entre 0.0 y 5.0' });
+
+    let nota = await Nota.findOne({ estId: req.params.estId, anoLectivo: ano, colegioId: cid });
+    if (!nota) nota = new Nota({ estId: req.params.estId, anoLectivo: ano, periodos: [], colegioId: cid });
+
+    if (periodo) {
+      // Guardar disciplina por periodo
+      let perEntry = nota.periodos.find(p => p.periodo === periodo);
+      if (!perEntry) { nota.periodos.push({ periodo, materias: {}, disciplina: val }); }
+      else { perEntry.disciplina = val; }
+      nota.markModified('periodos');
+    }
+    // Calcular promedio global de disciplina
+    const perConDisc = nota.periodos.filter(p => p.disciplina != null && !isNaN(p.disciplina));
+    nota.disciplina = perConDisc.length
+      ? +(perConDisc.reduce((s, p) => s + p.disciplina, 0) / perConDisc.length).toFixed(2)
+      : val;
+    await nota.save();
+    res.json({ ok: true, disciplinaGlobal: nota.disciplina });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
