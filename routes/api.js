@@ -29,7 +29,14 @@ const tenantFilter = (req) => {
 // ─── tenantId: colegioId a inyectar en docs nuevos ───────────────────────────
 const tenantId = (req) => {
   if (req.user.role === 'superadmin') return req.body?.colegioId || req.query.colegioId || '';
-  return req.user.colegioId || '';
+  const cid = req.user.colegioId || '';
+  if (!cid) {
+    // Advertencia crítica: admin/profe/est sin colegioId en su token — indica
+    // que el usuario fue creado sin colegioId en la BD. Usar fix_salones_colegioId.js
+    // y actualizar el documento del usuario en MongoDB Atlas.
+    console.warn(`[tenantId] ⚠️  Usuario "${req.user.usuario}" (role: ${req.user.role}) no tiene colegioId en su token. Posible usuario creado sin colegio asignado.`);
+  }
+  return cid;
 };
 
 // ═══════════════════════════════════════════════════════════════════
@@ -143,9 +150,15 @@ router.post('/salones', authMiddleware, requireRole('admin', 'superadmin'), asyn
       return res.status(400).json({ error: 'El nombre del salón es obligatorio.' });
     }
 
+    // ── Log de diagnóstico para detectar colegioId vacíos ───────────────────────
+    console.log(`[salones:POST] usuario=${req.user.usuario} | role=${req.user.role} | colegioId_token=${req.user.colegioId} | cid_resuelto=${cid} | salon=${nombreSalon}`);
+
     // ── Verificación explícita antes de insertar (evita el error E11000 de Mongo) ──
+    // IMPORTANTE: solo buscar si cid tiene valor real — evita colisiones cross-tenant
+    // cuando colegioId es vacío (salones huérfanos de otros colegios comparten el mismo "").
     const yaExiste = await Salon.findOne({ nombre: nombreSalon, colegioId: cid }).lean();
     if (yaExiste) {
+      console.warn(`[salones:POST] COLISIÓN — salón "${nombreSalon}" ya existe para colegioId="${cid}"`);
       return res.status(409).json({ error: `El salón "${nombreSalon}" ya existe en este colegio.` });
     }
 
@@ -155,10 +168,12 @@ router.post('/salones', authMiddleware, requireRole('admin', 'superadmin'), asyn
       colegioId: cid,
       colegioNombre,
     });
+    console.log(`[salones:POST] ✅ Salón "${nombreSalon}" creado para colegioId="${cid}"`);
     res.status(201).json(s);
   } catch (err) {
     // Doble seguridad: captura race condition E11000 si dos peticiones llegan simultáneas
     if (err.code === 11000) {
+      console.error(`[salones:POST] E11000 race-condition para colegioId="${(tenantId(req)||req.user.colegioId||'').trim()}"`);
       return res.status(409).json({ error: `El salón ya existe en este colegio.` });
     }
     res.status(500).json({ error: err.message });
