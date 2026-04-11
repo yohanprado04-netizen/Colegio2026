@@ -658,7 +658,28 @@ async function eliminarRecEst(recId) {
 // ═══════════════════════════════════════════════════════════════════
 async function saveExt() {
   const wasOn = DB.ext.on;
-  DB.ext = { on: gi('exon').checked, s: gi('exs').value, e: gi('exe').value };
+  const s     = gi('exs').value;
+  const e     = gi('exe').value;
+  const on    = gi('exon').checked;
+  const ano   = DB.anoActual || String(new Date().getFullYear());
+
+  // ── Validar que las fechas pertenezcan al año activo ──
+  if (s && !s.startsWith(ano)) {
+    sw('error', 'Fecha de inicio inválida', `El Periodo Extraordinario solo puede tener fechas del año ${ano}.`); return;
+  }
+  if (e && !e.startsWith(ano)) {
+    sw('error', 'Fecha de fin inválida', `El Periodo Extraordinario solo puede tener fechas del año ${ano}.`); return;
+  }
+  // ── Validar que inicio sea estrictamente antes que fin ──
+  if (s && e && s >= e) {
+    sw('error', 'Rango inválido', 'La fecha de inicio del Periodo Extraordinario debe ser anterior a la fecha de fin.'); return;
+  }
+  // ── Si se activa, ambas fechas son obligatorias ──
+  if (on && (!s || !e)) {
+    sw('error', 'Fechas requeridas', 'Para activar el Periodo Extraordinario debes definir fecha de inicio y fin.'); return;
+  }
+
+  DB.ext = { on, s, e };
   try {
     await apiFetch('/api/config/ext', { method: 'PUT', body: JSON.stringify({ value: DB.ext }) });
     if (wasOn && !DB.ext.on) {
@@ -668,7 +689,7 @@ async function saveExt() {
     } else {
       sw('success', 'Guardado', '', 1400);
     }
-  } catch (e) { sw('error', 'Error: ' + e.message); }
+  } catch (e2) { sw('error', 'Error: ' + e2.message); }
 }
 
 async function archivarYLimpiarRecuperacion() {

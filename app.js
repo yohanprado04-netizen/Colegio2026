@@ -1397,9 +1397,13 @@ function pgAFec(){
         <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
           <label style="font-size:11px;color:var(--sl2)">Inicio</label>
           <input type="date" id="dps_${p.replace(/\s/g,'_')}" value="${dp.s}"
+            min="${DB.anoActual||new Date().getFullYear()}-01-01"
+            max="${DB.anoActual||new Date().getFullYear()}-12-31"
             style="padding:5px 8px;border:1.5px solid var(--bd);border-radius:6px;font-size:12px">
           <label style="font-size:11px;color:var(--sl2)">Fin</label>
           <input type="date" id="dpe_${p.replace(/\s/g,'_')}" value="${dp.e}"
+            min="${DB.anoActual||new Date().getFullYear()}-01-01"
+            max="${DB.anoActual||new Date().getFullYear()}-12-31"
             style="padding:5px 8px;border:1.5px solid var(--bd);border-radius:6px;font-size:12px">
           <label style="font-size:11px;color:var(--sl2)">Periodo Ext.</label>
           <select id="dpex_${p.replace(/\s/g,'_')}"
@@ -1450,14 +1454,30 @@ function pgAFec(){
   <div class="g2">
     <div class="card"><div class="chd"><span class="cti">📅 Rango Global (fallback)</span></div>
       <div style="font-size:12px;color:var(--sl2);margin-bottom:10px">Se aplica cuando un periodo no tiene rango propio configurado.</div>
-      <div class="fld"><label>Fecha Inicio</label><input type="date" id="drs" value="${DB.dr.s}"></div>
-      <div class="fld"><label>Fecha Fin</label><input type="date" id="dre" value="${DB.dr.e}"></div>
+      <div class="fld"><label>Fecha Inicio</label>
+        <input type="date" id="drs" value="${DB.dr.s}"
+          min="${DB.anoActual||new Date().getFullYear()}-01-01"
+          max="${DB.anoActual||new Date().getFullYear()}-12-31">
+      </div>
+      <div class="fld"><label>Fecha Fin</label>
+        <input type="date" id="dre" value="${DB.dr.e}"
+          min="${DB.anoActual||new Date().getFullYear()}-01-01"
+          max="${DB.anoActual||new Date().getFullYear()}-12-31">
+      </div>
       <button class="btn bn" onclick="saveDR()">Guardar Rango Global</button>
     </div>
     <div class="card"><div class="chd"><span class="cti">🔄 Periodo Extraordinario</span></div>
       <div class="al aly" style="margin-bottom:10px">Solo para estudiantes con 1 o 2 materias perdidas.</div>
-      <div class="fld"><label>Inicio</label><input type="date" id="exs" value="${DB.ext.s}"></div>
-      <div class="fld"><label>Fin</label><input type="date" id="exe" value="${DB.ext.e}"></div>
+      <div class="fld"><label>Inicio</label>
+        <input type="date" id="exs" value="${DB.ext.s}"
+          min="${DB.anoActual||new Date().getFullYear()}-01-01"
+          max="${DB.anoActual||new Date().getFullYear()}-12-31">
+      </div>
+      <div class="fld"><label>Fin</label>
+        <input type="date" id="exe" value="${DB.ext.e}"
+          min="${DB.anoActual||new Date().getFullYear()}-01-01"
+          max="${DB.anoActual||new Date().getFullYear()}-12-31">
+      </div>
       <label style="display:flex;align-items:center;gap:8px;font-size:13px;margin-bottom:14px;cursor:pointer">
         <input type="checkbox" id="exon" ${DB.ext.on?'checked':''}> Activar Periodo Extraordinario
       </label>
