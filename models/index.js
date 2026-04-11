@@ -87,7 +87,7 @@ const NotaSchema = new Schema({
   disciplina: { type: String, default: '' },
   colegioId:  { type: String, default: '', index: true },
 }, { timestamps: true, collection: 'notas' });
-NotaSchema.index({ estId: 1, anoLectivo: 1 }, { unique: true });
+NotaSchema.index({ estId: 1, anoLectivo: 1, colegioId: 1 }, { unique: true }); // multi-tenant: un estudiante puede existir en 2 colegios distintos
 
 const AsistenciaSchema = new Schema({
   fecha:     { type: String, required: true },
