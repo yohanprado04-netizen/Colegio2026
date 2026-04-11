@@ -100,6 +100,7 @@ async function dbLoad() {
       DB.histPlanes = DB.histPlanes || [];
       DB.estHist    = DB.estHist    || [];
       DB.anoActual  = DB.anoActual  || String(new Date().getFullYear());
+      DB.notaPct    = DB.notaPct    || { a: 60, c: 20, r: 20 };
       DB.notasPorAno = DB.notasPorAno || {};
       DB.sals.forEach(s => { if (!Array.isArray(s.mats)) s.mats = []; });
     }
@@ -115,7 +116,7 @@ function dbSave() {
 
 async function _saveConfigBg() {
   try {
-    const cfgKeys = ['mP', 'mB', 'pers', 'dr', 'drPer', 'ext', 'anoActual'];
+    const cfgKeys = ['mP', 'mB', 'pers', 'dr', 'drPer', 'ext', 'anoActual', 'notaPct'];
     await Promise.all(cfgKeys.map(k =>
       apiFetch(`/api/config/${k}`, {
         method: 'PUT',
@@ -193,6 +194,7 @@ async function doLogin() {
         notas:      {},
         dr:         { s: '', e: '' },
         drPer:      {},
+        notaPct:    { a: 60, c: 20, r: 20 },
         ext:        { on: false, s: '', e: '' },
         ups:        {},
         asist:      {},

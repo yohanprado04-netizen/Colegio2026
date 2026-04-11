@@ -187,8 +187,15 @@ function getProfMatsSalon(profId,salon){
   return p.materias||[];
 }
 
-/* Definitiva = 60%a + 20%c + 20%r */
-function def(t){return+((t.a||0)*.6+(t.c||0)*.2+(t.r||0)*.2).toFixed(2);}
+/* Definitiva dinámica — usa DB.notaPct configurado por el superadmin por colegio */
+function getNotaPct(){
+  const p=DB.notaPct||{};
+  const a=(p.a!=null?p.a:60)/100;
+  const c=(p.c!=null?p.c:20)/100;
+  const r=(p.r!=null?p.r:20)/100;
+  return{a,c,r};
+}
+function def(t){const p=getNotaPct();return+((t.a||0)*p.a+(t.c||0)*p.c+(t.r||0)*p.r).toFixed(2);}
 
 function pprom(eid,per){
   syncN(eid);
@@ -846,7 +853,7 @@ function pgAEst(ciclo){
   </div>
     <div class="fg">
       <div class="fld"><label>Nombre</label><input id="nen" placeholder="Nombre completo"></div>
-      <div class="fld"><label>T.I.</label><input id="neti" placeholder="TI-000001"></div>
+      <div class="fld"><label>${ciclo==='bachillerato'?'T.I./C.C.':'T.I.'}</label><input id="neti" placeholder="${ciclo==='bachillerato'?'CC-000001':'TI-000001'}"></div>
       <div class="fld"><label>Salón</label><select id="nes"><option value="">Sin salón</option>${sOpts}</select></div>
       <div class="fld"><label>Usuario</label><input id="neu" placeholder="usuario"></div>
       <div class="fld"><label>Contraseña</label><input id="nep" type="password" placeholder="contraseña"></div>
@@ -879,7 +886,7 @@ function renderEstTabla(ciclo,filter=''){
     e.nombre.toLowerCase().includes(f)||(e.ti||'').toLowerCase().includes(f)||(e.salon||'').toLowerCase().includes(f));}
   if(!list.length){el.innerHTML='<div class="mty"><div class="ei">🎓</div><p>Sin estudiantes</p></div>';return;}
   el.innerHTML=`<div class="tw"><table>
-    <thead><tr><th>#</th><th>Nombre</th><th>T.I.</th><th>Salón</th><th>Usuario</th><th>Prom.</th><th>Acciones</th></tr></thead>
+    <thead><tr><th>#</th><th>Nombre</th><th>${ciclo==='bachillerato'?'T.I./C.C.':'T.I.'}</th><th>Salón</th><th>Usuario</th><th>Prom.</th><th>Acciones</th></tr></thead>
     <tbody>${list.map((e,i)=>{const pg=gprom(e.id);return`<tr>
       <td style="color:var(--sl3);font-family:var(--mn);font-size:11px">${i+1}</td>
       <td><strong>${e.nombre}</strong></td>
@@ -1317,7 +1324,7 @@ function renderANotTbl(salon,per,list){
         ${mats.map(m=>`<th colspan="4" style="text-align:center;border-left:2px solid var(--bd)">${m}</th>`).join('')}
         <th>Disciplina</th><th>Prom.</th></tr>
       <tr><td></td>
-        ${mats.map(()=>'<th style="font-size:9px;color:var(--sl2);border-left:2px solid var(--bd)">Apt.60%</th><th style="font-size:9px;color:var(--sl2)">Act.20%</th><th style="font-size:9px;color:var(--sl2)">Res.20%</th><th style="font-size:9px;background:#e8f4fd">Def.</th>').join('')}
+        ${(()=>{const p=DB.notaPct||{};const a=p.a??60,c=p.c??20,r=p.r??20;return mats.map(()=>`<th style="font-size:9px;color:var(--sl2);border-left:2px solid var(--bd)">Apt.${a}%</th><th style="font-size:9px;color:var(--sl2)">Act.${c}%</th><th style="font-size:9px;color:var(--sl2)">Res.${r}%</th><th style="font-size:9px;background:#e8f4fd">Def.</th>`).join('')})()}
         <td></td><td></td></tr>
     </thead>
     <tbody id="anB"></tbody>
@@ -2058,7 +2065,7 @@ function pgPNot(){
   ${banner}
   <div class="card">
     <div class="al alb" style="margin-bottom:14px">
-      <div>ℹ️ <strong>Sistema tripartita:</strong> Aptitud 60% + Actitud 20% + Responsabilidad 20% = Definitiva.<br>
+      <div>ℹ️ <strong>Sistema tripartita:</strong> Aptitud ${DB.notaPct?.a??60}% + Actitud ${DB.notaPct?.c??20}% + Responsabilidad ${DB.notaPct?.r??20}% = Definitiva.<br>
       Solo el periodo seleccionado se modifica; los demás quedan en 0 hasta que se ingresen.</div>
     </div>
     <div class="fg">
@@ -2103,7 +2110,7 @@ function loadPN(){
         ${mats.map(m=>`<th colspan="4" style="text-align:center;border-left:2px solid var(--bd)">${m}</th>`).join('')}
         <th>Disciplina</th><th>Prom.</th></tr>
       <tr><td></td>
-        ${mats.map(()=>'<th style="font-size:9px;color:var(--sl2);border-left:2px solid var(--bd)">Apt.60%</th><th style="font-size:9px;color:var(--sl2)">Act.20%</th><th style="font-size:9px;color:var(--sl2)">Res.20%</th><th style="font-size:9px;background:#e8f4fd">Def.</th>').join('')}
+        ${(()=>{const p=DB.notaPct||{};const a=p.a??60,c=p.c??20,r=p.r??20;return mats.map(()=>`<th style="font-size:9px;color:var(--sl2);border-left:2px solid var(--bd)">Apt.${a}%</th><th style="font-size:9px;color:var(--sl2)">Act.${c}%</th><th style="font-size:9px;color:var(--sl2)">Res.${r}%</th><th style="font-size:9px;background:#e8f4fd">Def.</th>`).join('')})()}
         <td></td><td></td></tr>
     </thead>
     <tbody id="pnB"></tbody>
@@ -2331,7 +2338,7 @@ function dlRptXls(salon,per,matFilter){
   /* ── Hoja 2: Tripartita completa ── */
   const triRows=[];
   const hdr2=['Estudiante','T.I.'];
-  mats.forEach(m=>{hdr2.push(`${m} Apt.60%`,`${m} Act.20%`,`${m} Res.20%`,`${m} Def.`);});
+  {const p=DB.notaPct||{};const a=p.a??60,c=p.c??20,r=p.r??20;mats.forEach(m=>{hdr2.push(`${m} Apt.${a}%`,`${m} Act.${c}%`,`${m} Res.${r}%`,`${m} Def.`);});}
   hdr2.push('Promedio','Disciplina');
   triRows.push(hdr2);
   ests.forEach(e=>{
@@ -3664,7 +3671,7 @@ function dlBoletin(estId,perFilter,anno,snapData){
       </div>
     </div>
     ${!isTodos?`<div style="background:#fffff0;padding:8px 28px;font-size:11px;color:#744210;border-bottom:1px solid #f6e05e">
-      📊 <strong>Sistema tripartita:</strong> Aptitud (60%) + Actitud (20%) + Responsabilidad (20%) = Definitiva
+      📊 <strong>Sistema tripartita:</strong> Aptitud (${DB.notaPct?.a??60}%) + Actitud (${DB.notaPct?.c??20}%) + Responsabilidad (${DB.notaPct?.r??20}%) = Definitiva
     </div>`:''}
     <!-- GRADES -->
     <div style="padding:16px 28px">
@@ -4042,23 +4049,58 @@ async function modalNuevoColegio() {
         <div id="snLogoLabel" style="font-size:11px;color:#a0aec0;margin-top:3px">PNG, JPG, SVG o WEBP · máx 600 KB</div>
       </div>
       <hr style="margin:.5rem 0">
+      <p style="margin:.5rem 1rem;font-size:.85rem;color:#555;text-align:left;font-weight:700">📊 Porcentajes de calificación (deben sumar 100%)</p>
+      <div style="display:flex;gap:8px;margin:0 .5rem .5rem;align-items:center">
+        <div style="flex:1;text-align:center">
+          <label style="font-size:10px;font-weight:700;color:#4a5568;display:block;margin-bottom:3px">Aptitud %</label>
+          <input id="snPctA" class="swal2-input" type="number" min="0" max="100" value="60" placeholder="60" style="text-align:center">
+        </div>
+        <div style="flex:1;text-align:center">
+          <label style="font-size:10px;font-weight:700;color:#4a5568;display:block;margin-bottom:3px">Actitud %</label>
+          <input id="snPctC" class="swal2-input" type="number" min="0" max="100" value="20" placeholder="20" style="text-align:center">
+        </div>
+        <div style="flex:1;text-align:center">
+          <label style="font-size:10px;font-weight:700;color:#4a5568;display:block;margin-bottom:3px">Responsabilidad %</label>
+          <input id="snPctR" class="swal2-input" type="number" min="0" max="100" value="20" placeholder="20" style="text-align:center">
+        </div>
+        <div id="snPctSum" style="font-size:11px;font-weight:700;color:#276749;padding-top:16px;min-width:50px;text-align:center">= 100%</div>
+      </div>
+      <hr style="margin:.5rem 0">
       <p style="margin:.5rem 1rem;font-size:.85rem;color:#666;text-align:left">Administrador principal:</p>
       <input id="snANombre" class="swal2-input" placeholder="Nombre del Admin *">
       <input id="snAUser"   class="swal2-input" placeholder="Usuario Admin * (sin espacios)">
       <input id="snAPwd"    class="swal2-input" type="password" placeholder="Contraseña Admin *">
     `,
     focusConfirm: false, showCancelButton: true, confirmButtonText: 'Crear Colegio',
-    didOpen: () => { window._snLogoB64 = null; },
-    preConfirm: () => ({
-      nombre:        gi('snNombre')?.value.trim(),
-      nit:           gi('snNit')?.value.trim(),
-      direccion:     gi('snDir')?.value.trim(),
-      telefono:      gi('snTel')?.value.trim(),
-      logo:          window._snLogoB64 || '',
-      adminNombre:   gi('snANombre')?.value.trim(),
-      adminUsuario:  gi('snAUser')?.value.trim(),
-      adminPassword: gi('snAPwd')?.value,
-    })
+    didOpen: () => {
+      window._snLogoB64 = null;
+      ['snPctA','snPctC','snPctR'].forEach(id => {
+        gi(id)?.addEventListener('input', () => {
+          const a=parseInt(gi('snPctA')?.value||0),c=parseInt(gi('snPctC')?.value||0),r=parseInt(gi('snPctR')?.value||0);
+          const sum=a+c+r;
+          const el=gi('snPctSum');
+          if(el){el.textContent='= '+sum+'%';el.style.color=sum===100?'#276749':'#c53030';}
+        });
+      });
+    },
+    preConfirm: () => {
+      const pctA=parseInt(gi('snPctA')?.value||60);
+      const pctC=parseInt(gi('snPctC')?.value||20);
+      const pctR=parseInt(gi('snPctR')?.value||20);
+      if(pctA+pctC+pctR!==100){Swal.showValidationMessage('Los porcentajes deben sumar exactamente 100%');return false;}
+      if(pctA<1||pctC<1||pctR<1){Swal.showValidationMessage('Cada porcentaje debe ser mayor a 0');return false;}
+      return {
+        nombre:        gi('snNombre')?.value.trim(),
+        nit:           gi('snNit')?.value.trim(),
+        direccion:     gi('snDir')?.value.trim(),
+        telefono:      gi('snTel')?.value.trim(),
+        logo:          window._snLogoB64 || '',
+        notaPct:       {a:pctA,c:pctC,r:pctR},
+        adminNombre:   gi('snANombre')?.value.trim(),
+        adminUsuario:  gi('snAUser')?.value.trim(),
+        adminPassword: gi('snAPwd')?.value,
+      };
+    }
   });
   if (!f) return;
   if (!f.nombre || !f.nit || !f.adminNombre || !f.adminUsuario || !f.adminPassword)

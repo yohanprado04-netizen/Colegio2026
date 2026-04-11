@@ -36,7 +36,7 @@ router.get('/colegios', async (req, res) => {
 router.post('/colegios', async (req, res) => {
   try {
     const { nombre, nit, direccion, telefono, sedes, jornadas,
-            adminNombre, adminUsuario, adminPassword } = req.body;
+            adminNombre, adminUsuario, adminPassword, notaPct } = req.body;
 
     if (!nombre || !nit || !adminNombre || !adminUsuario || !adminPassword)
       return res.status(400).json({ error: 'Faltan campos requeridos (nombre, NIT, admin)' });
@@ -69,13 +69,14 @@ router.post('/colegios', async (req, res) => {
     // Configs por defecto del colegio
     const cfgDefaults = [
       { key: 'periodos', value: ['Periodo 1','Periodo 2','Periodo 3','Periodo 4'] },
-      { key: 'mP',       value: ['Matemáticas','Español','Ciencias','Sociales','Artística','Educación Física'] },
-      { key: 'mB',       value: ['Matemáticas','Español','Física','Química','Filosofía','Historia','Inglés'] },
+      { key: 'mP',       value: ['Matemáticas','Lengua Castellana','Ciencias Naturales','Ciencias Sociales','Ed. Artística','Ed. Física','Ética'] },
+      { key: 'mB',       value: ['Matemáticas','Español','Física','Química','Filosofía','Historia','Inglés','Ed. Física'] },
       { key: 'pers',     value: ['Periodo 1','Periodo 2','Periodo 3','Periodo 4'] },
       { key: 'ext',      value: { on: false, s: '', e: '' } },
       { key: 'dr',       value: { s: '', e: '' } },
       { key: 'drPer',    value: {} },
       { key: 'anoActual',value: String(new Date().getFullYear()) },
+      { key: 'notaPct',  value: (notaPct && typeof notaPct.a === 'number') ? notaPct : { a: 60, c: 20, r: 20 } },
     ];
     for (const c of cfgDefaults) {
       await Config.findOneAndUpdate(
@@ -295,15 +296,18 @@ router.get('/stats', async (req, res) => {
         Salon.countDocuments(  { colegioId: c.id }),
       ]);
 
-      // Promedio de notas: iterar solo documentos del colegio
+      // Promedio de notas: usar pct configurado por colegio
       let totalProm = 0, countProm = 0;
       try {
+        const cfgPct = await Config.findOne({ key: 'notaPct', colegioId: c.id }).lean();
+        const pct = (cfgPct && cfgPct.value) ? cfgPct.value : { a: 60, c: 20, r: 20 };
+        const pA = (pct.a || 60) / 100, pC = (pct.c || 20) / 100, pR = (pct.r || 20) / 100;
         const notasDocs = await Nota.find({ colegioId: c.id }, 'periodos').lean();
         for (const nd of notasDocs) {
           for (const per of nd.periodos || []) {
             for (const val of Object.values(per.materias || {})) {
               if (val && typeof val === 'object' && 'a' in val) {
-                totalProm += (val.a || 0) * 0.6 + (val.c || 0) * 0.2 + (val.r || 0) * 0.2;
+                totalProm += (val.a || 0) * pA + (val.c || 0) * pC + (val.r || 0) * pR;
                 countProm++;
               }
             }
