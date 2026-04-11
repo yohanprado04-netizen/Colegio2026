@@ -66,7 +66,45 @@ router.get('/', authMiddleware, async (req, res) => {
     // ── Separar usuarios por rol ────────────────────────────────────────────
     const admin = usuarios.find(u => u.role === 'admin') || null;
     const profs = usuarios.filter(u => u.role === 'profe');
-    const ests  = usuarios.filter(u => u.role === 'est');
+    let   ests  = usuarios.filter(u => u.role === 'est');
+
+    // FALLBACK MULTI-TENANT: si no hay estudiantes con colegioId correcto,
+    // buscar también estudiantes con colegioId vacío/null cuyo salón pertenece
+    // a este colegio. Esto ocurre cuando estudiantes fueron creados antes del
+    // fix de multi-tenant. Se corrigen automáticamente al encontrarlos.
+    if (!ests.length && salones.length > 0) {
+      const salonNames = salones.map(s => s.nombre);
+      const estsHuerfanos = await Usuario.find({
+        role: 'est',
+        salon: { $in: salonNames },
+        $or: [{ colegioId: null }, { colegioId: '' }, { colegioId: { $exists: false } }]
+      }, '-__v').lean();
+
+      if (estsHuerfanos.length > 0) {
+        console.warn(`[db] Encontrados ${estsHuerfanos.length} estudiantes huérfanos para colegio "${cid}" — auto-reparando colegioId...`);
+        // Auto-reparar colegioId en background
+        Usuario.updateMany(
+          { _id: { $in: estsHuerfanos.map(e => e._id) } },
+          { $set: { colegioId: cid, colegioNombre: req.user.colegioNombre || '' } }
+        ).catch(e => console.error('[db] Error auto-reparando estudiantes:', e.message));
+        ests = estsHuerfanos;
+      }
+    }
+
+    // Mismo fallback para profs huérfanos
+    if (!profs.length && salones.length > 0) {
+      const profsHuerfanos = await Usuario.find({
+        role: 'profe',
+        $or: [{ colegioId: null }, { colegioId: '' }, { colegioId: { $exists: false } }]
+      }, '-__v').lean();
+      if (profsHuerfanos.length > 0) {
+        console.warn(`[db] Encontrados ${profsHuerfanos.length} profes huérfanos para colegio "${cid}" — auto-reparando...`);
+        Usuario.updateMany(
+          { _id: { $in: profsHuerfanos.map(p => p._id) } },
+          { $set: { colegioId: cid, colegioNombre: req.user.colegioNombre || '' } }
+        ).catch(e => console.error('[db] Error auto-reparando profes:', e.message));
+      }
+    }
 
     // ── Reconstruir notas { estId: { periodo: { materia:{a,c,r} } } } ────────
     // FIX Bug2: solo incluir notas del año lectivo ACTIVO en DB.notas
