@@ -37,10 +37,11 @@ const UsuarioSchema = new Schema({
 UsuarioSchema.index({ colegioId: 1, role: 1 });
 
 const SalonSchema = new Schema({
-  nombre:    { type: String, required: true, trim: true },
-  ciclo:     { type: String, enum: ['primaria','bachillerato'], required: true },
-  mats:      [{ type: String }],
-  colegioId: { type: String, required: true, index: true },
+  nombre:        { type: String, required: true, trim: true },
+  ciclo:         { type: String, enum: ['primaria','bachillerato'], required: true },
+  mats:          [{ type: String }],
+  colegioId:     { type: String, required: true, index: true },
+  colegioNombre: { type: String, default: '' },   // nombre del colegio al que pertenece
 }, { timestamps: true, collection: 'salones' });
 SalonSchema.index({ nombre: 1, colegioId: 1 }, { unique: true });
 

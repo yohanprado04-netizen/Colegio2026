@@ -118,10 +118,13 @@ router.get('/salones', authMiddleware, async (req, res) => {
 
 router.post('/salones', authMiddleware, requireRole('admin', 'superadmin'), async (req, res) => {
   try {
-    const s = await Salon.create({ ...req.body, colegioId: tenantId(req) });
+    const cid = tenantId(req) || req.user.colegioId;
+    // Guardar siempre con colegioNombre para que quede vinculado al colegio por nombre
+    const colegioNombre = req.user.colegioNombre || req.body.colegioNombre || '';
+    const s = await Salon.create({ ...req.body, colegioId: cid, colegioNombre });
     res.status(201).json(s);
   } catch (err) {
-    if (err.code === 11000) return res.status(409).json({ error: 'Salón ya existe' });
+    if (err.code === 11000) return res.status(409).json({ error: 'Salón ya existe en este colegio' });
     res.status(500).json({ error: err.message });
   }
 });
@@ -161,8 +164,13 @@ router.post('/materias', authMiddleware, requireRole('admin', 'superadmin'), asy
     const cid = tenantId(req) || req.user.colegioId;
     const { nombre, ciclo, orden } = req.body;
     if (!nombre || !ciclo) return res.status(400).json({ error: 'nombre y ciclo son requeridos' });
-    const col = req.user.colegioNombre || '';
-    const m = await Materia.create({ nombre: nombre.trim(), ciclo, colegioId: cid, colegioNombre: col, orden: orden || 0 });
+    // colegioNombre siempre del token del usuario autenticado — garantiza que queda vinculada al colegio
+    const colegioNombre = req.user.colegioNombre || '';
+    const m = await Materia.create({
+      nombre: nombre.trim(), ciclo,
+      colegioId: cid, colegioNombre,
+      orden: orden || 0
+    });
     res.status(201).json(m);
   } catch (err) {
     if (err.code === 11000) return res.status(409).json({ error: 'Esa materia ya existe en este colegio para ese ciclo' });

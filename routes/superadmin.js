@@ -66,11 +66,13 @@ router.post('/colegios', async (req, res) => {
       colegioNombre: nombre
     });
 
-    // Configs por defecto del colegio
+    // ── Config por defecto — cada item con try/catch individual ──────────────
+    // CRÍTICO: sin try/catch individual, un E11000 en 'mP' detiene TODO
+    // y nunca se crean los salones ni materias del colegio nuevo.
     const cfgDefaults = [
       { key: 'periodos', value: ['Periodo 1','Periodo 2','Periodo 3','Periodo 4'] },
-      { key: 'mP',       value: ['Matemáticas','Español','Ciencias','Sociales','Artística','Educación Física'] },
-      { key: 'mB',       value: ['Matemáticas','Español','Física','Química','Filosofía','Historia','Inglés'] },
+      { key: 'mP',       value: ['Matemáticas','Lengua Castellana','Ciencias Naturales','Ciencias Sociales','Ed. Artística','Ed. Física','Ética'] },
+      { key: 'mB',       value: ['Matemáticas','Español','Física','Química','Filosofía','Historia','Inglés','Ed. Física'] },
       { key: 'pers',     value: ['Periodo 1','Periodo 2','Periodo 3','Periodo 4'] },
       { key: 'ext',      value: { on: false, s: '', e: '' } },
       { key: 'dr',       value: { s: '', e: '' } },
@@ -78,36 +80,57 @@ router.post('/colegios', async (req, res) => {
       { key: 'anoActual',value: String(new Date().getFullYear()) },
     ];
     for (const c of cfgDefaults) {
-      await Config.findOneAndUpdate(
-        { key: c.key, colegioId },
-        { $set: { value: c.value }, $setOnInsert: { key: c.key, colegioId } },
-        { upsert: true }
-      );
+      try {
+        await Config.findOneAndUpdate(
+          { key: c.key, colegioId },
+          { $set: { value: c.value }, $setOnInsert: { key: c.key, colegioId } },
+          { upsert: true }
+        );
+      } catch (cfgErr) {
+        if (cfgErr.code === 11000) {
+          // Índice legacy key_1 en Atlas — forzar update directo sin upsert
+          try {
+            const exists = await Config.findOne({ key: c.key, colegioId }).lean();
+            if (exists) {
+              await Config.updateOne({ key: c.key, colegioId }, { $set: { value: c.value } });
+            } else {
+              await Config.collection.insertOne({ key: c.key, value: c.value, colegioId });
+            }
+          } catch (_) { /* no bloquear la creación del colegio */ }
+        }
+        // Cualquier otro error: ignorar y continuar — el colegio DEBE crearse
+      }
     }
 
-    // Salones por defecto — upsert para no duplicar si ya existen
+    // ── Salones por defecto — guardados con colegioId Y colegioNombre ─────────
+    // El índice único es {nombre, colegioId}: "1A" puede existir en múltiples colegios.
+    // Error "Salón ya existe" SOLO si ese mismo colegio ya tiene ese nombre.
     const salonesDefault = [
-      { nombre: '1A',  ciclo: 'primaria',     mats: [] },
-      { nombre: '2A',  ciclo: 'primaria',     mats: [] },
-      { nombre: '3A',  ciclo: 'primaria',     mats: [] },
-      { nombre: '4A',  ciclo: 'primaria',     mats: [] },
-      { nombre: '5A',  ciclo: 'primaria',     mats: [] },
-      { nombre: '6A',  ciclo: 'bachillerato', mats: [] },
-      { nombre: '7A',  ciclo: 'bachillerato', mats: [] },
-      { nombre: '8A',  ciclo: 'bachillerato', mats: [] },
-      { nombre: '9A',  ciclo: 'bachillerato', mats: [] },
-      { nombre: '10A', ciclo: 'bachillerato', mats: [] },
-      { nombre: '11A', ciclo: 'bachillerato', mats: [] },
+      { nombre: '1A',  ciclo: 'primaria'     },
+      { nombre: '2A',  ciclo: 'primaria'     },
+      { nombre: '3A',  ciclo: 'primaria'     },
+      { nombre: '4A',  ciclo: 'primaria'     },
+      { nombre: '5A',  ciclo: 'primaria'     },
+      { nombre: '6A',  ciclo: 'bachillerato' },
+      { nombre: '7A',  ciclo: 'bachillerato' },
+      { nombre: '8A',  ciclo: 'bachillerato' },
+      { nombre: '9A',  ciclo: 'bachillerato' },
+      { nombre: '10A', ciclo: 'bachillerato' },
+      { nombre: '11A', ciclo: 'bachillerato' },
     ];
     for (const s of salonesDefault) {
-      await Salon.findOneAndUpdate(
-        { nombre: s.nombre, colegioId },
-        { $setOnInsert: { nombre: s.nombre, ciclo: s.ciclo, mats: s.mats, colegioId } },
-        { upsert: true, new: false }
-      ).catch(() => {});
+      try {
+        await Salon.findOneAndUpdate(
+          { nombre: s.nombre, colegioId },
+          { $setOnInsert: { nombre: s.nombre, ciclo: s.ciclo, mats: [], colegioId, colegioNombre: nombre } },
+          { upsert: true, new: false }
+        );
+      } catch (_) { /* duplicado: ignorar */ }
     }
 
-    // Materias por defecto en colección dedicada — diferenciadas por colegioId
+    // ── Materias por defecto — guardadas con colegioId Y colegioNombre ────────
+    // Colección dedicada 'materias'. Índice único {nombre, ciclo, colegioId}:
+    // "Matemáticas" puede existir en múltiples colegios sin conflicto.
     const materiasPrimaria = [
       'Matemáticas', 'Lengua Castellana', 'Ciencias Naturales',
       'Ciencias Sociales', 'Ed. Artística', 'Ed. Física', 'Ética',
@@ -117,18 +140,22 @@ router.post('/colegios', async (req, res) => {
       'Filosofía', 'Historia', 'Inglés', 'Ed. Física',
     ];
     for (let i = 0; i < materiasPrimaria.length; i++) {
-      await Materia.findOneAndUpdate(
-        { nombre: materiasPrimaria[i], ciclo: 'primaria', colegioId },
-        { $setOnInsert: { nombre: materiasPrimaria[i], ciclo: 'primaria', colegioId, colegioNombre: nombre, orden: i } },
-        { upsert: true }
-      ).catch(() => {});
+      try {
+        await Materia.findOneAndUpdate(
+          { nombre: materiasPrimaria[i], ciclo: 'primaria', colegioId },
+          { $setOnInsert: { nombre: materiasPrimaria[i], ciclo: 'primaria', colegioId, colegioNombre: nombre, orden: i } },
+          { upsert: true }
+        );
+      } catch (_) { /* duplicado: ignorar */ }
     }
     for (let i = 0; i < materiasBachillerato.length; i++) {
-      await Materia.findOneAndUpdate(
-        { nombre: materiasBachillerato[i], ciclo: 'bachillerato', colegioId },
-        { $setOnInsert: { nombre: materiasBachillerato[i], ciclo: 'bachillerato', colegioId, colegioNombre: nombre, orden: i } },
-        { upsert: true }
-      ).catch(() => {});
+      try {
+        await Materia.findOneAndUpdate(
+          { nombre: materiasBachillerato[i], ciclo: 'bachillerato', colegioId },
+          { $setOnInsert: { nombre: materiasBachillerato[i], ciclo: 'bachillerato', colegioId, colegioNombre: nombre, orden: i } },
+          { upsert: true }
+        );
+      } catch (_) { /* duplicado: ignorar */ }
     }
 
     Auditoria.create({
