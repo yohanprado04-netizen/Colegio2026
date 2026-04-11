@@ -2759,11 +2759,11 @@ function _planDialog({titulo='',desc='',archNombre='',archDataUrl='',archType=''
     if(f){
       if(f.size>5*1024*1024){sw('error','Archivo muy grande (máx 5 MB)');return;}
       const reader=new FileReader();
-      reader.onload=ev=>onConfirm({...r.value,archNombre:f.name,archType:f.type,archDataUrl:ev.target.result});
+      reader.onload=ev=>Promise.resolve(onConfirm({...r.value,archNombre:f.name,archType:f.type,archDataUrl:ev.target.result})).catch(e=>sw('error','Error: '+e.message));
       reader.onerror=()=>sw('error','Error al leer el archivo');
       reader.readAsDataURL(f);
     } else {
-      onConfirm({...r.value,archNombre:archNombre,archType:archType,archDataUrl:archDataUrl});
+      Promise.resolve(onConfirm({...r.value,archNombre:archNombre,archType:archType,archDataUrl:archDataUrl})).catch(e=>sw('error','Error: '+e.message));
     }
   });
 }
@@ -2781,7 +2781,7 @@ function abrirEnviarPlanSalon(salon,matsStr){
     archNombre:last?.archNombre||'',archDataUrl:last?.archDataUrl||'',archType:last?.archType||'',
     existing:last,
     destinatario:`<strong>Para todo el Salón ${salon}</strong> · Materias: ${mats.map(m=>`<span class="bdg brd" style="font-size:10px">${m}</span>`).join(' ')}`,
-    onConfirm(vals){
+    async onConfirm(vals){
       if(!DB.planes) DB.planes=[];
       /* Get all students in salon who need this prof's recovery */
       const matsProf=getProfMatsSalon(CU.id,salon);
@@ -2791,11 +2791,11 @@ function abrirEnviarPlanSalon(salon,matsStr){
       });
       const fecha=new Date().toLocaleDateString('es-CO');
       const planId='plan_'+Date.now();
-      /* Create one plan entry per student (so each student sees it) */
+      /* FIX Bug1: persist each plan to MongoDB via _savePlan() instead of dbSave() */
+      const _planesPromesas=[];
       estudiantesDestino.forEach((est,idx)=>{
         mats.forEach(mat=>{
-          /* Append new plan — keep all previous ones */
-          DB.planes.push({
+          const _pd={
             id:planId+'_'+est.id+'_'+idx,
             estId:est.id,estNombre:est.nombre,salon,
             materia:mat,profId:CU.id,profNombre:CU.nombre,
@@ -2803,11 +2803,15 @@ function abrirEnviarPlanSalon(salon,matsStr){
             fechaLimite:vals.fechaLimite,
             archNombre:vals.archNombre||'',archDataUrl:vals.archDataUrl||'',archType:vals.archType||'',
             fecha,visto:false,esSalon:true,planId
-          });
+          };
+          _planesPromesas.push(_savePlan(_pd));
         });
       });
-      dbSave();goto('prec');
-      sw('success',`Plan enviado a ${estudiantesDestino.length} estudiante(s) del salón ${salon}`,'',1800);
+      try{
+        await Promise.all(_planesPromesas);
+        goto('prec');
+        sw('success',`Plan enviado a ${estudiantesDestino.length} estudiante(s) del salón ${salon}`,'',1800);
+      }catch(_e2){sw('error','Error guardando plan: '+_e2.message);}
     }
   });
 }
@@ -2821,20 +2825,21 @@ function abrirEnviarPlan(estId,materia,salon){
     archNombre:existing?.archNombre||'',archDataUrl:existing?.archDataUrl||'',archType:existing?.archType||'',
     existing,
     destinatario:`<strong>${est.nombre}</strong> · <span style="color:#c53030">${materia}</span> · Salón ${salon}`,
-    onConfirm(vals){
-      if(!DB.planes) DB.planes=[];
-      /* Append new plan — keep all previous ones */
-      DB.planes.push({
-        id:'plan_'+Date.now(),
-        estId,estNombre:est.nombre,salon,
-        materia,profId:CU.id,profNombre:CU.nombre,
-        titulo:vals.titulo,desc:vals.desc,
-        fechaLimite:vals.fechaLimite,
-        archNombre:vals.archNombre||'',archDataUrl:vals.archDataUrl||'',archType:vals.archType||'',
-        fecha:new Date().toLocaleDateString('es-CO'),
-        visto:false,esSalon:false
-      });
-      dbSave();goto('prec');sw('success','Plan enviado al estudiante','',1500);
+    async onConfirm(vals){
+      /* FIX Bug1: persist plan to MongoDB via _savePlan() */
+      try{
+        await _savePlan({
+          id:'plan_'+Date.now(),
+          estId,estNombre:est.nombre,salon,
+          materia,profId:CU.id,profNombre:CU.nombre,
+          titulo:vals.titulo,desc:vals.desc,
+          fechaLimite:vals.fechaLimite,
+          archNombre:vals.archNombre||'',archDataUrl:vals.archDataUrl||'',archType:vals.archType||'',
+          fecha:new Date().toLocaleDateString('es-CO'),
+          visto:false,esSalon:false
+        });
+        goto('prec');sw('success','Plan enviado al estudiante','',1500);
+      }catch(_e3){sw('error','Error guardando plan: '+_e3.message);}
     }
   });
 }

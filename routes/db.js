@@ -69,8 +69,10 @@ router.get('/', authMiddleware, async (req, res) => {
     const ests  = usuarios.filter(u => u.role === 'est');
 
     // ── Reconstruir notas { estId: { periodo: { materia:{a,c,r} } } } ────────
+    // FIX Bug2: solo incluir notas del año lectivo ACTIVO en DB.notas
+    const anoActualStr = cfg.anoActual || String(new Date().getFullYear());
     const notasObj = {};
-    notas.forEach(n => {
+    notas.filter(n => String(n.anoLectivo) === anoActualStr).forEach(n => {
       if (!notasObj[n.estId]) notasObj[n.estId] = {};
       n.periodos.forEach(p => {
         const mats = {};
