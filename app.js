@@ -220,9 +220,17 @@ function gprom(eid){
   return+(act.reduce((s,p)=>s+pprom(eid,p),0)/act.length).toFixed(2);
 }
 function matPerd(eid){
+  // Una materia se considera "perdida" si:
+  // - Tiene al menos un periodo con notas > 0 Y el promedio de esos periodos < 3
+  // - O si NO tiene ninguna nota ingresada pero el periodo extraordinario está activo
+  //   (el docente necesita poder enviarle el plan aunque no haya ingresado notas aún)
   return getMats(eid).filter(m=>{
     const act=DB.pers.filter(p=>{const t=DB.notas[eid]?.[p]?.[m];return t&&(t.a>0||t.c>0||t.r>0);});
-    if(!act.length) return false;
+    if(!act.length){
+      // Sin notas: si el periodo extraordinario está activo, considerar perdida
+      // para que el docente pueda enviar el plan de recuperación
+      return DB.ext?.on===true;
+    }
     return act.reduce((s,p)=>s+def(DB.notas[eid][p][m]),0)/act.length<3;
   });
 }
@@ -271,10 +279,18 @@ function siguienteSalon(salon){
 }
 
 // Materias perdidas en el año completo (promedio todos los periodos < 3)
+// Si el estudiante no tiene NINGUNA nota en TODO el año → se considera sin datos
+// y NO puede ser promovido ni reprobado hasta que el admin decida manualmente.
 function matPerdAnio(eid){
-  return getMats(eid).filter(m=>{
+  const mats=getMats(eid);
+  // Verificar si el estudiante tiene alguna nota en el año
+  const tienAlgunaNota=mats.some(m=>
+    DB.pers.some(p=>{const t=DB.notas[eid]?.[p]?.[m];return t&&(t.a>0||t.c>0||t.r>0);})
+  );
+  if(!tienAlgunaNota) return []; // Sin datos: no pierde ni pasa → debe revisarse manualmente
+  return mats.filter(m=>{
     const act=DB.pers.filter(p=>{const t=DB.notas[eid]?.[p]?.[m];return t&&(t.a>0||t.c>0||t.r>0);});
-    if(!act.length) return false;
+    if(!act.length) return false; // sin notas en esta materia específica → no perdida
     const prom=act.reduce((s,p)=>s+def(DB.notas[eid][p][m]),0)/act.length;
     return prom<3;
   });

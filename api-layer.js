@@ -917,12 +917,36 @@ async function saveAno() {
     showCancelButton: true, confirmButtonText: `Cambiar a ${nuevo}`, confirmButtonColor: 'var(--nv)'
   }).then(async r => {
     if (!r.isConfirmed) return;
+    // ── Archivar notas del año ACTUAL en estHist antes de cambiar ──────────────
+    try {
+      const snapPromises = (DB.ests || []).map(est => {
+        const snapNotas = JSON.parse(JSON.stringify(DB.notas[est.id] || {}));
+        const histEntry = { ...((DB.estHist || []).find(h => h.id === est.id) || {}),
+          id: est.id, nombre: est.nombre, ti: est.ti || '',
+          salon: est.salon || '', activo: true,
+          snapNotas, snapAno: actual,
+          snapMats: getMats ? getMats(est.id) : [],
+          snapSalon: est.salon || ''
+        };
+        return apiFetch(`/api/est-hist/${est.id}`, {
+          method: 'PUT', body: JSON.stringify(histEntry)
+        }).catch(e => console.warn(`[saveAno] snapshot error ${est.id}:`, e.message));
+      });
+      await Promise.all(snapPromises);
+      console.log(`[saveAno] ✅ Notas del año ${actual} archivadas (${snapPromises.length} estudiantes)`);
+    } catch (snapErr) {
+      console.warn('[saveAno] Error archivando snapshots:', snapErr.message);
+    }
+
     DB.anoActual = nuevo;
+    // Limpiar notas locales para el nuevo año
+    (DB.ests || []).forEach(est => { DB.notas[est.id] = {}; });
+
     try {
       await apiFetch('/api/config/anoActual', { method: 'PUT', body: JSON.stringify({ value: nuevo }) });
       await dbLoad();
       goto('afec');
-      sw('success', `Año lectivo ${nuevo} activado`, `Los datos del ${actual} quedan en el historial.`, 2500);
+      sw('success', `Año lectivo ${nuevo} activado`, `Las notas del ${actual} quedaron archivadas en el historial.`, 2500);
     } catch (e) { sw('error', 'Error: ' + e.message); }
   });
 }
@@ -1543,20 +1567,27 @@ async function promoverEstudiantes(ciclo) {
   // Calcular resultado para cada estudiante
   const resultados = lista.map(e => {
     const mp = matPerdAnio ? matPerdAnio(e.id) : matPerd(e.id);
+    // Detectar si el estudiante no tiene NINGUNA nota en todo el año
+    const mats = getMats(e.id);
+    const sinDatos = !mats.some(m =>
+      DB.pers.some(p => { const t = DB.notas[e.id]?.[p]?.[m]; return t && (t.a > 0 || t.c > 0 || t.r > 0); })
+    );
     const pierde = mp.length >= 3;
     const sig = siguienteSalon ? siguienteSalon(e.salon) : null;
     return {
       est: e,
       pierde,
+      sinDatos,   // TRUE si no tiene ninguna nota en el año actual
       matsPerdidas: mp,
       siguienteSalon: pierde ? e.salon : (sig || e.salon),
-      graduado: !pierde && sig === 'GRADUADO'
+      graduado: !pierde && !sinDatos && sig === 'GRADUADO'
     };
   });
 
-  const promueven   = resultados.filter(r => !r.pierde && !r.graduado);
+  const promueven   = resultados.filter(r => !r.pierde && !r.graduado && !r.sinDatos);
   const repiten     = resultados.filter(r => r.pierde);
   const graduados   = resultados.filter(r => r.graduado);
+  const sinDatosList = resultados.filter(r => r.sinDatos);
 
   const conf = await Swal.fire({
     title: '🎓 Promover año — Resumen',
@@ -1589,9 +1620,14 @@ async function promoverEstudiantes(ciclo) {
         ${promueven.slice(0,5).map(r=>`• ${r.est.nombre}: ${r.est.salon} → ${r.siguienteSalon}`).join('<br>')}
         ${promueven.length>5?`<br><em>... y ${promueven.length-5} más</em>`:''}
       </div>` : ''}
-      ${graduados.length ? `<div style="background:#ebf8ff;border-radius:8px;padding:10px">
+      ${graduados.length ? `<div style="background:#ebf8ff;border-radius:8px;padding:10px;margin-bottom:8px">
         <strong style="color:#2b6cb0">🎓 Graduados (pasan al historial):</strong><br>
         ${graduados.map(r=>`• ${r.est.nombre}`).join('<br>')}
+      </div>` : ''}
+      ${sinDatosList.length ? `<div style="background:#fef9c3;border-radius:8px;padding:10px">
+        <strong style="color:#92400e">⚠️ Sin notas (no se moverán — revisar manualmente):</strong><br>
+        ${sinDatosList.map(r=>`• ${r.est.nombre} (${r.est.salon})`).join('<br>')}
+        <br><small style="color:#78350f">Ingresa sus notas antes de promover.</small>
       </div>` : ''}
     </div>`,
     showCancelButton: true,
@@ -1611,6 +1647,12 @@ async function promoverEstudiantes(ciclo) {
 
   for (const r of resultados) {
     try {
+      if (r.sinDatos) {
+        // Sin notas: no mover, no graduar, solo registrar en audit
+        console.warn(`[promover] ${r.est.nombre} (${r.est.salon}): sin datos — omitido`);
+        ok++;
+        continue;
+      }
       if (r.graduado) {
         // Graduados: eliminar del sistema y pasar a historial
         await apiFetch(`/api/usuarios/${r.est.id}`, { method: 'DELETE' });

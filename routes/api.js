@@ -325,21 +325,40 @@ router.put('/notas/:estId/:periodo/:materia', authMiddleware, async (req, res) =
 
     const cfg  = await Config.findOne({ key: 'anoActual', colegioId: cid }).lean();
     const ano  = cfg?.value || String(new Date().getFullYear());
-    let   nota = await Nota.findOne({ estId, anoLectivo: ano, colegioId: cid });
-    if (!nota) nota = new Nota({ estId, anoLectivo: ano, periodos: [], colegioId: cid });
 
-    let perEntry = nota.periodos.find(p => p.periodo === periodo);
-    if (!perEntry) {
-      nota.periodos.push({ periodo, materias: {}, disciplina: '' });
-      perEntry = nota.periodos[nota.periodos.length - 1];
+    // Usar findOneAndUpdate atómico con $set en el elemento de periodos
+    // Esto evita el VersionError de Mongoose ("No matching document found for id... version 0")
+    // que ocurría cuando nota.save() encontraba conflicto de versión concurrente.
+    const key = `periodos.$.materias.${materia}`;
+
+    // Primero intentar actualizar periodo existente
+    let nota = await Nota.findOneAndUpdate(
+      { estId, anoLectivo: ano, colegioId: cid, 'periodos.periodo': periodo },
+      {
+        $set: {
+          [`periodos.$.materias.${materia}`]: { a, c, r },
+          ...(disciplina !== undefined ? { 'periodos.$.disciplina': disciplina } : {})
+        }
+      },
+      { new: true }
+    );
+
+    if (!nota) {
+      // El documento no existe O el periodo no existe aún — usar upsert con $push
+      nota = await Nota.findOneAndUpdate(
+        { estId, anoLectivo: ano, colegioId: cid },
+        {
+          $push: {
+            periodos: {
+              periodo,
+              materias: { [materia]: { a, c, r } },
+              disciplina: disciplina !== undefined ? disciplina : ''
+            }
+          }
+        },
+        { upsert: true, new: true, setDefaultsOnInsert: true }
+      );
     }
-    if (!perEntry.materias) perEntry.materias = {};
-    perEntry.materias.set
-      ? perEntry.materias.set(materia, { a, c, r })
-      : (perEntry.materias[materia] = { a, c, r });
-    if (disciplina !== undefined) perEntry.disciplina = disciplina;
-    nota.markModified('periodos');
-    await nota.save();
 
     // Auditoría fire-and-forget
     Auditoria.create({
