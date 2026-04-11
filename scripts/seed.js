@@ -7,7 +7,7 @@ const mongoose = require('mongoose');
 const bcrypt   = require('bcryptjs');
 const connectDB = require('../config/db');
 const {
-  Usuario, Colegio, Salon, Config,
+  Usuario, Colegio, Salon, Config, Materia,
   Nota, EstHist, PlanEstudios
 } = require('../models');
 
@@ -23,6 +23,7 @@ async function seed() {
     Colegio.deleteMany({}),
     Salon.deleteMany({}),
     Config.deleteMany({}),
+    Materia.deleteMany({}),
     Nota.deleteMany({}),
     EstHist.deleteMany({}),
     PlanEstudios.deleteMany({}),
@@ -169,6 +170,31 @@ async function seed() {
   ];
   await PlanEstudios.insertMany(plan);
   console.log('📖 Plan de Estudios Demo creado');
+
+  // ── Materias en colección dedicada (separadas por colegioId) ─────────────
+  const materiasPrimaria = [
+    'Matemáticas', 'Lengua Castellana', 'Ciencias Naturales',
+    'Ciencias Sociales', 'Ed. Artística', 'Ed. Física', 'Ética',
+  ];
+  const materiasBachillerato = [
+    'Matemáticas', 'Español', 'Física', 'Química',
+    'Filosofía', 'Historia', 'Inglés', 'Ed. Física',
+  ];
+  for (let i = 0; i < materiasPrimaria.length; i++) {
+    await Materia.findOneAndUpdate(
+      { nombre: materiasPrimaria[i], ciclo: 'primaria', colegioId },
+      { $setOnInsert: { nombre: materiasPrimaria[i], ciclo: 'primaria', colegioId, colegioNombre, orden: i } },
+      { upsert: true }
+    ).catch(() => {});
+  }
+  for (let i = 0; i < materiasBachillerato.length; i++) {
+    await Materia.findOneAndUpdate(
+      { nombre: materiasBachillerato[i], ciclo: 'bachillerato', colegioId },
+      { $setOnInsert: { nombre: materiasBachillerato[i], ciclo: 'bachillerato', colegioId, colegioNombre, orden: i } },
+      { upsert: true }
+    ).catch(() => {});
+  }
+  console.log('📚 Materias creadas en colección dedicada (primaria + bachillerato)');
 
   console.log('\n✅ Seed completado.\n');
   console.log('Credenciales:');

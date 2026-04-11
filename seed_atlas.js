@@ -32,6 +32,12 @@ const SalonSchema = new Schema({
   nombre: String, ciclo: String, mats: [String], colegioId: String,
 }, { timestamps: true, collection: 'salones' });
 
+const MateriaSchema = new Schema({
+  nombre: String, ciclo: String, colegioId: String,
+  colegioNombre: String, orden: Number,
+}, { timestamps: true, collection: 'materias' });
+MateriaSchema.index({ nombre: 1, ciclo: 1, colegioId: 1 }, { unique: true });
+
 const ConfigSchema = new Schema({
   key: String, value: Schema.Types.Mixed, colegioId: String,
 }, { timestamps: true, collection: 'config' });
@@ -49,6 +55,7 @@ const EstHistSchema = new Schema({
 const Colegio       = mongoose.model('Colegio',       ColegioSchema);
 const Usuario       = mongoose.model('Usuario',       UsuarioSchema);
 const Salon         = mongoose.model('Salon',         SalonSchema);
+const Materia       = mongoose.model('Materia',       MateriaSchema);
 const Config        = mongoose.model('Config',        ConfigSchema);
 const PlanEstudios  = mongoose.model('PlanEstudios',  PlanEstudiosSchema);
 const EstHist       = mongoose.model('EstHist',       EstHistSchema);
@@ -71,6 +78,7 @@ async function seed() {
     Colegio.deleteMany({}),
     Salon.deleteMany({}),
     Config.deleteMany({}),
+    Materia.deleteMany({}),
     PlanEstudios.deleteMany({}),
     EstHist.deleteMany({}),
   ]);
@@ -197,6 +205,31 @@ async function seed() {
   ];
   await PlanEstudios.insertMany(plan);
   console.log('📖 Plan de Estudios creado');
+
+  // ── Materias en colección dedicada ─────────────────────────────
+  const materiasPrimaria = [
+    'Matemáticas', 'Lengua Castellana', 'Ciencias Naturales',
+    'Ciencias Sociales', 'Ed. Artística', 'Ed. Física', 'Ética',
+  ];
+  const materiasBachillerato = [
+    'Matemáticas', 'Español', 'Física', 'Química',
+    'Filosofía', 'Historia', 'Inglés', 'Ed. Física',
+  ];
+  for (let i = 0; i < materiasPrimaria.length; i++) {
+    await Materia.findOneAndUpdate(
+      { nombre: materiasPrimaria[i], ciclo: 'primaria', colegioId },
+      { $setOnInsert: { nombre: materiasPrimaria[i], ciclo: 'primaria', colegioId, colegioNombre, orden: i } },
+      { upsert: true }
+    ).catch(() => {});
+  }
+  for (let i = 0; i < materiasBachillerato.length; i++) {
+    await Materia.findOneAndUpdate(
+      { nombre: materiasBachillerato[i], ciclo: 'bachillerato', colegioId },
+      { $setOnInsert: { nombre: materiasBachillerato[i], ciclo: 'bachillerato', colegioId, colegioNombre, orden: i } },
+      { upsert: true }
+    ).catch(() => {});
+  }
+  console.log('📚 Materias creadas en colección dedicada');
 
   console.log('\n✅ Seed completado exitosamente en Atlas!\n');
   console.log('═══════════════════════════════════════');

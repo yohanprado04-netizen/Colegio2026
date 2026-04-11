@@ -44,6 +44,18 @@ const SalonSchema = new Schema({
 }, { timestamps: true, collection: 'salones' });
 SalonSchema.index({ nombre: 1, colegioId: 1 }, { unique: true });
 
+// ─── MATERIAS POR COLEGIO ────────────────────────────────────────────────────
+// Colección dedicada para materias de primaria y bachillerato por colegio.
+// Reemplaza el uso de config {key:'mP'} y {key:'mB'} que causaban E11000.
+const MateriaSchema = new Schema({
+  nombre:    { type: String, required: true, trim: true },
+  ciclo:     { type: String, enum: ['primaria', 'bachillerato'], required: true },
+  colegioId: { type: String, required: true, index: true },
+  colegioNombre: { type: String, default: '' },
+  orden:     { type: Number, default: 0 },
+}, { timestamps: true, collection: 'materias' });
+MateriaSchema.index({ nombre: 1, ciclo: 1, colegioId: 1 }, { unique: true });
+
 const ConfigSchema = new Schema({
   key:       { type: String, required: true },
   value:     { type: Schema.Types.Mixed, required: true },
@@ -254,6 +266,7 @@ SugerenciaSchema.index({ leida: 1, createdAt: -1 });
 SugerenciaSchema.index({ uid: 1 });
 
 module.exports = {
+  Materia:       mongoose.model('Materia',       MateriaSchema),
   Colegio:       mongoose.model('Colegio',       ColegioSchema),
   Usuario:       mongoose.model('Usuario',       UsuarioSchema),
   Salon:         mongoose.model('Salon',         SalonSchema),

@@ -4,7 +4,7 @@ const router = require('express').Router();
 const bcrypt  = require('bcryptjs');
 const { verifyToken, requireRole } = require('../middleware/auth');
 const {
-  Usuario, Colegio, Config, PlanEstudios,
+  Usuario, Colegio, Config, PlanEstudios, Materia,
   Nota, Asistencia, Auditoria, Estadistica,
   Salon, EstHist, Upload, Plan, Recuperacion, Bloqueo, Excusa, VClase
 } = require('../models');
@@ -104,6 +104,30 @@ router.post('/colegios', async (req, res) => {
         { nombre: s.nombre, colegioId },
         { $setOnInsert: { nombre: s.nombre, ciclo: s.ciclo, mats: s.mats, colegioId } },
         { upsert: true, new: false }
+      ).catch(() => {});
+    }
+
+    // Materias por defecto en colección dedicada — diferenciadas por colegioId
+    const materiasPrimaria = [
+      'Matemáticas', 'Lengua Castellana', 'Ciencias Naturales',
+      'Ciencias Sociales', 'Ed. Artística', 'Ed. Física', 'Ética',
+    ];
+    const materiasBachillerato = [
+      'Matemáticas', 'Español', 'Física', 'Química',
+      'Filosofía', 'Historia', 'Inglés', 'Ed. Física',
+    ];
+    for (let i = 0; i < materiasPrimaria.length; i++) {
+      await Materia.findOneAndUpdate(
+        { nombre: materiasPrimaria[i], ciclo: 'primaria', colegioId },
+        { $setOnInsert: { nombre: materiasPrimaria[i], ciclo: 'primaria', colegioId, colegioNombre: nombre, orden: i } },
+        { upsert: true }
+      ).catch(() => {});
+    }
+    for (let i = 0; i < materiasBachillerato.length; i++) {
+      await Materia.findOneAndUpdate(
+        { nombre: materiasBachillerato[i], ciclo: 'bachillerato', colegioId },
+        { $setOnInsert: { nombre: materiasBachillerato[i], ciclo: 'bachillerato', colegioId, colegioNombre: nombre, orden: i } },
+        { upsert: true }
       ).catch(() => {});
     }
 

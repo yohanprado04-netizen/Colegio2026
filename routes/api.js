@@ -4,7 +4,7 @@ const router = require('express').Router();
 const bcrypt  = require('bcryptjs');
 const { authMiddleware, requireRole } = require('../middleware/auth');
 const {
-  Usuario, Salon, Config, Nota, Asistencia, Excusa,
+  Usuario, Salon, Config, Materia, Nota, Asistencia, Excusa,
   VClase, Upload, Plan, Recuperacion, Auditoria, EstHist, Bloqueo
 } = require('../models');
 
@@ -140,6 +140,46 @@ router.delete('/salones/:nombre', authMiddleware, requireRole('admin', 'superadm
 });
 
 // ═══════════════════════════════════════════════════════════════════
+// MATERIAS POR COLEGIO — colección dedicada, separada por colegioId
+// Reemplaza config {key:'mP'} y {key:'mB'} que causaban E11000 en Atlas
+// ═══════════════════════════════════════════════════════════════════
+
+// GET /api/materias?ciclo=primaria|bachillerato
+router.get('/materias', authMiddleware, async (req, res) => {
+  try {
+    const cid = tenantId(req) || req.user.colegioId;
+    const filter = { colegioId: cid };
+    if (req.query.ciclo) filter.ciclo = req.query.ciclo;
+    const mats = await Materia.find(filter).sort({ ciclo: 1, orden: 1, nombre: 1 }).lean();
+    res.json(mats);
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// POST /api/materias — crear materia para este colegio
+router.post('/materias', authMiddleware, requireRole('admin', 'superadmin'), async (req, res) => {
+  try {
+    const cid = tenantId(req) || req.user.colegioId;
+    const { nombre, ciclo, orden } = req.body;
+    if (!nombre || !ciclo) return res.status(400).json({ error: 'nombre y ciclo son requeridos' });
+    const col = req.user.colegioNombre || '';
+    const m = await Materia.create({ nombre: nombre.trim(), ciclo, colegioId: cid, colegioNombre: col, orden: orden || 0 });
+    res.status(201).json(m);
+  } catch (err) {
+    if (err.code === 11000) return res.status(409).json({ error: 'Esa materia ya existe en este colegio para ese ciclo' });
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// DELETE /api/materias/:nombre/:ciclo
+router.delete('/materias/:nombre/:ciclo', authMiddleware, requireRole('admin', 'superadmin'), async (req, res) => {
+  try {
+    const cid = tenantId(req) || req.user.colegioId;
+    await Materia.findOneAndDelete({ nombre: req.params.nombre, ciclo: req.params.ciclo, colegioId: cid });
+    res.json({ ok: true });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// ═══════════════════════════════════════════════════════════════════
 // CONFIGURACIÓN
 // ═══════════════════════════════════════════════════════════════════
 router.get('/config', authMiddleware, async (req, res) => {
@@ -155,15 +195,43 @@ router.get('/config', authMiddleware, async (req, res) => {
 router.put('/config/:key', authMiddleware, requireRole('admin', 'superadmin'), async (req, res) => {
   try {
     const cid = tenantId(req) || req.user.colegioId || 'global';
-    // Usar $set + $setOnInsert para evitar E11000 en upsert con índice único {key, colegioId}
-    const cfg = await Config.findOneAndUpdate(
-      { key: req.params.key, colegioId: cid },
-      {
-        $set:           { value: req.body.value },
-        $setOnInsert:   { key: req.params.key, colegioId: cid }
-      },
-      { upsert: true, new: true }
-    );
+    const key = req.params.key;
+    let cfg;
+    try {
+      cfg = await Config.findOneAndUpdate(
+        { key, colegioId: cid },
+        { $set: { value: req.body.value }, $setOnInsert: { key, colegioId: cid } },
+        { upsert: true, new: true }
+      );
+    } catch (upsertErr) {
+      if (upsertErr.code === 11000) {
+        // Índice legacy key_1 en Atlas — intentar update directo
+        cfg = await Config.findOneAndUpdate(
+          { key, colegioId: cid },
+          { $set: { value: req.body.value } },
+          { new: true }
+        );
+        if (!cfg) {
+          // No existe con ese colegioId — insertar por colección directa
+          await Config.collection.insertOne({ key, value: req.body.value, colegioId: cid });
+          cfg = await Config.findOne({ key, colegioId: cid }).lean();
+        }
+      } else { throw upsertErr; }
+    }
+    // Sincronizar con colección materias si es mP o mB
+    if ((key === 'mP' || key === 'mB') && Array.isArray(req.body.value)) {
+      const ciclo = key === 'mP' ? 'primaria' : 'bachillerato';
+      const col = req.user.colegioNombre || '';
+      for (let i = 0; i < req.body.value.length; i++) {
+        const nombre = String(req.body.value[i]).trim();
+        if (!nombre) continue;
+        await Materia.findOneAndUpdate(
+          { nombre, ciclo, colegioId: cid },
+          { $setOnInsert: { nombre, ciclo, colegioId: cid, colegioNombre: col, orden: i } },
+          { upsert: true }
+        ).catch(() => {});
+      }
+    }
     res.json(cfg);
   } catch (err) { res.status(500).json({ error: err.message }); }
 });

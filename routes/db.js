@@ -3,7 +3,7 @@
 const router = require('express').Router();
 const { authMiddleware, requireRole } = require('../middleware/auth');
 const {
-  Usuario, Salon, Config, Nota, Asistencia, Excusa,
+  Usuario, Salon, Config, Materia, Nota, Asistencia, Excusa,
   VClase, Upload, Plan, Recuperacion, Auditoria, EstHist, Bloqueo
 } = require('../models');
 
@@ -38,13 +38,14 @@ router.get('/', authMiddleware, async (req, res) => {
 
     // ── Cargar todo en paralelo con filtro de tenant ──────────────────────────
     const [
-      usuarios, salones, configs, notas, asistencias,
+      usuarios, salones, configs, materiasDocs, notas, asistencias,
       excusas, vclases, uploads, planes, recuperaciones,
       auditoria, estHist, bloqueos
     ] = await Promise.all([
       Usuario.find({ ...cf, role: { $in: ['admin','profe','est'] } }, '-__v').lean(),
       Salon.find(cf).lean(),
       Config.find(cf).lean(),
+      Materia.find(cf).sort({ ciclo: 1, orden: 1, nombre: 1 }).lean(),
       Nota.find(cf).lean(),
       Asistencia.find(cf).lean(),
       Excusa.find(cf).lean(),
@@ -131,8 +132,12 @@ router.get('/', authMiddleware, async (req, res) => {
       profs:        profs.map(cleanUser),
       ests:         ests.map(cleanUser),
       sals:         salones.map(s => ({ nombre: s.nombre, ciclo: s.ciclo, mats: s.mats || [], colegioId: s.colegioId })),
-      mP:           cfg.mP    || ['Matemáticas','Lengua Castellana','Ciencias Naturales','Ciencias Sociales','Ed. Artística','Ed. Física','Ética'],
-      mB:           cfg.mB    || ['Matemáticas','Español','Ciencias Naturales','Ciencias Sociales','Inglés','Ed. Física','Arte'],
+      mP:           materiasDocs.filter(m => m.ciclo === 'primaria').map(m => m.nombre).length
+                      ? materiasDocs.filter(m => m.ciclo === 'primaria').map(m => m.nombre)
+                      : (cfg.mP || ['Matemáticas','Lengua Castellana','Ciencias Naturales','Ciencias Sociales','Ed. Artística','Ed. Física','Ética']),
+      mB:           materiasDocs.filter(m => m.ciclo === 'bachillerato').map(m => m.nombre).length
+                      ? materiasDocs.filter(m => m.ciclo === 'bachillerato').map(m => m.nombre)
+                      : (cfg.mB || ['Matemáticas','Español','Ciencias Naturales','Ciencias Sociales','Inglés','Ed. Física','Arte']),
       pers:         cfg.pers  || ['Periodo 1','Periodo 2','Periodo 3','Periodo 4'],
       dr:           cfg.dr    || { s: '', e: '' },
       drPer:        cfg.drPer || {},
