@@ -323,7 +323,7 @@ router.put('/notas/:estId/:periodo/:materia', authMiddleware, async (req, res) =
     const cid = tenantId(req) || req.user.colegioId || '';
 
     if (req.user.role === 'profe') {
-      const est = await Usuario.findOne({ id: estId, role: 'est' }).lean();
+      const est = await Usuario.findOne({ id: estId, role: 'est', colegioId: cid }).lean(); // seguridad multi-tenant
       if (!est || !(req.user.salones || []).includes(est.salon))
         return res.status(403).json({ error: 'Sin autorización para este estudiante' });
     }

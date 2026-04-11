@@ -68,66 +68,6 @@ router.get('/', authMiddleware, async (req, res) => {
     const profs = usuarios.filter(u => u.role === 'profe');
     let   ests  = usuarios.filter(u => u.role === 'est');
 
-    // ══════════════════════════════════════════════════════════════════════
-    // REPARACIÓN AUTOMÁTICA DE MULTI-TENANT — 3 estrategias
-    //
-    // Problema: estudiantes/profes creados sin colegioId correcto quedan
-    // invisibles para su colegio. Esto pasa cuando:
-    //   1. colegioId es null o ''  (usuario creado antes del fix)
-    //   2. colegioId es de otro colegio (seed o migración incorrecta)
-    //
-    // Solución: si faltan estudiantes, buscarlos por su salón.
-    // Los salones son únicos por colegio (índice único {nombre, colegioId}),
-    // por lo que un estudiante en salón "1A" del colegio X no puede
-    // pertenecer al colegio Y que también tiene "1A".
-    // ══════════════════════════════════════════════════════════════════════
-    if (salones.length > 0) {
-      const salonNames = salones.map(s => s.nombre);
-      const colegioNombreActual = req.user.colegioNombre || '';
-
-      // ── Reparar estudiantes ─────────────────────────────────────────────
-      // Buscar estudiantes cuyo salón pertenece a ESTE colegio
-      // pero cuyo colegioId es diferente (null, '', u otro colegio)
-      const todasEstsConEseSalon = await Usuario.find({
-        role: 'est',
-        salon: { $in: salonNames },
-        colegioId: { $ne: cid }           // colegioId NO es el correcto
-      }, '-__v').lean();
-
-      if (todasEstsConEseSalon.length > 0) {
-        console.warn(`[db] Reparando ${todasEstsConEseSalon.length} estudiantes con colegioId incorrecto para colegio "${cid}"`);
-        // Reparar en la BD (sincrónico para que este mismo request ya los vea)
-        await Usuario.updateMany(
-          { _id: { $in: todasEstsConEseSalon.map(e => e._id) } },
-          { $set: { colegioId: cid, colegioNombre: colegioNombreActual } }
-        ).catch(e => console.error('[db] Error reparando estudiantes:', e.message));
-
-        // Mezclar con los que ya teníamos (evitar duplicados por id)
-        const idsYaTenemos = new Set(ests.map(e => String(e._id)));
-        const nuevos = todasEstsConEseSalon.filter(e => !idsYaTenemos.has(String(e._id)));
-        // Actualizar colegioId en los objetos en memoria también
-        nuevos.forEach(e => { e.colegioId = cid; e.colegioNombre = colegioNombreActual; });
-        ests = [...ests, ...nuevos];
-      }
-
-      // ── Reparar profes ──────────────────────────────────────────────────
-      // Buscar profes cuyos salones asignados pertenecen a este colegio
-      // pero cuyo colegioId es diferente
-      const todosProfsSinColegio = await Usuario.find({
-        role: 'profe',
-        salones: { $elemMatch: { $in: salonNames } },
-        colegioId: { $ne: cid }
-      }, '-__v').lean();
-
-      if (todosProfsSinColegio.length > 0) {
-        console.warn(`[db] Reparando ${todosProfsSinColegio.length} profes con colegioId incorrecto para colegio "${cid}"`);
-        await Usuario.updateMany(
-          { _id: { $in: todosProfsSinColegio.map(p => p._id) } },
-          { $set: { colegioId: cid, colegioNombre: colegioNombreActual } }
-        ).catch(e => console.error('[db] Error reparando profes:', e.message));
-      }
-    }
-
     // ── Reconstruir notas { estId: { periodo: { materia:{a,c,r} } } } ────────
     // FIX Bug2: solo incluir notas del año lectivo ACTIVO en DB.notas
     const anoActualStr = cfg.anoActual || String(new Date().getFullYear());
