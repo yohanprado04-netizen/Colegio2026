@@ -722,7 +722,7 @@ function initPg(pid){
   const map={
     dash:initDash,asal:initASal,apri:()=>initAEst('primaria'),abac:()=>initAEst('bachillerato'),
     aprf:initAPrf,amat:initAMat,anot:initANot,areh:initAReh,aexc:initAExc,avcl:initAVcl,
-    past:initPAst,eb:initEB,
+    pnot:initPNot,past:initPAst,eb:initEB,
     ph:()=>{ setTimeout(renderPExcR,0); },
     sadash:initSADash,sacolegios:initSAColegios,saplan:initSAPlan,
     saestadisticas:initSAEstadisticas,saauditoria:initSAAuditoria,samantenimiento:initSAMantenimiento,
@@ -2257,14 +2257,45 @@ function updatePNMats(){
   sel.innerHTML=`<option value="">Todas las materias del salón</option>
     ${mats.map(m=>`<option value="${m}">${m}</option>`).join('')}`;
 }
+function initPNot(){
+  // Recarga DB fresca antes de renderizar — igual que initAEst
+  // Garantiza que DB.ests tenga los estudiantes del colegio antes de que
+  // el profesor presione Cargar, evitando la tabla vacía.
+  if(typeof dbLoad==='function'){
+    dbLoad().catch(()=>{}).finally(()=>{
+      // Re-renderizar pgPNot con datos frescos si ya estamos en esa página
+      const el=gi('pnW');
+      if(el && !el.children.length){
+        // Tabla aún no cargada — solo actualizar DB, no forzar render
+      }
+    });
+  }
+}
 function loadPN(){
   const salon=gi('pns')?.value,per=gi('pnp')?.value;
   if(!salon||!per){sw('warning','Selecciona salón y periodo');return;}
   if(!notasOk(per)){sw('error','Ingreso de notas cerrado para este periodo');return;}
   const matSel=gi('pnm')?.value;
-  const ests=ebySalon(salon);
+  // Trim por si acaso hay espacios extra en el nombre del salón
+  const salonClean = (salon||'').trim();
+  const ests = ebySalon(salonClean);
   const el=gi('pnW');
-  if(!ests.length){el.innerHTML='<div class="mty"><div class="ei">🎓</div><p>Sin estudiantes en este salón</p></div>';return;}
+  if(!ests.length){
+    // Intentar recargar DB y reintentar UNA vez — puede ser que aún no cargó
+    if(typeof dbLoad==='function'){
+      el.innerHTML='<div style="text-align:center;padding:1rem;color:#718096">🔄 Cargando estudiantes…</div>';
+      dbLoad().then(()=>{
+        const estsReloaded=ebySalon(salonClean);
+        if(estsReloaded.length){ loadPN(); return; }
+        el.innerHTML='<div class="mty"><div class="ei">🎓</div><p>Sin estudiantes en el salón <strong>'+salonClean+'</strong>.<br><small style="color:#a0aec0">Verifica que los estudiantes tengan asignado este salón.</small></p></div>';
+      }).catch(()=>{
+        el.innerHTML='<div class="mty"><div class="ei">🎓</div><p>Sin estudiantes en este salón</p></div>';
+      });
+    } else {
+      el.innerHTML='<div class="mty"><div class="ei">🎓</div><p>Sin estudiantes en este salón</p></div>';
+    }
+    return;
+  }
   /* Inicializar notas de TODOS los estudiantes antes de calcular materias */
   ests.forEach(e=>syncN(e.id));
   /* ── Resolución de materias con cascada de fallbacks ── */
