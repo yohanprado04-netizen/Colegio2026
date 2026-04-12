@@ -778,4 +778,44 @@ router.put('/est-hist/:id', authMiddleware, requireRole('admin', 'superadmin'), 
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
+
+// ─── GET /api/diag/salon — Diagnóstico: por qué no aparecen estudiantes ──────
+// Solo admin y profe pueden usarlo. Muestra exactamente qué hay en DB.
+router.get('/diag/salon', authMiddleware, requireRole('admin','profe','superadmin'), async (req, res) => {
+  try {
+    const cid   = req.user.colegioId || null;
+    const salon = (req.query.salon || '').trim();
+
+    // Datos del profesor autenticado
+    const profDoc = await Usuario.findOne({ id: req.user.id }).lean();
+
+    // Todos los ests del colegio
+    const todosEsts = cid
+      ? await Usuario.find({ colegioId: cid, role: 'est' }, 'id nombre salon colegioId').lean()
+      : [];
+
+    // Ests del salón pedido (comparación exacta)
+    const estsSalon = salon
+      ? todosEsts.filter(e => e.salon === salon)
+      : [];
+
+    // Ests con salon similar (para detectar espacios/casing)
+    const estsSimilar = salon
+      ? todosEsts.filter(e => (e.salon||'').trim().toUpperCase() === salon.toUpperCase() && e.salon !== salon)
+      : [];
+
+    res.json({
+      profesorId:       req.user.id,
+      profesorUsuario:  req.user.usuario,
+      profesorColegioId: cid,
+      profesorSalones:  profDoc?.salones || [],
+      salonBuscado:     salon,
+      totalEstsColegio: todosEsts.length,
+      estsSalonExacto:  estsSalon.length,
+      estsSimilar:      estsSimilar.map(e => ({ nombre: e.nombre, salon: JSON.stringify(e.salon) })),
+      muestraEsts:      todosEsts.slice(0, 10).map(e => ({ nombre: e.nombre, salon: e.salon, colegioId: e.colegioId })),
+    });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
 module.exports = router;
