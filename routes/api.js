@@ -336,7 +336,10 @@ router.get('/notas/:estId', authMiddleware, async (req, res) => {
     const cid  = tenantId(req) || req.user.colegioId || '';
     const cfg  = await Config.findOne({ key: 'anoActual', colegioId: cid }).lean();
     const ano  = req.query.ano || cfg?.value || String(new Date().getFullYear());
-    const nota = await Nota.findOne({ estId: req.params.estId, anoLectivo: ano, colegioId: cid }).lean();
+    const cidFilter = cid
+      ? { colegioId: cid }
+      : { $or: [{ colegioId: '' }, { colegioId: null }, { colegioId: { $exists: false } }] };
+    const nota = await Nota.findOne({ estId: req.params.estId, anoLectivo: ano, ...cidFilter }).lean();
     res.json(nota || { estId: req.params.estId, periodos: [] });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
@@ -348,7 +351,7 @@ router.put('/notas/:estId/:periodo/:materia', authMiddleware, async (req, res) =
     const cid = tenantId(req) || req.user.colegioId || '';
 
     if (req.user.role === 'profe') {
-      const est = await Usuario.findOne({ id: estId, role: 'est', colegioId: cid }).lean(); // seguridad multi-tenant
+      const est = await Usuario.findOne({ id: estId, role: 'est', colegioId: cid }).lean();
       if (!est || !(req.user.salones || []).includes(est.salon))
         return res.status(403).json({ error: 'Sin autorización para este estudiante' });
     }
@@ -356,39 +359,61 @@ router.put('/notas/:estId/:periodo/:materia', authMiddleware, async (req, res) =
     const cfg  = await Config.findOne({ key: 'anoActual', colegioId: cid }).lean();
     const ano  = cfg?.value || String(new Date().getFullYear());
 
-    // Usar findOneAndUpdate atómico con $set en el elemento de periodos
-    // Esto evita el VersionError de Mongoose ("No matching document found for id... version 0")
-    // que ocurría cuando nota.save() encontraba conflicto de versión concurrente.
-    const key = `periodos.$.materias.${materia}`;
+    // Filtro robusto: cubre colegioId vacío '', null, o el valor real
+    // Esto evita que un documento guardado con colegioId:null no sea encontrado
+    // cuando el token tiene colegioId:'' (ambos deben tratarse igual)
+    const cidFilter = cid
+      ? { colegioId: cid }
+      : { $or: [{ colegioId: '' }, { colegioId: null }, { colegioId: { $exists: false } }] };
 
-    // Primero intentar actualizar periodo existente
-    let nota = await Nota.findOneAndUpdate(
-      { estId, anoLectivo: ano, colegioId: cid, 'periodos.periodo': periodo },
-      {
-        $set: {
-          [`periodos.$.materias.${materia}`]: { a, c, r },
-          ...(disciplina !== undefined ? { 'periodos.$.disciplina': disciplina } : {})
-        }
-      },
-      { new: true }
-    );
+    // Función de guardado con reintentos para manejar race conditions y E11000
+    const guardarNota = async (intentos = 3) => {
+      for (let i = 0; i < intentos; i++) {
+        try {
+          // Paso 1: intentar actualizar periodo existente en el documento
+          const updated = await Nota.findOneAndUpdate(
+            { estId, anoLectivo: ano, ...cidFilter, 'periodos.periodo': periodo },
+            {
+              $set: {
+                [`periodos.$.materias.${materia}`]: { a, c, r },
+                ...(disciplina !== undefined ? { 'periodos.$.disciplina': disciplina } : {})
+              }
+            },
+            { new: true }
+          );
+          if (updated) return updated;
 
-    if (!nota) {
-      // El documento no existe O el periodo no existe aún — usar upsert con $push
-      nota = await Nota.findOneAndUpdate(
-        { estId, anoLectivo: ano, colegioId: cid },
-        {
-          $push: {
-            periodos: {
-              periodo,
-              materias: { [materia]: { a, c, r } },
-              disciplina: disciplina !== undefined ? disciplina : ''
-            }
+          // Paso 2: el periodo no existe aún — agregar con $push
+          // Si el documento tampoco existe, crearlo con upsert
+          const pushed = await Nota.findOneAndUpdate(
+            { estId, anoLectivo: ano, ...cidFilter },
+            {
+              $push: {
+                periodos: {
+                  periodo,
+                  materias: { [materia]: { a, c, r } },
+                  ...(disciplina !== undefined ? { disciplina } : {})
+                }
+              },
+              $setOnInsert: { estId, anoLectivo: ano, colegioId: cid }
+            },
+            { upsert: true, new: true, setDefaultsOnInsert: true }
+          );
+          if (pushed) return pushed;
+
+        } catch (err) {
+          // E11000: race condition — otro proceso creó el doc simultáneamente, reintentar
+          if (err.code === 11000 && i < intentos - 1) {
+            await new Promise(resolve => setTimeout(resolve, 30 * (i + 1)));
+            continue;
           }
-        },
-        { upsert: true, new: true, setDefaultsOnInsert: true }
-      );
-    }
+          throw err;
+        }
+      }
+      throw new Error('No se pudo guardar la nota después de varios intentos');
+    };
+
+    await guardarNota();
 
     // Auditoría fire-and-forget
     Auditoria.create({
@@ -400,7 +425,10 @@ router.put('/notas/:estId/:periodo/:materia', authMiddleware, async (req, res) =
     }).catch(() => {});
 
     res.json({ ok: true });
-  } catch (err) { res.status(500).json({ error: err.message }); }
+  } catch (err) {
+    console.error('[notas:PUT] Error guardando nota:', err.message, '| code:', err.code);
+    res.status(500).json({ error: err.message });
+  }
 });
 
 router.put('/notas/:estId/disciplina', authMiddleware, async (req, res) => {
@@ -413,24 +441,30 @@ router.put('/notas/:estId/disciplina', authMiddleware, async (req, res) => {
     if (isNaN(val) || val < 0 || val > 5)
       return res.status(400).json({ error: 'Disciplina debe ser número entre 0.0 y 5.0' });
 
-    let nota = await Nota.findOne({ estId: req.params.estId, anoLectivo: ano, colegioId: cid });
+    // Filtro robusto igual que en PUT notas
+    const cidFilter = cid
+      ? { colegioId: cid }
+      : { $or: [{ colegioId: '' }, { colegioId: null }, { colegioId: { $exists: false } }] };
+
+    let nota = await Nota.findOne({ estId: req.params.estId, anoLectivo: ano, ...cidFilter });
     if (!nota) nota = new Nota({ estId: req.params.estId, anoLectivo: ano, periodos: [], colegioId: cid });
 
     if (periodo) {
-      // Guardar disciplina por periodo
       let perEntry = nota.periodos.find(p => p.periodo === periodo);
       if (!perEntry) { nota.periodos.push({ periodo, materias: {}, disciplina: val }); }
       else { perEntry.disciplina = val; }
       nota.markModified('periodos');
     }
-    // Calcular promedio global de disciplina
     const perConDisc = nota.periodos.filter(p => p.disciplina != null && !isNaN(p.disciplina));
     nota.disciplina = perConDisc.length
       ? +(perConDisc.reduce((s, p) => s + p.disciplina, 0) / perConDisc.length).toFixed(2)
       : val;
     await nota.save();
     res.json({ ok: true, disciplinaGlobal: nota.disciplina });
-  } catch (err) { res.status(500).json({ error: err.message }); }
+  } catch (err) {
+    console.error('[disciplina:PUT] Error:', err.message, '| code:', err.code);
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // ═══════════════════════════════════════════════════════════════════
