@@ -194,6 +194,15 @@ tbody tr:hover{background:#fafcff}
   text-align:center;font-size:12px;font-family:var(--mn);font-weight:600;
   background:var(--bg2);transition:border .15s;outline:none;color:var(--tx)}
 .ni:focus{border-color:var(--bl3);background:#fff;box-shadow:0 0 0 3px rgba(59,130,246,.1)}
+/* Input de nota en modo tarjetas — más grande y legible */
+.niCard{width:100%;padding:8px 6px;border:2px solid var(--bd);border-radius:8px;
+  text-align:center;font-size:16px;font-family:var(--fn);font-weight:700;
+  background:#fff;transition:border .15s,box-shadow .15s;outline:none;color:var(--tx);
+  box-sizing:border-box;-moz-appearance:textfield}
+.niCard::-webkit-outer-spin-button,.niCard::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+.niCard:focus{border-color:var(--bl3);background:#f0f8ff;box-shadow:0 0 0 3px rgba(59,130,246,.15)}
+.niCard.nota-ok{border-color:#68d391;background:#f0fff4;color:#276749}
+.niCard.nota-vacia{border-color:#e2e8f0;background:#f7fafc;color:#a0aec0}
 /* LOGS */
 .lw{display:flex;flex-direction:column;gap:6px;max-height:380px;overflow-y:auto;padding-right:4px}
 .le{padding:9px 13px;border-radius:9px;background:var(--bg2);

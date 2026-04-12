@@ -2371,42 +2371,47 @@ function loadPN(){
           const t = DB.notas[e.id][per][m] || {a:0,c:0,r:0};
           const d = def(t);
           const em = encodeURIComponent(m);
-          return `<div style="background:#f8faff;border-radius:8px;padding:8px 10px;border:1px solid #e2e8f0">
-            <div style="font-size:10px;font-weight:700;color:var(--nv);margin-bottom:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${m}">${m}</div>
-            <div style="display:grid;grid-template-columns:repeat(3,1fr) auto;gap:4px;align-items:center">
-              <div style="text-align:center">
-                <div style="font-size:8px;color:var(--sl3);margin-bottom:2px">Apt.${pA}%</div>
-                <input type="number" class="ni pnInp" min="0" max="5" step="0.1" value="${t.a.toFixed(1)}"
+          const tieneVal = t.a > 0 || t.c > 0 || t.r > 0;
+          const clsA = t.a > 0 ? 'niCard nota-ok' : 'niCard nota-vacia';
+          const clsC = t.c > 0 ? 'niCard nota-ok' : 'niCard nota-vacia';
+          const clsR = t.r > 0 ? 'niCard nota-ok' : 'niCard nota-vacia';
+          return `<div style="background:#fff;border-radius:10px;padding:10px 12px;border:1.5px solid ${tieneVal?'#c6f6d5':'#e2e8f0'}">
+            <div style="font-size:11px;font-weight:800;color:var(--nv);margin-bottom:8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;letter-spacing:-.01em" title="${m}">${m}</div>
+            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:6px">
+              <div>
+                <div style="font-size:9px;color:var(--sl3);margin-bottom:3px;text-align:center;font-weight:600">Apt.${pA}%</div>
+                <input type="number" class="${clsA} pnInp" min="0" max="5" step="0.1" value="${t.a > 0 ? t.a.toFixed(1) : ''}" placeholder="0.0"
                   data-eid="${e.id}" data-per="${ep_global}" data-mat="${em}" data-f="a"
-                  onchange="saveTri(this)" style="width:100%;text-align:center;font-size:12px">
+                  onchange="saveTri(this);this.className='niCard nota-ok pnInp'">
               </div>
-              <div style="text-align:center">
-                <div style="font-size:8px;color:var(--sl3);margin-bottom:2px">Act.${pC}%</div>
-                <input type="number" class="ni pnInp" min="0" max="5" step="0.1" value="${t.c.toFixed(1)}"
+              <div>
+                <div style="font-size:9px;color:var(--sl3);margin-bottom:3px;text-align:center;font-weight:600">Act.${pC}%</div>
+                <input type="number" class="${clsC} pnInp" min="0" max="5" step="0.1" value="${t.c > 0 ? t.c.toFixed(1) : ''}" placeholder="0.0"
                   data-eid="${e.id}" data-per="${ep_global}" data-mat="${em}" data-f="c"
-                  onchange="saveTri(this)" style="width:100%;text-align:center;font-size:12px">
+                  onchange="saveTri(this);this.className='niCard nota-ok pnInp'">
               </div>
-              <div style="text-align:center">
-                <div style="font-size:8px;color:var(--sl3);margin-bottom:2px">Res.${pR}%</div>
-                <input type="number" class="ni pnInp" min="0" max="5" step="0.1" value="${t.r.toFixed(1)}"
+              <div>
+                <div style="font-size:9px;color:var(--sl3);margin-bottom:3px;text-align:center;font-weight:600">Res.${pR}%</div>
+                <input type="number" class="${clsR} pnInp" min="0" max="5" step="0.1" value="${t.r > 0 ? t.r.toFixed(1) : ''}" placeholder="0.0"
                   data-eid="${e.id}" data-per="${ep_global}" data-mat="${em}" data-f="r"
-                  onchange="saveTri(this)" style="width:100%;text-align:center;font-size:12px">
+                  onchange="saveTri(this);this.className='niCard nota-ok pnInp'">
               </div>
-              <div id="dc_${e.id}_${em}_${ep_global}" style="text-align:center;padding:2px 4px;background:#ebf8ff;border-radius:5px;min-width:36px">
-                <span class="${scC(d)}" style="font-size:11px;font-weight:700">${d.toFixed(1)}</span>
-              </div>
+            </div>
+            <div id="dc_${e.id}_${em}_${ep_global}" style="text-align:center;padding:4px 6px;background:${tieneVal?'#ebf8ff':'#f7fafc'};border-radius:6px">
+              <span style="font-size:10px;color:var(--sl3);margin-right:4px">DEF.</span>
+              <span class="${scC(d)}" style="font-size:14px;font-weight:800">${tieneVal ? d.toFixed(2) : '—'}</span>
             </div>
           </div>`;
         }).join('');
         return `<div class="pnCard" data-nombre="${e.nombre.toLowerCase()}" style="border:1px solid ${tieneNotas ? '#c6f6d5' : 'var(--bd)'};border-radius:10px;margin-bottom:8px;overflow:hidden;background:${tieneNotas ? '#f0fff4' : '#fff'}">
-          <div style="display:flex;align-items:center;gap:10px;padding:10px 14px;cursor:pointer;user-select:none"
+          <div style="display:flex;align-items:center;gap:12px;padding:12px 16px;cursor:pointer;user-select:none"
             onclick="togglePN('${e.id}')">
-            <div style="width:28px;height:28px;border-radius:50%;background:${tieneNotas ? '#68d391' : '#e2e8f0'};display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;color:${tieneNotas ? '#276749' : '#718096'};flex-shrink:0">${idx+1}</div>
+            <div style="width:32px;height:32px;border-radius:50%;background:${tieneNotas ? '#68d391' : '#e2e8f0'};display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;color:${tieneNotas ? '#276749' : '#718096'};flex-shrink:0">${idx+1}</div>
             <div style="flex:1;min-width:0">
-              <div style="font-weight:700;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${e.nombre}</div>
-              <div style="font-size:11px;color:var(--sl2)">${tieneNotas ? `Prom: <strong class="${scC(pp)}">${pp.toFixed(2)}</strong>` : '<span style="color:#a0aec0">Sin notas ingresadas</span>'}</div>
+              <div style="font-weight:700;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${e.nombre}</div>
+              <div style="font-size:12px;color:var(--sl2);margin-top:2px">${tieneNotas ? `Prom. periodo: <strong class="${scC(pp)}" id="apr_hdr_${e.id}">${pp.toFixed(2)}</strong>` : '<span style="color:#a0aec0">▶ Clic para ingresar notas</span>'}</div>
             </div>
-            <div id="pnArr_${e.id}" style="color:var(--sl2);font-size:14px;transition:transform .2s">▼</div>
+            <div id="pnArr_${e.id}" style="color:var(--sl2);font-size:16px;transition:transform .2s">▼</div>
           </div>
           <div id="pnDet_${e.id}" style="display:none;padding:12px 14px;border-top:1px solid #f0f0f0;background:#fafafa">
             <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:8px;margin-bottom:10px">
