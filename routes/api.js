@@ -4,7 +4,7 @@ const router = require('express').Router();
 const bcrypt  = require('bcryptjs');
 const { authMiddleware, requireRole } = require('../middleware/auth');
 const {
-  Usuario, Salon, Config, Materia, Nota, Asistencia, Excusa,
+  Usuario, Salon, Config, Materia, Area, Nota, Asistencia, Excusa,
   VClase, Upload, Plan, Recuperacion, Auditoria, EstHist, Bloqueo
 } = require('../models');
 
@@ -265,6 +265,96 @@ router.delete('/salones/:nombre', authMiddleware, requireRole('admin', 'superadm
 });
 
 // ═══════════════════════════════════════════════════════════════════
+// ÁREAS POR COLEGIO — agrupan materias; la definitiva de área = promedio de sus materias
+// ═══════════════════════════════════════════════════════════════════
+
+// GET /api/areas?ciclo=primaria|bachillerato
+router.get('/areas', authMiddleware, async (req, res) => {
+  try {
+    const cid = tenantId(req) || req.user.colegioId;
+    const filter = { colegioId: cid };
+    if (req.query.ciclo) filter.ciclo = req.query.ciclo;
+    const areas = await Area.find(filter).sort({ ciclo: 1, orden: 1, nombre: 1 }).lean();
+    res.json(areas);
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// POST /api/areas — crear área
+router.post('/areas', authMiddleware, requireRole('admin', 'superadmin'), async (req, res) => {
+  try {
+    const cid = tenantId(req) || req.user.colegioId;
+    const { nombre, ciclo, orden } = req.body;
+    if (!nombre || !ciclo) return res.status(400).json({ error: 'nombre y ciclo son requeridos' });
+    const colegioNombre = req.user.colegioNombre || '';
+    const a = await Area.create({ nombre: nombre.trim(), ciclo, colegioId: cid, colegioNombre, orden: orden || 0 });
+    res.status(201).json(a);
+  } catch (err) {
+    if (err.code === 11000) return res.status(409).json({ error: 'Esa área ya existe en este colegio para ese ciclo' });
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// PUT /api/areas/:nombre/:ciclo — renombrar área
+router.put('/areas/:nombre/:ciclo', authMiddleware, requireRole('admin', 'superadmin'), async (req, res) => {
+  try {
+    const cid = tenantId(req) || req.user.colegioId;
+    const { nuevoNombre } = req.body;
+    if (!nuevoNombre) return res.status(400).json({ error: 'nuevoNombre requerido' });
+    // Actualizar área
+    const a = await Area.findOneAndUpdate(
+      { nombre: req.params.nombre, ciclo: req.params.ciclo, colegioId: cid },
+      { nombre: nuevoNombre.trim() },
+      { new: true }
+    );
+    if (!a) return res.status(404).json({ error: 'Área no encontrada' });
+    // Actualizar areaNombre en materias que pertenecen a esta área
+    await Materia.updateMany(
+      { areaNombre: req.params.nombre, ciclo: req.params.ciclo, colegioId: cid },
+      { $set: { areaNombre: nuevoNombre.trim() } }
+    );
+    res.json(a);
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// DELETE /api/areas/:nombre/:ciclo — eliminar área (las materias quedan sin área)
+router.delete('/areas/:nombre/:ciclo', authMiddleware, requireRole('admin', 'superadmin'), async (req, res) => {
+  try {
+    const cid = tenantId(req) || req.user.colegioId;
+    await Area.findOneAndDelete({ nombre: req.params.nombre, ciclo: req.params.ciclo, colegioId: cid });
+    // Desasociar materias del área eliminada
+    await Materia.updateMany(
+      { areaNombre: req.params.nombre, ciclo: req.params.ciclo, colegioId: cid },
+      { $set: { areaNombre: '' } }
+    );
+    res.json({ ok: true });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// PUT /api/areas/:nombre/:ciclo/materias — asignar qué materias pertenecen a esta área
+router.put('/areas/:nombre/:ciclo/materias', authMiddleware, requireRole('admin', 'superadmin'), async (req, res) => {
+  try {
+    const cid = tenantId(req) || req.user.colegioId;
+    const { materias } = req.body; // array de nombres de materias
+    if (!Array.isArray(materias)) return res.status(400).json({ error: 'materias debe ser un array' });
+    const areaNombre = req.params.nombre;
+    const ciclo = req.params.ciclo;
+    // Desasociar las materias que antes pertenecían a esta área pero ya no
+    await Materia.updateMany(
+      { areaNombre, ciclo, colegioId: cid, nombre: { $nin: materias } },
+      { $set: { areaNombre: '' } }
+    );
+    // Asociar las materias seleccionadas
+    if (materias.length > 0) {
+      await Materia.updateMany(
+        { nombre: { $in: materias }, ciclo, colegioId: cid },
+        { $set: { areaNombre } }
+      );
+    }
+    res.json({ ok: true });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// ═══════════════════════════════════════════════════════════════════
 // MATERIAS POR COLEGIO — colección dedicada, separada por colegioId
 // Reemplaza config {key:'mP'} y {key:'mB'} que causaban E11000 en Atlas
 // ═══════════════════════════════════════════════════════════════════
@@ -276,7 +366,7 @@ router.get('/materias', authMiddleware, async (req, res) => {
     const filter = { colegioId: cid };
     if (req.query.ciclo) filter.ciclo = req.query.ciclo;
     const mats = await Materia.find(filter).sort({ ciclo: 1, orden: 1, nombre: 1 }).lean();
-    res.json(mats);
+    res.json(mats); // incluye areaNombre en cada materia
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 

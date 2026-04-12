@@ -109,6 +109,8 @@ async function dbLoad() {
       DB.anoActual  = DB.anoActual  || String(new Date().getFullYear());
       DB.notaPct    = DB.notaPct    || { a: 60, c: 20, r: 20 };
       DB.notasPorAno = DB.notasPorAno || {};
+      DB.areas      = DB.areas      || [];
+      DB.materiasDocs = DB.materiasDocs || [];
       DB.sals.forEach(s => { if (!Array.isArray(s.mats)) s.mats = []; });
     }
   } catch (err) {
@@ -1596,26 +1598,37 @@ async function promoverEstudiantes(ciclo) {
   // 0 materias perdidas     → PROMUEVE al siguiente salón
   // 11° sin materias perd.  → GRADUADO (pasa al historial)
   const resultados = lista.map(e => {
-    const mp = matPerdAnio ? matPerdAnio(e.id) : matPerd(e.id);
     const mats = getMats(e.id);
     // Detectar si el estudiante no tiene NINGUNA nota en todo el año
     const sinDatos = !mats.some(m =>
       DB.pers.some(p => { const t = DB.notas[e.id]?.[p]?.[m]; return t && (t.a > 0 || t.c > 0 || t.r > 0); })
     );
-    // Detectar periodos sin calificar: periodos donde TODAS las materias tienen notas en 0
     const periodosCalificados = DB.pers.filter(p =>
       mats.some(m => { const t = DB.notas[e.id]?.[p]?.[m]; return t && (t.a > 0 || t.c > 0 || t.r > 0); })
     );
     const periodosFaltantes = sinDatos ? [] : DB.pers.filter(p => !periodosCalificados.includes(p));
     const faltanPeriodos = !sinDatos && periodosFaltantes.length > 0 && periodosCalificados.length > 0;
-    // Verificar si tiene recuperaciones PENDIENTES (enviadas pero sin revisar)
+
+    // ── Evaluación por ÁREAS o MATERIAS según configuración ──────────────────
+    const areaMap = typeof getAreaMatsMap === 'function' ? getAreaMatsMap(e.id) : {};
+    const tieneAreas = Object.keys(areaMap).filter(k=>k!=='_sinArea').length > 0;
+    let mp, numPerdidas;
+    if(tieneAreas){
+      const areasP = typeof areasPerdidasAnio === 'function' ? (areasPerdidasAnio(e.id)||[]) : [];
+      mp = areasP.map(a=>a.areaNombre);
+      numPerdidas = mp.length;
+    } else {
+      mp = matPerdAnio ? matPerdAnio(e.id) : matPerd(e.id);
+      numPerdidas = mp.length;
+    }
+
     const recsPendientes = (DB.recs || []).filter(r =>
       r.estId === e.id && !r.revisado && !r.archivado
     );
-    const enRecuperacion = !sinDatos && !faltanPeriodos && mp.length >= 1 && mp.length <= 2;
+    const enRecuperacion = !sinDatos && !faltanPeriodos && numPerdidas >= 1 && numPerdidas <= 2;
     const recuperacionCompleta = enRecuperacion &&
-      mp.every(mat => (DB.recs || []).some(r => r.estId === e.id && r.materia === mat && r.revisado));
-    const pierde = !faltanPeriodos && mp.length >= 3;
+      mp.every(nombre => (DB.recs || []).some(r => r.estId === e.id && r.materia === nombre && r.revisado));
+    const pierde = !faltanPeriodos && numPerdidas >= 3;
     const sig = siguienteSalon ? siguienteSalon(e.salon) : null;
     return {
       est: e,
@@ -1733,12 +1746,19 @@ async function promoverEstudiantes(ciclo) {
       else if (r.enRecuperacion && r.recuperacionCompleta)  { ic='✅'; col='#553c9a'; bg='#faf5ff'; etiq='Recup. aprobada'; }
       else                                     { ic='⬆️'; col='#276749'; bg='#f0fff4'; etiq='Promueve'; }
 
-      // Definitivas por materia (si hay veredicto)
-      const matsHTML = v && v.resMateria && v.resMateria.length
-        ? v.resMateria.map(m =>
-            `<span style="display:inline-block;margin:1px 3px;padding:1px 6px;border-radius:10px;font-size:10px;background:${m.gana?'#c6f6d5':'#fed7d7'};color:${m.gana?'#276749':'#c53030'};font-weight:600">${m.mat} ${m.prom.toFixed(1)}</span>`
-          ).join('')
-        : '<span style="font-size:10px;color:#a0aec0;font-style:italic">Sin datos</span>';
+      // Definitivas por área o materia (si hay veredicto)
+      let matsHTML;
+      if(v && v.tieneAreas && v.resAreas && v.resAreas.length){
+        matsHTML = v.resAreas.map(a =>
+          `<span style="display:inline-block;margin:1px 3px;padding:1px 6px;border-radius:10px;font-size:10px;background:${a.gana?'#c6f6d5':'#fed7d7'};color:${a.gana?'#276749':'#c53030'};font-weight:600">${a.areaNombre} ${a.prom.toFixed(1)}</span>`
+        ).join('');
+      } else if(v && v.resMateria && v.resMateria.length){
+        matsHTML = v.resMateria.map(m =>
+          `<span style="display:inline-block;margin:1px 3px;padding:1px 6px;border-radius:10px;font-size:10px;background:${m.gana?'#c6f6d5':'#fed7d7'};color:${m.gana?'#276749':'#c53030'};font-weight:600">${m.mat} ${m.prom.toFixed(1)}</span>`
+        ).join('');
+      } else {
+        matsHTML = '<span style="font-size:10px;color:#a0aec0;font-style:italic">Sin datos</span>';
+      }
 
       return `<tr style="background:${bg};border-bottom:1px solid #edf2f7">
         <td style="padding:5px 8px;font-size:12px;font-weight:700">${ic} ${r.est.nombre}</td>

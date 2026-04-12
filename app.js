@@ -110,6 +110,7 @@ function dbInit(){
     admin:{id:'admin',nombre:'Administrador',ti:'CC-000001',
       usuario:'admin',password:'admin123',role:'admin'},
     profs:[],ests,mP:dfP(),mB:dfB(),pers:dfPer(),sals:[],notas,
+    areas:[],materiasDocs:[],
     audit:[],blk:{},dr:{s:'',e:''},drPer:{},ext:{on:false,s:'',e:''},
     ups:{},asist:{},exc:[],vclases:[],recs:[],planes:[],histRecs:[],histPlanes:[],
     anoActual:String(new Date().getFullYear()),
@@ -233,6 +234,81 @@ function matPerd(eid){
     }
     return act.reduce((s,p)=>s+def(DB.notas[eid][p][m]),0)/act.length<3;
   });
+}
+
+/* ─── HELPERS DE ÁREAS ──────────────────────────────────────────────────────
+   Las áreas agrupan materias. La definitiva del área = promedio de definitivas
+   de sus materias. El año se gana/recupera/pierde según las ÁREAS, no materias.
+   - 0 áreas perdidas → aprueba el año
+   - 1-2 áreas perdidas → va a recuperación (de esas áreas / sus materias)
+   - 3+ áreas perdidas → pierde el año
+   Si NO hay áreas configuradas, se evalúa materia por materia (compatibilidad).
+*/
+
+// Retorna las áreas del colegio para un ciclo dado
+function getAreasDelColegio(ciclo){
+  return (DB.areas||[]).filter(a=>a.ciclo===ciclo);
+}
+
+// Retorna el mapa { areaNombre: [materia1, materia2, ...] } para un estudiante
+// Las materias sin área quedan en '_sinArea'
+function getAreaMatsMap(eid){
+  const mats = getMats(eid);
+  const e = DB.ests.find(x=>x.id===eid);
+  const ciclo = cicloOf(e?.salon||'');
+  const areasCol = getAreasDelColegio(ciclo);
+  const matDocs = DB.materiasDocs||[];
+
+  const map = {};
+  // Inicializar todas las áreas configuradas
+  areasCol.forEach(a=>{ map[a.nombre]=[]; });
+
+  mats.forEach(m=>{
+    // Buscar en qué área está esta materia
+    const doc = matDocs.find(d=>d.nombre===m && d.ciclo===ciclo);
+    const areaNombre = doc?.areaNombre||'';
+    if(areaNombre && map[areaNombre]!==undefined){
+      map[areaNombre].push(m);
+    } else {
+      // Sin área asignada o área no existe → grupo especial
+      if(!map['_sinArea']) map['_sinArea']=[];
+      map['_sinArea'].push(m);
+    }
+  });
+  return map;
+}
+
+// Definitiva de un área para un estudiante en periodos activos (promedio de mats del área)
+function defArea(eid, areaNombre, mats){
+  // mats: array de materias del área
+  const periodos = DB.pers||[];
+  if(!mats||!mats.length) return 0;
+  // Calcular definitiva de cada materia (promedio de todos los periodos con datos)
+  const defsAct = mats.map(m=>{
+    const act=periodos.filter(p=>{const t=DB.notas[eid]?.[p]?.[m];return t&&(t.a>0||t.c>0||t.r>0);});
+    if(!act.length) return 0;
+    return act.reduce((s,p)=>s+def(DB.notas[eid][p][m]),0)/act.length;
+  }).filter(d=>d>0);
+  if(!defsAct.length) return 0;
+  return+(defsAct.reduce((s,v)=>s+v,0)/defsAct.length).toFixed(2);
+}
+
+// Áreas perdidas del año (definitiva de área < 3)
+function areasPerdidasAnio(eid){
+  const map = getAreaMatsMap(eid);
+  const tieneAreas = Object.keys(map).filter(k=>k!=='_sinArea').length>0;
+  if(!tieneAreas){
+    // Sin áreas configuradas: usar lógica de materias (compatibilidad)
+    return null;
+  }
+  const perdidas=[];
+  Object.entries(map).forEach(([areaNombre, mats])=>{
+    if(areaNombre==='_sinArea') return;
+    if(!mats.length) return;
+    const d = defArea(eid, areaNombre, mats);
+    if(d>0 && d<3) perdidas.push({areaNombre, def:d, mats});
+  });
+  return perdidas;
 }
 function puestoS(eid){
   const e=DB.ests.find(x=>x.id===eid);if(!e?.salon) return'-';
@@ -408,29 +484,70 @@ function veredictoAnual(eid){
   const tienNota = p => mats.some(m => { const t=DB.notas[eid]?.[p]?.[m]; return t&&(t.a>0||t.c>0||t.r>0); });
   const completo = pers.every(tienNota);
 
-  // Calcular definitiva por materia promediando los 4 periodos
+  // Calcular definitiva por materia promediando todos los periodos
   const resMateria = mats.map(m => {
     const defs = pers.map(p => def(DB.notas[eid]?.[p]?.[m]||{a:0,c:0,r:0}));
     const prom = defs.reduce((s,v)=>s+v,0) / pers.length;
     return { mat: m, prom: +prom.toFixed(2), gana: prom >= 3 };
   });
 
-  const matsPerdidasFinal = resMateria.filter(x => !x.gana);
-  const matsGanadasFinal  = resMateria.filter(x => x.gana);
+  // ── Evaluación por ÁREAS (si hay áreas configuradas) ──────────────────────
+  const areaMap = getAreaMatsMap(eid);
+  const tieneAreas = Object.keys(areaMap).filter(k=>k!=='_sinArea').length > 0;
 
-  let resultado, mensaje;
-  if(matsPerdidasFinal.length === 0){
-    resultado = 'gana';
-    mensaje = '🎉 Aprueba el año. Ganó todas las materias.';
-  } else if(matsPerdidasFinal.length <= 2){
-    resultado = 'recupera';
-    mensaje = `⚠️ Va a recuperación. Perdió ${matsPerdidasFinal.length} materia${matsPerdidasFinal.length>1?'s':''}: ${matsPerdidasFinal.map(x=>x.mat).join(', ')}.`;
+  let resultado, mensaje, resAreas=null;
+
+  if(tieneAreas){
+    // Calcular definitiva y estado de cada área
+    resAreas = Object.entries(areaMap)
+      .filter(([k])=>k!=='_sinArea')
+      .map(([areaNombre, matsArea])=>{
+        if(!matsArea.length) return null;
+        // Promedio de definitivas de materias del área (todos los periodos)
+        const defsArea = matsArea.map(m=>{
+          const defs2 = pers.map(p=>def(DB.notas[eid]?.[p]?.[m]||{a:0,c:0,r:0}));
+          return defs2.reduce((s,v)=>s+v,0)/pers.length;
+        });
+        const promArea = defsArea.reduce((s,v)=>s+v,0)/defsArea.length;
+        return { areaNombre, prom:+promArea.toFixed(2), gana: promArea>=3, mats:matsArea, defsArea };
+      }).filter(Boolean);
+
+    const areasLost = resAreas.filter(a=>!a.gana);
+    const matsSinArea = areaMap['_sinArea']||[];
+    // Materias sin área se evalúan individualmente
+    const matsSinAreaPerd = resMateria.filter(x=>matsSinArea.includes(x.mat)&&!x.gana);
+
+    if(areasLost.length===0 && matsSinAreaPerd.length===0){
+      resultado='gana';
+      mensaje='🎉 Aprueba el año. Ganó todas las áreas.';
+    } else if(areasLost.length<=2 && (areasLost.length+matsSinAreaPerd.length)<=2){
+      resultado='recupera';
+      const nombresArea=areasLost.map(a=>a.areaNombre);
+      const nombresMat=matsSinAreaPerd.map(x=>x.mat);
+      const todos=[...nombresArea,...nombresMat];
+      mensaje=`⚠️ Va a recuperación. Perdió ${todos.length} área${todos.length>1?'s':''}: ${todos.join(', ')}.`;
+    } else {
+      resultado='pierde';
+      const nombresArea=areasLost.map(a=>a.areaNombre);
+      mensaje=`❌ Pierde el año. Perdió ${areasLost.length} área${areasLost.length>1?'s':''}: ${nombresArea.join(', ')}.`;
+    }
   } else {
-    resultado = 'pierde';
-    mensaje = `❌ Pierde el año. Perdió ${matsPerdidasFinal.length} materias: ${matsPerdidasFinal.map(x=>x.mat).join(', ')}.`;
+    // Sin áreas: lógica original por materias
+    const matsPerdidasFinal = resMateria.filter(x => !x.gana);
+    if(matsPerdidasFinal.length===0){
+      resultado='gana'; mensaje='🎉 Aprueba el año. Ganó todas las materias.';
+    } else if(matsPerdidasFinal.length<=2){
+      resultado='recupera';
+      mensaje=`⚠️ Va a recuperación. Perdió ${matsPerdidasFinal.length} materia${matsPerdidasFinal.length>1?'s':''}: ${matsPerdidasFinal.map(x=>x.mat).join(', ')}.`;
+    } else {
+      resultado='pierde';
+      mensaje=`❌ Pierde el año. Perdió ${matsPerdidasFinal.length} materias: ${resMateria.filter(x=>!x.gana).map(x=>x.mat).join(', ')}.`;
+    }
   }
 
-  return { completo, resMateria, matsPerdidasFinal, matsGanadasFinal, resultado, mensaje };
+  return { completo, resMateria, resAreas, tieneAreas, resultado, mensaje,
+    matsPerdidasFinal: resMateria.filter(x=>!x.gana),
+    matsGanadasFinal:  resMateria.filter(x=>x.gana) };
 }
 
 // Categoría de disciplina numérica
@@ -691,7 +808,7 @@ const PL={
 
 function bootApp(){
   if(!CU||!CU.role){console.error('[bootApp] CU no disponible');return;}
-  if(!DB) DB={dr:{s:'',e:''},drPer:{},ext:{on:false,s:'',e:''},pers:[],mP:[],mB:[],sals:[],profs:[],ests:[],notas:{},asist:{},exc:[],vclases:[],recs:[],planes:[],histRecs:[],histPlanes:[],audit:[],blk:{},ups:{}};
+  if(!DB) DB={dr:{s:'',e:''},drPer:{},ext:{on:false,s:'',e:''},pers:[],mP:[],mB:[],sals:[],profs:[],ests:[],notas:{},asist:{},exc:[],vclases:[],recs:[],planes:[],histRecs:[],histPlanes:[],audit:[],blk:{},ups:{},areas:[],materiasDocs:[]};
   const _tbDate=gi('tbDate');
   if(_tbDate) _tbDate.textContent=new Date().toLocaleDateString('es-CO',{weekday:'short',year:'numeric',month:'short',day:'numeric'});
   const st=gi('tbStatus');
@@ -1374,21 +1491,39 @@ function delPrf(pid,ciclo){
    MATERIAS & PERIODOS
 ============================================================ */
 function pgAMat(){
-  return`<div class="ph"><h2>Materias & Periodos</h2></div>
+  return`<div class="ph"><h2>Áreas & Materias</h2></div>
   <div class="g2">
     <div class="card">
-      <div class="chd"><span class="cti">📚 Materias — Primaria</span></div>
+      <div class="chd"><span class="cti">📚 Primaria — Áreas y Materias</span></div>
       <div style="display:flex;gap:8px;margin-bottom:14px">
-        <div class="fld" style="margin:0;flex:1"><input id="nmp" placeholder="Nueva materia primaria..."></div>
-        <button class="btn bn sm" onclick="addMP()">➕</button>
-      </div><div id="mlP"></div>
+        <div class="fld" style="margin:0;flex:1"><input id="nap" placeholder="Nueva área primaria..."></div>
+        <button class="btn bn sm" onclick="addArea('primaria')">➕ Área</button>
+      </div>
+      <div id="areaListP"></div>
+      <div style="margin-top:14px;padding-top:12px;border-top:1px solid var(--bd)">
+        <div style="font-size:11px;font-weight:700;color:var(--sl);text-transform:uppercase;margin-bottom:8px">Materias sin área</div>
+        <div style="display:flex;gap:8px;margin-bottom:10px">
+          <div class="fld" style="margin:0;flex:1"><input id="nmp" placeholder="Nueva materia primaria..."></div>
+          <button class="btn bg sm" onclick="addMP()">➕ Materia</button>
+        </div>
+        <div id="mlP"></div>
+      </div>
     </div>
     <div class="card">
-      <div class="chd"><span class="cti">🎓 Materias — Bachillerato</span></div>
+      <div class="chd"><span class="cti">🎓 Bachillerato — Áreas y Materias</span></div>
       <div style="display:flex;gap:8px;margin-bottom:14px">
-        <div class="fld" style="margin:0;flex:1"><input id="nmb" placeholder="Nueva materia bachillerato..."></div>
-        <button class="btn bn sm" onclick="addMB()">➕</button>
-      </div><div id="mlB"></div>
+        <div class="fld" style="margin:0;flex:1"><input id="nab" placeholder="Nueva área bachillerato..."></div>
+        <button class="btn bn sm" onclick="addArea('bachillerato')">➕ Área</button>
+      </div>
+      <div id="areaListB"></div>
+      <div style="margin-top:14px;padding-top:12px;border-top:1px solid var(--bd)">
+        <div style="font-size:11px;font-weight:700;color:var(--sl);text-transform:uppercase;margin-bottom:8px">Materias sin área</div>
+        <div style="display:flex;gap:8px;margin-bottom:10px">
+          <div class="fld" style="margin:0;flex:1"><input id="nmb" placeholder="Nueva materia bachillerato..."></div>
+          <button class="btn bg sm" onclick="addMB()">➕ Materia</button>
+        </div>
+        <div id="mlB"></div>
+      </div>
     </div>
   </div>
   <div class="card">
@@ -1401,24 +1536,47 @@ function pgAMat(){
 }
 async function initAMat(){
   try{
-    // Cargar materias directamente desde /api/materias para garantizar aislamiento por colegio
-    const [mP, mB] = await Promise.all([
+    const [mP, mB, areasP, areasB] = await Promise.all([
       apiFetch('/api/materias?ciclo=primaria').catch(()=>null),
       apiFetch('/api/materias?ciclo=bachillerato').catch(()=>null),
+      apiFetch('/api/areas?ciclo=primaria').catch(()=>null),
+      apiFetch('/api/areas?ciclo=bachillerato').catch(()=>null),
     ]);
-    // Si el colegio tiene materias en la colección Materias, usarlas
-    if(mP && mP.length > 0) DB.mP = mP.map(m=>m.nombre);
-    if(mB && mB.length > 0) DB.mB = mB.map(m=>m.nombre);
-    // Si no hay en colección Materias, cargar desde Config (fallback)
-    if((!mP || mP.length===0) || (!mB || mB.length===0)){
-      const cfg = await apiFetch('/api/config').catch(()=>null);
-      if(cfg){
-        if((!mP||mP.length===0) && cfg.mP) DB.mP = cfg.mP;
-        if((!mB||mB.length===0) && cfg.mB) DB.mB = cfg.mB;
-      }
+    if(mP&&mP.length>0){ DB.mP=mP.map(m=>m.nombre); DB.materiasDocs=(DB.materiasDocs||[]).filter(d=>d.ciclo!=='primaria'); DB.materiasDocs.push(...mP.map(m=>({nombre:m.nombre,ciclo:'primaria',areaNombre:m.areaNombre||''}))); }
+    if(mB&&mB.length>0){ DB.mB=mB.map(m=>m.nombre); DB.materiasDocs=(DB.materiasDocs||[]).filter(d=>d.ciclo!=='bachillerato'); DB.materiasDocs.push(...mB.map(m=>({nombre:m.nombre,ciclo:'bachillerato',areaNombre:m.areaNombre||''}))); }
+    if((!mP||!mP.length)||(!mB||!mB.length)){
+      const cfg=await apiFetch('/api/config').catch(()=>null);
+      if(cfg){ if((!mP||!mP.length)&&cfg.mP)DB.mP=cfg.mP; if((!mB||!mB.length)&&cfg.mB)DB.mB=cfg.mB; }
     }
-  }catch(e){ console.warn('initAMat error:', e); }
+    if(areasP) DB.areas=(DB.areas||[]).filter(a=>a.ciclo!=='primaria').concat(areasP.map(a=>({nombre:a.nombre,ciclo:'primaria',orden:a.orden||0})));
+    if(areasB) DB.areas=(DB.areas||[]).filter(a=>a.ciclo!=='bachillerato').concat(areasB.map(a=>({nombre:a.nombre,ciclo:'bachillerato',orden:a.orden||0})));
+  }catch(e){ console.warn('initAMat error:',e); }
   renderMats();
+}
+function renderAreaBlock(ciclo){
+  const elId=ciclo==='primaria'?'areaListP':'areaListB';
+  const el=gi(elId);if(!el)return;
+  const areas=(DB.areas||[]).filter(a=>a.ciclo===ciclo);
+  const matDocs=(DB.materiasDocs||[]).filter(d=>d.ciclo===ciclo);
+  if(!areas.length){el.innerHTML='<div style="color:var(--sl3);font-size:12px;padding:6px 0">Sin áreas creadas aún.</div>';return;}
+  el.innerHTML=areas.map(area=>{
+    const matsDelArea=matDocs.filter(d=>d.areaNombre===area.nombre).map(d=>d.nombre);
+    return`<div style="background:var(--bg2);border:1px solid var(--bd);border-radius:10px;padding:12px 14px;margin-bottom:10px">
+      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px">
+        <strong style="font-size:14px">📂 ${area.nombre}</strong>
+        <div style="display:flex;gap:5px">
+          <button class="btn xs bg" onclick="editAreaMats('${area.nombre}','${ciclo}')">🎯 Materias</button>
+          <button class="btn xs bg" onclick="renameArea('${area.nombre}','${ciclo}')">✏️</button>
+          <button class="btn xs bd" onclick="delArea('${area.nombre}','${ciclo}')">🗑</button>
+        </div>
+      </div>
+      <div style="margin-top:8px;display:flex;flex-wrap:wrap;gap:4px">
+        ${matsDelArea.length
+          ?matsDelArea.map(m=>`<span style="font-size:11px;padding:2px 8px;background:#fff;border:1px solid var(--bd);border-radius:5px">${m}</span>`).join('')
+          :'<span style="font-size:11px;color:var(--sl3)">Sin materias asignadas</span>'}
+      </div>
+    </div>`;
+  }).join('');
 }
 function matItem(v,delFn,ciclo){
   return`<div style="display:flex;justify-content:space-between;align-items:center;
@@ -1430,8 +1588,14 @@ function matItem(v,delFn,ciclo){
     </div></div>`;
 }
 function renderMats(){
-  const mp=gi('mlP');if(mp) mp.innerHTML=DB.mP.map(m=>matItem(m,'delMP','primaria')).join('');
-  const mb=gi('mlB');if(mb) mb.innerHTML=DB.mB.map(m=>matItem(m,'delMB','bachillerato')).join('');
+  const matDocsP=(DB.materiasDocs||[]).filter(d=>d.ciclo==='primaria');
+  const matDocsB=(DB.materiasDocs||[]).filter(d=>d.ciclo==='bachillerato');
+  const mp=gi('mlP');
+  if(mp) mp.innerHTML=DB.mP.filter(m=>{ const d=matDocsP.find(x=>x.nombre===m); return !d||!d.areaNombre; }).map(m=>matItem(m,'delMP','primaria')).join('');
+  const mb=gi('mlB');
+  if(mb) mb.innerHTML=DB.mB.filter(m=>{ const d=matDocsB.find(x=>x.nombre===m); return !d||!d.areaNombre; }).map(m=>matItem(m,'delMB','bachillerato')).join('');
+  renderAreaBlock('primaria');
+  renderAreaBlock('bachillerato');
   const pl=gi('perL');if(pl) pl.innerHTML=DB.pers.map(p=>`
     <div style="display:flex;justify-content:space-between;align-items:center;
       padding:9px 12px;background:var(--bg2);border-radius:8px;margin-bottom:7px;border:1px solid var(--bd)">
@@ -1439,6 +1603,70 @@ function renderMats(){
       <button class="btn xs bd" onclick="delPer('${p}')">🗑</button>
     </div>`).join('');
 }
+async function addArea(ciclo){
+  const inpId=ciclo==='primaria'?'nap':'nab';
+  const v=gi(inpId)?.value.trim();
+  if(!v){sw('error','Escribe el nombre del área');return;}
+  if((DB.areas||[]).some(a=>a.nombre===v&&a.ciclo===ciclo)){sw('warning','Esa área ya existe');return;}
+  try{
+    await apiFetch('/api/areas',{method:'POST',body:JSON.stringify({nombre:v,ciclo,orden:(DB.areas||[]).filter(a=>a.ciclo===ciclo).length})});
+    if(!DB.areas) DB.areas=[];
+    DB.areas.push({nombre:v,ciclo,orden:DB.areas.filter(a=>a.ciclo===ciclo).length});
+    gi(inpId).value='';renderMats();
+    sw('success',`Área "${v}" creada`,'',1400);
+  }catch(e){sw('error','Error al crear: '+e.message);}
+}
+async function delArea(nombre,ciclo){
+  const r=await Swal.fire({title:`¿Eliminar área "${nombre}"?`,text:'Las materias quedarán sin área asignada.',icon:'warning',showCancelButton:true,confirmButtonText:'Sí, eliminar',confirmButtonColor:'#e53e3e'});
+  if(!r.isConfirmed) return;
+  try{
+    await apiFetch(`/api/areas/${encodeURIComponent(nombre)}/${ciclo}`,{method:'DELETE'});
+    DB.areas=(DB.areas||[]).filter(a=>!(a.nombre===nombre&&a.ciclo===ciclo));
+    (DB.materiasDocs||[]).forEach(d=>{if(d.areaNombre===nombre&&d.ciclo===ciclo) d.areaNombre='';});
+    renderMats();sw('success','Área eliminada','',1400);
+  }catch(e){sw('error','Error: '+e.message);}
+}
+async function renameArea(nombre,ciclo){
+  const r=await Swal.fire({title:'Renombrar área',input:'text',inputValue:nombre,showCancelButton:true,confirmButtonText:'Guardar'});
+  if(!r.isConfirmed||!r.value.trim()||r.value.trim()===nombre) return;
+  const nw=r.value.trim();
+  try{
+    await apiFetch(`/api/areas/${encodeURIComponent(nombre)}/${ciclo}`,{method:'PUT',body:JSON.stringify({nuevoNombre:nw})});
+    const a=(DB.areas||[]).find(a=>a.nombre===nombre&&a.ciclo===ciclo);
+    if(a) a.nombre=nw;
+    (DB.materiasDocs||[]).forEach(d=>{if(d.areaNombre===nombre&&d.ciclo===ciclo) d.areaNombre=nw;});
+    renderMats();sw('success','Área renombrada','',1400);
+  }catch(e){sw('error','Error: '+e.message);}
+}
+async function editAreaMats(areaNombre,ciclo){
+  const allMats=ciclo==='primaria'?DB.mP:DB.mB;
+  const matDocs=(DB.materiasDocs||[]).filter(d=>d.ciclo===ciclo);
+  const current=matDocs.filter(d=>d.areaNombre===areaNombre).map(d=>d.nombre);
+  const rows=allMats.map(m=>`
+    <label style="display:flex;align-items:center;gap:8px;padding:6px 10px;background:var(--bg2);
+      border-radius:7px;border:1px solid var(--bd);cursor:pointer;font-size:13px;margin-bottom:5px">
+      <input type="checkbox" class="amck" value="${m}" ${current.includes(m)?'checked':''}>
+      <span>${m}</span>
+    </label>`).join('');
+  const r=await Swal.fire({
+    title:`Materias del área "${areaNombre}"`,width:520,
+    html:`<div style="text-align:left;max-height:360px;overflow-y:auto">${rows}</div>`,
+    showCancelButton:true,confirmButtonText:'Guardar',
+    preConfirm:()=>[...document.querySelectorAll('.amck:checked')].map(c=>c.value)
+  });
+  if(!r.isConfirmed) return;
+  const elegidas=r.value;
+  try{
+    await apiFetch(`/api/areas/${encodeURIComponent(areaNombre)}/${ciclo}/materias`,{method:'PUT',body:JSON.stringify({materias:elegidas})});
+    (DB.materiasDocs||[]).forEach(d=>{
+      if(d.ciclo!==ciclo) return;
+      if(elegidas.includes(d.nombre)) d.areaNombre=areaNombre;
+      else if(d.areaNombre===areaNombre) d.areaNombre='';
+    });
+    renderMats();sw('success','Materias del área actualizadas','',1400);
+  }catch(e){sw('error','Error: '+e.message);}
+}
+
 async function addMP(){
   const v=gi('nmp').value.trim();
   if(!v){sw('error','Escribe el nombre de la materia');return;}
@@ -1628,22 +1856,46 @@ function pgAReh(){return`<div class="ph"><h2>Recuperaciones</h2></div><div id="a
 function initAReh(){
   const el=gi('arB');if(!el)return;
   if(!DB.ext.on){el.innerHTML=`<div class="al aly">⚠️ Activa el Periodo Extraordinario en <strong>Control de Fechas</strong>.</div>`;return;}
-  const list=DB.ests.filter(e=>{const mp=matPerd(e.id);return mp.length>=1&&mp.length<=2;});
-  if(!list.length){el.innerHTML=`<div class="al alg">✅ Sin estudiantes en recuperación actualmente.</div>`;return;}
-  /* Also show recovery submissions per student */
+
+  // Determinar elegibles usando áreas (si hay) o materias
+  const elegibles=[];
+  DB.ests.forEach(e=>{
+    const areaMap=getAreaMatsMap(e.id);
+    const tieneAreas=Object.keys(areaMap).filter(k=>k!=='_sinArea').length>0;
+    if(tieneAreas){
+      const areasP=areasPerdidasAnio(e.id)||[];
+      // Recupera: 1 o 2 áreas perdidas
+      if(areasP.length>=1&&areasP.length<=2) elegibles.push({est:e,tipo:'area',perdidas:areasP.map(a=>a.areaNombre)});
+    } else {
+      const mp=matPerd(e.id);
+      if(mp.length>=1&&mp.length<=2) elegibles.push({est:e,tipo:'materia',perdidas:mp});
+    }
+  });
+
+  if(!elegibles.length){el.innerHTML=`<div class="al alg">✅ Sin estudiantes en recuperación actualmente.</div>`;return;}
   el.innerHTML=`<div class="al aly">📅 Periodo Extraordinario: <strong>${DB.ext.s} → ${DB.ext.e}</strong></div>
-  <div class="card"><div class="chd"><span class="cti">⚠️ Estudiantes Elegibles (${list.length})</span></div>
-  <div class="tw"><table><thead><tr><th>Estudiante</th><th>Salón</th><th>Materia Perdida</th><th>Profesor Asignado</th><th>Recuperación Enviada</th></tr></thead>
-  <tbody>${list.map(e=>{
-    const mp=matPerd(e.id),pg=gprom(e.id);
-    return mp.map(m=>{
-      const prf=profForMat(m,e.salon);
-      const recs=(DB.recs||[]).filter(r=>r.estId===e.id&&r.materia===m);
+  <div class="card"><div class="chd"><span class="cti">⚠️ Estudiantes Elegibles (${elegibles.length})</span></div>
+  <div class="tw"><table><thead><tr><th>Estudiante</th><th>Salón</th><th>${elegibles.some(x=>x.tipo==='area')?'Área Perdida':'Materia Perdida'}</th><th>Profesor Asignado</th><th>Recuperación Enviada</th></tr></thead>
+  <tbody>${elegibles.map(({est:e,tipo,perdidas})=>{
+    const pg=gprom(e.id);
+    return perdidas.map(nombre=>{
+      // Para áreas: buscar profes de las materias del área; para materias: profForMat
+      let profNombre='<span style="color:var(--sl3)">Sin asignar</span>';
+      if(tipo==='area'){
+        const areaMap=getAreaMatsMap(e.id);
+        const mats=areaMap[nombre]||[];
+        const prfs=[...new Set(mats.map(m=>profForMat(m,e.salon)).filter(Boolean).map(p=>p.nombre))];
+        if(prfs.length) profNombre=prfs.join(', ');
+      } else {
+        const prf=profForMat(nombre,e.salon);
+        if(prf) profNombre=prf.nombre;
+      }
+      const recs=(DB.recs||[]).filter(r=>r.estId===e.id&&r.materia===nombre);
       return`<tr>
         <td><strong>${esc(e.nombre)}</strong><br><span class="sc ${scC(pg)}" style="font-size:11px">${pg.toFixed(2)}</span></td>
         <td>${e.salon?`<span class="bdg bbl">${esc(e.salon||"")}</span>`:'—'}</td>
-        <td><span class="bdg brd">${m}</span></td>
-        <td style="font-size:13px">${prf?prf.nombre:'<span style="color:var(--sl3)">Sin asignar</span>'}</td>
+        <td><span class="bdg brd">${nombre}</span>${tipo==='area'?'<span style="font-size:10px;color:var(--sl3)"> (área)</span>':''}</td>
+        <td style="font-size:13px">${profNombre}</td>
         <td>${recs.length?recs.map(r=>`<div style="font-size:11px;padding:3px 0">
           📎 ${esc(r.nombre)} <span style="color:var(--sl3)">${r.fecha}</span></div>`).join('')
           :'<span style="font-size:12px;color:var(--sl3)">Pendiente</span>'}
@@ -3646,7 +3898,13 @@ function initEB(){
   const anoLabel=DB.anoActual||String(new Date().getFullYear());
   const mats=getMats(e.id);
 
-  /* Only render periods that have at least one real note */
+  // Pérdidas por área o por materia
+  const areaMap=getAreaMatsMap(e.id);
+  const tieneAreas=Object.keys(areaMap).filter(k=>k!=='_sinArea').length>0;
+  const areasP=tieneAreas?(areasPerdidasAnio(e.id)||[]):[];
+  const cantPerdidas=tieneAreas?areasP.length:mp.length;
+  const labelPerdidas=tieneAreas?'Áreas Perd.':'Mat. Perdidas';
+
   const persConDatos=DB.pers.filter(per=>
     mats.some(m=>{const t=DB.notas[e.id]?.[per]?.[m];return t&&(t.a>0||t.c>0||t.r>0);}));
 
@@ -3668,26 +3926,56 @@ function initEB(){
     <div class="scc" data-i="📊"><div class="sv" style="color:${scCol(pg)}">${pg.toFixed(2)}</div><div class="sl">Prom. General</div><div class="bar"></div></div>
     <div class="scc" data-i="🏆"><div class="sv">${ps}</div><div class="sl">Puesto Salón</div><div class="bar"></div></div>
     <div class="scc" data-i="🏫"><div class="sv" style="font-size:${(e.salon||'—').length>4?'15px':'22px'};margin-top:2px">${e.salon||'—'}</div><div class="sl">Mi Salón</div><div class="bar"></div></div>
-    <div class="scc" data-i="⚠️"><div class="sv" style="color:${mp.length>0?'var(--red)':'var(--grn)'}">${mp.length}</div><div class="sl">Mat. Perdidas</div><div class="bar"></div></div>
+    <div class="scc" data-i="⚠️"><div class="sv" style="color:${cantPerdidas>0?'var(--red)':'var(--grn)'}">${cantPerdidas}</div><div class="sl">${labelPerdidas}</div><div class="bar"></div></div>
   </div>`;
 
-  if(DB.ext.on&&mp.length>=1&&mp.length<=2){
-    h+=`<div class="rbc"><h4>⚠️ Tienes ${mp.length} materia(s) en recuperación</h4>
-      <p style="font-size:13px;margin-bottom:8px">${mp.map(m=>`<span class="bdg brd" style="margin:2px">${m}</span>`).join('')}</p>
+  const elegible=tieneAreas?(areasP.length>=1&&areasP.length<=2):(mp.length>=1&&mp.length<=2);
+  const nombresPerdidos=tieneAreas?areasP.map(a=>a.areaNombre):mp;
+  if(DB.ext.on&&elegible){
+    const tipLabel=tieneAreas?'área(s)':'materia(s)';
+    h+=`<div class="rbc"><h4>⚠️ Tienes ${nombresPerdidos.length} ${tipLabel} en recuperación</h4>
+      <p style="font-size:13px;margin-bottom:8px">${nombresPerdidos.map(m=>`<span class="bdg brd" style="margin:2px">${m}</span>`).join('')}</p>
       <p style="font-size:13px">Extraordinario: <strong>${DB.ext.s} → ${DB.ext.e}</strong></p></div>`;
   }
 
   persConDatos.forEach(per=>{
     const pp=pprom(e.id,per),ppu=puestoP(e.id,per);
-    h+=`<div class="card"><div class="chd">
-      <span class="cti">${per}</span>
-      <div style="display:flex;align-items:center;gap:12px">
-        <span style="font-size:12px;color:var(--sl2)">Puesto: <strong>${ppu}</strong></span>
-        <span class="${scC(pp)}" style="font-size:14px">Prom. ${pp.toFixed(2)}</span>
-      </div></div>
-      <div class="tw"><table><thead>
-        <tr><th>Materia</th><th>Aptitud</th><th>Actitud</th><th>Resp.</th><th>Definitiva</th><th>Estado</th><th>Profesor</th></tr>
-      </thead><tbody>${mats.map(m=>{
+    let tablaBody='';
+    if(tieneAreas){
+      const areaEntries=Object.entries(areaMap).filter(([k])=>k!=='_sinArea');
+      const sinArea=areaMap['_sinArea']||[];
+      areaEntries.forEach(([areaNombre,matsArea])=>{
+        if(!matsArea.length) return;
+        const defsA=matsArea.map(m=>def(DB.notas[e.id]?.[per]?.[m]||{a:0,c:0,r:0})).filter(d=>d>0);
+        const da=defsA.length?+(defsA.reduce((s,v)=>s+v,0)/defsA.length).toFixed(2):0;
+        tablaBody+=`<tr style="background:#f0f0f0"><td colspan="7" style="padding:5px 8px;font-weight:800;font-size:12px">▸ ${areaNombre} — Def. Área: <span class="${scC(da)}">${da===0?'—':da.toFixed(2)}</span></td></tr>`;
+        matsArea.forEach(m=>{
+          const t=DB.notas[e.id]?.[per]?.[m]||{a:0,c:0,r:0};const d=def(t);
+          const prf=profForMat(m,e.salon);
+          tablaBody+=`<tr><td style="padding-left:16px">${m}</td>
+            <td style="font-family:var(--mn);font-size:12px">${t.a.toFixed(1)}</td>
+            <td style="font-family:var(--mn);font-size:12px">${t.c.toFixed(1)}</td>
+            <td style="font-family:var(--mn);font-size:12px">${t.r.toFixed(1)}</td>
+            <td><span class="${scC(d)}">${d.toFixed(2)}</span></td>
+            <td><span class="bdg ${d>=3?'bgr':'brd'}">${d===0?'Sin nota':d>=3?'Aprobado':'Reprobado'}</span></td>
+            <td style="font-size:12px;color:var(--sl2)">${prf?prf.nombre:'Sin asignar'}</td>
+          </tr>`;
+        });
+      });
+      sinArea.forEach(m=>{
+        const t=DB.notas[e.id]?.[per]?.[m]||{a:0,c:0,r:0};const d=def(t);
+        const prf=profForMat(m,e.salon);
+        tablaBody+=`<tr><td>${m}</td>
+          <td style="font-family:var(--mn);font-size:12px">${t.a.toFixed(1)}</td>
+          <td style="font-family:var(--mn);font-size:12px">${t.c.toFixed(1)}</td>
+          <td style="font-family:var(--mn);font-size:12px">${t.r.toFixed(1)}</td>
+          <td><span class="${scC(d)}">${d.toFixed(2)}</span></td>
+          <td><span class="bdg ${d>=3?'bgr':'brd'}">${d===0?'Sin nota':d>=3?'Aprobado':'Reprobado'}</span></td>
+          <td style="font-size:12px;color:var(--sl2)">${prf?prf.nombre:'Sin asignar'}</td>
+        </tr>`;
+      });
+    } else {
+      tablaBody=mats.map(m=>{
         const t=DB.notas[e.id]?.[per]?.[m]||{a:0,c:0,r:0};const d=def(t);
         const prf=profForMat(m,e.salon);
         return`<tr><td>${m}</td>
@@ -3698,7 +3986,17 @@ function initEB(){
           <td><span class="bdg ${d>=3?'bgr':'brd'}">${d===0?'Sin nota':d>=3?'Aprobado':'Reprobado'}</span></td>
           <td style="font-size:12px;color:var(--sl2)">${prf?prf.nombre:'Sin asignar'}</td>
         </tr>`;
-      }).join('')}</tbody></table></div></div>`;
+      }).join('');
+    }
+    h+=`<div class="card"><div class="chd">
+      <span class="cti">${per}</span>
+      <div style="display:flex;align-items:center;gap:12px">
+        <span style="font-size:12px;color:var(--sl2)">Puesto: <strong>${ppu}</strong></span>
+        <span class="${scC(pp)}" style="font-size:14px">Prom. ${pp.toFixed(2)}</span>
+      </div></div>
+      <div class="tw"><table><thead>
+        <tr><th>Materia</th><th>Ser</th><th>Saber</th><th>Saber Hacer</th><th>Definitiva</th><th>Estado</th><th>Profesor</th></tr>
+      </thead><tbody>${tablaBody}</tbody></table></div></div>`;
   });
 
   h+=mkBoletinUI(e.id,'est');
@@ -4179,331 +4477,306 @@ function dlBoletinUI(estId){
 function dlBoletin(estId,perFilter,anno,snapData){
   perFilter=perFilter||'TODOS';anno=anno||String(new Date().getFullYear());
 
-  /* Support deleted students via snapshot */
   const e=DB.ests.find(x=>x.id===estId);
   const snap=snapData||(e?null:null);
   if(!e&&!snap){sw('error','Estudiante no encontrado');return;}
 
-  /* Resolve notas: use notasPorAno[anno] if anno != anoActual, else DB.notas */
   const anoActual=DB.anoActual||String(new Date().getFullYear());
   const notasDelAno=snap?.notas
     ||(anno!==anoActual&&DB.notasPorAno?.[anno]?.[estId])
     ||(e?DB.notas[estId]:null)||{};
 
-  /* Resolve data source */
   const nombre=snap?.nombre||e?.nombre||estId;
   const ti=snap?.ti||e?.ti||'—';
   const salon=snap?.salon||e?.salon||'—';
   const disciplina=snap?.disciplina||DB.notas[estId]?.disciplina||'—';
   const notas=notasDelAno;
   const mats=snap?.mats||(e?getMats(estId):DB.mP);
-  const salObj=DB.sals.find(s=>s.nombre===salon);
-  const matsSource=snap?.mats?.length?`Materias del salón ${salon} (archivo)`
-    :(salObj?.mats?.length?`Materias del salón ${salon}`
-    :(cicloOf(salon)==='primaria'?'Materias globales primaria':'Materias globales bachillerato'));
-  const cicloLabel=cicloOf(salon)==='primaria'?'Primaria (1°-5°)':'Bachillerato (6°-11°)';
+  const ciclo=cicloOf(salon);
 
-  if(!e) {/* deleted — skip syncN */} else syncN(estId);
+  if(!e){} else syncN(estId);
 
   const isTodos=perFilter==='TODOS';
-  /* For Todos: only render periods that actually have data */
   const allPers=DB.pers;
   const pers2render=isTodos
     ?allPers.filter(per=>mats.some(m=>{const t=notas[per]?.[m];return t&&(t.a>0||t.c>0||t.r>0);}))
     :allPers.filter(p=>p===decodeURIComponent(perFilter));
   if(!pers2render.length){sw('info','Sin datos',`No hay notas registradas${isTodos?' en ningún periodo':' en este periodo'}.`);return;}
 
-  /* Check data — already guaranteed by pers2render filter above */
-
-  /* Promedio general and position (only for active students) */
   const pg=e?gprom(estId):+(
-    DB.pers.map(per=>{
-      const ds=mats.map(m=>def(notas[per]?.[m]||{a:0,c:0,r:0}));
-      return+(ds.reduce((s,v)=>s+v,0)/ds.length).toFixed(2);
-    }).filter(v=>v>0).reduce((a,b,_,arr)=>a+b/arr.length,0)
+    DB.pers.map(per=>{const ds=mats.map(m=>def(notas[per]?.[m]||{a:0,c:0,r:0}));return+(ds.reduce((s,v)=>s+v,0)/ds.length).toFixed(2);})
+      .filter(v=>v>0).reduce((a,b,_,arr)=>a+b/arr.length,0)
   ).toFixed(2);
   const ps=e?puestoS(estId):'—';
+
+  // Materias perdidas (para seccion recuperación en vista por periodo)
   const mp=e?matPerd(estId):mats.filter(m=>{
     const act=DB.pers.filter(p=>{const t=notas[p]?.[m];return t&&(t.a>0||t.c>0||t.r>0);});
     if(!act.length) return false;
     return act.reduce((s,p)=>s+def(notas[p][m]),0)/act.length<3;
   });
+
   const box=gi('pdfBox');
   const suffix=isTodos?'todos_periodos':decodeURIComponent(perFilter).replace(/\s+/g,'_');
   const fechaGen=new Date().toLocaleDateString('es-CO',{year:'numeric',month:'long',day:'numeric'});
   const subtitle=isTodos?`Año Lectivo ${anno} — Todos los Periodos`:`Año Lectivo ${anno} — ${decodeURIComponent(perFilter)}`;
 
-  /* ─── TODOS: una sola tabla consolidada ─────────────────── */
+  // ─── Obtener mapa de áreas para este estudiante ───────────────────────────
+  const areaMap = e ? getAreaMatsMap(estId) : {};
+  const tieneAreas = Object.keys(areaMap).filter(k=>k!=='_sinArea').length > 0;
+
+  // ─── Helpers locales de color para boletín (escala de grises) ─────────────
+  const bCol = n => { n=+n; if(n===0) return '#aaa'; if(n<3) return '#111'; if(n<4) return '#444'; return '#111'; };
+  const bBg  = n => { n=+n; if(n===0) return '#f5f5f5'; if(n<3) return '#f0f0f0'; return '#fff'; };
+  const bDes = n => { n=+n; if(n===0) return '—'; if(n>=4.5) return 'Superior'; if(n>=4) return 'Alto'; if(n>=3) return 'Básico'; return 'Bajo'; };
+
+  // ─── TABLA POR PERIODOS (vista individual) ────────────────────────────────
   let persHTML;
   if(isTodos){
-    // Calcular definitiva final por materia (promedio de todos los periodos con datos)
-    const defFinal=(m)=>{
+    // Definitiva final de cada materia
+    const defFinal = m => {
       const act=pers2render.filter(p=>{const t=notas[p]?.[m];return t&&(t.a>0||t.c>0||t.r>0);});
       if(!act.length) return 0;
       return+(act.reduce((s,p)=>s+def(notas[p]?.[m]||{a:0,c:0,r:0}),0)/act.length).toFixed(2);
     };
-    // Promedios por periodo
     const ppPer=pers2render.map(per=>+(mats.reduce((s,m)=>s+def(notas[per]?.[m]||{a:0,c:0,r:0}),0)/mats.length).toFixed(2));
-    // Disciplina por periodo
-    const discPer=pers2render.map(per=>{
-      const dv=notas[per]?.disciplina??notas[per]?.disc??null;
-      return typeof dv==='number'?dv:null;
-    });
-    const discConVal=discPer.filter(d=>d!==null);
-    const discProm=discConVal.length?+(discConVal.reduce((s,d)=>s+d,0)/discConVal.length).toFixed(2):null;
-    // Estado general (columnas de cabecera)
-    const thPers=pers2render.map(p=>`<th style="background:#2d5286;color:#fff;padding:5px 7px;text-align:center;font-size:11px;white-space:nowrap">${p}<br><span style="font-weight:400;opacity:.75">${ppPer[pers2render.indexOf(p)].toFixed(2)}</span></th>`).join('');
-    const rows=mats.map((m,idx)=>{
+    const thPers=pers2render.map((p,i)=>`<th style="background:#333;color:#fff;padding:5px 7px;text-align:center;font-size:10px;border:1px solid #999">${p}<br><span style="font-weight:400;opacity:.8">${ppPer[i].toFixed(2)}</span></th>`).join('');
+
+    // Función para generar filas con o sin agrupación por áreas
+    const buildRows = (matsArr, showArea) => matsArr.map((m,idx)=>{
       const perCells=pers2render.map(per=>{
         const d=def(notas[per]?.[m]||{a:0,c:0,r:0});
-        return`<td style="padding:5px 7px;border-bottom:1px solid #e2e8f0;text-align:center;font-weight:700;font-size:12px;color:${d===0?'#a0aec0':scCol(d)}">${d===0?'—':d.toFixed(2)}</td>`;
+        return`<td style="padding:5px 7px;border:1px solid #ddd;text-align:center;font-weight:700;font-size:12px;color:${bCol(d)}">${d===0?'—':d.toFixed(2)}</td>`;
       }).join('');
       const df=defFinal(m);
       const prf=profForMat(m,salon);
-      return`<tr style="background:${idx%2===0?'#f7fafc':'#fff'}">
-        <td style="padding:5px 7px;border-bottom:1px solid #e2e8f0;font-weight:600;font-size:12px">${m}</td>
+      return`<tr style="background:${idx%2===0?'#fafafa':'#fff'}">
+        <td style="padding:5px 8px;border:1px solid #ddd;font-size:12px">${m}</td>
         ${perCells}
-        <td style="padding:5px 7px;border-bottom:1px solid #e2e8f0;text-align:center;font-weight:900;font-size:13px;color:${scCol(df)};background:${df>=3?'#f0fff4':'#fff5f5'}">${df.toFixed(2)}</td>
-        <td style="padding:5px 7px;border-bottom:1px solid #e2e8f0;text-align:center;font-size:11px;color:${df===0?'#a0aec0':df>=4.5?'#276749':df>=4?'#276749':df>=3?'#744210':'#c53030'};font-weight:700">${df===0?'—':df>=4.5?'Superior':df>=4.0?'Alto':df>=3.0?'Básico':'Bajo'}</td>
-        <td style="padding:5px 7px;border-bottom:1px solid #e2e8f0;font-size:10px;color:#4a5568">${prf?prf.nombre:'—'}</td>
+        <td style="padding:5px 7px;border:1px solid #ddd;text-align:center;font-weight:900;font-size:13px;color:${bCol(df)}">${df.toFixed(2)}</td>
+        <td style="padding:5px 7px;border:1px solid #ddd;text-align:center;font-size:11px;font-weight:700;color:${bCol(df)}">${bDes(df)}</td>
+        <td style="padding:5px 7px;border:1px solid #ddd;font-size:10px;color:#555">${prf?prf.nombre:'—'}</td>
       </tr>`;
     }).join('');
-    // Fila de disciplina
-    const discPerCells=pers2render.map(per=>{
-      const dv=notas[per]?.disciplina??notas[per]?.disc??null;
-      const d=typeof dv==='number'?dv:null;
-      return`<td style="padding:5px 7px;border-bottom:1px solid #e2e8f0;text-align:center;font-style:italic;color:${d===null?'#a0aec0':scCol(d)}">${d===null?'—':d.toFixed(1)}</td>`;
-    }).join('');
-    const discFinalCell=discProm!==null
-      ?`<td style="padding:5px 7px;font-weight:900;text-align:center;color:${scCol(discProm)};background:${discProm>=3?'#f0fff4':'#fff5f5'}">${discProm.toFixed(2)}</td>
-         <td style="padding:5px 7px;text-align:center;font-size:11px;color:${discProm>=3?'#276749':'#c53030'};font-weight:700">${discProm>=4.5?'Superior':discProm>=4.0?'Alto':discProm>=3.0?'Básico':'Bajo'}</td>`
-      :`<td colspan="2" style="color:#a0aec0;text-align:center">—</td>`;
-    persHTML=`<table style="width:100%;border-collapse:collapse;font-size:11px;margin-bottom:16px">
-      <thead>
-        <tr>
-          <th style="background:#0b1e33;color:#fff;padding:7px 9px;text-align:left;font-size:12px">Materia</th>
-          ${thPers}
-          <th style="background:#0b1e33;color:#fff;padding:7px 9px;text-align:center;font-size:12px;white-space:nowrap">Def. Final</th>
-          <th style="background:#0b1e33;color:#fff;padding:7px 9px;text-align:center;font-size:11px">Desempeño</th>
-          <th style="background:#2d5286;color:#fff;padding:7px 9px;text-align:left;font-size:11px">Docente</th>
-        </tr>
-      </thead>
-      <tbody>
-        ${rows}
-        <tr style="background:#eef6fb">
-          <td style="padding:5px 7px;font-weight:700;font-size:11px;color:#2b6cb0;font-style:italic">📐 Disciplina</td>
-          ${discPerCells}
-          ${discFinalCell}
-          <td style="padding:5px 7px;font-size:10px;color:#718096">Comportamiento</td>
-        </tr>
-      </tbody>
-    </table>`;
+
+    const tableHeader = `<thead><tr>
+      <th style="background:#111;color:#fff;padding:6px 8px;text-align:left;font-size:11px;border:1px solid #999">Materia / Asignatura</th>
+      ${thPers}
+      <th style="background:#111;color:#fff;padding:6px 8px;text-align:center;font-size:11px;border:1px solid #999">Def. Final</th>
+      <th style="background:#111;color:#fff;padding:6px 8px;text-align:center;font-size:11px;border:1px solid #999">Desempeño</th>
+      <th style="background:#444;color:#fff;padding:6px 8px;text-align:left;font-size:10px;border:1px solid #999">Docente</th>
+    </tr></thead>`;
+
+    if(tieneAreas && e){
+      // Renderizar agrupado por áreas
+      const areaEntries = Object.entries(areaMap).filter(([k])=>k!=='_sinArea');
+      const sinArea = areaMap['_sinArea']||[];
+      let bodyHTML = '';
+      areaEntries.forEach(([areaNombre, matsArea])=>{
+        if(!matsArea.length) return;
+        // Definitiva del área
+        const defsArea = matsArea.map(m=>defFinal(m)).filter(d=>d>0);
+        const promArea = defsArea.length ? +(defsArea.reduce((s,v)=>s+v,0)/defsArea.length).toFixed(2) : 0;
+        const perCellsArea = pers2render.map(per=>{
+          const defsP = matsArea.map(m=>def(notas[per]?.[m]||{a:0,c:0,r:0})).filter(d=>d>0);
+          const dp = defsP.length ? +(defsP.reduce((s,v)=>s+v,0)/defsP.length).toFixed(2) : 0;
+          return`<td style="padding:4px 7px;border:1px solid #bbb;text-align:center;font-weight:700;font-size:11px;background:#e8e8e8">${dp===0?'—':dp.toFixed(2)}</td>`;
+        }).join('');
+        // Fila de área (cabecera de sección)
+        bodyHTML += `<tr style="background:#e0e0e0">
+          <td style="padding:5px 8px;border:1px solid #bbb;font-weight:800;font-size:12px;color:#111">▸ ${areaNombre}</td>
+          ${perCellsArea}
+          <td style="padding:5px 7px;border:1px solid #bbb;text-align:center;font-weight:900;font-size:13px;color:${bCol(promArea)}">${promArea===0?'—':promArea.toFixed(2)}</td>
+          <td style="padding:5px 7px;border:1px solid #bbb;text-align:center;font-size:11px;font-weight:700;color:${bCol(promArea)}">${promArea===0?'—':bDes(promArea)}</td>
+          <td style="padding:5px 7px;border:1px solid #bbb;font-size:10px;color:#666">Área</td>
+        </tr>`;
+        // Filas de materias del área
+        bodyHTML += buildRows(matsArea, true);
+      });
+      if(sinArea.length) bodyHTML += buildRows(sinArea, false);
+      persHTML = `<table style="width:100%;border-collapse:collapse;font-size:11px;margin-bottom:16px">${tableHeader}<tbody>${bodyHTML}</tbody></table>`;
+    } else {
+      // Sin áreas: tabla plana
+      persHTML = `<table style="width:100%;border-collapse:collapse;font-size:11px;margin-bottom:16px">${tableHeader}<tbody>${buildRows(mats,false)}</tbody></table>`;
+    }
   } else {
-    /* Build period tables (individual period) */
+    // Vista por periodo individual — tabla con desglose tripartita
+    const pct=DB.notaPct||{};const pa=pct.a??60,pc=pct.c??20,pr=pct.r??20;
     persHTML=pers2render.map(per=>{
-    const pp=e?pprom(estId,per):+(mats.reduce((s,m)=>s+def(notas[per]?.[m]||{a:0,c:0,r:0}),0)/mats.length).toFixed(2);
-    const ppu=e?puestoP(estId,per):'—';
-    {
-      /* Detailed: full tripartita breakdown */
+      const pp=e?pprom(estId,per):+(mats.reduce((s,m)=>s+def(notas[per]?.[m]||{a:0,c:0,r:0}),0)/mats.length).toFixed(2);
+      const ppu=e?puestoP(estId,per):'—';
+
+      const buildMatRows = (matsArr) => matsArr.map((m,idx)=>{
+        const t=notas[per]?.[m]||{a:0,c:0,r:0};const d=def(t);
+        const prf=profForMat(m,salon);
+        return`<tr style="background:${idx%2===0?'#fafafa':'#fff'}">
+          <td style="padding:5px 8px;border:1px solid #ddd;font-size:12px">${m}</td>
+          <td style="padding:5px 7px;border:1px solid #ddd;text-align:center;font-size:12px">${t.a.toFixed(1)}</td>
+          <td style="padding:5px 7px;border:1px solid #ddd;text-align:center;font-size:12px">${t.c.toFixed(1)}</td>
+          <td style="padding:5px 7px;border:1px solid #ddd;text-align:center;font-size:12px">${t.r.toFixed(1)}</td>
+          <td style="padding:5px 7px;border:1px solid #ddd;text-align:center;font-weight:900;font-size:13px;color:${bCol(d)}">${d.toFixed(2)}</td>
+          <td style="padding:5px 7px;border:1px solid #ddd;text-align:center;font-size:11px;font-weight:700;color:${bCol(d)}">${d===0?'—':bDes(d)}</td>
+          <td style="padding:5px 7px;border:1px solid #ddd;font-size:10px;color:#555">${prf?prf.nombre:'—'}</td>
+        </tr>`;
+      }).join('');
+
+      let tableBody = '';
+      if(tieneAreas && e){
+        const areaEntries = Object.entries(areaMap).filter(([k])=>k!=='_sinArea');
+        const sinArea = areaMap['_sinArea']||[];
+        areaEntries.forEach(([areaNombre, matsArea])=>{
+          if(!matsArea.length) return;
+          const defsArea=matsArea.map(m=>def(notas[per]?.[m]||{a:0,c:0,r:0})).filter(d=>d>0);
+          const dp=defsArea.length?+(defsArea.reduce((s,v)=>s+v,0)/defsArea.length).toFixed(2):0;
+          tableBody+=`<tr style="background:#e0e0e0">
+            <td style="padding:5px 8px;border:1px solid #bbb;font-weight:800;font-size:12px" colspan="5">▸ ${areaNombre}</td>
+            <td style="padding:5px 7px;border:1px solid #bbb;text-align:center;font-weight:900;font-size:13px;color:${bCol(dp)}">${dp===0?'—':dp.toFixed(2)}</td>
+            <td style="padding:5px 7px;border:1px solid #bbb;font-size:10px;color:#666">Área</td>
+          </tr>`;
+          tableBody+=buildMatRows(matsArea);
+        });
+        if(sinArea.length) tableBody+=buildMatRows(sinArea);
+      } else {
+        tableBody=buildMatRows(mats);
+      }
+
       return`<div style="margin-bottom:18px;page-break-inside:avoid">
-        <div style="background:#1a3a5c;color:#fff;padding:8px 12px;border-radius:6px 6px 0 0;display:flex;justify-content:space-between;align-items:center">
+        <div style="background:#111;color:#fff;padding:8px 12px;display:flex;justify-content:space-between;align-items:center">
           <strong style="font-size:13px">${per}</strong>
           <span style="font-size:11px;opacity:.8">Promedio: ${pp.toFixed(2)} &nbsp;|&nbsp; Puesto: ${ppu}${ppu!=='—'?'°':''}</span>
         </div>
         <table style="width:100%;border-collapse:collapse;font-size:11px">
           <thead><tr>
-            <th style="background:#2d5286;color:#fff;padding:6px 9px;text-align:left">Materia</th>
-            <th style="background:#1e6b5c;color:#fff;padding:6px 9px;text-align:center;font-size:10px">Aptitud<br><span style="opacity:.7">(60%)</span></th>
-            <th style="background:#2d5286;color:#fff;padding:6px 9px;text-align:center;font-size:10px">Actitud<br><span style="opacity:.7">(20%)</span></th>
-            <th style="background:#2d5286;color:#fff;padding:6px 9px;text-align:center;font-size:10px">Respons.<br><span style="opacity:.7">(20%)</span></th>
-            <th style="background:#0b1e33;color:#fff;padding:6px 9px;text-align:center;font-weight:800">Definitiva</th>
-            <th style="background:#2d5286;color:#fff;padding:6px 9px;text-align:center;font-size:10px">Estado</th>
-            <th style="background:#2d5286;color:#fff;padding:6px 9px;text-align:left;font-size:10px">Profesor(a)</th>
+            <th style="background:#333;color:#fff;padding:5px 8px;text-align:left;border:1px solid #999">Materia / Asignatura</th>
+            <th style="background:#444;color:#fff;padding:5px 7px;text-align:center;font-size:10px;border:1px solid #999">Ser (${pa}%)</th>
+            <th style="background:#444;color:#fff;padding:5px 7px;text-align:center;font-size:10px;border:1px solid #999">Saber (${pc}%)</th>
+            <th style="background:#444;color:#fff;padding:5px 7px;text-align:center;font-size:10px;border:1px solid #999">Hacer (${pr}%)</th>
+            <th style="background:#111;color:#fff;padding:5px 7px;text-align:center;font-weight:800;border:1px solid #999">Definitiva</th>
+            <th style="background:#333;color:#fff;padding:5px 7px;text-align:center;font-size:10px;border:1px solid #999">Desempeño</th>
+            <th style="background:#444;color:#fff;padding:5px 7px;text-align:left;font-size:10px;border:1px solid #999">Docente</th>
           </tr></thead>
-          <tbody>${mats.map((m,idx)=>{
-            const t=notas[per]?.[m]||{a:0,c:0,r:0};const d=def(t);
-            const prf=profForMat(m,salon);
-            return`<tr style="background:${idx%2===0?'#f7fafc':'#fff'}">
-              <td style="padding:6px 9px;border-bottom:1px solid #e2e8f0;font-weight:600">${m}</td>
-              <td style="padding:6px 9px;border-bottom:1px solid #e2e8f0;text-align:center;color:#276749;font-weight:600">${t.a.toFixed(1)}</td>
-              <td style="padding:6px 9px;border-bottom:1px solid #e2e8f0;text-align:center;color:#744210;font-weight:600">${t.c.toFixed(1)}</td>
-              <td style="padding:6px 9px;border-bottom:1px solid #e2e8f0;text-align:center;color:#2b6cb0;font-weight:600">${t.r.toFixed(1)}</td>
-              <td style="padding:6px 9px;border-bottom:1px solid #e2e8f0;text-align:center;font-weight:900;font-size:13px;color:${scCol(d)}">${d.toFixed(2)}</td>
-              <td style="padding:6px 9px;border-bottom:1px solid #e2e8f0;text-align:center;color:${d===0?'#a0aec0':d>=3?'#276749':'#c53030'};font-weight:600">${d===0?'—':d>=3?'✓':'✗'}</td>
-              <td style="padding:6px 9px;border-bottom:1px solid #e2e8f0;font-size:11px;color:#4a5568">${prf?prf.nombre:'Sin asignar'}</td>
-            </tr>`;
-          }).join('')}</tbody>
+          <tbody>${tableBody}</tbody>
         </table>
       </div>`;
-    }
     }).join('');
-  } // end else (individual period)
+  }
 
-  const rehabHTML=(isTodos&&DB.ext.on&&mp.length>=1&&mp.length<=2)
-    ?`<div style="background:#fffff0;border:2px solid #f6e05e;padding:12px 16px;border-radius:8px;font-size:12px;margin:12px 0">
-       ⚠️ <strong>Materias en periodo de recuperación:</strong> ${mp.join(', ')} &nbsp;·&nbsp; Fechas: ${DB.ext.s} → ${DB.ext.e}
-     </div>`:'' ;
+  // ─── Veredicto anual (bloque limpio blanco/negro) ─────────────────────────
+  let veredictoHTML = '';
+  if(e && isTodos){
+    const verd = veredictoAnual(estId);
+    if(verd){
+      if(verd.completo){
+        // Resultado definitivo
+        const ic = verd.resultado==='gana'?'✓':verd.resultado==='recupera'?'⚠':'✗';
+        let resumenHTML = '';
+        if(verd.tieneAreas && verd.resAreas){
+          resumenHTML = verd.resAreas.map(a=>`<tr>
+            <td style="padding:5px 8px;border:1px solid #ddd;font-size:12px;font-weight:700">${a.gana?'✓':'✗'} ${a.areaNombre}</td>
+            <td style="padding:5px 7px;border:1px solid #ddd;text-align:center;font-size:13px;font-weight:800;color:${bCol(a.prom)}">${a.prom.toFixed(2)}</td>
+            <td style="padding:5px 7px;border:1px solid #ddd;font-size:11px;font-weight:700;color:${bCol(a.prom)}">${a.gana?'Aprobada':'Perdida'}</td>
+          </tr>`).join('');
+          const cabeza = '<tr style="background:#eee"><th style="padding:5px 8px;border:1px solid #bbb;font-size:10px;text-align:left">Área</th><th style="padding:5px 7px;border:1px solid #bbb;font-size:10px;text-align:center">Definitiva</th><th style="padding:5px 7px;border:1px solid #bbb;font-size:10px;text-align:left">Resultado</th></tr>';
+          resumenHTML = `<table style="width:100%;border-collapse:collapse;font-size:11px;margin-top:8px"><tbody>${cabeza}${resumenHTML}</tbody></table>`;
+        } else {
+          resumenHTML = verd.resMateria.map(x=>`<tr>
+            <td style="padding:5px 8px;border:1px solid #ddd;font-size:12px;font-weight:700">${x.gana?'✓':'✗'} ${x.mat}</td>
+            <td style="padding:5px 7px;border:1px solid #ddd;text-align:center;font-size:13px;font-weight:800;color:${bCol(x.prom)}">${x.prom.toFixed(2)}</td>
+            <td style="padding:5px 7px;border:1px solid #ddd;font-size:11px;font-weight:700;color:${bCol(x.prom)}">${x.gana?'Aprobada':'Perdida'}</td>
+          </tr>`).join('');
+          const cabeza = '<tr style="background:#eee"><th style="padding:5px 8px;border:1px solid #bbb;font-size:10px;text-align:left">Materia</th><th style="padding:5px 7px;border:1px solid #bbb;font-size:10px;text-align:center">Definitiva</th><th style="padding:5px 7px;border:1px solid #bbb;font-size:10px;text-align:left">Resultado</th></tr>';
+          resumenHTML = `<table style="width:100%;border-collapse:collapse;font-size:11px;margin-top:8px"><tbody>${cabeza}${resumenHTML}</tbody></table>`;
+        }
+        const regla = verd.tieneAreas
+          ? 'Aprobado ≥ 3.0 por área · Recuperación: 1–2 áreas perdidas · Pierde año: 3+ áreas perdidas'
+          : 'Aprobado ≥ 3.0 · Recuperación: 1–2 materias perdidas · Pierde año: 3+ materias perdidas';
+        veredictoHTML = `<div style="border:1.5px solid #333;margin-top:16px;page-break-inside:avoid">
+          <div style="background:#111;color:#fff;padding:10px 14px">
+            <div style="font-size:14px;font-weight:800">${ic} ${verd.mensaje.replace(/[🎉⚠️❌]/g,'').trim()}</div>
+            ${verd.resultado==='recupera'?'<div style="font-size:11px;margin-top:3px;opacity:.85">Tiene derecho a recuperación al finalizar el año por las áreas/materias perdidas.</div>':''}
+            ${verd.resultado==='pierde'?'<div style="font-size:11px;margin-top:3px;opacity:.85">Perdió 3 o más áreas. Debe repetir el año escolar.</div>':''}
+            ${verd.resultado==='gana'?'<div style="font-size:11px;margin-top:3px;opacity:.85">Felicitaciones. Aprobó todas las áreas del año lectivo.</div>':''}
+          </div>
+          <div style="padding:8px 14px 4px">${resumenHTML}</div>
+          <div style="padding:5px 14px;font-size:9px;color:#666;border-top:1px solid #ddd">${regla}</div>
+        </div>`;
+      } else {
+        // Periodos pendientes — solo texto simple de qué le falta
+        const periodosProy = necesitaParaPeriodos(estId);
+        if(periodosProy.length){
+          const hayImp = periodosProy.some(x=>!x.posible);
+          let textoFalta = '';
+          if(hayImp){
+            textoFalta = 'En algunas materias ya no es posible alcanzar el promedio mínimo. Hablar con el docente.';
+          } else {
+            const menor = periodosProy[0];
+            textoFalta = `${menor.necesita.toFixed(1)} en promedio en los periodos pendientes (${periodosProy.map(x=>x.per).join(', ')}).`;
+          }
+          veredictoHTML = `<div style="border:1px solid #aaa;padding:10px 14px;margin-top:14px;font-size:12px;color:#333">
+            <strong>Le falta para ganar el año:</strong> ${textoFalta}
+          </div>`;
+        }
+      }
+    }
+  }
 
-  /* Per-period promedio for single-period view (works for both active and snapshot) */
+  // ─── Disciplina ───────────────────────────────────────────────────────────
+  const discPer=isTodos?pers2render.map(per=>{const dv=notas[per]?.disciplina??notas[per]?.disc??null;return typeof dv==='number'?dv:null;}).filter(d=>d!==null):[];
+  const discProm=discPer.length?+(discPer.reduce((s,d)=>s+d,0)/discPer.length).toFixed(2):null;
+
+  // ─── HTML DEL BOLETÍN ─────────────────────────────────────────────────────
+  const _logo = DB.colegioLogo||'';
+  const _nomColegio = CU.colegioNombre||'';
   const perPromVal=!isTodos?+(mats.reduce((s,m)=>s+def(notas[decodeURIComponent(perFilter)]?.[m]||{a:0,c:0,r:0}),0)/mats.length).toFixed(2):0;
   const perPuestoVal=e&&!isTodos?puestoP(estId,decodeURIComponent(perFilter)):'—';
 
-  const _colegioLogo = DB.colegioLogo || '';
-  const _colegioNombreLabel = CU.colegioNombre || '';
-  box.innerHTML=`<div style="font-family:'Outfit',sans-serif;background:#fff;max-width:760px">
-    <!-- HEADER -->
-    <div style="background:linear-gradient(135deg,#0b1e33 0%,#1a3a5c 100%);color:#fff;padding:20px 28px;position:relative;overflow:hidden">
-      ${_colegioLogo ? `<img src="${_colegioLogo}" style="position:absolute;right:20px;top:50%;transform:translateY(-50%);height:56px;width:auto;object-fit:contain;opacity:.92;border-radius:6px;background:rgba(255,255,255,.12);padding:4px" alt="Logo">` : '<div style="position:absolute;right:16px;top:50%;transform:translateY(-50%);font-size:80px;opacity:.08;line-height:1">🏛️</div>'}
-      ${_colegioNombreLabel ? `<div style="font-size:10px;text-transform:uppercase;letter-spacing:.1em;opacity:.7;margin-bottom:2px;font-weight:600">${_colegioNombreLabel}</div>` : ''}
-      <div style="font-size:10px;text-transform:uppercase;letter-spacing:.15em;opacity:.55;margin-bottom:6px">EduSistema Pro · Documento Oficial${snap?'  ·  ARCHIVO HISTÓRICO':''}</div>
-      <h1 style="font-size:20px;font-weight:900;margin-bottom:4px;letter-spacing:-.3px">BOLETÍN DE CALIFICACIONES</h1>
-      <p style="font-size:11px;opacity:.65">${subtitle} · Emitido: ${fechaGen}</p>
+  box.innerHTML=`<div style="font-family:'Arial',sans-serif;background:#fff;max-width:760px;color:#111">
+    <!-- ENCABEZADO -->
+    <div style="border-bottom:3px solid #111;padding:16px 24px 12px;display:flex;justify-content:space-between;align-items:center">
+      <div style="flex:1">
+        ${_nomColegio?`<div style="font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:#444;margin-bottom:2px">${_nomColegio}</div>`:''}
+        <div style="font-size:18px;font-weight:900;letter-spacing:-.3px">BOLETÍN DE CALIFICACIONES</div>
+        <div style="font-size:11px;color:#555;margin-top:3px">${subtitle} · Emitido: ${fechaGen}</div>
+      </div>
+      ${_logo?`<img src="${_logo}" style="height:60px;width:auto;object-fit:contain;margin-left:16px" alt="Logo">`:''}
     </div>
-    <!-- STUDENT INFO -->
-    <div style="background:#eef2f7;padding:14px 28px;display:grid;grid-template-columns:1fr 1fr;gap:10px;border-bottom:2px solid #d8e2ef">
+    <!-- DATOS DEL ESTUDIANTE -->
+    <div style="border-bottom:1.5px solid #ccc;padding:10px 24px;display:grid;grid-template-columns:1fr 1fr;gap:8px">
       <div>
-        <div style="font-size:12px;line-height:1.8"><strong>Nombre:</strong> ${esc(nombre)}</div>
-        <div style="font-size:12px;line-height:1.8"><strong>T.I.:</strong> ${esc(ti)||'No registrado'}</div>
-        <div style="font-size:12px;line-height:1.8"><strong>Salón:</strong> ${esc(salon)||'Sin salón'} &nbsp;·&nbsp; <strong>Ciclo:</strong> ${cicloLabel}</div>
-        <div style="font-size:11px;color:#4a5568;line-height:1.6"><strong>Plan de estudios:</strong> ${matsSource} — ${mats.join(', ')}</div>
+        <div style="font-size:12px;line-height:1.9"><strong>Estudiante:</strong> ${esc(nombre)}</div>
+        <div style="font-size:12px;line-height:1.9"><strong>T.I.:</strong> ${esc(ti)||'No registrado'}</div>
+        <div style="font-size:12px;line-height:1.9"><strong>Salón:</strong> ${esc(salon)||'—'} &nbsp;·&nbsp; <strong>Ciclo:</strong> ${ciclo==='primaria'?'Primaria':'Bachillerato'}</div>
       </div>
       <div>
         ${isTodos
-          ?`<div style="font-size:12px;line-height:1.8"><strong>Promedio General:</strong> <span style="color:${scCol(pg)};font-weight:900;font-size:16px">${pg.toFixed(2)}</span></div>
-             <div style="font-size:12px;line-height:1.8"><strong>Puesto en Salón:</strong> <strong>${ps}${ps!=='—'?'°':''}</strong></div>`
-          :`<div style="font-size:12px;line-height:1.8"><strong>Promedio ${decodeURIComponent(perFilter)}:</strong> <span style="color:${scCol(perPromVal)};font-weight:900;font-size:16px">${perPromVal.toFixed(2)}</span></div>
-             <div style="font-size:12px;line-height:1.8"><strong>Puesto en Salón:</strong> <strong>${perPuestoVal}${perPuestoVal!=='—'?'°':''}</strong></div>`}
-        <div style="font-size:12px;line-height:1.8"><strong>Disciplina:</strong> ${esc(disciplina)}</div>
-        <div style="font-size:12px;line-height:1.8"><strong>Materias Perdidas:</strong> <span style="color:${mp.length>0?'#c53030':'#276749'};font-weight:700">${mp.length===0?'Ninguna':mp.length}</span></div>
+          ?`<div style="font-size:12px;line-height:1.9"><strong>Promedio General:</strong> <span style="font-weight:900;font-size:15px">${pg.toFixed(2)}</span></div>
+             <div style="font-size:12px;line-height:1.9"><strong>Puesto en Salón:</strong> <strong>${ps}${ps!=='—'?'°':''}</strong></div>`
+          :`<div style="font-size:12px;line-height:1.9"><strong>Promedio ${decodeURIComponent(perFilter)}:</strong> <span style="font-weight:900;font-size:15px">${perPromVal.toFixed(2)}</span></div>
+             <div style="font-size:12px;line-height:1.9"><strong>Puesto en Salón:</strong> <strong>${perPuestoVal}${perPuestoVal!=='—'?'°':''}</strong></div>`}
+        ${discProm!==null?`<div style="font-size:12px;line-height:1.9"><strong>Comportamiento Social:</strong> ${discProm.toFixed(2)} — ${bDes(discProm)}</div>`:''}
       </div>
     </div>
-    ${!isTodos?`<div style="background:#fffff0;padding:8px 28px;font-size:11px;color:#744210;border-bottom:1px solid #f6e05e">
-      📊 <strong>Sistema tripartita:</strong> Aptitud (${DB.notaPct?.a??60}%) + Actitud (${DB.notaPct?.c??20}%) + Responsabilidad (${DB.notaPct?.r??20}%) = Definitiva
-    </div>`:''}
-    <!-- GRADES -->
-    <div style="padding:16px 28px">
+    <!-- NOTAS -->
+    <div style="padding:14px 24px">
+      ${!isTodos?`<div style="font-size:10px;color:#555;margin-bottom:10px;padding:6px 10px;border:1px solid #ccc">
+        Sistema tripartita: Ser (${DB.notaPct?.a??60}%) + Saber (${DB.notaPct?.c??20}%) + Saber Hacer (${DB.notaPct?.r??20}%) = Definitiva
+      </div>`:''}
       ${persHTML}
-      ${rehabHTML}
-      ${(()=>{
-        // Proyección / Veredicto final — solo para estudiantes activos
-        if(!e) return '';
-        const verd = veredictoAnual(estId);
-        if(!verd) return '';
-
-        // ── CASO A: Todos los periodos completos → veredicto definitivo ──
-        if(verd.completo){
-          const bgV = verd.resultado==='gana' ? '#f0fff4' : verd.resultado==='recupera' ? '#fffbeb' : '#fff5f5';
-          const borV = verd.resultado==='gana' ? '#9ae6b4' : verd.resultado==='recupera' ? '#fbd38d' : '#feb2b2';
-          const colV = verd.resultado==='gana' ? '#276749' : verd.resultado==='recupera' ? '#92400e' : '#742a2a';
-          const filasV = verd.resMateria.map(x => {
-            const col = x.gana ? '#276749' : '#c53030';
-            const bg  = x.gana ? '#f0fff4' : '#fff5f5';
-            const ic  = x.gana ? '✅' : '❌';
-            return `<tr style="background:${bg}">
-              <td style="padding:6px 10px;font-size:12px;font-weight:700">${ic} ${x.mat}</td>
-              <td style="padding:6px 8px;text-align:center;font-size:14px;font-weight:800;color:${col}">${x.prom.toFixed(2)}</td>
-              <td style="padding:6px 8px;font-size:11px;font-weight:700;color:${col}">${x.gana ? '✓ Aprobada' : '✗ Perdida'}</td>
-            </tr>`;
-          }).join('');
-          return `<div style="margin-top:16px;border-radius:10px;overflow:hidden;border:2px solid ${borV};page-break-inside:avoid">
-            <div style="background:${bgV};padding:12px 16px">
-              <div style="font-size:15px;font-weight:800;color:${colV}">${verd.mensaje}</div>
-              ${verd.resultado==='recupera'?`<div style="font-size:11px;color:#92400e;margin-top:4px">Tienes derecho a recuperación de fin de año por las materias perdidas.</div>`:''}
-              ${verd.resultado==='pierde'?`<div style="font-size:11px;color:#742a2a;margin-top:4px">Perdiste más de 2 materias. Debes repetir el año escolar.</div>`:''}
-              ${verd.resultado==='gana'?`<div style="font-size:11px;color:#276749;margin-top:4px">¡Felicitaciones! Aprobaste todas las materias del año.</div>`:''}
-            </div>
-            <div style="background:#fff;padding:6px 0">
-              <div style="padding:4px 16px;font-size:10px;font-weight:700;color:#718096;text-transform:uppercase;letter-spacing:.5px">Resultados por materia</div>
-              <table style="width:100%;border-collapse:collapse;font-size:11px">
-                <thead><tr style="background:#f7fafc">
-                  <th style="padding:5px 10px;text-align:left;font-size:10px;color:#4a5568">Materia</th>
-                  <th style="padding:5px 8px;text-align:center;font-size:10px;color:#4a5568">Definitiva</th>
-                  <th style="padding:5px 8px;text-align:left;font-size:10px;color:#4a5568">Resultado</th>
-                </tr></thead>
-                <tbody>${filasV}</tbody>
-              </table>
-            </div>
-            <div style="background:${bgV};padding:5px 16px;font-size:9px;color:#718096">
-              Definitiva = promedio de los ${DB.pers.length} periodos del año &nbsp;·&nbsp; Aprobado ≥ 3.0 &nbsp;·&nbsp; Recuperación: 1–2 materias perdidas &nbsp;·&nbsp; Pierde año: 3+ materias perdidas
-            </div>
-          </div>`;
-        }
-
-        // ── CASO B: Periodos pendientes → proyección secuencial ──
-        const periodosProy = necesitaParaPeriodos(estId);
-        if(!periodosProy.length) return '';
-        const hayImposible = periodosProy.some(x => !x.posible);
-        const filas = periodosProy.map(x => {
-          const imposible = !x.posible;
-          const color = imposible ? '#742a2a' : x.necesita <= 3 ? '#276749' : x.necesita <= 4 ? '#b7791f' : '#c53030';
-          const bg = imposible ? '#fff5f5' : x.necesita <= 3 ? '#f0fff4' : x.necesita <= 4 ? '#fffaf0' : '#fff5f5';
-          const icono = imposible ? '🚨' : x.necesita <= 3 ? '🟢' : x.necesita <= 4 ? '🟡' : '🔴';
-          let estado, consejo;
-          if(imposible){
-            estado = 'Ya no alcanza';
-            consejo = `En ${x.matsImpCount} materia${x.matsImpCount>1?'s':''} ya no es posible llegar a 3.0. Habla con tu profesor.`;
-          } else if(x.matsEnRiesgo === 0){
-            estado = '¡Vas bien!';
-            consejo = 'No tienes materias en riesgo en este periodo.';
-          } else if(x.necesita <= 3){
-            estado = 'Alcanzable 👍';
-            consejo = `Saca ${x.necesita.toFixed(1)} o más en promedio en este periodo y pasas las ${x.matsEnRiesgo} materia${x.matsEnRiesgo>1?'s':''} en riesgo.`;
-          } else if(x.necesita <= 4){
-            estado = 'Con esfuerzo';
-            consejo = `Necesitas ${x.necesita.toFixed(1)} en promedio en este periodo. ¡Tú puedes!`;
-          } else {
-            estado = 'Muy difícil 😟';
-            consejo = `Necesitas ${x.necesita.toFixed(1)} en promedio. Pide ayuda a tus profesores.`;
-          }
-          return `<tr style="background:${bg}">
-            <td style="padding:7px 10px;font-size:12px;font-weight:700">${icono} ${x.per}</td>
-            <td style="padding:7px 8px;text-align:center;font-size:13px;font-weight:800;color:${color}">${imposible ? '✗' : x.necesita.toFixed(1)}</td>
-            <td style="padding:7px 8px;font-size:11px;font-weight:700;color:${color}">${estado}</td>
-            <td style="padding:7px 8px;font-size:10px;color:#555;font-style:italic">${consejo}</td>
-          </tr>`;
-        }).join('');
-        const resumen = hayImposible
-          ? `<div style="font-size:11px;color:#c53030;font-weight:600">⚠️ Hay materias donde ya no alcanza el promedio. Habla con tu profesor.</div>`
-          : periodosProy[0]?.necesita <= 3
-            ? `<div style="font-size:11px;color:#276749;font-weight:600">📌 Aún puedes ganar el año. ¡Mantén el esfuerzo!</div>`
-            : `<div style="font-size:11px;color:#b7791f;font-weight:600">📌 Es posible, pero necesitas esforzarte en los periodos que faltan.</div>`;
-        return `<div style="margin-top:16px;border-radius:10px;overflow:hidden;border:1.5px solid #fbd38d;page-break-inside:avoid">
-          <div style="background:#fffbeb;padding:10px 14px;display:flex;align-items:flex-start;gap:10px">
-            <span style="font-size:20px">📊</span>
-            <div>
-              <div style="font-size:13px;font-weight:800;color:#92400e">¿Qué me falta para ganar el año?</div>
-              <div style="font-size:10px;color:#b7791f;margin-top:2px">Nota mínima promedio que necesitas en cada periodo para aprobar todas tus materias</div>
-              <div style="margin-top:5px">${resumen}</div>
-            </div>
-          </div>
-          <table style="width:100%;border-collapse:collapse;font-size:11px">
-            <thead><tr style="background:#fef3c7">
-              <th style="padding:6px 10px;text-align:left;font-size:10px;color:#92400e">Periodo pendiente</th>
-              <th style="padding:6px 8px;text-align:center;font-size:10px;color:#92400e">Nota mínima promedio</th>
-              <th style="padding:6px 8px;text-align:center;font-size:10px;color:#92400e">Estado</th>
-              <th style="padding:6px 8px;text-align:left;font-size:10px;color:#92400e">¿Qué hacer?</th>
-            </tr></thead>
-            <tbody>${filas}</tbody>
-          </table>
-          <div style="background:#fffbeb;padding:6px 14px;font-size:9px;color:#a16207;line-height:1.6">
-            🟢 Alcanzable (≤ 3.0) &nbsp;·&nbsp; 🟡 Con esfuerzo (3.1–4.0) &nbsp;·&nbsp; 🔴 Muy difícil (&gt; 4.0) &nbsp;·&nbsp; 🚨 Ya no alcanza
-          </div>
-        </div>`;
-      })()}
+      ${veredictoHTML}
     </div>
-    <!-- SIGNATURES -->
-    <div style="display:flex;justify-content:space-around;margin-top:36px;padding:0 28px 28px">
+    <!-- FIRMAS -->
+    <div style="display:flex;justify-content:space-around;margin-top:40px;padding:0 24px 28px">
       <div style="text-align:center">
-        <div style="width:160px;border-top:1.5px solid #1a3a5c;margin:0 auto 6px"></div>
-        <div style="font-size:10px;color:#718096;font-weight:600">Rector(a)</div>
+        <div style="width:150px;border-top:1.5px solid #111;margin:0 auto 5px"></div>
+        <div style="font-size:10px;color:#555">Vb. Coordinador</div>
       </div>
       <div style="text-align:center">
-        <div style="width:160px;border-top:1.5px solid #1a3a5c;margin:0 auto 6px"></div>
-        <div style="font-size:10px;color:#718096;font-weight:600">Director(a) de Grupo</div>
+        <div style="width:150px;border-top:1.5px solid #111;margin:0 auto 5px"></div>
+        <div style="font-size:10px;color:#555">Director de Grupo</div>
       </div>
       <div style="text-align:center">
-        <div style="width:160px;border-top:1.5px solid #1a3a5c;margin:0 auto 6px"></div>
-        <div style="font-size:10px;color:#718096;font-weight:600">Padre / Acudiente</div>
+        <div style="width:150px;border-top:1.5px solid #111;margin:0 auto 5px"></div>
+        <div style="font-size:10px;color:#555">Padre / Acudiente</div>
       </div>
     </div>
   </div>`;

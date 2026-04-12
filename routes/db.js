@@ -3,7 +3,7 @@
 const router = require('express').Router();
 const { authMiddleware, requireRole } = require('../middleware/auth');
 const {
-  Usuario, Salon, Config, Materia, Nota, Asistencia, Excusa,
+  Usuario, Salon, Config, Materia, Area, Nota, Asistencia, Excusa,
   VClase, Upload, Plan, Recuperacion, Auditoria, EstHist, Bloqueo
 } = require('../models');
 
@@ -38,7 +38,7 @@ router.get('/', authMiddleware, async (req, res) => {
 
     // ── Cargar todo en paralelo con filtro de tenant ──────────────────────────
     const [
-      usuarios, salones, configs, materiasDocs, notas, asistencias,
+      usuarios, salones, configs, materiasDocs, areasDocs, notas, asistencias,
       excusas, vclases, uploads, planes, recuperaciones,
       auditoria, estHist, bloqueos
     ] = await Promise.all([
@@ -46,6 +46,7 @@ router.get('/', authMiddleware, async (req, res) => {
       Salon.find(cf).lean(),
       Config.find(cf).lean(),
       Materia.find(cf).sort({ ciclo: 1, orden: 1, nombre: 1 }).lean(),
+      Area.find(cf).sort({ ciclo: 1, orden: 1, nombre: 1 }).lean(),
       Nota.find(cf).lean(),
       Asistencia.find(cf).lean(),
       Excusa.find(cf).lean(),
@@ -149,6 +150,10 @@ router.get('/', authMiddleware, async (req, res) => {
       mB:           materiasDocs.filter(m => m.ciclo === 'bachillerato').map(m => m.nombre).length
                       ? materiasDocs.filter(m => m.ciclo === 'bachillerato').map(m => m.nombre)
                       : (cfg.mB || ['Matemáticas','Español','Ciencias Naturales','Ciencias Sociales','Inglés','Ed. Física','Arte']),
+      // Materias completas con areaNombre — para que el frontend sepa a qué área pertenece cada una
+      materiasDocs: materiasDocs.map(m => ({ nombre: m.nombre, ciclo: m.ciclo, areaNombre: m.areaNombre || '' })),
+      // Áreas definidas por el admin para este colegio
+      areas:        areasDocs.map(a => ({ nombre: a.nombre, ciclo: a.ciclo, orden: a.orden || 0 })),
       pers:         cfg.pers  || ['Periodo 1','Periodo 2','Periodo 3','Periodo 4'],
       dr:           cfg.dr    || { s: '', e: '' },
       drPer:        cfg.drPer || {},

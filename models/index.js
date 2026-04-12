@@ -45,6 +45,19 @@ const SalonSchema = new Schema({
 }, { timestamps: true, collection: 'salones' });
 SalonSchema.index({ nombre: 1, colegioId: 1 }, { unique: true });
 
+// ─── ÁREAS POR COLEGIO ──────────────────────────────────────────────────────
+// Cada área agrupa una o más materias. El admin define las áreas y asigna materias.
+// La definitiva del área = promedio de definitivas de sus materias.
+// Para ganar/perder/recuperar el año se evalúan las áreas, no las materias individuales.
+const AreaSchema = new Schema({
+  nombre:    { type: String, required: true, trim: true },
+  ciclo:     { type: String, enum: ['primaria', 'bachillerato'], required: true },
+  colegioId: { type: String, required: true, index: true },
+  colegioNombre: { type: String, default: '' },
+  orden:     { type: Number, default: 0 },
+}, { timestamps: true, collection: 'areas' });
+AreaSchema.index({ nombre: 1, ciclo: 1, colegioId: 1 }, { unique: true });
+
 // ─── MATERIAS POR COLEGIO ────────────────────────────────────────────────────
 // Colección dedicada para materias de primaria y bachillerato por colegio.
 // Reemplaza el uso de config {key:'mP'} y {key:'mB'} que causaban E11000.
@@ -54,6 +67,7 @@ const MateriaSchema = new Schema({
   colegioId: { type: String, required: true, index: true },
   colegioNombre: { type: String, default: '' },
   orden:     { type: Number, default: 0 },
+  areaNombre: { type: String, default: '' }, // nombre del área a la que pertenece esta materia
 }, { timestamps: true, collection: 'materias' });
 MateriaSchema.index({ nombre: 1, ciclo: 1, colegioId: 1 }, { unique: true });
 
@@ -284,6 +298,7 @@ SugerenciaSchema.index({ leida: 1, createdAt: -1 });
 SugerenciaSchema.index({ uid: 1 });
 
 module.exports = {
+  Area:          mongoose.model('Area',          AreaSchema),
   Materia:       mongoose.model('Materia',       MateriaSchema),
   Colegio:       mongoose.model('Colegio',       ColegioSchema),
   Usuario:       mongoose.model('Usuario',       UsuarioSchema),
