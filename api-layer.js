@@ -971,7 +971,15 @@ async function addPrf(data) {
 // ═══════════════════════════════════════════════════════════════════
 function editEst(eid, ciclo) {
   const e = DB.ests.find(x => x.id === eid);
-  const sOpts = DB.sals.map(s => `<option value="${s.nombre}" ${s.nombre === e.salon ? 'selected' : ''}>${s.nombre}</option>`).join('');
+  // Filtrar salones por ciclo Y colegioId — evita mostrar salones de otros colegios
+  const cicloEst = ciclo || (e.salon ? cicloOf(e.salon) : '');
+  const sOpts = DB.sals
+    .filter(s => {
+      const mismoColegio = !s.colegioId || !CU.colegioId || s.colegioId === CU.colegioId;
+      const mismoCiclo   = !cicloEst || s.ciclo === cicloEst;
+      return mismoColegio && mismoCiclo;
+    })
+    .map(s => `<option value="${s.nombre}" ${s.nombre === e.salon ? 'selected' : ''}>${s.nombre}</option>`).join('');
   Swal.fire({
     title: 'Editar Estudiante', width: 500,
     html: sF([
@@ -1231,7 +1239,11 @@ function previsualizarCSVEst(file, ciclo) {
       password:header.includes('password') ? header.indexOf('password') : header.includes('contraseña') ? header.indexOf('contraseña') : -1,
     } : { nombre:0, ti:1, salon:2, usuario:3, password:4 };
 
-    const salonesDisp = new Set(DB.sals.filter(s => s.ciclo === ciclo).map(s => s.nombre));
+    // Filtrar salones por ciclo Y colegioId — evita aceptar salones de otros colegios en la carga CSV
+    const salonesDisp = new Set(
+      DB.sals.filter(s => s.ciclo === ciclo && (!s.colegioId || !CU.colegioId || s.colegioId === CU.colegioId))
+        .map(s => s.nombre)
+    );
     const parsed = [];
     const errores = [];
 
@@ -1404,7 +1416,11 @@ function previsualizarCSVPrf(file, ciclo) {
       salones:  header.includes('salones') ? header.indexOf('salones') : header.includes('salon') ? header.indexOf('salon') : -1,
     } : { nombre:0, ti:1, usuario:2, password:3, salones:4 };
 
-    const salonesDisp = new Set(DB.sals.filter(s => s.ciclo === ciclo).map(s => s.nombre));
+    // Filtrar salones por ciclo Y colegioId — evita aceptar salones de otros colegios en carga CSV
+    const salonesDisp = new Set(
+      DB.sals.filter(s => s.ciclo === ciclo && (!s.colegioId || !CU.colegioId || s.colegioId === CU.colegioId))
+        .map(s => s.nombre)
+    );
     const MAX = ciclo === 'primaria' ? 1 : Infinity;
     const parsed = [];
     const errores = [];

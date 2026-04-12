@@ -4918,42 +4918,8 @@ function pgSAMantenimiento() {
           <button class="btn bdan" onclick="resetMasivo()">⚠️ Resetear</button>
         </div>
       </div>
-      <div class="card" style="border:2px solid #e53e3e">
-        <h3>🔧 Reparar Aislamiento de Colegios</h3>
-        <p style="color:#888;margin-bottom:.75rem">Corrige estudiantes y profesores que aparecen mezclados entre colegios. Usar si los datos de un colegio se mezclan con otro.</p>
-        <div id="saRepairResult" style="margin-bottom:.5rem"></div>
-        <button class="btn bdan" onclick="repararColegios()">🔧 Reparar ahora</button>
-      </div>
     </div>
   </div>`;
-}
-
-async function repararColegios() {
-  const conf = await Swal.fire({
-    title: '🔧 Reparar aislamiento de colegios',
-    text: 'Corregirá usuarios con colegio incorrecto en la base de datos. No borra datos.',
-    icon: 'warning', showCancelButton: true,
-    confirmButtonText: 'Sí, reparar', confirmButtonColor: '#e53e3e'
-  });
-  if (!conf.isConfirmed) return;
-  const res = gi('saRepairResult');
-  if (res) res.innerHTML = '<p style="color:#718096">🔄 Reparando…</p>';
-  try {
-    const r = await saApiFetch('/api/superadmin/repair-colegios', { method: 'POST', body: JSON.stringify({}) });
-    if (!r) return;
-    if (r.totalFixed === 0) {
-      if (res) res.innerHTML = '<p style="color:#276749;font-weight:600">✅ Todo correcto. Sin usuarios con colegio incorrecto.</p>';
-    } else {
-      const det = (r.report || []).map(x =>
-        '<li><strong>' + x.colegio + '</strong>: ' + x.fixedEsts + ' est. + ' + x.fixedProfs + ' prof. corregidos</li>'
-      ).join('');
-      if (res) res.innerHTML = '<div style="background:#f0fff4;border-radius:8px;padding:.75rem"><p style="color:#276749;font-weight:600">✅ ' + r.totalFixed + ' usuarios corregidos:</p><ul style="margin:.25rem 0 0 1rem;font-size:.9rem">' + det + '</ul><p style="font-size:.8rem;color:#718096;margin-top:.5rem">Recarga para ver cambios.</p></div>';
-    }
-    sw('success', 'Reparación completa: ' + r.totalFixed + ' usuarios corregidos', '', 3000);
-  } catch (e) {
-    if (res) res.innerHTML = '<p style="color:#c53030">❌ Error: ' + e.message + '</p>';
-    sw('error', 'Error: ' + e.message);
-  }
 }
 
 async function initSAMantenimiento() {

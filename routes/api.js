@@ -95,6 +95,18 @@ router.put('/usuarios/:id', authMiddleware, async (req, res) => {
       const target = await Usuario.findOne({ id: req.params.id }).lean();
       if (target && target.colegioId !== req.user.colegioId)
         return res.status(403).json({ error: 'Sin autorización' });
+      // Seguridad: validar que el salón asignado pertenezca a este colegio
+      // Evita que un admin asigne a un estudiante a un salón de otro colegio
+      if (d.salon) {
+        const { Salon } = require('../models');
+        const salonValido = await Salon.findOne({
+          nombre: d.salon, colegioId: req.user.colegioId
+        }).lean();
+        if (!salonValido) {
+          console.warn(`[usuarios:PUT] ⚠️  Intento de asignar salón "${d.salon}" que no pertenece a colegioId="${req.user.colegioId}"`);
+          return res.status(400).json({ error: `El salón "${d.salon}" no existe en este colegio.` });
+        }
+      }
     }
     if (d.password && !/^\$2[ab]\$/.test(d.password)) d.password = await hashPwd(d.password);
     const u = await Usuario.findOneAndUpdate({ id: req.params.id }, d, { new: true });
@@ -189,11 +201,24 @@ router.post('/salones', authMiddleware, requireRole('admin', 'superadmin'), asyn
 });
 
 router.put('/salones/:nombre', authMiddleware, requireRole('admin', 'superadmin'), async (req, res) => {
-  const s = await Salon.findOneAndUpdate(
-    { nombre: req.params.nombre, ...tenantFilter(req) }, req.body, { new: true }
-  );
-  if (!s) return res.status(404).json({ error: 'Salón no encontrado' });
-  res.json(s);
+  try {
+    // Seguridad: nunca permitir cambiar colegioId desde el body — siempre usar el del token
+    const cid = tenantId(req) || req.user.colegioId || '';
+    const update = { ...req.body };
+    // Forzar colegioId e colegioNombre correctos — evita cross-tenant accidental
+    update.colegioId     = cid;
+    update.colegioNombre = req.user.colegioNombre || req.body.colegioNombre || '';
+    // No permitir cambiar el nombre del salón a uno que ya exista en este colegio
+    if (update.nombre && update.nombre !== req.params.nombre) {
+      const yaExiste = await Salon.findOne({ nombre: update.nombre, colegioId: cid }).lean();
+      if (yaExiste) return res.status(409).json({ error: `El salón "${update.nombre}" ya existe en este colegio.` });
+    }
+    const s = await Salon.findOneAndUpdate(
+      { nombre: req.params.nombre, colegioId: cid }, update, { new: true }
+    );
+    if (!s) return res.status(404).json({ error: 'Salón no encontrado' });
+    res.json(s);
+  } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
 router.delete('/salones/:nombre', authMiddleware, requireRole('admin', 'superadmin'), async (req, res) => {
