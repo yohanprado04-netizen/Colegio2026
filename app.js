@@ -1405,9 +1405,10 @@ function renderANotTbl(salon,per,list){
     syncN(e.id);
     const tr=document.createElement('tr');tr.id='anr'+e.id;
     const pp=pprom(e.id,per);
+    const ep=encodeURIComponent(per);
     const cells=mats.map(m=>{
       const t=DB.notas[e.id][per][m]||{a:0,c:0,r:0};const d=def(t);
-      const enc=encodeURIComponent,em=enc(m),ep=enc(per);
+      const enc=encodeURIComponent,em=enc(m);
       return`<td style="border-left:2px solid var(--bd);padding:5px">
         <input type="number" class="ni" min="0" max="5" step="0.1" value="${t.a.toFixed(1)}"
           data-eid="${e.id}" data-per="${ep}" data-mat="${em}" data-f="a" onchange="saveTri(this)"></td>
@@ -2353,9 +2354,10 @@ function loadPN(){
     syncN(e.id);
     const tr=document.createElement('tr');tr.id='pnr'+e.id;
     const pp=pprom(e.id,per);
+    const ep=encodeURIComponent(per);
     const cells=mats.map(m=>{
       const t=DB.notas[e.id][per][m]||{a:0,c:0,r:0};const d=def(t);
-      const enc=encodeURIComponent,em=enc(m),ep=enc(per);
+      const enc=encodeURIComponent,em=enc(m);
       return`<td style="border-left:2px solid var(--bd);padding:5px">
         <input type="number" class="ni" min="0" max="5" step="0.1" value="${t.a.toFixed(1)}"
           data-eid="${e.id}" data-per="${ep}" data-mat="${em}" data-f="a" onchange="saveTri(this)"></td>
