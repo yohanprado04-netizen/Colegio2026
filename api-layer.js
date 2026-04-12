@@ -1588,39 +1588,77 @@ async function promoverEstudiantes(ciclo) {
   // 11° sin materias perd.  → GRADUADO (pasa al historial)
   const resultados = lista.map(e => {
     const mp = matPerdAnio ? matPerdAnio(e.id) : matPerd(e.id);
-    // Detectar si el estudiante no tiene NINGUNA nota en todo el año
     const mats = getMats(e.id);
+    // Detectar si el estudiante no tiene NINGUNA nota en todo el año
     const sinDatos = !mats.some(m =>
       DB.pers.some(p => { const t = DB.notas[e.id]?.[p]?.[m]; return t && (t.a > 0 || t.c > 0 || t.r > 0); })
     );
+    // Detectar periodos sin calificar: periodos donde TODAS las materias tienen notas en 0
+    const periodosCalificados = DB.pers.filter(p =>
+      mats.some(m => { const t = DB.notas[e.id]?.[p]?.[m]; return t && (t.a > 0 || t.c > 0 || t.r > 0); })
+    );
+    const periodosFaltantes = sinDatos ? [] : DB.pers.filter(p => !periodosCalificados.includes(p));
+    const faltanPeriodos = !sinDatos && periodosFaltantes.length > 0 && periodosCalificados.length > 0;
     // Verificar si tiene recuperaciones PENDIENTES (enviadas pero sin revisar)
     const recsPendientes = (DB.recs || []).filter(r =>
       r.estId === e.id && !r.revisado && !r.archivado
     );
-    const enRecuperacion = !sinDatos && mp.length >= 1 && mp.length <= 2;
+    const enRecuperacion = !sinDatos && !faltanPeriodos && mp.length >= 1 && mp.length <= 2;
     const recuperacionCompleta = enRecuperacion &&
       mp.every(mat => (DB.recs || []).some(r => r.estId === e.id && r.materia === mat && r.revisado));
-    const pierde = mp.length >= 3;
+    const pierde = !faltanPeriodos && mp.length >= 3;
     const sig = siguienteSalon ? siguienteSalon(e.salon) : null;
     return {
       est: e,
       pierde,
       sinDatos,
-      enRecuperacion,            // 1-2 materias perdidas → en proceso de recuperación
-      recuperacionCompleta,      // todas sus materias perdidas tienen recuperación revisada
+      faltanPeriodos,
+      periodosFaltantes,
+      enRecuperacion,
+      recuperacionCompleta,
       recsPendientes: recsPendientes.length,
       matsPerdidas: mp,
       siguienteSalon: pierde ? e.salon : (sig || e.salon),
-      graduado: !pierde && !sinDatos && !enRecuperacion && sig === 'GRADUADO'
+      graduado: !pierde && !sinDatos && !faltanPeriodos && !enRecuperacion && sig === 'GRADUADO'
     };
   });
 
-  const promueven      = resultados.filter(r => !r.pierde && !r.graduado && !r.sinDatos && !r.enRecuperacion);
-  const repiten        = resultados.filter(r => r.pierde);
-  const graduados      = resultados.filter(r => r.graduado);
-  const sinDatosList   = resultados.filter(r => r.sinDatos);
-  const enRecupList    = resultados.filter(r => r.enRecuperacion && !r.recuperacionCompleta);
-  const recupOkList    = resultados.filter(r => r.enRecuperacion && r.recuperacionCompleta);
+  const promueven         = resultados.filter(r => !r.pierde && !r.graduado && !r.sinDatos && !r.enRecuperacion && !r.faltanPeriodos);
+  const repiten           = resultados.filter(r => r.pierde);
+  const graduados         = resultados.filter(r => r.graduado);
+  const sinDatosList      = resultados.filter(r => r.sinDatos);
+  const faltanPeriodosList= resultados.filter(r => r.faltanPeriodos);
+  const enRecupList       = resultados.filter(r => r.enRecuperacion && !r.recuperacionCompleta);
+  const recupOkList       = resultados.filter(r => r.enRecuperacion && r.recuperacionCompleta);
+
+  // Bloquear si hay estudiantes con periodos sin calificar
+  if (faltanPeriodosList.length > 0) {
+    await Swal.fire({
+      icon: 'warning',
+      title: '⚠️ Periodos sin calificar',
+      width: 520,
+      html: `<div style="text-align:left;font-size:13px;font-family:var(--fn)">
+        <div class="al aly" style="margin-bottom:12px">
+          <strong>${faltanPeriodosList.length} estudiante(s)</strong> tienen periodos sin calificar.
+          No pueden ser promovidos hasta que todos los periodos tengan notas ingresadas.
+        </div>
+        <div style="background:#fef9c3;border-radius:8px;padding:10px;font-size:12px">
+          <strong style="color:#92400e">📋 Estudiantes con periodos faltantes:</strong><br><br>
+          ${faltanPeriodosList.map(r=>
+            `<div style="margin-bottom:6px;padding:6px 10px;background:#fff;border-radius:6px;border-left:3px solid #f59e0b">
+              <strong>${r.est.salon}</strong> — Faltan: <span style="color:#92400e;font-weight:600">${r.periodosFaltantes.join(', ')}</span>
+            </div>`
+          ).join('')}
+        </div>
+        <div style="font-size:12px;color:#718096;margin-top:10px">
+          💡 Ve a <strong>Gestión de Notas</strong> e ingresa las notas de los periodos faltantes.
+        </div>
+      </div>`,
+      confirmButtonText: 'Entendido',
+      confirmButtonColor: 'var(--nv)'
+    });
+    return;
+  }
 
   // Bloquear si hay estudiantes en recuperación pendiente
   if (enRecupList.length > 0) {
@@ -1649,55 +1687,90 @@ async function promoverEstudiantes(ciclo) {
     return;
   }
 
+  // Calcular desglose por salón para las estadísticas
+  const salonesSet = [...new Set(lista.map(r => r.salon))].sort();
+  const porSalon = salonesSet.map(sal => {
+    const ests = lista.filter(e => e.salon === sal);
+    const rSal = resultados.filter(r => r.est.salon === sal);
+    return {
+      salon: sal,
+      total: ests.length,
+      promueven: rSal.filter(r => !r.pierde && !r.graduado && !r.sinDatos && !r.enRecuperacion && !r.faltanPeriodos).length,
+      repiten: rSal.filter(r => r.pierde).length,
+      graduados: rSal.filter(r => r.graduado).length,
+      recupOk: rSal.filter(r => r.enRecuperacion && r.recuperacionCompleta).length,
+      sinDatos: rSal.filter(r => r.sinDatos).length,
+    };
+  });
+
   const conf = await Swal.fire({
     title: '🎓 Promover año — Resumen',
-    width: 620,
+    width: 660,
     html: `<div style="text-align:left;font-size:13px;font-family:var(--fn)">
-      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:14px">
-        <div style="background:#f0fff4;border-radius:8px;padding:10px;text-align:center">
-          <div style="font-size:1.4rem">⬆️</div>
-          <div style="font-size:1.3rem;font-weight:800;color:#276749">${promueven.length}</div>
-          <div style="font-size:10px;color:#4a5568">Promueven</div>
+      <!-- Tarjetas de resumen global -->
+      <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-bottom:16px">
+        <div style="background:#f0fff4;border-radius:10px;padding:12px 8px;text-align:center">
+          <div style="font-size:1.6rem">⬆️</div>
+          <div style="font-size:1.5rem;font-weight:800;color:#276749">${promueven.length + recupOkList.length}</div>
+          <div style="font-size:10px;color:#4a5568;font-weight:600">Promueven</div>
         </div>
-        <div style="background:#fff5f5;border-radius:8px;padding:10px;text-align:center">
-          <div style="font-size:1.4rem">🔁</div>
-          <div style="font-size:1.3rem;font-weight:800;color:#c53030">${repiten.length}</div>
-          <div style="font-size:10px;color:#4a5568">Repiten año</div>
+        <div style="background:#fff5f5;border-radius:10px;padding:12px 8px;text-align:center">
+          <div style="font-size:1.6rem">🔁</div>
+          <div style="font-size:1.5rem;font-weight:800;color:#c53030">${repiten.length}</div>
+          <div style="font-size:10px;color:#4a5568;font-weight:600">Repiten año</div>
         </div>
-        <div style="background:#ebf8ff;border-radius:8px;padding:10px;text-align:center">
-          <div style="font-size:1.4rem">🎓</div>
-          <div style="font-size:1.3rem;font-weight:800;color:#2b6cb0">${graduados.length}</div>
-          <div style="font-size:10px;color:#4a5568">Graduados</div>
+        <div style="background:#ebf8ff;border-radius:10px;padding:12px 8px;text-align:center">
+          <div style="font-size:1.6rem">🎓</div>
+          <div style="font-size:1.5rem;font-weight:800;color:#2b6cb0">${graduados.length}</div>
+          <div style="font-size:10px;color:#4a5568;font-weight:600">Graduados</div>
         </div>
-        <div style="background:#f0f4ff;border-radius:8px;padding:10px;text-align:center">
-          <div style="font-size:1.4rem">✅</div>
-          <div style="font-size:1.3rem;font-weight:800;color:#553c9a">${recupOkList.length}</div>
-          <div style="font-size:10px;color:#4a5568">Recup. OK</div>
+        <div style="background:#fef9c3;border-radius:10px;padding:12px 8px;text-align:center">
+          <div style="font-size:1.6rem">⚠️</div>
+          <div style="font-size:1.5rem;font-weight:800;color:#92400e">${sinDatosList.length}</div>
+          <div style="font-size:10px;color:#4a5568;font-weight:600">Sin notas</div>
+        </div>
+        <div style="background:#f7fafc;border-radius:10px;padding:12px 8px;text-align:center">
+          <div style="font-size:1.6rem">👥</div>
+          <div style="font-size:1.5rem;font-weight:800;color:#4a5568">${lista.length}</div>
+          <div style="font-size:10px;color:#4a5568;font-weight:600">Total</div>
         </div>
       </div>
-      ${repiten.length ? `<div style="background:#fff5f5;border-radius:8px;padding:10px;margin-bottom:8px">
-        <strong style="color:#c53030">🔁 Repiten (≥3 materias perdidas — quedan en ${repiten[0]?.est?.salon||'su salón'}):</strong><br>
-        ${repiten.slice(0,5).map(r=>`• ${r.est.nombre} <span style="font-size:11px;color:#718096">(${r.est.salon} — ${r.matsPerdidas.length} mat. perd.)</span>`).join('<br>')}
-        ${repiten.length>5?`<br><em>... y ${repiten.length-5} más</em>`:''}
+
+      <!-- Tabla por salón -->
+      <div style="background:#f7fafc;border-radius:10px;padding:12px;margin-bottom:12px">
+        <div style="font-size:11px;font-weight:800;text-transform:uppercase;color:#4a5568;margin-bottom:8px;letter-spacing:.05em">📊 Desglose por salón</div>
+        <table style="width:100%;border-collapse:collapse;font-size:12px">
+          <thead>
+            <tr style="border-bottom:2px solid #e2e8f0">
+              <th style="text-align:left;padding:5px 8px;color:#718096">Salón</th>
+              <th style="text-align:center;padding:5px;color:#276749">⬆️ Prom.</th>
+              <th style="text-align:center;padding:5px;color:#c53030">🔁 Repite</th>
+              <th style="text-align:center;padding:5px;color:#2b6cb0">🎓 Grad.</th>
+              <th style="text-align:center;padding:5px;color:#553c9a">✅ Recup.</th>
+              <th style="text-align:center;padding:5px;color:#718096">Total</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${porSalon.map(s=>`<tr style="border-bottom:1px solid #edf2f7">
+              <td style="padding:6px 8px;font-weight:700">${s.salon}</td>
+              <td style="text-align:center;padding:5px;color:#276749;font-weight:600">${s.promueven||'—'}</td>
+              <td style="text-align:center;padding:5px;color:#c53030;font-weight:600">${s.repiten||'—'}</td>
+              <td style="text-align:center;padding:5px;color:#2b6cb0;font-weight:600">${s.graduados||'—'}</td>
+              <td style="text-align:center;padding:5px;color:#553c9a;font-weight:600">${s.recupOk||'—'}</td>
+              <td style="text-align:center;padding:5px;color:#718096">${s.total}</td>
+            </tr>`).join('')}
+          </tbody>
+        </table>
+      </div>
+
+      ${sinDatosList.length ? `<div style="background:#fef9c3;border-radius:8px;padding:10px;font-size:12px;color:#92400e">
+        ⚠️ <strong>${sinDatosList.length} estudiante(s) sin notas no serán movidos.</strong>
+        Ingresa sus notas antes de promover el año.
       </div>` : ''}
-      ${recupOkList.length ? `<div style="background:#faf5ff;border-radius:8px;padding:10px;margin-bottom:8px">
-        <strong style="color:#553c9a">✅ Recuperación aprobada (promueven con condición):</strong><br>
-        ${recupOkList.slice(0,5).map(r=>`• ${r.est.nombre}: ${r.est.salon} → ${r.siguienteSalon}`).join('<br>')}
-      </div>` : ''}
-      ${promueven.length ? `<div style="background:#f0fff4;border-radius:8px;padding:10px;margin-bottom:8px">
-        <strong style="color:#276749">⬆️ Promovidos:</strong><br>
-        ${promueven.slice(0,5).map(r=>`• ${r.est.nombre}: ${r.est.salon} → ${r.siguienteSalon}`).join('<br>')}
-        ${promueven.length>5?`<br><em>... y ${promueven.length-5} más</em>`:''}
-      </div>` : ''}
-      ${graduados.length ? `<div style="background:#ebf8ff;border-radius:8px;padding:10px;margin-bottom:8px">
-        <strong style="color:#2b6cb0">🎓 Graduados (pasan al historial):</strong><br>
-        ${graduados.map(r=>`• ${r.est.nombre}`).join('<br>')}
-      </div>` : ''}
-      ${sinDatosList.length ? `<div style="background:#fef9c3;border-radius:8px;padding:10px">
-        <strong style="color:#92400e">⚠️ Sin notas (no se moverán):</strong><br>
-        ${sinDatosList.map(r=>`• ${r.est.nombre} (${r.est.salon})`).join('<br>')}
-        <br><small style="color:#78350f">Ingresa sus notas antes de promover.</small>
-      </div>` : ''}
+
+      <div style="margin-top:12px;padding:10px;background:#ebf8ff;border-radius:8px;font-size:12px;color:#2c5282">
+        ℹ️ Al confirmar se aplicarán los cambios de salón a todos los estudiantes listados. Esta acción no se puede deshacer fácilmente.
+      </div>
     </div>`,
     showCancelButton: true,
     confirmButtonText: '✅ Aplicar cambios',

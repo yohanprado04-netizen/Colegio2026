@@ -2334,56 +2334,184 @@ function loadPN(){
     </div>`;
     return;
   }
-  el.innerHTML=`<div class="tw"><table>
-    <thead>
-      <tr><th>Estudiante</th>
-        ${mats.map(m=>`<th colspan="4" style="text-align:center;border-left:2px solid var(--bd)">${m}</th>`).join('')}
-        <th>Disciplina</th><th>Prom.</th></tr>
-      <tr><td></td>
-        ${(()=>{const p=DB.notaPct||{};const a=p.a??60,c=p.c??20,r=p.r??20;return mats.map(()=>`<th style="font-size:9px;color:var(--sl2);border-left:2px solid var(--bd)">Apt.${a}%</th><th style="font-size:9px;color:var(--sl2)">Act.${c}%</th><th style="font-size:9px;color:var(--sl2)">Res.${r}%</th><th style="font-size:9px;background:#e8f4fd">Def.</th>`).join('')})()}
-        <td></td><td></td></tr>
-    </thead>
-    <tbody id="pnB"></tbody>
-  </table></div>
-  <div style="margin-top:14px;display:flex;gap:10px;flex-wrap:wrap">
-    <button class="btn bg sm" onclick="selRptProf('${salon}','${per}','pdf')">📄 Reporte PDF</button>
-    <button class="btn bs sm" onclick="selRptProf('${salon}','${per}','xls')">📊 Descargar Excel</button>
-  </div>`;
-  const body=gi('pnB');
-  ests.forEach(e=>{
-    syncN(e.id);
-    const tr=document.createElement('tr');tr.id='pnr'+e.id;
-    const pp=pprom(e.id,per);
-    const ep=encodeURIComponent(per);
-    const cells=mats.map(m=>{
-      const t=DB.notas[e.id][per][m]||{a:0,c:0,r:0};const d=def(t);
-      const enc=encodeURIComponent,em=enc(m);
-      return`<td style="border-left:2px solid var(--bd);padding:5px">
-        <input type="number" class="ni" min="0" max="5" step="0.1" value="${t.a.toFixed(1)}"
-          data-eid="${e.id}" data-per="${ep}" data-mat="${em}" data-f="a" onchange="saveTri(this)"></td>
-        <td style="padding:5px"><input type="number" class="ni" min="0" max="5" step="0.1" value="${t.c.toFixed(1)}"
-          data-eid="${e.id}" data-per="${ep}" data-mat="${em}" data-f="c" onchange="saveTri(this)"></td>
-        <td style="padding:5px"><input type="number" class="ni" min="0" max="5" step="0.1" value="${t.r.toFixed(1)}"
-          data-eid="${e.id}" data-per="${ep}" data-mat="${em}" data-f="r" onchange="saveTri(this)"></td>
-        <td id="dc_${e.id}_${em}_${ep}" style="background:#f0f8ff;padding:5px">
-          <span class="${scC(d)}" style="font-size:11px">${d.toFixed(2)}</span></td>`;
-    }).join('');
-    const discVal=typeof DB.notas[e.id]?.disciplina==='number'?DB.notas[e.id].disciplina:0;
-    tr.innerHTML=`<td><strong>${e.nombre}</strong></td>${cells}
-      <td style="padding:4px">
-        <input type="number" class="ni" min="0" max="5" step="0.1"
-          style="width:62px;text-align:center"
-          value="${discVal.toFixed(1)}"
-          placeholder="0.0"
-          title="Disciplina 0.0-5.0 — se promedia entre todos los periodos"
-          onchange="saveDisc('${e.id}',this.value,'${ep}')">
-        <div style="font-size:10px;color:var(--sl3);text-align:center">
-          ${discLabel(discVal)}
-        </div>
-      </td>
-      <td id="apr_${e.id}"><span class="${scC(pp)}">${pp.toFixed(2)}</span></td>`;
-    body.appendChild(tr);
-  });
+  // ── Modo compacto vs. tabla según cantidad de estudiantes ──────────────────
+  const MODO_CARDS = ests.length >= 10;
+  const ep_global = encodeURIComponent(per);
+
+  if (MODO_CARDS) {
+    // ── MODO TARJETAS: ideal para 10+ estudiantes ────────────────────────────
+    const pct = DB.notaPct || {};
+    const pA = pct.a ?? 60, pC = pct.c ?? 20, pR = pct.r ?? 20;
+    el.innerHTML = `
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap">
+        <input id="pnFiltro" placeholder="🔍 Buscar estudiante..." style="flex:1;min-width:180px;padding:7px 12px;border:1px solid var(--bd);border-radius:8px;font-size:13px;font-family:var(--fn)"
+          oninput="filtrarPN()">
+        <span id="pnContador" style="font-size:12px;color:var(--sl2);white-space:nowrap">${ests.length} estudiantes</span>
+      </div>
+      <div id="pnCards"></div>
+      <div style="margin-top:14px;display:flex;gap:10px;flex-wrap:wrap">
+        <button class="btn bg sm" onclick="selRptProf('${salon}','${per}','pdf')">📄 Reporte PDF</button>
+        <button class="btn bs sm" onclick="selRptProf('${salon}','${per}','xls')">📊 Descargar Excel</button>
+      </div>`;
+
+    function renderCards(lista) {
+      const container = gi('pnCards');
+      if (!container) return;
+      const total = lista.length;
+      const conNotas = lista.filter(e => {
+        return mats.some(m => { const t = DB.notas[e.id]?.[per]?.[m]; return t && (t.a > 0 || t.c > 0 || t.r > 0); });
+      }).length;
+      if (gi('pnContador')) gi('pnContador').textContent = `${lista.length} estudiantes — ✅ ${conNotas} con notas`;
+      container.innerHTML = lista.map((e, idx) => {
+        syncN(e.id);
+        const pp = pprom(e.id, per);
+        const tieneNotas = mats.some(m => { const t = DB.notas[e.id]?.[per]?.[m]; return t && (t.a > 0 || t.c > 0 || t.r > 0); });
+        const discVal = typeof DB.notas[e.id]?.disciplina === 'number' ? DB.notas[e.id].disciplina : 0;
+        const camposHTML = mats.map(m => {
+          const t = DB.notas[e.id][per][m] || {a:0,c:0,r:0};
+          const d = def(t);
+          const em = encodeURIComponent(m);
+          return `<div style="background:#f8faff;border-radius:8px;padding:8px 10px;border:1px solid #e2e8f0">
+            <div style="font-size:10px;font-weight:700;color:var(--nv);margin-bottom:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${m}">${m}</div>
+            <div style="display:grid;grid-template-columns:repeat(3,1fr) auto;gap:4px;align-items:center">
+              <div style="text-align:center">
+                <div style="font-size:8px;color:var(--sl3);margin-bottom:2px">Apt.${pA}%</div>
+                <input type="number" class="ni pnInp" min="0" max="5" step="0.1" value="${t.a.toFixed(1)}"
+                  data-eid="${e.id}" data-per="${ep_global}" data-mat="${em}" data-f="a"
+                  onchange="saveTri(this)" style="width:100%;text-align:center;font-size:12px">
+              </div>
+              <div style="text-align:center">
+                <div style="font-size:8px;color:var(--sl3);margin-bottom:2px">Act.${pC}%</div>
+                <input type="number" class="ni pnInp" min="0" max="5" step="0.1" value="${t.c.toFixed(1)}"
+                  data-eid="${e.id}" data-per="${ep_global}" data-mat="${em}" data-f="c"
+                  onchange="saveTri(this)" style="width:100%;text-align:center;font-size:12px">
+              </div>
+              <div style="text-align:center">
+                <div style="font-size:8px;color:var(--sl3);margin-bottom:2px">Res.${pR}%</div>
+                <input type="number" class="ni pnInp" min="0" max="5" step="0.1" value="${t.r.toFixed(1)}"
+                  data-eid="${e.id}" data-per="${ep_global}" data-mat="${em}" data-f="r"
+                  onchange="saveTri(this)" style="width:100%;text-align:center;font-size:12px">
+              </div>
+              <div id="dc_${e.id}_${em}_${ep_global}" style="text-align:center;padding:2px 4px;background:#ebf8ff;border-radius:5px;min-width:36px">
+                <span class="${scC(d)}" style="font-size:11px;font-weight:700">${d.toFixed(1)}</span>
+              </div>
+            </div>
+          </div>`;
+        }).join('');
+        return `<div class="pnCard" data-nombre="${e.nombre.toLowerCase()}" style="border:1px solid ${tieneNotas ? '#c6f6d5' : 'var(--bd)'};border-radius:10px;margin-bottom:8px;overflow:hidden;background:${tieneNotas ? '#f0fff4' : '#fff'}">
+          <div style="display:flex;align-items:center;gap:10px;padding:10px 14px;cursor:pointer;user-select:none"
+            onclick="togglePN('${e.id}')">
+            <div style="width:28px;height:28px;border-radius:50%;background:${tieneNotas ? '#68d391' : '#e2e8f0'};display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;color:${tieneNotas ? '#276749' : '#718096'};flex-shrink:0">${idx+1}</div>
+            <div style="flex:1;min-width:0">
+              <div style="font-weight:700;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${e.nombre}</div>
+              <div style="font-size:11px;color:var(--sl2)">${tieneNotas ? `Prom: <strong class="${scC(pp)}">${pp.toFixed(2)}</strong>` : '<span style="color:#a0aec0">Sin notas ingresadas</span>'}</div>
+            </div>
+            <div id="pnArr_${e.id}" style="color:var(--sl2);font-size:14px;transition:transform .2s">▼</div>
+          </div>
+          <div id="pnDet_${e.id}" style="display:none;padding:12px 14px;border-top:1px solid #f0f0f0;background:#fafafa">
+            <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:8px;margin-bottom:10px">
+              ${camposHTML}
+            </div>
+            <div style="display:flex;align-items:center;gap:10px;padding:8px 10px;background:#f7fafc;border-radius:8px;font-size:12px">
+              <span style="color:var(--sl2)">Disciplina:</span>
+              <input type="number" class="ni" min="0" max="5" step="0.1" style="width:64px;text-align:center"
+                value="${discVal.toFixed(1)}" placeholder="0.0"
+                onchange="saveDisc('${e.id}',this.value,'${ep_global}')">
+              <span style="color:var(--sl3);font-size:11px">${discLabel(discVal)}</span>
+              <span style="margin-left:auto;font-size:12px">Prom. periodo: <strong id="apr_${e.id}" class="${scC(pp)}">${pp.toFixed(2)}</strong></span>
+            </div>
+          </div>
+        </div>`;
+      }).join('');
+
+      // Navegación con Tab entre inputs dentro de cada tarjeta abierta
+      container.querySelectorAll('.pnInp').forEach((inp, i, all) => {
+        inp.addEventListener('keydown', ev => {
+          if (ev.key === 'Enter' || ev.key === 'Tab') {
+            ev.preventDefault();
+            const next = all[i + 1];
+            if (next) { next.focus(); next.select(); }
+          }
+        });
+        inp.addEventListener('focus', ev => ev.target.select());
+      });
+    }
+
+    window._pnEsts = ests;
+    window._pnMats = mats;
+    window._pnSalon = salon;
+    window._pnPer = per;
+    window.filtrarPN = function() {
+      const q = (gi('pnFiltro')?.value || '').toLowerCase().trim();
+      const filtrados = q ? window._pnEsts.filter(e => e.nombre.toLowerCase().includes(q)) : window._pnEsts;
+      renderCards(filtrados);
+    };
+    window.togglePN = function(eid) {
+      const det = gi('pnDet_' + eid);
+      const arr = gi('pnArr_' + eid);
+      if (!det) return;
+      const open = det.style.display !== 'none';
+      det.style.display = open ? 'none' : 'block';
+      if (arr) arr.style.transform = open ? '' : 'rotate(180deg)';
+      if (!open) {
+        // Enfocar primer input al abrir
+        const firstInp = det.querySelector('input[type="number"]');
+        if (firstInp) { setTimeout(() => { firstInp.focus(); firstInp.select(); }, 50); }
+      }
+    };
+    renderCards(ests);
+
+  } else {
+    // ── MODO TABLA: para grupos pequeños (<10 estudiantes) ──────────────────
+    el.innerHTML=`<div class="tw"><table>
+      <thead>
+        <tr><th>Estudiante</th>
+          ${mats.map(m=>`<th colspan="4" style="text-align:center;border-left:2px solid var(--bd)">${m}</th>`).join('')}
+          <th>Disciplina</th><th>Prom.</th></tr>
+        <tr><td></td>
+          ${(()=>{const p=DB.notaPct||{};const a=p.a??60,c=p.c??20,r=p.r??20;return mats.map(()=>`<th style="font-size:9px;color:var(--sl2);border-left:2px solid var(--bd)">Apt.${a}%</th><th style="font-size:9px;color:var(--sl2)">Act.${c}%</th><th style="font-size:9px;color:var(--sl2)">Res.${r}%</th><th style="font-size:9px;background:#e8f4fd">Def.</th>`).join('')})()}
+          <td></td><td></td></tr>
+      </thead>
+      <tbody id="pnB"></tbody>
+    </table></div>
+    <div style="margin-top:14px;display:flex;gap:10px;flex-wrap:wrap">
+      <button class="btn bg sm" onclick="selRptProf('${salon}','${per}','pdf')">📄 Reporte PDF</button>
+      <button class="btn bs sm" onclick="selRptProf('${salon}','${per}','xls')">📊 Descargar Excel</button>
+    </div>`;
+    const body=gi('pnB');
+    ests.forEach(e=>{
+      syncN(e.id);
+      const tr=document.createElement('tr');tr.id='pnr'+e.id;
+      const pp=pprom(e.id,per);
+      const ep=ep_global;
+      const cells=mats.map(m=>{
+        const t=DB.notas[e.id][per][m]||{a:0,c:0,r:0};const d=def(t);
+        const enc=encodeURIComponent,em=enc(m);
+        return`<td style="border-left:2px solid var(--bd);padding:5px">
+          <input type="number" class="ni" min="0" max="5" step="0.1" value="${t.a.toFixed(1)}"
+            data-eid="${e.id}" data-per="${ep}" data-mat="${em}" data-f="a" onchange="saveTri(this)"></td>
+          <td style="padding:5px"><input type="number" class="ni" min="0" max="5" step="0.1" value="${t.c.toFixed(1)}"
+            data-eid="${e.id}" data-per="${ep}" data-mat="${em}" data-f="c" onchange="saveTri(this)"></td>
+          <td style="padding:5px"><input type="number" class="ni" min="0" max="5" step="0.1" value="${t.r.toFixed(1)}"
+            data-eid="${e.id}" data-per="${ep}" data-mat="${em}" data-f="r" onchange="saveTri(this)"></td>
+          <td id="dc_${e.id}_${em}_${ep}" style="background:#f0f8ff;padding:5px">
+            <span class="${scC(d)}" style="font-size:11px">${d.toFixed(2)}</span></td>`;
+      }).join('');
+      const discVal=typeof DB.notas[e.id]?.disciplina==='number'?DB.notas[e.id].disciplina:0;
+      tr.innerHTML=`<td><strong>${e.nombre}</strong></td>${cells}
+        <td style="padding:4px">
+          <input type="number" class="ni" min="0" max="5" step="0.1"
+            style="width:62px;text-align:center"
+            value="${discVal.toFixed(1)}"
+            placeholder="0.0"
+            title="Disciplina 0.0-5.0"
+            onchange="saveDisc('${e.id}',this.value,'${ep}')">
+          <div style="font-size:10px;color:var(--sl3);text-align:center">${discLabel(discVal)}</div>
+        </td>
+        <td id="apr_${e.id}"><span class="${scC(pp)}">${pp.toFixed(2)}</span></td>`;
+      body.appendChild(tr);
+    });
+  }
 }
 /* ============================================================
    SELECTOR DE SALÓN + MATERIA PARA REPORTES (bachillerato)
