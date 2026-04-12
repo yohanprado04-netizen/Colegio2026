@@ -89,14 +89,15 @@ router.put('/usuarios/:id', authMiddleware, async (req, res) => {
   try {
     const d    = req.body;
     const role = req.user.role;
+
+    // ── Verificar que tiene permiso para editar este usuario ─────────────────
     if (role !== 'admin' && role !== 'superadmin' && req.user.id !== req.params.id)
       return res.status(403).json({ error: 'Sin autorización' });
+
     if (role === 'admin') {
       const target = await Usuario.findOne({ id: req.params.id }).lean();
       if (target && target.colegioId !== req.user.colegioId)
         return res.status(403).json({ error: 'Sin autorización' });
-      // Seguridad: validar que el salón asignado pertenezca a este colegio
-      // Evita que un admin asigne a un estudiante a un salón de otro colegio
       if (d.salon) {
         const { Salon } = require('../models');
         const salonValido = await Salon.findOne({
@@ -108,8 +109,45 @@ router.put('/usuarios/:id', authMiddleware, async (req, res) => {
         }
       }
     }
-    if (d.password && !/^\$2[ab]\$/.test(d.password)) d.password = await hashPwd(d.password);
-    const u = await Usuario.findOneAndUpdate({ id: req.params.id }, d, { new: true });
+
+    // ══════════════════════════════════════════════════════════════════════════
+    // 🔒 SECURITY: Whitelist de campos permitidos por rol
+    // Previene escalada de privilegios: un profe/est no puede cambiar su propio
+    // role, colegioId, ni ningún campo sensible enviando { role: 'admin' }
+    // ══════════════════════════════════════════════════════════════════════════
+    let update = {};
+    if (role === 'superadmin') {
+      // Superadmin puede cambiar todo
+      update = { ...d };
+    } else if (role === 'admin') {
+      // Admin puede cambiar datos de usuarios de su colegio pero NO el role ni colegioId
+      const ADMIN_ALLOWED = ['nombre', 'ti', 'usuario', 'password', 'salon', 'salones',
+        'ciclo', 'materia', 'materias', 'salonMaterias', 'blocked', 'activo'];
+      ADMIN_ALLOWED.forEach(f => { if (d[f] !== undefined) update[f] = d[f]; });
+    } else {
+      // profe/est: solo puede cambiar su propia contraseña y datos de perfil básicos
+      // NUNCA puede cambiar role, colegioId, blocked, salones, ciclo
+      const SELF_ALLOWED = ['nombre', 'password'];
+      SELF_ALLOWED.forEach(f => { if (d[f] !== undefined) update[f] = d[f]; });
+    }
+
+    // Detectar y bloquear intento de escalada explícita
+    const PROTECTED_FIELDS = ['role', 'colegioId', 'colegioNombre', 'blocked'];
+    if (role !== 'admin' && role !== 'superadmin') {
+      const intento = PROTECTED_FIELDS.filter(f => d[f] !== undefined);
+      if (intento.length > 0) {
+        console.warn(`[SEC] ⚠️  Intento de escalada de privilegios por usuario="${req.user.usuario}" role="${role}" campos="${intento.join(',')}"`);
+        return res.status(403).json({ error: 'No puedes modificar campos de seguridad.' });
+      }
+    }
+
+    if (update.password && !/^\$2[ab]\$/.test(update.password))
+      update.password = await hashPwd(update.password);
+
+    if (Object.keys(update).length === 0)
+      return res.status(400).json({ error: 'No hay campos válidos para actualizar.' });
+
+    const u = await Usuario.findOneAndUpdate({ id: req.params.id }, update, { new: true });
     if (!u) return res.status(404).json({ error: 'Usuario no encontrado' });
     const out = u.toObject(); delete out.password; delete out._id;
     res.json(out);

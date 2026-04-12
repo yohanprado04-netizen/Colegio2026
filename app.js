@@ -1141,10 +1141,10 @@ function renderEstTabla(ciclo,filter=''){
     <thead><tr><th>#</th><th>Nombre</th><th>${ciclo==='bachillerato'?'T.I./C.C.':'T.I.'}</th><th>Salón</th><th>Usuario</th><th>Prom.</th><th>Acciones</th></tr></thead>
     <tbody>${list.map((e,i)=>{const pg=gprom(e.id);return`<tr>
       <td style="color:var(--sl3);font-family:var(--mn);font-size:11px">${i+1}</td>
-      <td><strong>${e.nombre}</strong></td>
+      <td><strong>${esc(e.nombre)}</strong></td>
       <td style="font-family:var(--mn);font-size:12px">${e.ti||'—'}</td>
-      <td>${e.salon?`<span class="bdg bbl">${e.salon}</span>`:'<span class="bdg bgy">Sin salón</span>'}</td>
-      <td style="font-family:var(--mn);font-size:12px">${e.usuario}</td>
+      <td>${e.salon?`<span class="bdg bbl">${esc(e.salon||"")}</span>`:'<span class="bdg bgy">Sin salón</span>'}</td>
+      <td style="font-family:var(--mn);font-size:12px">${esc(e.usuario||"")}</td>
       <td><span class="${scC(pg)}">${pg.toFixed(2)}</span></td>
       <td><div style="display:flex;gap:5px">
         <button class="btn xs bg" onclick="editEst('${e.id}','${ciclo}')">✏️</button>
@@ -1199,8 +1199,8 @@ function renderPrfTbl(){
     el.innerHTML=`<div class="tw"><table>
       <thead><tr><th>Nombre</th><th>T.I.</th>${c==='bachillerato'?'<th>Salón → Materias</th>':'<th>Salones</th>'}<th></th></tr></thead>
       <tbody>${list.map(p=>`<tr>
-        <td><strong>${p.nombre}</strong><br>
-          <span style="font-family:var(--mn);font-size:11px;color:var(--sl3)">${p.usuario}</span></td>
+        <td><strong>${esc(p.nombre)}</strong><br>
+          <span style="font-family:var(--mn);font-size:11px;color:var(--sl3)">${esc(p.usuario||"")}</span></td>
         <td style="font-family:var(--mn);font-size:12px">${p.ti||'—'}</td>
         ${c==='bachillerato'?`<td style="font-size:12px">
           ${(p.salones||[]).length?`<div style="display:flex;flex-direction:column;gap:4px">
@@ -1284,7 +1284,7 @@ function openSalonMaterias(pid,cb){
       </div>
     </div>`;
   }).join('');
-  Swal.fire({title:`Materias por Salón — ${p.nombre}`,width:620,
+  Swal.fire({title:`Materias por Salón — ${esc(p.nombre)}`,width:620,
     html:`<div style="text-align:left;font-family:var(--fn)">
       <div class="al alb" style="margin-bottom:12px;font-size:12px">
         Selecciona qué materias imparte este profesor en <strong>cada salón específico</strong>.<br>
@@ -1600,7 +1600,7 @@ function renderANotTbl(salon,per,list){
         <td id="dc_${e.id}_${em}_${ep}" style="background:#f0f8ff;padding:5px">
           <span class="${scC(d)}" style="font-size:11px">${d.toFixed(2)}</span></td>`;
     }).join('');
-    tr.innerHTML=`<td><strong>${e.nombre}</strong></td>${cells}
+    tr.innerHTML=`<td><strong>${esc(e.nombre)}</strong></td>${cells}
       <td style="padding:4px">
         <input type="number" class="ni" min="0" max="5" step="0.1"
           style="width:62px;text-align:center"
@@ -1640,12 +1640,12 @@ function initAReh(){
       const prf=profForMat(m,e.salon);
       const recs=(DB.recs||[]).filter(r=>r.estId===e.id&&r.materia===m);
       return`<tr>
-        <td><strong>${e.nombre}</strong><br><span class="sc ${scC(pg)}" style="font-size:11px">${pg.toFixed(2)}</span></td>
-        <td>${e.salon?`<span class="bdg bbl">${e.salon}</span>`:'—'}</td>
+        <td><strong>${esc(e.nombre)}</strong><br><span class="sc ${scC(pg)}" style="font-size:11px">${pg.toFixed(2)}</span></td>
+        <td>${e.salon?`<span class="bdg bbl">${esc(e.salon||"")}</span>`:'—'}</td>
         <td><span class="bdg brd">${m}</span></td>
         <td style="font-size:13px">${prf?prf.nombre:'<span style="color:var(--sl3)">Sin asignar</span>'}</td>
         <td>${recs.length?recs.map(r=>`<div style="font-size:11px;padding:3px 0">
-          📎 ${r.nombre} <span style="color:var(--sl3)">${r.fecha}</span></div>`).join('')
+          📎 ${esc(r.nombre)} <span style="color:var(--sl3)">${r.fecha}</span></div>`).join('')
           :'<span style="font-size:12px;color:var(--sl3)">Pendiente</span>'}
         </td>
       </tr>`;
@@ -1887,7 +1887,7 @@ function pgAExp(){
       <div class="fld"><label>Seleccionar Estudiante</label>
         <select id="expe" onchange="renderExpUI()">
           <option value="">Seleccionar...</option>
-          ${DB.ests.sort((a,b)=>a.nombre.localeCompare(b.nombre,'es')).map(e=>`<option value="${e.id}">${e.nombre} — ${e.salon||'Sin salón'}</option>`).join('')}
+          ${DB.ests.sort((a,b)=>a.nombre.localeCompare(b.nombre,'es')).map(e=>`<option value="${e.id}">${esc(e.nombre)} — ${e.salon||'Sin salón'}</option>`).join('')}
         </select>
       </div>
       <div id="expUI"></div>
@@ -1939,7 +1939,7 @@ function renderExpSalon(){
     </thead><tbody>${ests.map(e=>{
       syncN(e.id);const pg=gprom(e.id),ps=puestoS(e.id);
       return`<tr>
-        <td><strong>${e.nombre}</strong></td>
+        <td><strong>${esc(e.nombre)}</strong></td>
         <td style="font-family:var(--mn);font-size:12px">${e.ti||'—'}</td>
         <td><span class="${scC(pg)}">${pg.toFixed(2)}</span></td>
         <td style="font-weight:700">${ps}°</td>
@@ -2359,7 +2359,7 @@ function initAVcl(){
 ============================================================ */
 function pgPH(){
   const p=CU;
-  return`<div class="ph"><h2>Bienvenido, ${p.nombre}</h2><p>${p.ciclo==='bachillerato'?'Bachillerato':'Primaria'}</p></div>
+  return`<div class="ph"><h2>Bienvenido, ${esc(p.nombre)}</h2><p>${p.ciclo==='bachillerato'?'Bachillerato':'Primaria'}</p></div>
   <div class="sr">
     <div class="scc" data-i="🏫"><div class="sv">${(p.salones||[]).length}</div><div class="sl">Mis Salones</div><div class="bar"></div></div>
     ${p.ciclo==='bachillerato'?`<div class="scc" data-i="📖"><div class="sv" style="font-size:14px;margin-top:2px">${(p.materias||[]).join(', ')||'—'}</div><div class="sl">Mis Materias</div><div class="bar"></div></div>`:''}
@@ -2370,7 +2370,7 @@ function pgPH(){
     const ests=ebySalon(sal);
     return`<div style="margin-bottom:18px">
       <div style="font-size:13px;font-weight:800;color:var(--nv);margin-bottom:8px">${sal} <span class="bdg bgy">${ests.length} est.</span></div>
-      <div style="display:flex;flex-wrap:wrap;gap:6px">${ests.map(e=>`<span style="font-size:12px;padding:4px 10px;background:var(--bg2);border-radius:7px;border:1px solid var(--bd)">${e.nombre}</span>`).join('')}</div>
+      <div style="display:flex;flex-wrap:wrap;gap:6px">${ests.map(e=>`<span style="font-size:12px;padding:4px 10px;background:var(--bg2);border-radius:7px;border:1px solid var(--bd)">${esc(e.nombre)}</span>`).join('')}</div>
     </div>`;
   }).join(''):'<div class="mty"><div class="ei">🏫</div><p>Sin salones</p></div>'}
   </div>
@@ -2589,7 +2589,7 @@ function loadPN(){
             onclick="togglePN('${e.id}')">
             <div style="width:32px;height:32px;border-radius:50%;background:${tieneNotas ? '#68d391' : '#e2e8f0'};display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;color:${tieneNotas ? '#276749' : '#718096'};flex-shrink:0">${idx+1}</div>
             <div style="flex:1;min-width:0">
-              <div style="font-weight:700;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${e.nombre}</div>
+              <div style="font-weight:700;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(e.nombre)}</div>
               <div style="font-size:12px;color:var(--sl2);margin-top:2px">${tieneNotas ? `Prom. periodo: <strong class="${scC(pp)}" id="apr_hdr_${e.id}">${pp.toFixed(2)}</strong>` : '<span style="color:#a0aec0">▶ Clic para ingresar notas</span>'}</div>
             </div>
             <div id="pnArr_${e.id}" style="color:var(--sl2);font-size:16px;transition:transform .2s">▼</div>
@@ -2759,7 +2759,7 @@ function loadPN(){
             <span class="${scC(d)}" style="font-size:11px">${d.toFixed(2)}</span></td>`;
       }).join('');
       const discVal=typeof DB.notas[e.id]?.disciplina==='number'?DB.notas[e.id].disciplina:0;
-      tr.innerHTML=`<td><strong>${e.nombre}</strong></td>${cells}
+      tr.innerHTML=`<td><strong>${esc(e.nombre)}</strong></td>${cells}
         <td style="padding:4px">
           <input type="number" class="ni" min="0" max="5" step="0.1"
             style="width:62px;text-align:center"
@@ -2864,7 +2864,7 @@ function dlRptProf(salon,per,matFilter){
     return`<div style="margin-bottom:18px;page-break-inside:avoid;border:1px solid #d8e2ef;border-radius:8px;overflow:hidden">
       <div style="background:#1a3a5c;color:#fff;padding:9px 14px;display:flex;justify-content:space-between;align-items:center">
         <div>
-          <strong style="font-size:13px">${e.nombre}</strong>
+          <strong style="font-size:13px">${esc(e.nombre)}</strong>
           <span style="font-size:11px;opacity:.65;margin-left:10px">T.I.: ${e.ti||'—'}</span>
         </div>
         <div style="text-align:right">
@@ -3032,7 +3032,7 @@ function loadAst(){
   el.innerHTML=`<div class="tw"><table><thead>
     <tr><th>Estudiante</th><th style="width:90px;text-align:center">Presente</th><th style="width:90px;text-align:center">Ausente</th></tr></thead>
     <tbody>${ests.map(e=>{const v=DB.asist[key][e.id]??'presente';return`<tr id="ar${e.id}">
-      <td>${e.nombre}</td>
+      <td>${esc(e.nombre)}</td>
       <td style="text-align:center"><button class="btn xs ${v==='presente'?'bs':'bg'}" onclick="setAst('${key}','${e.id}','presente')">✓</button></td>
       <td style="text-align:center"><button class="btn xs ${v==='ausente'?'bd':'bg'}" onclick="setAst('${key}','${e.id}','ausente')">✗</button></td>
     </tr>`;}).join('')}</tbody></table></div>
@@ -3112,7 +3112,7 @@ function pgPTar(){
       return`<tr data-salon="${est?.salon||''}" style="background:${!u.revisado?'':'#f9fff9'}">
         <td><strong style="font-size:13px">${u.estNombre||'—'}</strong></td>
         <td><span class="bdg bgy">${est?.salon||'—'}</span></td>
-        <td><span style="font-size:12px;font-family:var(--mn)">📎 ${u.nombre}</span><br>
+        <td><span style="font-size:12px;font-family:var(--mn)">📎 ${esc(u.nombre)}</span><br>
           <span style="font-size:10px;color:var(--sl3)">${u.size?(u.size/1024).toFixed(1)+' KB':'—'}</span></td>
         <td><span class="bdg bbl">${u.materia}</span></td>
         <td style="font-size:12px">${u.periodo}</td>
@@ -3274,7 +3274,7 @@ function pgPRec(){
         ${items.map(({est,mat})=>{
           const planesInd=(DB.planes||[]).filter(p=>p.estId===est.id&&p.materia===mat&&p.profId===CU.id&&!p.esSalon);
           return`<tr>
-            <td><strong>${est.nombre}</strong></td>
+            <td><strong>${esc(est.nombre)}</strong></td>
             <td><span class="bdg brd">${mat}</span></td>
             <td>${planesInd.length
               ?planesInd.slice().reverse().map(pl=>`<span class="bdg bgr" style="font-size:10px;margin:1px">✓ ${pl.fecha}</span>`).join('')
@@ -3340,7 +3340,7 @@ function pgPRec(){
               const idx=recs.findIndex(x=>x.id===r.id);
               const planRef=r.planId?(DB.planes||[]).find(p=>p.id===r.planId):null;
               return`<tr style="background:${!r.revisado?'#fffff0':''}">
-                <td><span style="font-size:12px;font-family:var(--mn)">📎 ${r.nombre}</span></td>
+                <td><span style="font-size:12px;font-family:var(--mn)">📎 ${esc(r.nombre)}</span></td>
                 <td><span class="bdg brd">${r.materia}</span></td>
                 <td style="font-size:12px;max-width:140px">${planRef
                   ?`<span style="color:var(--nv);font-weight:700">${planRef.titulo}</span><br><span style="font-size:10px;color:var(--sl3)">${planRef.fecha}</span>`
@@ -3480,7 +3480,7 @@ function abrirEnviarPlan(estId,materia,salon){
     titulo:existing?.titulo||'',desc:existing?.desc||'',
     archNombre:existing?.archNombre||'',archDataUrl:existing?.archDataUrl||'',archType:existing?.archType||'',
     existing,
-    destinatario:`<strong>${est.nombre}</strong> · <span style="color:#c53030">${materia}</span> · Salón ${salon}`,
+    destinatario:`<strong>${esc(est.nombre)}</strong> · <span style="color:#c53030">${materia}</span> · Salón ${salon}`,
     async onConfirm(vals){
       /* FIX Bug1: persist plan to MongoDB via _savePlan() */
       try{
@@ -3543,7 +3543,7 @@ function pgEHist(){
           return`<tr>
             <td><span class="bdg brd">${r.materia}</span></td>
             <td style="font-size:12px;max-width:130px">${planRef?`<strong>${planRef.titulo}</strong>`:'<span style="color:var(--sl3)">—</span>'}</td>
-            <td><span style="font-size:12px;font-family:var(--mn)">📎 ${r.nombre}</span></td>
+            <td><span style="font-size:12px;font-family:var(--mn)">📎 ${esc(r.nombre)}</span></td>
             <td style="font-size:12px;color:var(--sl2);max-width:110px">${r.desc||'—'}</td>
             <td style="font-family:var(--mn);font-size:11px">${r.fecha}</td>
             <td><span class="bdg ${r.revisado?'bgr':'brd'}">${r.revisado?`✓ Revisado ${r.revisadoTs||''}`:'✗ No revisado'}</span></td>
@@ -3595,7 +3595,7 @@ function pgPHist(){
               <td><strong>${r.estNombre||'—'}</strong></td>
               <td><span class="bdg bgy">${r.salon||'—'}</span></td>
               <td><span class="bdg brd">${r.materia}</span></td>
-              <td><span style="font-size:12px;font-family:var(--mn)">📎 ${r.nombre}</span></td>
+              <td><span style="font-size:12px;font-family:var(--mn)">📎 ${esc(r.nombre)}</span></td>
               <td style="font-size:12px;max-width:130px">${planRef?`<strong>${planRef.titulo}</strong><br><span style="font-size:10px;color:var(--sl3)">${planRef.fecha}</span>`:'<span style="color:var(--sl3)">—</span>'}</td>
               <td style="font-size:12px;color:var(--sl2);max-width:100px">${r.desc||'—'}</td>
               <td style="font-family:var(--mn);font-size:11px">${r.fecha}</td>
@@ -3739,7 +3739,7 @@ function pgETare(){
   const e=CU;
   const prfsDelSalon=profsInSalon(e.salon);
   const profOpts=prfsDelSalon.length
-    ?prfsDelSalon.map(p=>`<option value="${p.id}">${p.nombre}${p.materias?.length?' ('+p.materias.join(', ')+')':''}</option>`).join('')
+    ?prfsDelSalon.map(p=>`<option value="${p.id}">${esc(p.nombre)}${p.materias?.length?' ('+p.materias.join(', ')+')':''}</option>`).join('')
     :'<option value="">Sin profesores asignados</option>';
   const mis=(DB.ups[e.id]||[]).slice().reverse();
   return`<div class="ph"><h2>Tareas & Talleres</h2><button class="btn xs bg" onclick="showHelp('etare')">❓ Ayuda</button></div>
@@ -3767,7 +3767,7 @@ function pgETare(){
   ${mis.length?`<div class="tw"><table><thead>
     <tr><th>Archivo</th><th>Materia</th><th>Periodo</th><th>Profesor</th><th>Descripción</th><th>Fecha</th><th>Estado</th><th>Acción</th></tr></thead>
     <tbody>${mis.map(u=>`<tr>
-      <td><strong>${u.nombre}</strong></td>
+      <td><strong>${esc(u.nombre)}</strong></td>
       <td><span class="bdg bbl">${u.materia}</span></td>
       <td><span class="bdg bgy">${u.periodo}</span></td>
       <td style="font-size:12px">${u.profNombre||'—'}</td>
@@ -3904,7 +3904,7 @@ function pgEProf(){
   ${e.salon&&prfs.length?`<div class="tw"><table><thead>
     <tr><th>Profesor</th><th>Ciclo</th><th>Materias</th><th>T.I./CC</th></tr></thead>
     <tbody>${prfs.map(p=>`<tr>
-      <td><strong>${p.nombre}</strong></td>
+      <td><strong>${esc(p.nombre)}</strong></td>
       <td><span class="bdg ${p.ciclo==='bachillerato'?'bte':'bbl'}">${p.ciclo}</span></td>
       <td><div style="display:flex;flex-wrap:wrap;gap:3px">
         ${(p.materias||[]).map(m=>`<span class="bdg bbl" style="margin:1px">${m}</span>`).join('')||
@@ -3991,7 +3991,7 @@ function pgEReh(){
             ${respuestas.length?`<div style="margin-bottom:10px">
               <div style="font-size:11px;font-weight:800;color:var(--sl);text-transform:uppercase;margin-bottom:5px">Mis respuestas:</div>
               ${respuestas.map(r=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:7px 10px;background:${r.revisado?'#f0fff4':'#fffff0'};border-radius:6px;border:1px solid ${r.revisado?'#9ae6b4':'#f6e05e'};margin-bottom:5px">
-                <span style="font-size:12px">📎 ${r.nombre} <span style="color:var(--sl3);font-size:11px">${r.fecha}</span>${r.desc?` — <em style="color:var(--sl2)">${r.desc}</em>`:''}</span>
+                <span style="font-size:12px">📎 ${esc(r.nombre)} <span style="color:var(--sl3);font-size:11px">${r.fecha}</span>${r.desc?` — <em style="color:var(--sl2)">${r.desc}</em>`:''}</span>
                 <div style="display:flex;align-items:center;gap:6px">
                   <span class="bdg ${r.revisado?'bgr':'bwa'}">${r.revisado?`✓ Revisado`:'⏳ Pendiente'}</span>
                   ${r.revisado?`<button class="btn xs br" onclick="eliminarRecEst('${r.id}')">🗑️</button>`:''}
@@ -4032,7 +4032,7 @@ function pgEReh(){
         return`<div style="margin-top:8px">
           <div style="font-size:11px;font-weight:700;color:var(--sl);margin-bottom:5px">Otros trabajos enviados:</div>
           ${sinPlan.map(r=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:7px 10px;background:${r.revisado?'#f0fff4':'#fffff0'};border-radius:6px;border:1px solid ${r.revisado?'#9ae6b4':'#f6e05e'};margin-bottom:5px">
-            <span style="font-size:12px">📎 ${r.nombre} <span style="color:var(--sl3);font-size:11px">${r.fecha}</span></span>
+            <span style="font-size:12px">📎 ${esc(r.nombre)} <span style="color:var(--sl3);font-size:11px">${r.fecha}</span></span>
             <div style="display:flex;align-items:center;gap:6px">
               <span class="bdg ${r.revisado?'bgr':'bwa'}">${r.revisado?`✓ Revisado`:'⏳ Pendiente'}</span>
               ${r.revisado?`<button class="btn xs br" onclick="eliminarRecEst('${r.id}')">🗑️</button>`:''}
@@ -4786,8 +4786,8 @@ function renderSAColegiosTable(lista) {
   </tr></thead><tbody>${lista.map(c => `<tr>
     <td>
       <div style="display:flex;align-items:center;gap:8px">
-        ${c.logo ? `<img src="${c.logo}" style="width:32px;height:32px;object-fit:contain;border-radius:5px;border:1px solid #e2e8f0;background:#f7fafc;flex-shrink:0" title="Logo ${c.nombre}">` : '<div style="width:32px;height:32px;border-radius:5px;background:#e2e8f0;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0">🏫</div>'}
-        <strong>${c.nombre}</strong>
+        ${c.logo ? `<img src="${c.logo}" style="width:32px;height:32px;object-fit:contain;border-radius:5px;border:1px solid #e2e8f0;background:#f7fafc;flex-shrink:0" title="Logo ${esc(c.nombre)}">` : '<div style="width:32px;height:32px;border-radius:5px;background:#e2e8f0;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0">🏫</div>'}
+        <strong>${esc(c.nombre)}</strong>
       </div>
     </td>
     <td style="font-size:.82rem;color:#718096">${c.nit || c.codigo || '—'}</td>
@@ -5074,7 +5074,7 @@ async function initSAPlan() {
     const colegios = Array.isArray(raw) ? raw : [];
     const sel = gi('saPlanCol');
     if (sel) sel.innerHTML = '<option value="">— Selecciona colegio —</option>' +
-      colegios.map(c => `<option value="${c.id}">${c.nombre}</option>`).join('');
+      colegios.map(c => `<option value="${c.id}">${esc(c.nombre)}</option>`).join('');
     if (!colegios.length && sel) sel.innerHTML = '<option value="">Sin colegios registrados</option>';
   } catch (e) { sw('error', e.message); }
 }
@@ -5356,9 +5356,9 @@ async function initSAAuditoria() {
     const colegios = Array.isArray(raw) ? raw : [];
     const sel = gi('saAudCol');
     if (sel) sel.innerHTML = '<option value="">Todos los colegios</option>' +
-      colegios.map(c => `<option value="${c.id}">${c.nombre}</option>`).join('');
+      colegios.map(c => `<option value="${c.id}">${esc(c.nombre)}</option>`).join('');
     loadSAAuditoria();
-  } catch (e) { const el = gi('saAudTable'); if (el) el.innerHTML = `<p style="color:red">Error: ${e.message}</p>`; }
+  } catch (e) { const el = gi('saAudTable'); if (el) el.innerHTML = `<p style="color:red">Error: ${esc(e.message)}</p>`; }
 }
 
 async function loadSAAuditoria() {
@@ -5427,7 +5427,7 @@ async function initSAMantenimiento() {
       const sel = gi(sid);
       if (!sel) return;
       sel.innerHTML = '<option value="">— Selecciona colegio —</option>' +
-        colegios.map(c => `<option value="${c.id}">${c.nombre}</option>`).join('');
+        colegios.map(c => `<option value="${c.id}">${esc(c.nombre)}</option>`).join('');
     });
   } catch (e) { sw('error', e.message); }
 }
@@ -5494,9 +5494,9 @@ async function initSASug() {
     const colegios = Array.isArray(raw) ? raw : [];
     const sel = gi('saSugFiltCol');
     if (sel) sel.innerHTML = '<option value="">Todos los colegios</option>' +
-      colegios.map(c => `<option value="${c.id}">${c.nombre}</option>`).join('');
+      colegios.map(c => `<option value="${c.id}">${esc(c.nombre)}</option>`).join('');
     loadSASug();
-  } catch (e) { const el = gi('saSugTable'); if (el) el.innerHTML = `<p style="color:red">Error: ${e.message}</p>`; }
+  } catch (e) { const el = gi('saSugTable'); if (el) el.innerHTML = `<p style="color:red">Error: ${esc(e.message)}</p>`; }
 }
 
 async function loadSASug() {

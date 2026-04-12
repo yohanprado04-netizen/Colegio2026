@@ -11,12 +11,29 @@ const LOCKOUT_MS   = 30 * 60 * 1000;
 const failedAttempts = {};
 
 // Usamos siempre la misma variable para que sea consistente con auth.js
-const JWT_SECRET     = process.env.JWT_SECRET || 'cualquier_clave_segura_aqui';
+// 🔒 SECURITY: JWT_SECRET DEBE estar en variables de entorno de Render
+// Si no está configurado en producción, el servidor no debe arrancar
+const JWT_SECRET = process.env.JWT_SECRET;
+if (!JWT_SECRET) {
+  if (process.env.NODE_ENV === 'production') {
+    console.error('[FATAL] JWT_SECRET no está configurado en producción. Servidor detenido.');
+    process.exit(1);
+  } else {
+    console.warn('[SEC] ⚠️  JWT_SECRET no definido — usando clave de desarrollo. NO usar en producción.');
+  }
+}
+const JWT_SECRET_FINAL = JWT_SECRET || 'dev_only_secret_cambiar_en_produccion';
 const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '8h';
 
 router.post('/login', async (req, res) => {
   try {
-    const { usuario, password } = req.body;
+    // 🔒 SECURITY: Coercionar a string para prevenir NoSQL injection
+    const usuario  = typeof req.body.usuario  === 'string' ? req.body.usuario.trim()  : '';
+    const password = typeof req.body.password === 'string' ? req.body.password        : '';
+
+    // 🔒 SECURITY: Forzar tipos string en login
+    // Previene NoSQL injection: { usuario: { $gt: "" } } se convierte en "[object Object]"
+    // que nunca matchea un usuario real, sin revelar información del error
     if (!usuario || !password)
       return res.status(400).json({ error: 'Usuario y contraseña requeridos' });
 
@@ -97,7 +114,7 @@ router.post('/login', async (req, res) => {
       colegioNombre: user.colegioNombre || ''
     };
 
-    const token = jwt.sign(payload, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN });
+    const token = jwt.sign(payload, JWT_SECRET_FINAL, { expiresIn: JWT_EXPIRES_IN });
 
     // Devolver usuario sin datos sensibles
     const userData = user.toObject();
@@ -125,7 +142,7 @@ router.get('/verify', async (req, res) => {
       return res.status(401).json({ valid: false, error: 'Token no provisto' });
     }
     const token = header.split(' ')[1];
-    const decoded = jwt.verify(token, JWT_SECRET);
+    const decoded = jwt.verify(token, JWT_SECRET_FINAL);
 
     const user = await Usuario.findOne({ $or: [{ id: decoded.id }, { usuario: decoded.usuario }] }).lean();
     if (!user) return res.status(401).json({ valid: false, error: 'Usuario no encontrado' });

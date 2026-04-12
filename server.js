@@ -73,6 +73,51 @@ const loginLimiter = rateLimit({
 app.use(express.json({ limit: '25mb' }));
 app.use(express.urlencoded({ extended: true, limit: '25mb' }));
 
+// ══════════════════════════════════════════════════════════════════
+// 🔒 SECURITY: NoSQL Injection sanitization
+// Elimina operadores MongoDB ($where, $gt, $regex, etc.) de req.body,
+// req.query y req.params antes de que lleguen a cualquier ruta.
+// Previene ataques tipo: { "usuario": { "$gt": "" }, "password": "x" }
+// que burlarían la autenticación en mongoose queries.
+// ══════════════════════════════════════════════════════════════════
+function stripMongoOperators(obj, depth = 0) {
+  if (depth > 10) return obj; // evitar recursión infinita
+  if (Array.isArray(obj)) {
+    return obj.map(item => stripMongoOperators(item, depth + 1));
+  }
+  if (obj !== null && typeof obj === 'object') {
+    const clean = {};
+    for (const key of Object.keys(obj)) {
+      // Eliminar cualquier clave que empiece con $ (operadores Mongo)
+      if (key.startsWith('$')) {
+        console.warn(`[SEC] 🚨 NoSQL injection bloqueado — clave: "${key}"`);
+        continue;
+      }
+      clean[key] = stripMongoOperators(obj[key], depth + 1);
+    }
+    return clean;
+  }
+  return obj;
+}
+
+app.use((req, res, next) => {
+  if (req.body)   req.body   = stripMongoOperators(req.body);
+  if (req.query)  req.query  = stripMongoOperators(req.query);
+  if (req.params) req.params = stripMongoOperators(req.params);
+  next();
+});
+
+// 🔒 SECURITY: Prevenir prototype pollution
+// Bloquea payloads que intenten contaminar Object.prototype
+app.use((req, res, next) => {
+  const body = JSON.stringify(req.body || {});
+  if (body.includes('__proto__') || body.includes('constructor') && body.includes('prototype')) {
+    console.warn(`[SEC] 🚨 Prototype pollution bloqueado desde IP: ${req.ip}`);
+    return res.status(400).json({ error: 'Payload inválido' });
+  }
+  next();
+});
+
 // ─── Logger de requests (solo en desarrollo) ─────────────────────
 if (process.env.NODE_ENV !== 'production') {
   app.use((req, res, next) => {
@@ -121,6 +166,16 @@ app.use((err, req, res, next) => {
 
 // ─── Iniciar servidor ─────────────────────────────────────────────
 const PORT = process.env.PORT || 3001;
+
+// 🔒 SECURITY: Capturar errores no manejados para evitar crash del servidor
+// y evitar que stack traces se expongan en producción
+process.on('uncaughtException', (err) => {
+  console.error('[FATAL] uncaughtException:', err.message);
+  // No hacer process.exit() — dejar que el servidor siga corriendo
+});
+process.on('unhandledRejection', (reason) => {
+  console.error('[FATAL] unhandledRejection:', reason?.message || reason);
+});
 
 (async () => {
   await connectDB();
