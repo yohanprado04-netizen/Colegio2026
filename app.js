@@ -252,6 +252,58 @@ function scC(n){n=+n;if(n===0)return'sc scz';if(n<3)return'sc scr';if(n<4)return
 function scCol(n){n=+n;if(n===0)return'#a0aec0';if(n<3)return'var(--red)';if(n<4)return'var(--ora)';if(n<=4.5)return'var(--grn)';return'var(--nsc)';}
 function today(){return new Date().toISOString().split('T')[0];}
 
+/* ── clampNota: limita y sanitiza inputs de notas en tiempo real ── */
+function clampNota(inp){
+  // Bloquear letras: solo dígitos, punto decimal y signo menos
+  let raw=inp.value.replace(/[^0-9.]/g,'');
+  // Evitar múltiples puntos
+  const pts=raw.split('.');
+  if(pts.length>2) raw=pts[0]+'.'+pts.slice(1).join('');
+  inp.value=raw;
+  const v=parseFloat(raw);
+  if(!isNaN(v)&&v>5){inp.value='5.0';}
+}
+
+/**
+ * necesitaPara(eid, mat):
+ * Dado un estudiante y una materia, calcula la nota mínima que necesita
+ * en los periodos faltantes (sin notas) para obtener promedio >= 3.0
+ * considerando los 4 periodos configurados.
+ * Retorna {necesita: number|null, periodosRestantes: number, promActual: number}
+ */
+function necesitaPara(eid, mat){
+  const pers=DB.pers||[];
+  if(!pers.length) return null;
+  const total=pers.length;
+  // Periodos con notas ingresadas (al menos un valor > 0)
+  const conNota=pers.filter(p=>{const t=DB.notas[eid]?.[p]?.[mat];return t&&(t.a>0||t.c>0||t.r>0);});
+  const sinNota=pers.filter(p=>{const t=DB.notas[eid]?.[p]?.[mat];return !t||(t.a===0&&t.c===0&&t.r===0);});
+  const restantes=sinNota.length;
+  if(restantes===0) return null; // ya tiene todos los periodos
+  // Suma de definitivas actuales
+  const sumaActual=pers.reduce((s,p)=>{
+    const t=DB.notas[eid]?.[p]?.[mat]||{a:0,c:0,r:0};
+    return s+def(t);
+  },0);
+  const promActual=total>0?sumaActual/total:0;
+  // Nota necesaria en cada periodo restante para que el promedio final sea >= 3.0
+  // sumaActual + restantes * x  >= 3.0 * total  → x >= (3*total - sumaActual) / restantes
+  const necesita=(3*total - sumaActual)/restantes;
+  return{necesita:Math.min(Math.max(necesita,0),5), restantes, promActual:+promActual.toFixed(2)};
+}
+
+/**
+ * necesitaParaEst(eid):
+ * Retorna array de {mat, necesita, restantes, promActual} para cada materia
+ * donde el estudiante aún puede mejorar (tiene periodos pendientes y podría estar en riesgo).
+ */
+function necesitaParaEst(eid){
+  return getMats(eid).map(mat=>{
+    const r=necesitaPara(eid,mat);
+    return r?{mat,...r}:null;
+  }).filter(Boolean).filter(x=>x.restantes>0);
+}
+
 // Categoría de disciplina numérica
 function discLabel(n){
   n=+n;
@@ -1411,11 +1463,11 @@ function renderANotTbl(salon,per,list){
       const enc=encodeURIComponent,em=enc(m);
       return`<td style="border-left:2px solid var(--bd);padding:5px">
         <input type="number" class="ni" min="0" max="5" step="0.1" value="${t.a.toFixed(1)}"
-          data-eid="${e.id}" data-per="${ep}" data-mat="${em}" data-f="a" onchange="saveTri(this)"></td>
+          data-eid="${e.id}" data-per="${ep}" data-mat="${em}" data-f="a" oninput="clampNota(this)" onchange="saveTri(this)"></td>
         <td style="padding:5px"><input type="number" class="ni" min="0" max="5" step="0.1" value="${t.c.toFixed(1)}"
-          data-eid="${e.id}" data-per="${ep}" data-mat="${em}" data-f="c" onchange="saveTri(this)"></td>
+          data-eid="${e.id}" data-per="${ep}" data-mat="${em}" data-f="c" oninput="clampNota(this)" onchange="saveTri(this)"></td>
         <td style="padding:5px"><input type="number" class="ni" min="0" max="5" step="0.1" value="${t.r.toFixed(1)}"
-          data-eid="${e.id}" data-per="${ep}" data-mat="${em}" data-f="r" onchange="saveTri(this)"></td>
+          data-eid="${e.id}" data-per="${ep}" data-mat="${em}" data-f="r" oninput="clampNota(this)" onchange="saveTri(this)"></td>
         <td id="dc_${e.id}_${em}_${ep}" style="background:#f0f8ff;padding:5px">
           <span class="${scC(d)}" style="font-size:11px">${d.toFixed(2)}</span></td>`;
     }).join('');
@@ -1426,7 +1478,7 @@ function renderANotTbl(salon,per,list){
           value="${typeof DB.notas[e.id]?.disciplina==='number'?DB.notas[e.id].disciplina.toFixed(1):''}"
           placeholder="0-5"
           title="Disciplina 0.0-5.0 — se promedia entre todos los periodos"
-          onchange="saveDisc('${e.id}',this.value,'${ep}')">
+          oninput="clampNota(this)" onchange="saveDisc('${e.id}',this.value,'${ep}')">
         <div style="font-size:10px;color:var(--sl3);text-align:center">
           ${typeof DB.notas[e.id]?.disciplina==='number'?discLabel(DB.notas[e.id].disciplina):'—'}
         </div>
@@ -2382,19 +2434,19 @@ function loadPN(){
                 <div style="font-size:9px;color:var(--sl3);margin-bottom:3px;text-align:center;font-weight:600">Apt.${pA}%</div>
                 <input type="number" class="${clsA} pnInp" min="0" max="5" step="0.1" value="${t.a > 0 ? t.a.toFixed(1) : ''}" placeholder="0.0"
                   data-eid="${e.id}" data-per="${ep_global}" data-mat="${em}" data-f="a"
-                  onchange="saveTri(this);this.className='niCard nota-ok pnInp'">
+                  oninput="clampNota(this)" onchange="saveTri(this);this.className='niCard nota-ok pnInp'">
               </div>
               <div>
                 <div style="font-size:9px;color:var(--sl3);margin-bottom:3px;text-align:center;font-weight:600">Act.${pC}%</div>
                 <input type="number" class="${clsC} pnInp" min="0" max="5" step="0.1" value="${t.c > 0 ? t.c.toFixed(1) : ''}" placeholder="0.0"
                   data-eid="${e.id}" data-per="${ep_global}" data-mat="${em}" data-f="c"
-                  onchange="saveTri(this);this.className='niCard nota-ok pnInp'">
+                  oninput="clampNota(this)" onchange="saveTri(this);this.className='niCard nota-ok pnInp'">
               </div>
               <div>
                 <div style="font-size:9px;color:var(--sl3);margin-bottom:3px;text-align:center;font-weight:600">Res.${pR}%</div>
                 <input type="number" class="${clsR} pnInp" min="0" max="5" step="0.1" value="${t.r > 0 ? t.r.toFixed(1) : ''}" placeholder="0.0"
                   data-eid="${e.id}" data-per="${ep_global}" data-mat="${em}" data-f="r"
-                  onchange="saveTri(this);this.className='niCard nota-ok pnInp'">
+                  oninput="clampNota(this)" onchange="saveTri(this);this.className='niCard nota-ok pnInp'">
               </div>
             </div>
             <div id="dc_${e.id}_${em}_${ep_global}" style="text-align:center;padding:4px 6px;background:${tieneVal?'#ebf8ff':'#f7fafc'};border-radius:6px">
@@ -2421,10 +2473,42 @@ function loadPN(){
               <span style="color:var(--sl2)">Disciplina:</span>
               <input type="number" class="ni" min="0" max="5" step="0.1" style="width:64px;text-align:center"
                 value="${discVal.toFixed(1)}" placeholder="0.0"
-                onchange="saveDisc('${e.id}',this.value,'${ep_global}')">
+                oninput="clampNota(this)" onchange="saveDisc('${e.id}',this.value,'${ep_global}')">
               <span style="color:var(--sl3);font-size:11px">${discLabel(discVal)}</span>
               <span style="margin-left:auto;font-size:12px">Prom. periodo: <strong id="apr_${e.id}" class="${scC(pp)}">${pp.toFixed(2)}</strong></span>
             </div>
+            ${(()=>{
+              // ── Proyección: cuánto necesita para ganar el año ──────────
+              const proyRows = necesitaParaEst(e.id);
+              if (!proyRows.length) return '';
+              const enRiesgo = proyRows.filter(x => x.necesita > 0 && x.promActual < 3);
+              const salvados = proyRows.filter(x => x.promActual >= 3);
+              if (!enRiesgo.length) return '';
+              const filas = enRiesgo.map(x => {
+                const color = x.necesita <= 3 ? '#276749' : x.necesita <= 4 ? '#744210' : '#c53030';
+                const icono = x.necesita <= 3 ? '🟢' : x.necesita <= 4 ? '🟡' : '🔴';
+                return `<tr>
+                  <td style="padding:4px 8px;font-size:11px;font-weight:600">${icono} ${x.mat}</td>
+                  <td style="padding:4px 8px;text-align:center;font-size:11px;color:var(--sl2)">${x.promActual.toFixed(2)}</td>
+                  <td style="padding:4px 8px;text-align:center;font-size:12px;font-weight:800;color:${color}">${x.necesita.toFixed(2)}</td>
+                  <td style="padding:4px 8px;text-align:center;font-size:10px;color:var(--sl3)">${x.restantes} periodo${x.restantes>1?'s':''}</td>
+                </tr>`;
+              }).join('');
+              return `<div style="margin-top:10px;border-radius:8px;overflow:hidden;border:1.5px solid #fed7aa">
+                <div style="background:#fff7ed;padding:7px 10px;font-size:11px;font-weight:800;color:#c05621;display:flex;align-items:center;gap:6px">
+                  📈 Proyección para ganar el año — <span style="font-weight:400">nota mínima en periodos restantes</span>
+                </div>
+                <table style="width:100%;border-collapse:collapse;background:#fff">
+                  <thead><tr style="background:#fef3c7">
+                    <th style="padding:4px 8px;font-size:10px;color:#92400e;text-align:left">Materia</th>
+                    <th style="padding:4px 8px;font-size:10px;color:#92400e;text-align:center">Prom. actual</th>
+                    <th style="padding:4px 8px;font-size:10px;color:#92400e;text-align:center">Necesita ≥</th>
+                    <th style="padding:4px 8px;font-size:10px;color:#92400e;text-align:center">Periodos rest.</th>
+                  </tr></thead>
+                  <tbody>${filas}</tbody>
+                </table>
+              </div>`;
+            })()}
           </div>
         </div>`;
       }).join('');
@@ -2494,11 +2578,11 @@ function loadPN(){
         const enc=encodeURIComponent,em=enc(m);
         return`<td style="border-left:2px solid var(--bd);padding:5px">
           <input type="number" class="ni" min="0" max="5" step="0.1" value="${t.a.toFixed(1)}"
-            data-eid="${e.id}" data-per="${ep}" data-mat="${em}" data-f="a" onchange="saveTri(this)"></td>
+            data-eid="${e.id}" data-per="${ep}" data-mat="${em}" data-f="a" oninput="clampNota(this)" onchange="saveTri(this)"></td>
           <td style="padding:5px"><input type="number" class="ni" min="0" max="5" step="0.1" value="${t.c.toFixed(1)}"
-            data-eid="${e.id}" data-per="${ep}" data-mat="${em}" data-f="c" onchange="saveTri(this)"></td>
+            data-eid="${e.id}" data-per="${ep}" data-mat="${em}" data-f="c" oninput="clampNota(this)" onchange="saveTri(this)"></td>
           <td style="padding:5px"><input type="number" class="ni" min="0" max="5" step="0.1" value="${t.r.toFixed(1)}"
-            data-eid="${e.id}" data-per="${ep}" data-mat="${em}" data-f="r" onchange="saveTri(this)"></td>
+            data-eid="${e.id}" data-per="${ep}" data-mat="${em}" data-f="r" oninput="clampNota(this)" onchange="saveTri(this)"></td>
           <td id="dc_${e.id}_${em}_${ep}" style="background:#f0f8ff;padding:5px">
             <span class="${scC(d)}" style="font-size:11px">${d.toFixed(2)}</span></td>`;
       }).join('');
@@ -2510,7 +2594,7 @@ function loadPN(){
             value="${discVal.toFixed(1)}"
             placeholder="0.0"
             title="Disciplina 0.0-5.0"
-            onchange="saveDisc('${e.id}',this.value,'${ep}')">
+            oninput="clampNota(this)" onchange="saveDisc('${e.id}',this.value,'${ep}')">
           <div style="font-size:10px;color:var(--sl3);text-align:center">${discLabel(discVal)}</div>
         </td>
         <td id="apr_${e.id}"><span class="${scC(pp)}">${pp.toFixed(2)}</span></td>`;
@@ -4128,6 +4212,52 @@ function dlBoletin(estId,perFilter,anno,snapData){
     <div style="padding:16px 28px">
       ${persHTML}
       ${rehabHTML}
+      ${(()=>{
+        // Proyección "cuánto necesita para ganar el año" — solo para estudiantes activos
+        if(!e) return '';
+        const proyRows=necesitaParaEst(estId);
+        const enRiesgo=proyRows.filter(x=>x.restantes>0);
+        if(!enRiesgo.length) return '';
+        // Separar por estado
+        const aprobadas=enRiesgo.filter(x=>x.promActual>=3);
+        const pendientes=enRiesgo.filter(x=>x.promActual<3&&x.necesita<=5);
+        const rows=enRiesgo.map(x=>{
+          const aprobada=x.promActual>=3;
+          const color=aprobada?'#276749':x.necesita<=3?'#276749':x.necesita<=4?'#b7791f':'#c53030';
+          const bg=aprobada?'#f0fff4':x.necesita<=3?'#f0fff4':x.necesita<=4?'#fffaf0':'#fff5f5';
+          const icono=aprobada?'✅':x.necesita<=3?'🟢':x.necesita<=4?'🟡':'🔴';
+          const estado=aprobada?'Va ganando':x.necesita<=3?'Alcanzable':x.necesita<=4?'Con esfuerzo':'En riesgo';
+          return`<tr style="background:${bg}">
+            <td style="padding:5px 8px;font-size:11px;font-weight:600">${icono} ${x.mat}</td>
+            <td style="padding:5px 8px;text-align:center;font-size:11px;color:#4a5568">${x.promActual.toFixed(2)}</td>
+            <td style="padding:5px 8px;text-align:center;font-size:12px;font-weight:800;color:${color}">${aprobada?'≥ 3.0 ✓':x.necesita.toFixed(2)}</td>
+            <td style="padding:5px 8px;text-align:center;font-size:10px;color:#718096">${x.restantes} per.</td>
+            <td style="padding:5px 8px;text-align:center;font-size:10px;font-weight:700;color:${color}">${estado}</td>
+          </tr>`;
+        }).join('');
+        return`<div style="margin-top:16px;border-radius:8px;overflow:hidden;border:1.5px solid #fbd38d;page-break-inside:avoid">
+          <div style="background:#fffbeb;padding:8px 12px;display:flex;align-items:center;gap:8px">
+            <span style="font-size:13px">📈</span>
+            <div>
+              <div style="font-size:11px;font-weight:800;color:#92400e">Proyección Año Lectivo — ${DB.pers.length} Periodos</div>
+              <div style="font-size:10px;color:#b7791f">Nota mínima requerida en los periodos pendientes para alcanzar promedio ≥ 3.0 por materia</div>
+            </div>
+          </div>
+          <table style="width:100%;border-collapse:collapse;font-size:11px">
+            <thead><tr style="background:#fef3c7">
+              <th style="padding:5px 8px;text-align:left;font-size:10px;color:#92400e">Materia</th>
+              <th style="padding:5px 8px;text-align:center;font-size:10px;color:#92400e">Prom. actual</th>
+              <th style="padding:5px 8px;text-align:center;font-size:10px;color:#92400e">Necesita ≥</th>
+              <th style="padding:5px 8px;text-align:center;font-size:10px;color:#92400e">Pendientes</th>
+              <th style="padding:5px 8px;text-align:center;font-size:10px;color:#92400e">Estado</th>
+            </tr></thead>
+            <tbody>${rows}</tbody>
+          </table>
+          <div style="background:#fffbeb;padding:6px 12px;font-size:9px;color:#a16207;font-style:italic">
+            🟢 Alcanzable (≤3.0) &nbsp;·&nbsp; 🟡 Con esfuerzo (3.0–4.0) &nbsp;·&nbsp; 🔴 En riesgo (>4.0 o ya imposible) &nbsp;·&nbsp; ✅ Va ganando (prom. actual ≥ 3.0)
+          </div>
+        </div>`;
+      })()}
     </div>
     <!-- SIGNATURES -->
     <div style="display:flex;justify-content:space-around;margin-top:36px;padding:0 28px 28px">

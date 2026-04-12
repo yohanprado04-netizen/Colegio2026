@@ -261,12 +261,13 @@ async function saveTri(inp) {
   const per = decodeURIComponent(inp.dataset.per);
   const mat = decodeURIComponent(inp.dataset.mat);
   const f   = inp.dataset.f;
-  const v   = parseFloat(inp.value);
+  let v = parseFloat(inp.value);
 
-  if (isNaN(v) || v < 0 || v > 5) {
+  if (isNaN(v) || v < 0) {
     inp.value = (DB.notas[eid]?.[per]?.[mat]?.[f] || 0).toFixed(1);
     return;
   }
+  if (v > 5) { v = 5; inp.value = '5.0'; }
 
   syncN(eid);
   const oldDef = def(DB.notas[eid][per][mat]);
@@ -814,10 +815,11 @@ async function unblk(u) {
 // ═══════════════════════════════════════════════════════════════════
 async function saveDisc(eid, v, periodo) {
   if (!validateSession() || !['admin', 'profe'].includes(CU.role)) return;
-  const val = parseFloat(v);
-  if (isNaN(val) || val < 0 || val > 5) {
-    sw('error', 'Disciplina inválida', 'Ingresa un valor entre 0.0 y 5.0'); return;
+  let val = parseFloat(v);
+  if (isNaN(val) || val < 0) {
+    sw('error', 'Disciplina inválida', 'Ingresa un número entre 0.0 y 5.0'); return;
   }
+  if (val > 5) val = 5;
   syncN(eid);
   // Guardar en el periodo actual si se conoce
   if (periodo && DB.notas[eid]) {
