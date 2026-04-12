@@ -20,7 +20,7 @@ const TokenStore = {
 window.TokenStore = TokenStore;
 
 // ─── Fetch con auth ──────────────────────────────────────────────
-async function apiFetch(path, opts = {}) {
+async function apiFetch(path, opts = {}, _retries = 2) {
   const token = TokenStore.get();
 
   // Validar que hay token antes de llamadas protegidas
@@ -37,7 +37,14 @@ async function apiFetch(path, opts = {}) {
   try {
     res = await fetch(API_BASE + path, { ...opts, headers });
   } catch (networkErr) {
-    throw new Error('Error de red. Verifica tu conexión a internet.');
+    // Render free tier: el servidor puede estar en cold start o reiniciando
+    // Reintentar automáticamente hasta _retries veces con espera progresiva
+    if (_retries > 0) {
+      console.warn(`[apiFetch] Error de red en ${path} — reintentando en 2s... (${_retries} intentos restantes)`);
+      await new Promise(r => setTimeout(r, 2000));
+      return apiFetch(path, opts, _retries - 1);
+    }
+    throw new Error('Error de red. El servidor no responde — puede estar iniciando, intenta en 30 segundos.');
   }
 
   // Token expirado o inválido → logout automático
@@ -2028,6 +2035,20 @@ document.addEventListener('DOMContentLoaded', async () => {
   _dbReady = true;
   if (btn) { btn.textContent = 'Ingresar →'; btn.disabled = false; }
 });
+
+// ─── Keep-alive: evita que Render free tier hiberne el servidor ────────────────
+// Envía un ping cada 10 minutos para mantener el servidor activo
+(function keepAlive() {
+  const INTERVALO = 10 * 60 * 1000; // 10 minutos
+  setInterval(async () => {
+    try {
+      await fetch(API_BASE + '/health');
+      console.debug('[keepAlive] servidor activo');
+    } catch (_) {
+      console.debug('[keepAlive] ping falló — servidor en cold start');
+    }
+  }, INTERVALO);
+})();
 
 console.log('✅ EduSistema Pro — API Layer cargado. Backend:', API_BASE);
 // force redeploy 04/10/2026
