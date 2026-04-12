@@ -1705,9 +1705,64 @@ async function promoverEstudiantes(ciclo) {
     };
   });
 
+  // Construir detalle por estudiante usando veredictoAnual()
+  const detalleEstudiantes = resultados.map(r => {
+    const verd = typeof veredictoAnual === 'function' ? veredictoAnual(r.est.id) : null;
+    return { ...r, verd };
+  });
+
+  // Agrupar detalle por salón para mostrar expandible
+  const salonesDetalle = [...new Set(resultados.map(r => r.est.salon))].sort();
+  const htmlDetalleSalones = salonesDetalle.map(sal => {
+    const ests = detalleEstudiantes.filter(r => r.est.salon === sal);
+    const filas = ests.map(r => {
+      const v = r.verd;
+      // Ícono y color según resultado
+      let ic, col, bg, etiq;
+      if (r.sinDatos)                          { ic='⚠️'; col='#92400e'; bg='#fef9c3'; etiq='Sin notas'; }
+      else if (r.graduado)                     { ic='🎓'; col='#2b6cb0'; bg='#ebf8ff'; etiq='Graduado'; }
+      else if (r.pierde)                       { ic='❌'; col='#742a2a'; bg='#fff5f5'; etiq='Repite año'; }
+      else if (r.enRecuperacion && !r.recuperacionCompleta) { ic='🔒'; col='#92400e'; bg='#fffbeb'; etiq='Recuperación pend.'; }
+      else if (r.enRecuperacion && r.recuperacionCompleta)  { ic='✅'; col='#553c9a'; bg='#faf5ff'; etiq='Recup. aprobada'; }
+      else                                     { ic='⬆️'; col='#276749'; bg='#f0fff4'; etiq='Promueve'; }
+
+      // Definitivas por materia (si hay veredicto)
+      const matsHTML = v && v.resMateria && v.resMateria.length
+        ? v.resMateria.map(m =>
+            `<span style="display:inline-block;margin:1px 3px;padding:1px 6px;border-radius:10px;font-size:10px;background:${m.gana?'#c6f6d5':'#fed7d7'};color:${m.gana?'#276749':'#c53030'};font-weight:600">${m.mat} ${m.prom.toFixed(1)}</span>`
+          ).join('')
+        : '<span style="font-size:10px;color:#a0aec0;font-style:italic">Sin datos</span>';
+
+      return `<tr style="background:${bg};border-bottom:1px solid #edf2f7">
+        <td style="padding:5px 8px;font-size:12px;font-weight:700">${ic} ${r.est.nombre}</td>
+        <td style="padding:5px 8px;font-size:11px;font-weight:700;color:${col};white-space:nowrap">${etiq}</td>
+        <td style="padding:5px 8px;font-size:11px">${matsHTML}</td>
+        <td style="padding:5px 8px;font-size:11px;color:#4a5568;white-space:nowrap">${r.est.salon} → ${r.siguienteSalon !== r.est.salon ? `<strong>${r.siguienteSalon}</strong>` : '<em>mismo</em>'}</td>
+      </tr>`;
+    }).join('');
+
+    return `<details style="margin-bottom:8px;border-radius:8px;overflow:hidden;border:1px solid #e2e8f0">
+      <summary style="cursor:pointer;padding:8px 12px;background:#f7fafc;font-size:12px;font-weight:700;color:#2d3748;list-style:none;display:flex;justify-content:space-between;align-items:center">
+        <span>🏫 Salón <strong>${sal}</strong> — ${ests.length} estudiante${ests.length>1?'s':''}</span>
+        <span style="font-size:10px;color:#718096">▼ ver detalle</span>
+      </summary>
+      <div style="overflow-x:auto">
+        <table style="width:100%;border-collapse:collapse;font-size:11px">
+          <thead><tr style="background:#edf2f7">
+            <th style="padding:4px 8px;text-align:left;color:#4a5568">Estudiante</th>
+            <th style="padding:4px 8px;text-align:left;color:#4a5568">Resultado</th>
+            <th style="padding:4px 8px;text-align:left;color:#4a5568">Definitivas por materia</th>
+            <th style="padding:4px 8px;text-align:left;color:#4a5568">Cambio de salón</th>
+          </tr></thead>
+          <tbody>${filas}</tbody>
+        </table>
+      </div>
+    </details>`;
+  }).join('');
+
   const conf = await Swal.fire({
     title: '🎓 Promover año — Resumen',
-    width: 660,
+    width: 740,
     html: `<div style="text-align:left;font-size:13px;font-family:var(--fn)">
       <!-- Tarjetas de resumen global -->
       <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-bottom:16px">
@@ -1738,9 +1793,9 @@ async function promoverEstudiantes(ciclo) {
         </div>
       </div>
 
-      <!-- Tabla por salón -->
+      <!-- Tabla por salón (resumen) -->
       <div style="background:#f7fafc;border-radius:10px;padding:12px;margin-bottom:12px">
-        <div style="font-size:11px;font-weight:800;text-transform:uppercase;color:#4a5568;margin-bottom:8px;letter-spacing:.05em">📊 Desglose por salón</div>
+        <div style="font-size:11px;font-weight:800;text-transform:uppercase;color:#4a5568;margin-bottom:8px;letter-spacing:.05em">📊 Resumen por salón</div>
         <table style="width:100%;border-collapse:collapse;font-size:12px">
           <thead>
             <tr style="border-bottom:2px solid #e2e8f0">
@@ -1765,13 +1820,20 @@ async function promoverEstudiantes(ciclo) {
         </table>
       </div>
 
-      ${sinDatosList.length ? `<div style="background:#fef9c3;border-radius:8px;padding:10px;font-size:12px;color:#92400e">
+      <!-- Detalle por estudiante expandible por salón -->
+      <div style="margin-bottom:12px">
+        <div style="font-size:11px;font-weight:800;text-transform:uppercase;color:#4a5568;margin-bottom:8px;letter-spacing:.05em">📋 Detalle por estudiante <span style="font-weight:400;font-style:italic;text-transform:none">(haz clic en cada salón para ver)</span></div>
+        ${htmlDetalleSalones}
+      </div>
+
+      ${sinDatosList.length ? `<div style="background:#fef9c3;border-radius:8px;padding:10px;font-size:12px;color:#92400e;margin-bottom:8px">
         ⚠️ <strong>${sinDatosList.length} estudiante(s) sin notas no serán movidos.</strong>
         Ingresa sus notas antes de promover el año.
       </div>` : ''}
 
-      <div style="margin-top:12px;padding:10px;background:#ebf8ff;border-radius:8px;font-size:12px;color:#2c5282">
-        ℹ️ Al confirmar se aplicarán los cambios de salón a todos los estudiantes listados. Esta acción no se puede deshacer fácilmente.
+      <div style="padding:10px;background:#ebf8ff;border-radius:8px;font-size:12px;color:#2c5282">
+        ℹ️ Al confirmar se aplicarán los cambios de salón. Esta acción no se puede deshacer fácilmente.
+        <br><span style="font-size:10px;color:#4a5568;margin-top:4px;display:block">Regla: 0 materias perdidas → promueve &nbsp;·&nbsp; 1–2 → recuperación &nbsp;·&nbsp; 3+ → repite el año</span>
       </div>
     </div>`,
     showCancelButton: true,

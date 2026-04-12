@@ -306,61 +306,131 @@ function necesitaParaEst(eid){
 
 /**
  * necesitaParaPeriodos(eid):
- * Calcula, por cada periodo pendiente (sin notas), qué nota promedio mínima
- * necesita el estudiante en ESE periodo (en TODAS las materias) para que
- * el promedio general del año quede >= 3.0 en cada materia.
- * Retorna array de {per, necesita, matsEnRiesgo, matsTotales, posible}
+ * Calcula SECUENCIALMENTE para cada periodo pendiente qué nota mínima promedio
+ * necesita el estudiante en ESE periodo específico, basándose en lo que ya tiene
+ * hasta ese punto (periodos anteriores con notas reales + proyección de los anteriores pendientes).
+ *
+ * Lógica: para el periodo pendiente N, asume que en los pendientes anteriores
+ * sacó exactamente la nota mínima calculada (proyección optimista).
+ * Retorna array de {per, necesita, matsEnRiesgo, matsTotales, posible, matsImpCount}
  */
 function necesitaParaPeriodos(eid){
   const pers = DB.pers || [];
   const mats = getMats(eid);
   if(!pers.length || !mats.length) return [];
 
-  // Para cada periodo, ver si está "pendiente" (sin ninguna nota en ninguna materia)
-  const periodosPendientes = pers.filter(p =>
-    mats.every(m => { const t=DB.notas[eid]?.[p]?.[m]; return !t||(t.a===0&&t.c===0&&t.r===0); })
-  );
+  const total = pers.length;
+
+  // Separar periodos con notas vs pendientes (sin ninguna nota en ninguna materia)
+  const tienNota = p => mats.some(m => { const t=DB.notas[eid]?.[p]?.[m]; return t&&(t.a>0||t.c>0||t.r>0); });
+  const periodosPendientes = pers.filter(p => !tienNota(p));
   if(!periodosPendientes.length) return [];
 
-  const total = pers.length;
-  const restantes = periodosPendientes.length;
-
-  // Calcular nota mínima por materia y luego promediar
-  const necesitaPorMat = mats.map(m => {
-    const sumaActual = pers.reduce((s,p) => {
+  // Construir simulación: notas reales para periodos con datos, proyectadas para los pendientes anteriores
+  // simNotas[p][m] = nota definitiva simulada
+  const simNotas = {};
+  pers.forEach(p => {
+    simNotas[p] = {};
+    mats.forEach(m => {
       const t = DB.notas[eid]?.[p]?.[m]||{a:0,c:0,r:0};
-      return s + def(t);
-    }, 0);
-    const n = (3*total - sumaActual) / restantes;
-    return { mat: m, necesita: Math.min(Math.max(n, 0), 99), posible: n <= 5 };
+      simNotas[p][m] = def(t); // 0 si no tiene nota
+    });
   });
 
-  const matsEnRiesgo = necesitaPorMat.filter(x => {
-    const sumaActual = pers.reduce((s,p) => {
-      const t = DB.notas[eid]?.[p]?.[x.mat]||{a:0,c:0,r:0};
-      return s + def(t);
-    }, 0);
-    const promActual = sumaActual / total;
-    return promActual < 3;
+  const resultado = [];
+
+  periodosPendientes.forEach((perAct, idx) => {
+    const restantes = periodosPendientes.length - idx; // este + los que vienen
+
+    // Para cada materia: calcular nota mínima necesaria en este periodo y los siguientes
+    const porMat = mats.map(m => {
+      // Suma de notas simuladas hasta ANTES de este periodo pendiente
+      const sumaAntes = pers.reduce((s, p) => {
+        if(p === perAct) return s; // no contar el periodo actual
+        // Si es un pendiente ANTERIOR a este en la lista, ya lo simulamos con su mínima
+        return s + (simNotas[p][m] || 0);
+      }, 0);
+      // Nota necesaria: (3*total - sumaAntes) / restantes
+      const n = (3 * total - sumaAntes) / restantes;
+      return { mat: m, necesita: n, posible: n <= 5 };
+    });
+
+    // Materias en riesgo: promedio simulado actual < 3
+    const matsRiesgo = porMat.filter(x => {
+      const sumaSimulada = pers.reduce((s,p) => s + (simNotas[p][x.mat]||0), 0);
+      return (sumaSimulada / total) < 3;
+    });
+
+    const hayImposible = matsRiesgo.some(x => x.necesita > 5);
+    const matsImpCount = matsRiesgo.filter(x => x.necesita > 5).length;
+    const necesitaArr = matsRiesgo.filter(x => x.necesita <= 5).map(x => x.necesita);
+    const necesitaProm = necesitaArr.length
+      ? necesitaArr.reduce((s,v)=>s+v,0) / necesitaArr.length
+      : 0;
+    const notaEste = +Math.min(Math.max(necesitaProm, 0), 5).toFixed(2);
+
+    resultado.push({
+      per: perAct,
+      necesita: notaEste,
+      matsEnRiesgo: matsRiesgo.length,
+      matsTotales: mats.length,
+      posible: !hayImposible,
+      matsImpCount
+    });
+
+    // Simular que en este periodo sacó exactamente la nota mínima (para calcular los siguientes)
+    mats.forEach(m => {
+      const minEste = porMat.find(x=>x.mat===m);
+      const val = minEste ? Math.min(Math.max(minEste.necesita, 0), 5) : 0;
+      simNotas[perAct][m] = val;
+    });
   });
 
-  // Nota promedio necesaria = promedio de las notas mínimas de las materias en riesgo
-  const necesitaArr = matsEnRiesgo.map(x => Math.min(x.necesita, 5));
-  const necesitaProm = necesitaArr.length
-    ? necesitaArr.reduce((s,v)=>s+v,0) / necesitaArr.length
-    : 0;
-  const hayImposible = matsEnRiesgo.some(x => x.necesita > 5);
-  const matsImpCount = matsEnRiesgo.filter(x => x.necesita > 5).length;
+  return resultado;
+}
 
-  // Retornar una fila por periodo pendiente (misma nota aplica a todos los pendientes)
-  return periodosPendientes.map(per => ({
-    per,
-    necesita: +necesitaProm.toFixed(2),
-    matsEnRiesgo: matsEnRiesgo.length,
-    matsTotales: mats.length,
-    posible: !hayImposible,
-    matsImpCount
-  }));
+/**
+ * veredictoAnual(eid):
+ * Con todos los periodos completos, calcula el veredicto final del año.
+ * Retorna {
+ *   completo: bool,           // true si todos los periodos tienen notas
+ *   matsPerdidasFinal: [],    // materias con promedio < 3 en los 4 periodos
+ *   matsGanadasFinal: [],     // materias aprobadas
+ *   resultado: 'gana'|'recupera'|'pierde',
+ *   mensaje: string
+ * }
+ */
+function veredictoAnual(eid){
+  const pers = DB.pers || [];
+  const mats = getMats(eid);
+  if(!pers.length || !mats.length) return null;
+
+  const tienNota = p => mats.some(m => { const t=DB.notas[eid]?.[p]?.[m]; return t&&(t.a>0||t.c>0||t.r>0); });
+  const completo = pers.every(tienNota);
+
+  // Calcular definitiva por materia promediando los 4 periodos
+  const resMateria = mats.map(m => {
+    const defs = pers.map(p => def(DB.notas[eid]?.[p]?.[m]||{a:0,c:0,r:0}));
+    const prom = defs.reduce((s,v)=>s+v,0) / pers.length;
+    return { mat: m, prom: +prom.toFixed(2), gana: prom >= 3 };
+  });
+
+  const matsPerdidasFinal = resMateria.filter(x => !x.gana);
+  const matsGanadasFinal  = resMateria.filter(x => x.gana);
+
+  let resultado, mensaje;
+  if(matsPerdidasFinal.length === 0){
+    resultado = 'gana';
+    mensaje = '🎉 Aprueba el año. Ganó todas las materias.';
+  } else if(matsPerdidasFinal.length <= 2){
+    resultado = 'recupera';
+    mensaje = `⚠️ Va a recuperación. Perdió ${matsPerdidasFinal.length} materia${matsPerdidasFinal.length>1?'s':''}: ${matsPerdidasFinal.map(x=>x.mat).join(', ')}.`;
+  } else {
+    resultado = 'pierde';
+    mensaje = `❌ Pierde el año. Perdió ${matsPerdidasFinal.length} materias: ${matsPerdidasFinal.map(x=>x.mat).join(', ')}.`;
+  }
+
+  return { completo, resMateria, matsPerdidasFinal, matsGanadasFinal, resultado, mensaje };
 }
 
 // Categoría de disciplina numérica
@@ -2537,7 +2607,42 @@ function loadPN(){
               <span style="margin-left:auto;font-size:12px">Prom. periodo: <strong id="apr_${e.id}" class="${scC(pp)}">${pp.toFixed(2)}</strong></span>
             </div>
             ${(()=>{
-              // ── Proyección: cuánto necesita para ganar el año ──────────
+              // ── Proyección / Veredicto final ──────────────────────────
+              const verd = veredictoAnual(e.id);
+              if(!verd) return '';
+
+              // ── CASO A: Todos los periodos completos → veredicto final ──
+              if(verd.completo){
+                const bgV = verd.resultado==='gana' ? '#f0fff4' : verd.resultado==='recupera' ? '#fffbeb' : '#fff5f5';
+                const borV = verd.resultado==='gana' ? '#9ae6b4' : verd.resultado==='recupera' ? '#fbd38d' : '#feb2b2';
+                const colV = verd.resultado==='gana' ? '#276749' : verd.resultado==='recupera' ? '#92400e' : '#742a2a';
+                const filasV = verd.resMateria.map(x => {
+                  const col = x.gana ? '#276749' : '#c53030';
+                  const ic  = x.gana ? '✅' : '❌';
+                  return `<tr>
+                    <td style="padding:5px 10px;font-size:12px;font-weight:600">${ic} ${x.mat}</td>
+                    <td style="padding:5px 8px;text-align:center;font-size:13px;font-weight:800;color:${col}">${x.prom.toFixed(2)}</td>
+                    <td style="padding:5px 8px;font-size:11px;color:${col};font-weight:700">${x.gana ? 'Aprobada' : 'Perdida'}</td>
+                  </tr>`;
+                }).join('');
+                return `<div style="margin-top:10px;border-radius:8px;overflow:hidden;border:1.5px solid ${borV}">
+                  <div style="background:${bgV};padding:9px 12px;font-size:12px;font-weight:800;color:${colV}">
+                    ${verd.mensaje}
+                  </div>
+                  <table style="width:100%;border-collapse:collapse;background:#fff">
+                    <thead><tr style="background:#f7fafc">
+                      <th style="padding:5px 10px;font-size:10px;color:#4a5568;text-align:left">Materia</th>
+                      <th style="padding:5px 8px;font-size:10px;color:#4a5568;text-align:center">Definitiva año</th>
+                      <th style="padding:5px 8px;font-size:10px;color:#4a5568;text-align:left">Resultado</th>
+                    </tr></thead>
+                    <tbody>${filasV}</tbody>
+                  </table>
+                  ${verd.resultado==='recupera'?`<div style="background:#fffbeb;padding:5px 12px;font-size:9px;color:#92400e">⚠️ Puede recuperar: máximo 2 materias perdidas → va a recuperación de fin de año</div>`:''}
+                  ${verd.resultado==='pierde'?`<div style="background:#fff5f5;padding:5px 12px;font-size:9px;color:#742a2a">❌ Pierde el año: más de 2 materias perdidas → debe repetir el grado</div>`:''}
+                </div>`;
+              }
+
+              // ── CASO B: Periodos pendientes → proyección secuencial ──
               const periodosProy = necesitaParaPeriodos(e.id);
               if (!periodosProy.length) return '';
               const filas = periodosProy.map(x => {
@@ -2548,7 +2653,7 @@ function loadPN(){
                   ? `${x.matsImpCount} materia${x.matsImpCount>1?'s':''} ya no pueden recuperarse — requiere apoyo`
                   : x.matsEnRiesgo === 0
                     ? 'Va bien en todas las materias'
-                    : `Debe sacar ≥ ${x.necesita.toFixed(1)} en promedio (${x.matsEnRiesgo} materia${x.matsEnRiesgo>1?'s':''} en riesgo)`;
+                    : `Sacar ≥ ${x.necesita.toFixed(1)} en promedio (${x.matsEnRiesgo} materia${x.matsEnRiesgo>1?'s':''} en riesgo)`;
                 return `<tr>
                   <td style="padding:5px 10px;font-size:12px;font-weight:700">${icono} ${x.per}</td>
                   <td style="padding:5px 8px;text-align:center;font-size:13px;font-weight:800;color:${color}">${imposible ? '✗' : x.necesita.toFixed(1)}</td>
@@ -2560,14 +2665,14 @@ function loadPN(){
                   <span style="font-size:15px">📊</span>
                   <div>
                     <div style="font-size:12px;font-weight:800;color:#c05621">¿Puede ganar el año?</div>
-                    <div style="font-size:10px;color:#b7791f">Nota mínima promedio que necesita en cada periodo pendiente para pasar</div>
+                    <div style="font-size:10px;color:#b7791f">Nota mínima promedio requerida en cada periodo para aprobar</div>
                   </div>
                 </div>
                 <table style="width:100%;border-collapse:collapse;background:#fff">
                   <thead><tr style="background:#fef3c7">
                     <th style="padding:5px 10px;font-size:10px;color:#92400e;text-align:left">Periodo pendiente</th>
-                    <th style="padding:5px 8px;font-size:10px;color:#92400e;text-align:center">Nota mínima promedio</th>
-                    <th style="padding:5px 8px;font-size:10px;color:#92400e;text-align:left">Situación</th>
+                    <th style="padding:5px 8px;font-size:10px;color:#92400e;text-align:center">Nota mínima prom.</th>
+                    <th style="padding:5px 8px;font-size:10px;color:#92400e;text-align:left">¿Qué necesita?</th>
                   </tr></thead>
                   <tbody>${filas}</tbody>
                 </table>
@@ -4280,8 +4385,51 @@ function dlBoletin(estId,perFilter,anno,snapData){
       ${persHTML}
       ${rehabHTML}
       ${(()=>{
-        // Proyección "cuánto necesita para ganar el año" — solo para estudiantes activos
+        // Proyección / Veredicto final — solo para estudiantes activos
         if(!e) return '';
+        const verd = veredictoAnual(estId);
+        if(!verd) return '';
+
+        // ── CASO A: Todos los periodos completos → veredicto definitivo ──
+        if(verd.completo){
+          const bgV = verd.resultado==='gana' ? '#f0fff4' : verd.resultado==='recupera' ? '#fffbeb' : '#fff5f5';
+          const borV = verd.resultado==='gana' ? '#9ae6b4' : verd.resultado==='recupera' ? '#fbd38d' : '#feb2b2';
+          const colV = verd.resultado==='gana' ? '#276749' : verd.resultado==='recupera' ? '#92400e' : '#742a2a';
+          const filasV = verd.resMateria.map(x => {
+            const col = x.gana ? '#276749' : '#c53030';
+            const bg  = x.gana ? '#f0fff4' : '#fff5f5';
+            const ic  = x.gana ? '✅' : '❌';
+            return `<tr style="background:${bg}">
+              <td style="padding:6px 10px;font-size:12px;font-weight:700">${ic} ${x.mat}</td>
+              <td style="padding:6px 8px;text-align:center;font-size:14px;font-weight:800;color:${col}">${x.prom.toFixed(2)}</td>
+              <td style="padding:6px 8px;font-size:11px;font-weight:700;color:${col}">${x.gana ? '✓ Aprobada' : '✗ Perdida'}</td>
+            </tr>`;
+          }).join('');
+          return `<div style="margin-top:16px;border-radius:10px;overflow:hidden;border:2px solid ${borV};page-break-inside:avoid">
+            <div style="background:${bgV};padding:12px 16px">
+              <div style="font-size:15px;font-weight:800;color:${colV}">${verd.mensaje}</div>
+              ${verd.resultado==='recupera'?`<div style="font-size:11px;color:#92400e;margin-top:4px">Tienes derecho a recuperación de fin de año por las materias perdidas.</div>`:''}
+              ${verd.resultado==='pierde'?`<div style="font-size:11px;color:#742a2a;margin-top:4px">Perdiste más de 2 materias. Debes repetir el año escolar.</div>`:''}
+              ${verd.resultado==='gana'?`<div style="font-size:11px;color:#276749;margin-top:4px">¡Felicitaciones! Aprobaste todas las materias del año.</div>`:''}
+            </div>
+            <div style="background:#fff;padding:6px 0">
+              <div style="padding:4px 16px;font-size:10px;font-weight:700;color:#718096;text-transform:uppercase;letter-spacing:.5px">Resultados por materia</div>
+              <table style="width:100%;border-collapse:collapse;font-size:11px">
+                <thead><tr style="background:#f7fafc">
+                  <th style="padding:5px 10px;text-align:left;font-size:10px;color:#4a5568">Materia</th>
+                  <th style="padding:5px 8px;text-align:center;font-size:10px;color:#4a5568">Definitiva</th>
+                  <th style="padding:5px 8px;text-align:left;font-size:10px;color:#4a5568">Resultado</th>
+                </tr></thead>
+                <tbody>${filasV}</tbody>
+              </table>
+            </div>
+            <div style="background:${bgV};padding:5px 16px;font-size:9px;color:#718096">
+              Definitiva = promedio de los ${DB.pers.length} periodos del año &nbsp;·&nbsp; Aprobado ≥ 3.0 &nbsp;·&nbsp; Recuperación: 1–2 materias perdidas &nbsp;·&nbsp; Pierde año: 3+ materias perdidas
+            </div>
+          </div>`;
+        }
+
+        // ── CASO B: Periodos pendientes → proyección secuencial ──
         const periodosProy = necesitaParaPeriodos(estId);
         if(!periodosProy.length) return '';
         const hayImposible = periodosProy.some(x => !x.posible);
@@ -4317,14 +4465,14 @@ function dlBoletin(estId,perFilter,anno,snapData){
         const resumen = hayImposible
           ? `<div style="font-size:11px;color:#c53030;font-weight:600">⚠️ Hay materias donde ya no alcanza el promedio. Habla con tu profesor.</div>`
           : periodosProy[0]?.necesita <= 3
-            ? `<div style="font-size:11px;color:#276749;font-weight:600">📌 Aún puedes ganar el año. ¡Mantén el esfuerzo en los periodos que faltan!</div>`
+            ? `<div style="font-size:11px;color:#276749;font-weight:600">📌 Aún puedes ganar el año. ¡Mantén el esfuerzo!</div>`
             : `<div style="font-size:11px;color:#b7791f;font-weight:600">📌 Es posible, pero necesitas esforzarte en los periodos que faltan.</div>`;
         return `<div style="margin-top:16px;border-radius:10px;overflow:hidden;border:1.5px solid #fbd38d;page-break-inside:avoid">
           <div style="background:#fffbeb;padding:10px 14px;display:flex;align-items:flex-start;gap:10px">
             <span style="font-size:20px">📊</span>
             <div>
               <div style="font-size:13px;font-weight:800;color:#92400e">¿Qué me falta para ganar el año?</div>
-              <div style="font-size:10px;color:#b7791f;margin-top:2px">Nota mínima promedio que necesitas sacar en cada periodo pendiente para pasar todas tus materias</div>
+              <div style="font-size:10px;color:#b7791f;margin-top:2px">Nota mínima promedio que necesitas en cada periodo para aprobar todas tus materias</div>
               <div style="margin-top:5px">${resumen}</div>
             </div>
           </div>
@@ -4338,7 +4486,7 @@ function dlBoletin(estId,perFilter,anno,snapData){
             <tbody>${filas}</tbody>
           </table>
           <div style="background:#fffbeb;padding:6px 14px;font-size:9px;color:#a16207;line-height:1.6">
-            🟢 Alcanzable (≤ 3.0) &nbsp;·&nbsp; 🟡 Con esfuerzo (3.1–4.0) &nbsp;·&nbsp; 🔴 Muy difícil (> 4.0) &nbsp;·&nbsp; 🚨 Ya no alcanza
+            🟢 Alcanzable (≤ 3.0) &nbsp;·&nbsp; 🟡 Con esfuerzo (3.1–4.0) &nbsp;·&nbsp; 🔴 Muy difícil (&gt; 4.0) &nbsp;·&nbsp; 🚨 Ya no alcanza
           </div>
         </div>`;
       })()}
