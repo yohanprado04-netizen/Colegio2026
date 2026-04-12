@@ -251,26 +251,29 @@ function getAreasDelColegio(ciclo){
 }
 
 // Retorna el mapa { areaNombre: [materia1, materia2, ...] } para un estudiante
-// Las materias sin área quedan en '_sinArea'
+// Solo incluye las áreas asignadas al salón (DB.salAreas[salon]).
+// Si el salón no tiene áreas asignadas, usa todas las áreas del ciclo.
+// Las materias sin área quedan en '_sinArea'.
 function getAreaMatsMap(eid){
   const mats = getMats(eid);
   const e = DB.ests.find(x=>x.id===eid);
   const ciclo = cicloOf(e?.salon||'');
-  const areasCol = getAreasDelColegio(ciclo);
   const matDocs = DB.materiasDocs||[];
 
+  // Áreas asignadas al salón; si no hay, usar todas las del ciclo
+  const areasEnSalon = (DB.salAreas||{})[e?.salon||''] || [];
+  const todasAreasDelCiclo = getAreasDelColegio(ciclo).map(a=>a.nombre);
+  const areasAplicables = areasEnSalon.length > 0 ? areasEnSalon : todasAreasDelCiclo;
+
   const map = {};
-  // Inicializar todas las áreas configuradas
-  areasCol.forEach(a=>{ map[a.nombre]=[]; });
+  areasAplicables.forEach(nombre=>{ map[nombre]=[]; });
 
   mats.forEach(m=>{
-    // Buscar en qué área está esta materia
     const doc = matDocs.find(d=>d.nombre===m && d.ciclo===ciclo);
     const areaNombre = doc?.areaNombre||'';
     if(areaNombre && map[areaNombre]!==undefined){
       map[areaNombre].push(m);
     } else {
-      // Sin área asignada o área no existe → grupo especial
       if(!map['_sinArea']) map['_sinArea']=[];
       map['_sinArea'].push(m);
     }
@@ -1099,6 +1102,9 @@ function renderSals(){
     const el=gi(c==='primaria'?'slP':'slB');if(!el) return;
     const list=DB.sals.filter(s=>s.ciclo===c);
     if(!list.length){el.innerHTML='<div class="mty" style="padding:20px"><div class="ei">🏫</div><p>Sin salones</p></div>';return;}
+    // Áreas configuradas para este ciclo
+    const areasDelCiclo=(DB.areas||[]).filter(a=>a.ciclo===c);
+    const matDocs=(DB.materiasDocs||[]).filter(d=>d.ciclo===c);
     el.innerHTML=list.map(s=>{
       const nMats=s.mats&&s.mats.length;
       const dfMats=c==='primaria'?DB.mP:DB.mB;
@@ -1106,14 +1112,49 @@ function renderSals(){
         ?`<span class="bdg bgr" style="font-size:10px">🎯 ${s.mats.length} materias propias</span>`
         :`<span class="bdg bgy" style="font-size:10px">${dfMats.length} materias (${c==='primaria'?'global primaria':'global bach.'})</span>`;
       const matsList=nMats?s.mats:dfMats;
+
+      // Áreas asignadas a este salón (las que tienen al menos una materia del salón)
+      const areasDelSalon=(DB.salAreas||{})[s.nombre]||[];
+      const hayAreas=areasDelCiclo.length>0;
+      const areasLabel=hayAreas
+        ?(areasDelSalon.length>0
+          ?`<span class="bdg" style="font-size:10px;background:#e0e7ff;color:#3730a3;border:1px solid #a5b4fc">📂 ${areasDelSalon.length} área${areasDelSalon.length>1?'s':''}</span>`
+          :`<span class="bdg bgy" style="font-size:10px">Sin áreas asignadas</span>`)
+        :'';
+
+      // Mostrar áreas con sus materias del salón
+      const areasHTML=areasDelSalon.length>0
+        ?`<div style="margin-top:10px;border-top:1px solid var(--bd);padding-top:8px">
+            <div style="font-size:10px;font-weight:700;color:var(--sl);text-transform:uppercase;margin-bottom:6px">Áreas del salón</div>
+            <div style="display:flex;flex-direction:column;gap:5px">
+              ${areasDelSalon.map(areaNombre=>{
+                const matsDelArea=matsList.filter(m=>{
+                  const d=matDocs.find(x=>x.nombre===m);
+                  return d&&d.areaNombre===areaNombre;
+                });
+                return`<div style="display:flex;align-items:flex-start;gap:8px;padding:5px 8px;background:#f5f3ff;border-radius:7px;border:1px solid #ddd6fe">
+                  <span style="font-size:11px;font-weight:700;color:#5b21b6;min-width:80px">▸ ${areaNombre}</span>
+                  <div style="display:flex;flex-wrap:wrap;gap:3px">${
+                    matsDelArea.length
+                      ?matsDelArea.map(m=>`<span style="font-size:10px;padding:1px 6px;background:#ede9fe;border:1px solid #c4b5fd;border-radius:4px">${m}</span>`).join('')
+                      :'<span style="font-size:10px;color:var(--sl3)">Sin materias asignadas en este salón</span>'
+                  }</div>
+                </div>`;
+              }).join('')}
+            </div>
+          </div>`
+        :'';
+
       return`<div style="background:var(--bg2);border-radius:10px;border:1px solid var(--bd);padding:12px 14px;margin-bottom:10px">
         <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
           <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
             <strong style="font-size:15px">${s.nombre}</strong>
             <span class="bdg bgy">${ebySalon(s.nombre).length} est.</span>
             ${matsLabel}
+            ${areasLabel}
           </div>
-          <div style="display:flex;gap:6px">
+          <div style="display:flex;gap:6px;flex-wrap:wrap">
+            ${hayAreas?`<button class="btn xs" style="background:#e0e7ff;color:#3730a3;border:1px solid #a5b4fc" onclick="editSalAreas('${s.nombre}')">📂 Áreas</button>`:''}
             <button class="btn xs bg" onclick="editSalMats('${s.nombre}')">🎯 Materias</button>
             <button class="btn xs bd" onclick="delSal('${s.nombre}')">🗑</button>
           </div>
@@ -1121,6 +1162,7 @@ function renderSals(){
         <div style="margin-top:8px;display:flex;flex-wrap:wrap;gap:4px">
           ${matsList.map(m=>`<span style="font-size:11px;padding:2px 7px;background:#fff;border:1px solid var(--bd);border-radius:5px">${m}</span>`).join('')}
         </div>
+        ${areasHTML}
       </div>`;
     }).join('');
   });
@@ -1204,6 +1246,79 @@ function addCustomMatRow(){
   lbl.innerHTML=`<input type="checkbox" class="smck" value="${v}" checked><span>${v}</span> <span style="font-size:10px;color:#2b6cb0">(nueva)</span>`;
   d.appendChild(lbl);
   inp.value='';inp.focus();
+}
+
+/* Asignar/editar áreas que aplican a un salón específico */
+async function editSalAreas(sname){
+  const sal=DB.sals.find(s=>s.nombre===sname);if(!sal)return;
+  const ciclo=sal.ciclo;
+  const areasDelCiclo=(DB.areas||[]).filter(a=>a.ciclo===ciclo);
+
+  if(!areasDelCiclo.length){
+    sw('info','Sin áreas configuradas',`Ve a <strong>Áreas & Materias</strong> y crea las áreas para ${ciclo} primero.`);
+    return;
+  }
+
+  // Áreas actualmente asignadas a este salón
+  if(!DB.salAreas) DB.salAreas={};
+  const current=[...(DB.salAreas[sname]||[])];
+
+  // Materias del salón para mostrar preview
+  const matDocs=(DB.materiasDocs||[]).filter(d=>d.ciclo===ciclo);
+  const matsList=sal.mats&&sal.mats.length?sal.mats:(ciclo==='primaria'?DB.mP:DB.mB);
+
+  const rows=areasDelCiclo.map(area=>{
+    // Materias de esta área que están en el salón
+    const matsDeArea=matsList.filter(m=>{
+      const d=matDocs.find(x=>x.nombre===m);
+      return d&&d.areaNombre===area.nombre;
+    });
+    const preview=matsDeArea.length
+      ?matsDeArea.map(m=>`<span style="font-size:10px;padding:1px 6px;background:#ede9fe;border:1px solid #c4b5fd;border-radius:4px;margin:1px">${m}</span>`).join('')
+      :'<span style="font-size:10px;color:#aaa">Sin materias asignadas a esta área</span>';
+    return`<label style="display:flex;align-items:flex-start;gap:10px;padding:9px 12px;background:var(--bg2);
+      border-radius:8px;border:1px solid var(--bd);cursor:pointer;margin-bottom:7px">
+      <input type="checkbox" class="sack" value="${area.nombre}" ${current.includes(area.nombre)?'checked':''} style="margin-top:3px;width:16px;height:16px">
+      <div style="flex:1">
+        <div style="font-size:13px;font-weight:700">📂 ${area.nombre}</div>
+        <div style="display:flex;flex-wrap:wrap;gap:3px;margin-top:4px">${preview}</div>
+      </div>
+    </label>`;
+  }).join('');
+
+  const r=await Swal.fire({
+    title:`📂 Áreas del Salón ${sname}`,
+    width:560,
+    html:`<div style="text-align:left;font-family:var(--fn)">
+      <div class="al alb" style="margin-bottom:12px;font-size:12px">
+        Selecciona las áreas que aplican a este salón. Las áreas agrupan materias y determinan si el estudiante aprueba, recupera o pierde el año.
+      </div>
+      <div style="max-height:380px;overflow-y:auto">${rows}</div>
+    </div>`,
+    showCancelButton:true,
+    confirmButtonText:'Guardar Áreas',
+    cancelButtonText:'Cancelar',
+    preConfirm:()=>[...document.querySelectorAll('.sack:checked')].map(c=>c.value)
+  });
+
+  if(!r.isConfirmed) return;
+  const elegidas=r.value;
+
+  // Guardar en DB.salAreas (mapa salón → array de áreas)
+  if(!DB.salAreas) DB.salAreas={};
+  DB.salAreas[sname]=elegidas;
+
+  // Persistir en config para que sobreviva recargas
+  try{
+    await apiFetch('/api/config/salAreas',{method:'PUT',body:JSON.stringify({value:DB.salAreas})});
+  }catch(e){ console.warn('Error guardando salAreas:',e); }
+
+  renderSals();
+  sw('success',
+    `Áreas de ${sname} actualizadas`,
+    elegidas.length?`${elegidas.length} área${elegidas.length>1?'s':''} asignadas`:'Sin áreas asignadas.',
+    2000
+  );
 }
 
 /* ============================================================

@@ -111,6 +111,7 @@ async function dbLoad() {
       DB.notasPorAno = DB.notasPorAno || {};
       DB.areas      = DB.areas      || [];
       DB.materiasDocs = DB.materiasDocs || [];
+      DB.salAreas   = DB.salAreas   || {};
       DB.sals.forEach(s => { if (!Array.isArray(s.mats)) s.mats = []; });
     }
   } catch (err) {
@@ -125,7 +126,7 @@ function dbSave() {
 
 async function _saveConfigBg() {
   try {
-    const cfgKeys = ['mP', 'mB', 'pers', 'dr', 'drPer', 'ext', 'anoActual', 'notaPct'];
+    const cfgKeys = ['mP', 'mB', 'pers', 'dr', 'drPer', 'ext', 'anoActual', 'notaPct', 'salAreas'];
     await Promise.all(cfgKeys.map(k =>
       apiFetch(`/api/config/${k}`, {
         method: 'PUT',

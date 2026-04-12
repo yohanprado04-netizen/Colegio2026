@@ -160,6 +160,7 @@ router.get('/', authMiddleware, async (req, res) => {
       ext:          cfg.ext   || { on: false, s: '', e: '' },
       anoActual:    cfg.anoActual || String(new Date().getFullYear()),
       notaPct:      cfg.notaPct   || { a: 60, c: 20, r: 20 },
+      salAreas:     cfg.salAreas  || {},
       notas:        notasObj,
       notasPorAno,
       asist:        asistObj,
