@@ -304,6 +304,65 @@ function necesitaParaEst(eid){
   }).filter(Boolean).filter(x=>x.restantes>0);
 }
 
+/**
+ * necesitaParaPeriodos(eid):
+ * Calcula, por cada periodo pendiente (sin notas), qué nota promedio mínima
+ * necesita el estudiante en ESE periodo (en TODAS las materias) para que
+ * el promedio general del año quede >= 3.0 en cada materia.
+ * Retorna array de {per, necesita, matsEnRiesgo, matsTotales, posible}
+ */
+function necesitaParaPeriodos(eid){
+  const pers = DB.pers || [];
+  const mats = getMats(eid);
+  if(!pers.length || !mats.length) return [];
+
+  // Para cada periodo, ver si está "pendiente" (sin ninguna nota en ninguna materia)
+  const periodosPendientes = pers.filter(p =>
+    mats.every(m => { const t=DB.notas[eid]?.[p]?.[m]; return !t||(t.a===0&&t.c===0&&t.r===0); })
+  );
+  if(!periodosPendientes.length) return [];
+
+  const total = pers.length;
+  const restantes = periodosPendientes.length;
+
+  // Calcular nota mínima por materia y luego promediar
+  const necesitaPorMat = mats.map(m => {
+    const sumaActual = pers.reduce((s,p) => {
+      const t = DB.notas[eid]?.[p]?.[m]||{a:0,c:0,r:0};
+      return s + def(t);
+    }, 0);
+    const n = (3*total - sumaActual) / restantes;
+    return { mat: m, necesita: Math.min(Math.max(n, 0), 99), posible: n <= 5 };
+  });
+
+  const matsEnRiesgo = necesitaPorMat.filter(x => {
+    const sumaActual = pers.reduce((s,p) => {
+      const t = DB.notas[eid]?.[p]?.[x.mat]||{a:0,c:0,r:0};
+      return s + def(t);
+    }, 0);
+    const promActual = sumaActual / total;
+    return promActual < 3;
+  });
+
+  // Nota promedio necesaria = promedio de las notas mínimas de las materias en riesgo
+  const necesitaArr = matsEnRiesgo.map(x => Math.min(x.necesita, 5));
+  const necesitaProm = necesitaArr.length
+    ? necesitaArr.reduce((s,v)=>s+v,0) / necesitaArr.length
+    : 0;
+  const hayImposible = matsEnRiesgo.some(x => x.necesita > 5);
+  const matsImpCount = matsEnRiesgo.filter(x => x.necesita > 5).length;
+
+  // Retornar una fila por periodo pendiente (misma nota aplica a todos los pendientes)
+  return periodosPendientes.map(per => ({
+    per,
+    necesita: +necesitaProm.toFixed(2),
+    matsEnRiesgo: matsEnRiesgo.length,
+    matsTotales: mats.length,
+    posible: !hayImposible,
+    matsImpCount
+  }));
+}
+
 // Categoría de disciplina numérica
 function discLabel(n){
   n=+n;
@@ -2479,25 +2538,20 @@ function loadPN(){
             </div>
             ${(()=>{
               // ── Proyección: cuánto necesita para ganar el año ──────────
-              const proyRows = necesitaParaEst(e.id);
-              if (!proyRows.length) return '';
-              const enRiesgo = proyRows.filter(x => x.necesita > 0 && x.promActual < 3);
-              if (!enRiesgo.length) return '';
-              const filas = enRiesgo.map(x => {
-                const imposible = x.necesita > 5;
+              const periodosProy = necesitaParaPeriodos(e.id);
+              if (!periodosProy.length) return '';
+              const filas = periodosProy.map(x => {
+                const imposible = !x.posible;
                 const color = imposible ? '#742a2a' : x.necesita <= 3 ? '#276749' : x.necesita <= 4 ? '#744210' : '#c53030';
                 const icono = imposible ? '🚨' : x.necesita <= 3 ? '🟢' : x.necesita <= 4 ? '🟡' : '🔴';
                 const msg = imposible
-                  ? 'Ya no puede recuperar sola — necesita apoyo'
-                  : x.necesita <= 3
-                    ? `Debe sacar ≥ ${x.necesita.toFixed(1)} en cada periodo que falta`
-                    : x.necesita <= 4
-                      ? `Debe esforzarse: ≥ ${x.necesita.toFixed(1)} en los ${x.restantes} periodos restantes`
-                      : `Muy difícil: necesita ≥ ${x.necesita.toFixed(1)} en los ${x.restantes} periodos restantes`;
+                  ? `${x.matsImpCount} materia${x.matsImpCount>1?'s':''} ya no pueden recuperarse — requiere apoyo`
+                  : x.matsEnRiesgo === 0
+                    ? 'Va bien en todas las materias'
+                    : `Debe sacar ≥ ${x.necesita.toFixed(1)} en promedio (${x.matsEnRiesgo} materia${x.matsEnRiesgo>1?'s':''} en riesgo)`;
                 return `<tr>
-                  <td style="padding:5px 10px;font-size:12px;font-weight:700">${icono} ${x.mat}</td>
-                  <td style="padding:5px 8px;text-align:center;font-size:12px;color:#4a5568">${x.promActual.toFixed(1)}</td>
-                  <td style="padding:5px 8px;text-align:center;font-size:13px;font-weight:800;color:${color}">${imposible ? '✗ Imposible' : x.necesita.toFixed(1)}</td>
+                  <td style="padding:5px 10px;font-size:12px;font-weight:700">${icono} ${x.per}</td>
+                  <td style="padding:5px 8px;text-align:center;font-size:13px;font-weight:800;color:${color}">${imposible ? '✗' : x.necesita.toFixed(1)}</td>
                   <td style="padding:5px 8px;font-size:10px;color:#555;font-style:italic">${msg}</td>
                 </tr>`;
               }).join('');
@@ -2506,20 +2560,19 @@ function loadPN(){
                   <span style="font-size:15px">📊</span>
                   <div>
                     <div style="font-size:12px;font-weight:800;color:#c05621">¿Puede ganar el año?</div>
-                    <div style="font-size:10px;color:#b7791f">Nota mínima que necesita sacar en cada periodo pendiente para pasar con ≥ 3.0</div>
+                    <div style="font-size:10px;color:#b7791f">Nota mínima promedio que necesita en cada periodo pendiente para pasar</div>
                   </div>
                 </div>
                 <table style="width:100%;border-collapse:collapse;background:#fff">
                   <thead><tr style="background:#fef3c7">
-                    <th style="padding:5px 10px;font-size:10px;color:#92400e;text-align:left">Materia</th>
-                    <th style="padding:5px 8px;font-size:10px;color:#92400e;text-align:center">Promedio hoy</th>
-                    <th style="padding:5px 8px;font-size:10px;color:#92400e;text-align:center">Nota mínima</th>
+                    <th style="padding:5px 10px;font-size:10px;color:#92400e;text-align:left">Periodo pendiente</th>
+                    <th style="padding:5px 8px;font-size:10px;color:#92400e;text-align:center">Nota mínima promedio</th>
                     <th style="padding:5px 8px;font-size:10px;color:#92400e;text-align:left">Situación</th>
                   </tr></thead>
                   <tbody>${filas}</tbody>
                 </table>
                 <div style="background:#fffbeb;padding:5px 12px;font-size:9px;color:#a16207">
-                  🟢 Fácil (≤ 3.0) &nbsp;·&nbsp; 🟡 Con esfuerzo (3.1–4.0) &nbsp;·&nbsp; 🔴 Muy difícil (4.1–5.0) &nbsp;·&nbsp; 🚨 Ya no alcanza (imposible)
+                  🟢 Fácil (≤ 3.0) &nbsp;·&nbsp; 🟡 Con esfuerzo (3.1–4.0) &nbsp;·&nbsp; 🔴 Muy difícil (4.1–5.0) &nbsp;·&nbsp; 🚨 Ya no alcanza
                 </div>
               </div>`;
             })()}
@@ -4229,74 +4282,63 @@ function dlBoletin(estId,perFilter,anno,snapData){
       ${(()=>{
         // Proyección "cuánto necesita para ganar el año" — solo para estudiantes activos
         if(!e) return '';
-        const proyRows=necesitaParaEst(estId);
-        const enRiesgo=proyRows.filter(x=>x.restantes>0);
-        if(!enRiesgo.length) return '';
-        // Separar por estado
-        const aprobadas=enRiesgo.filter(x=>x.promActual>=3);
-        const pendientes=enRiesgo.filter(x=>x.promActual<3&&x.necesita<=5);
-        const imposibles=enRiesgo.filter(x=>x.promActual<3&&x.necesita>5);
-        const rows=enRiesgo.map(x=>{
-          const aprobada=x.promActual>=3;
-          const imposible=!aprobada&&x.necesita>5;
-          const color=aprobada?'#276749':imposible?'#742a2a':x.necesita<=3?'#276749':x.necesita<=4?'#b7791f':'#c53030';
-          const bg=aprobada?'#f0fff4':imposible?'#fff5f5':x.necesita<=3?'#f0fff4':x.necesita<=4?'#fffaf0':'#fff5f5';
-          const icono=aprobada?'✅':imposible?'🚨':x.necesita<=3?'🟢':x.necesita<=4?'🟡':'🔴';
-          // Mensaje amigable para el estudiante
+        const periodosProy = necesitaParaPeriodos(estId);
+        if(!periodosProy.length) return '';
+        const hayImposible = periodosProy.some(x => !x.posible);
+        const filas = periodosProy.map(x => {
+          const imposible = !x.posible;
+          const color = imposible ? '#742a2a' : x.necesita <= 3 ? '#276749' : x.necesita <= 4 ? '#b7791f' : '#c53030';
+          const bg = imposible ? '#fff5f5' : x.necesita <= 3 ? '#f0fff4' : x.necesita <= 4 ? '#fffaf0' : '#fff5f5';
+          const icono = imposible ? '🚨' : x.necesita <= 3 ? '🟢' : x.necesita <= 4 ? '🟡' : '🔴';
           let estado, consejo;
-          if(aprobada){
-            estado='¡Vas ganando!';
-            consejo=`Tu promedio actual es ${x.promActual.toFixed(1)} — sigue así y no bajes el ritmo.`;
-          } else if(imposible){
-            estado='Ya no alcanza';
-            consejo='Con las notas actuales no es posible llegar a 3.0. Habla con tu profesor.';
-          } else if(x.necesita<=3){
-            estado='Alcanzable 👍';
-            consejo=`Saca ${x.necesita.toFixed(1)} o más en los ${x.restantes} periodo${x.restantes>1?'s':''} que faltan y pasas.`;
-          } else if(x.necesita<=4){
-            estado='Con esfuerzo';
-            consejo=`Necesitas ${x.necesita.toFixed(1)} en cada periodo restante. ¡Puedes lograrlo!`;
+          if(imposible){
+            estado = 'Ya no alcanza';
+            consejo = `En ${x.matsImpCount} materia${x.matsImpCount>1?'s':''} ya no es posible llegar a 3.0. Habla con tu profesor.`;
+          } else if(x.matsEnRiesgo === 0){
+            estado = '¡Vas bien!';
+            consejo = 'No tienes materias en riesgo en este periodo.';
+          } else if(x.necesita <= 3){
+            estado = 'Alcanzable 👍';
+            consejo = `Saca ${x.necesita.toFixed(1)} o más en promedio en este periodo y pasas las ${x.matsEnRiesgo} materia${x.matsEnRiesgo>1?'s':''} en riesgo.`;
+          } else if(x.necesita <= 4){
+            estado = 'Con esfuerzo';
+            consejo = `Necesitas ${x.necesita.toFixed(1)} en promedio en este periodo. ¡Tú puedes!`;
           } else {
-            estado='Muy difícil 😟';
-            consejo=`Necesitas ${x.necesita.toFixed(1)} en los ${x.restantes} periodos restantes. Pide ayuda a tu profe.`;
+            estado = 'Muy difícil 😟';
+            consejo = `Necesitas ${x.necesita.toFixed(1)} en promedio. Pide ayuda a tus profesores.`;
           }
-          return`<tr style="background:${bg}">
-            <td style="padding:7px 10px;font-size:12px;font-weight:700">${icono} ${x.mat}</td>
-            <td style="padding:7px 8px;text-align:center;font-size:12px;color:#4a5568;font-weight:600">${x.promActual.toFixed(1)}</td>
-            <td style="padding:7px 8px;text-align:center;font-size:13px;font-weight:800;color:${color}">${aprobada?'≥ 3.0 ✓':imposible?'✗':x.necesita.toFixed(1)}</td>
+          return `<tr style="background:${bg}">
+            <td style="padding:7px 10px;font-size:12px;font-weight:700">${icono} ${x.per}</td>
+            <td style="padding:7px 8px;text-align:center;font-size:13px;font-weight:800;color:${color}">${imposible ? '✗' : x.necesita.toFixed(1)}</td>
             <td style="padding:7px 8px;font-size:11px;font-weight:700;color:${color}">${estado}</td>
             <td style="padding:7px 8px;font-size:10px;color:#555;font-style:italic">${consejo}</td>
           </tr>`;
         }).join('');
-        // Resumen ejecutivo arriba de la tabla
-        const resumen = aprobadas.length===enRiesgo.length
-          ? `<div style="font-size:11px;color:#276749;font-weight:600">🎉 ¡Vas ganando todas las materias! Mantén el esfuerzo.</div>`
-          : imposibles.length>0
-            ? `<div style="font-size:11px;color:#c53030;font-weight:600">⚠️ Tienes ${imposibles.length} materia${imposibles.length>1?'s':''} donde ya no alcanza el promedio. Habla con tu profesor.</div>`
-            : pendientes.length>0
-              ? `<div style="font-size:11px;color:#b7791f;font-weight:600">📌 Tienes ${pendientes.length} materia${pendientes.length>1?'s':''} en riesgo. ¡Aún puedes recuperarlas!</div>`
-              : '';
-        return`<div style="margin-top:16px;border-radius:10px;overflow:hidden;border:1.5px solid #fbd38d;page-break-inside:avoid">
+        const resumen = hayImposible
+          ? `<div style="font-size:11px;color:#c53030;font-weight:600">⚠️ Hay materias donde ya no alcanza el promedio. Habla con tu profesor.</div>`
+          : periodosProy[0]?.necesita <= 3
+            ? `<div style="font-size:11px;color:#276749;font-weight:600">📌 Aún puedes ganar el año. ¡Mantén el esfuerzo en los periodos que faltan!</div>`
+            : `<div style="font-size:11px;color:#b7791f;font-weight:600">📌 Es posible, pero necesitas esforzarte en los periodos que faltan.</div>`;
+        return `<div style="margin-top:16px;border-radius:10px;overflow:hidden;border:1.5px solid #fbd38d;page-break-inside:avoid">
           <div style="background:#fffbeb;padding:10px 14px;display:flex;align-items:flex-start;gap:10px">
             <span style="font-size:20px">📊</span>
             <div>
               <div style="font-size:13px;font-weight:800;color:#92400e">¿Qué me falta para ganar el año?</div>
-              <div style="font-size:10px;color:#b7791f;margin-top:2px">Nota mínima que necesitas sacar en cada periodo que falta para llegar a promedio ≥ 3.0</div>
+              <div style="font-size:10px;color:#b7791f;margin-top:2px">Nota mínima promedio que necesitas sacar en cada periodo pendiente para pasar todas tus materias</div>
               <div style="margin-top:5px">${resumen}</div>
             </div>
           </div>
           <table style="width:100%;border-collapse:collapse;font-size:11px">
             <thead><tr style="background:#fef3c7">
-              <th style="padding:6px 10px;text-align:left;font-size:10px;color:#92400e">Materia</th>
-              <th style="padding:6px 8px;text-align:center;font-size:10px;color:#92400e">Prom. hoy</th>
-              <th style="padding:6px 8px;text-align:center;font-size:10px;color:#92400e">Nota mínima</th>
+              <th style="padding:6px 10px;text-align:left;font-size:10px;color:#92400e">Periodo pendiente</th>
+              <th style="padding:6px 8px;text-align:center;font-size:10px;color:#92400e">Nota mínima promedio</th>
               <th style="padding:6px 8px;text-align:center;font-size:10px;color:#92400e">Estado</th>
               <th style="padding:6px 8px;text-align:left;font-size:10px;color:#92400e">¿Qué hacer?</th>
             </tr></thead>
-            <tbody>${rows}</tbody>
+            <tbody>${filas}</tbody>
           </table>
           <div style="background:#fffbeb;padding:6px 14px;font-size:9px;color:#a16207;line-height:1.6">
-            ✅ ¡Vas ganando! &nbsp;·&nbsp; 🟢 Alcanzable — saca ≤ 3.0 &nbsp;·&nbsp; 🟡 Con esfuerzo — necesitas entre 3.1 y 4.0 &nbsp;·&nbsp; 🔴 Muy difícil — necesitas > 4.0 &nbsp;·&nbsp; 🚨 Ya no alcanza
+            🟢 Alcanzable (≤ 3.0) &nbsp;·&nbsp; 🟡 Con esfuerzo (3.1–4.0) &nbsp;·&nbsp; 🔴 Muy difícil (> 4.0) &nbsp;·&nbsp; 🚨 Ya no alcanza
           </div>
         </div>`;
       })()}
