@@ -254,14 +254,14 @@ function today(){return new Date().toISOString().split('T')[0];}
 
 /* ── clampNota: limita y sanitiza inputs de notas en tiempo real ── */
 function clampNota(inp){
-  // Bloquear letras: solo dígitos, punto decimal y signo menos
-  let raw=inp.value.replace(/[^0-9.]/g,'');
-  // Evitar múltiples puntos
-  const pts=raw.split('.');
-  if(pts.length>2) raw=pts[0]+'.'+pts.slice(1).join('');
-  inp.value=raw;
-  const v=parseFloat(raw);
-  if(!isNaN(v)&&v>5){inp.value='5.0';}
+  // Los inputs type="number" ya bloquean letras nativamente.
+  // Solo corregimos si el valor es > 5 o < 0 para no interferir mientras el usuario escribe.
+  const raw = inp.value;
+  if(raw === '' || raw === '.' || raw === '0.' || raw.endsWith('.')) return; // está escribiendo, no interrumpir
+  const v = parseFloat(raw);
+  if(isNaN(v)) return; // vacío o inválido: saveTri lo manejará al hacer onchange
+  if(v > 5){ inp.value = '5.0'; }
+  else if(v < 0){ inp.value = '0.0'; }
 }
 
 /**
@@ -2482,31 +2482,45 @@ function loadPN(){
               const proyRows = necesitaParaEst(e.id);
               if (!proyRows.length) return '';
               const enRiesgo = proyRows.filter(x => x.necesita > 0 && x.promActual < 3);
-              const salvados = proyRows.filter(x => x.promActual >= 3);
               if (!enRiesgo.length) return '';
               const filas = enRiesgo.map(x => {
-                const color = x.necesita <= 3 ? '#276749' : x.necesita <= 4 ? '#744210' : '#c53030';
-                const icono = x.necesita <= 3 ? '🟢' : x.necesita <= 4 ? '🟡' : '🔴';
+                const imposible = x.necesita > 5;
+                const color = imposible ? '#742a2a' : x.necesita <= 3 ? '#276749' : x.necesita <= 4 ? '#744210' : '#c53030';
+                const icono = imposible ? '🚨' : x.necesita <= 3 ? '🟢' : x.necesita <= 4 ? '🟡' : '🔴';
+                const msg = imposible
+                  ? 'Ya no puede recuperar sola — necesita apoyo'
+                  : x.necesita <= 3
+                    ? `Debe sacar ≥ ${x.necesita.toFixed(1)} en cada periodo que falta`
+                    : x.necesita <= 4
+                      ? `Debe esforzarse: ≥ ${x.necesita.toFixed(1)} en los ${x.restantes} periodos restantes`
+                      : `Muy difícil: necesita ≥ ${x.necesita.toFixed(1)} en los ${x.restantes} periodos restantes`;
                 return `<tr>
-                  <td style="padding:4px 8px;font-size:11px;font-weight:600">${icono} ${x.mat}</td>
-                  <td style="padding:4px 8px;text-align:center;font-size:11px;color:var(--sl2)">${x.promActual.toFixed(2)}</td>
-                  <td style="padding:4px 8px;text-align:center;font-size:12px;font-weight:800;color:${color}">${x.necesita.toFixed(2)}</td>
-                  <td style="padding:4px 8px;text-align:center;font-size:10px;color:var(--sl3)">${x.restantes} periodo${x.restantes>1?'s':''}</td>
+                  <td style="padding:5px 10px;font-size:12px;font-weight:700">${icono} ${x.mat}</td>
+                  <td style="padding:5px 8px;text-align:center;font-size:12px;color:#4a5568">${x.promActual.toFixed(1)}</td>
+                  <td style="padding:5px 8px;text-align:center;font-size:13px;font-weight:800;color:${color}">${imposible ? '✗ Imposible' : x.necesita.toFixed(1)}</td>
+                  <td style="padding:5px 8px;font-size:10px;color:#555;font-style:italic">${msg}</td>
                 </tr>`;
               }).join('');
               return `<div style="margin-top:10px;border-radius:8px;overflow:hidden;border:1.5px solid #fed7aa">
-                <div style="background:#fff7ed;padding:7px 10px;font-size:11px;font-weight:800;color:#c05621;display:flex;align-items:center;gap:6px">
-                  📈 Proyección para ganar el año — <span style="font-weight:400">nota mínima en periodos restantes</span>
+                <div style="background:#fff7ed;padding:8px 12px;display:flex;align-items:center;gap:8px">
+                  <span style="font-size:15px">📊</span>
+                  <div>
+                    <div style="font-size:12px;font-weight:800;color:#c05621">¿Puede ganar el año?</div>
+                    <div style="font-size:10px;color:#b7791f">Nota mínima que necesita sacar en cada periodo pendiente para pasar con ≥ 3.0</div>
+                  </div>
                 </div>
                 <table style="width:100%;border-collapse:collapse;background:#fff">
                   <thead><tr style="background:#fef3c7">
-                    <th style="padding:4px 8px;font-size:10px;color:#92400e;text-align:left">Materia</th>
-                    <th style="padding:4px 8px;font-size:10px;color:#92400e;text-align:center">Prom. actual</th>
-                    <th style="padding:4px 8px;font-size:10px;color:#92400e;text-align:center">Necesita ≥</th>
-                    <th style="padding:4px 8px;font-size:10px;color:#92400e;text-align:center">Periodos rest.</th>
+                    <th style="padding:5px 10px;font-size:10px;color:#92400e;text-align:left">Materia</th>
+                    <th style="padding:5px 8px;font-size:10px;color:#92400e;text-align:center">Promedio hoy</th>
+                    <th style="padding:5px 8px;font-size:10px;color:#92400e;text-align:center">Nota mínima</th>
+                    <th style="padding:5px 8px;font-size:10px;color:#92400e;text-align:left">Situación</th>
                   </tr></thead>
                   <tbody>${filas}</tbody>
                 </table>
+                <div style="background:#fffbeb;padding:5px 12px;font-size:9px;color:#a16207">
+                  🟢 Fácil (≤ 3.0) &nbsp;·&nbsp; 🟡 Con esfuerzo (3.1–4.0) &nbsp;·&nbsp; 🔴 Muy difícil (4.1–5.0) &nbsp;·&nbsp; 🚨 Ya no alcanza (imposible)
+                </div>
               </div>`;
             })()}
           </div>
@@ -4221,40 +4235,68 @@ function dlBoletin(estId,perFilter,anno,snapData){
         // Separar por estado
         const aprobadas=enRiesgo.filter(x=>x.promActual>=3);
         const pendientes=enRiesgo.filter(x=>x.promActual<3&&x.necesita<=5);
+        const imposibles=enRiesgo.filter(x=>x.promActual<3&&x.necesita>5);
         const rows=enRiesgo.map(x=>{
           const aprobada=x.promActual>=3;
-          const color=aprobada?'#276749':x.necesita<=3?'#276749':x.necesita<=4?'#b7791f':'#c53030';
-          const bg=aprobada?'#f0fff4':x.necesita<=3?'#f0fff4':x.necesita<=4?'#fffaf0':'#fff5f5';
-          const icono=aprobada?'✅':x.necesita<=3?'🟢':x.necesita<=4?'🟡':'🔴';
-          const estado=aprobada?'Va ganando':x.necesita<=3?'Alcanzable':x.necesita<=4?'Con esfuerzo':'En riesgo';
+          const imposible=!aprobada&&x.necesita>5;
+          const color=aprobada?'#276749':imposible?'#742a2a':x.necesita<=3?'#276749':x.necesita<=4?'#b7791f':'#c53030';
+          const bg=aprobada?'#f0fff4':imposible?'#fff5f5':x.necesita<=3?'#f0fff4':x.necesita<=4?'#fffaf0':'#fff5f5';
+          const icono=aprobada?'✅':imposible?'🚨':x.necesita<=3?'🟢':x.necesita<=4?'🟡':'🔴';
+          // Mensaje amigable para el estudiante
+          let estado, consejo;
+          if(aprobada){
+            estado='¡Vas ganando!';
+            consejo=`Tu promedio actual es ${x.promActual.toFixed(1)} — sigue así y no bajes el ritmo.`;
+          } else if(imposible){
+            estado='Ya no alcanza';
+            consejo='Con las notas actuales no es posible llegar a 3.0. Habla con tu profesor.';
+          } else if(x.necesita<=3){
+            estado='Alcanzable 👍';
+            consejo=`Saca ${x.necesita.toFixed(1)} o más en los ${x.restantes} periodo${x.restantes>1?'s':''} que faltan y pasas.`;
+          } else if(x.necesita<=4){
+            estado='Con esfuerzo';
+            consejo=`Necesitas ${x.necesita.toFixed(1)} en cada periodo restante. ¡Puedes lograrlo!`;
+          } else {
+            estado='Muy difícil 😟';
+            consejo=`Necesitas ${x.necesita.toFixed(1)} en los ${x.restantes} periodos restantes. Pide ayuda a tu profe.`;
+          }
           return`<tr style="background:${bg}">
-            <td style="padding:5px 8px;font-size:11px;font-weight:600">${icono} ${x.mat}</td>
-            <td style="padding:5px 8px;text-align:center;font-size:11px;color:#4a5568">${x.promActual.toFixed(2)}</td>
-            <td style="padding:5px 8px;text-align:center;font-size:12px;font-weight:800;color:${color}">${aprobada?'≥ 3.0 ✓':x.necesita.toFixed(2)}</td>
-            <td style="padding:5px 8px;text-align:center;font-size:10px;color:#718096">${x.restantes} per.</td>
-            <td style="padding:5px 8px;text-align:center;font-size:10px;font-weight:700;color:${color}">${estado}</td>
+            <td style="padding:7px 10px;font-size:12px;font-weight:700">${icono} ${x.mat}</td>
+            <td style="padding:7px 8px;text-align:center;font-size:12px;color:#4a5568;font-weight:600">${x.promActual.toFixed(1)}</td>
+            <td style="padding:7px 8px;text-align:center;font-size:13px;font-weight:800;color:${color}">${aprobada?'≥ 3.0 ✓':imposible?'✗':x.necesita.toFixed(1)}</td>
+            <td style="padding:7px 8px;font-size:11px;font-weight:700;color:${color}">${estado}</td>
+            <td style="padding:7px 8px;font-size:10px;color:#555;font-style:italic">${consejo}</td>
           </tr>`;
         }).join('');
-        return`<div style="margin-top:16px;border-radius:8px;overflow:hidden;border:1.5px solid #fbd38d;page-break-inside:avoid">
-          <div style="background:#fffbeb;padding:8px 12px;display:flex;align-items:center;gap:8px">
-            <span style="font-size:13px">📈</span>
+        // Resumen ejecutivo arriba de la tabla
+        const resumen = aprobadas.length===enRiesgo.length
+          ? `<div style="font-size:11px;color:#276749;font-weight:600">🎉 ¡Vas ganando todas las materias! Mantén el esfuerzo.</div>`
+          : imposibles.length>0
+            ? `<div style="font-size:11px;color:#c53030;font-weight:600">⚠️ Tienes ${imposibles.length} materia${imposibles.length>1?'s':''} donde ya no alcanza el promedio. Habla con tu profesor.</div>`
+            : pendientes.length>0
+              ? `<div style="font-size:11px;color:#b7791f;font-weight:600">📌 Tienes ${pendientes.length} materia${pendientes.length>1?'s':''} en riesgo. ¡Aún puedes recuperarlas!</div>`
+              : '';
+        return`<div style="margin-top:16px;border-radius:10px;overflow:hidden;border:1.5px solid #fbd38d;page-break-inside:avoid">
+          <div style="background:#fffbeb;padding:10px 14px;display:flex;align-items:flex-start;gap:10px">
+            <span style="font-size:20px">📊</span>
             <div>
-              <div style="font-size:11px;font-weight:800;color:#92400e">Proyección Año Lectivo — ${DB.pers.length} Periodos</div>
-              <div style="font-size:10px;color:#b7791f">Nota mínima requerida en los periodos pendientes para alcanzar promedio ≥ 3.0 por materia</div>
+              <div style="font-size:13px;font-weight:800;color:#92400e">¿Qué me falta para ganar el año?</div>
+              <div style="font-size:10px;color:#b7791f;margin-top:2px">Nota mínima que necesitas sacar en cada periodo que falta para llegar a promedio ≥ 3.0</div>
+              <div style="margin-top:5px">${resumen}</div>
             </div>
           </div>
           <table style="width:100%;border-collapse:collapse;font-size:11px">
             <thead><tr style="background:#fef3c7">
-              <th style="padding:5px 8px;text-align:left;font-size:10px;color:#92400e">Materia</th>
-              <th style="padding:5px 8px;text-align:center;font-size:10px;color:#92400e">Prom. actual</th>
-              <th style="padding:5px 8px;text-align:center;font-size:10px;color:#92400e">Necesita ≥</th>
-              <th style="padding:5px 8px;text-align:center;font-size:10px;color:#92400e">Pendientes</th>
-              <th style="padding:5px 8px;text-align:center;font-size:10px;color:#92400e">Estado</th>
+              <th style="padding:6px 10px;text-align:left;font-size:10px;color:#92400e">Materia</th>
+              <th style="padding:6px 8px;text-align:center;font-size:10px;color:#92400e">Prom. hoy</th>
+              <th style="padding:6px 8px;text-align:center;font-size:10px;color:#92400e">Nota mínima</th>
+              <th style="padding:6px 8px;text-align:center;font-size:10px;color:#92400e">Estado</th>
+              <th style="padding:6px 8px;text-align:left;font-size:10px;color:#92400e">¿Qué hacer?</th>
             </tr></thead>
             <tbody>${rows}</tbody>
           </table>
-          <div style="background:#fffbeb;padding:6px 12px;font-size:9px;color:#a16207;font-style:italic">
-            🟢 Alcanzable (≤3.0) &nbsp;·&nbsp; 🟡 Con esfuerzo (3.0–4.0) &nbsp;·&nbsp; 🔴 En riesgo (>4.0 o ya imposible) &nbsp;·&nbsp; ✅ Va ganando (prom. actual ≥ 3.0)
+          <div style="background:#fffbeb;padding:6px 14px;font-size:9px;color:#a16207;line-height:1.6">
+            ✅ ¡Vas ganando! &nbsp;·&nbsp; 🟢 Alcanzable — saca ≤ 3.0 &nbsp;·&nbsp; 🟡 Con esfuerzo — necesitas entre 3.1 y 4.0 &nbsp;·&nbsp; 🔴 Muy difícil — necesitas > 4.0 &nbsp;·&nbsp; 🚨 Ya no alcanza
           </div>
         </div>`;
       })()}
