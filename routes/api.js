@@ -337,7 +337,7 @@ router.get('/notas/:estId', authMiddleware, async (req, res) => {
     const cfg  = await Config.findOne({ key: 'anoActual', colegioId: cid }).lean();
     const ano  = req.query.ano || cfg?.value || String(new Date().getFullYear());
     const cidFilter = cid
-      ? { colegioId: cid }
+      ? { $or: [{ colegioId: cid }, { colegioId: '' }, { colegioId: null }] }
       : { $or: [{ colegioId: '' }, { colegioId: null }, { colegioId: { $exists: false } }] };
     const nota = await Nota.findOne({ estId: req.params.estId, anoLectivo: ano, ...cidFilter }).lean();
     res.json(nota || { estId: req.params.estId, periodos: [] });
@@ -351,19 +351,26 @@ router.put('/notas/:estId/:periodo/:materia', authMiddleware, async (req, res) =
     const cid = tenantId(req) || req.user.colegioId || '';
 
     if (req.user.role === 'profe') {
-      const est = await Usuario.findOne({ id: estId, role: 'est', colegioId: cid }).lean();
+      // Buscar estudiante con colegioId correcto O colegioId vacío (usuarios huérfanos pre-fix)
+      const est = await Usuario.findOne({
+        id: estId, role: 'est',
+        $or: [{ colegioId: cid }, { colegioId: '' }, { colegioId: null }]
+      }).lean();
       if (!est || !(req.user.salones || []).includes(est.salon))
         return res.status(403).json({ error: 'Sin autorización para este estudiante' });
+      // Auto-reparar colegioId si está vacío
+      if (est && (!est.colegioId || est.colegioId === '') && cid) {
+        Usuario.updateOne({ id: estId }, { $set: { colegioId: cid, colegioNombre: req.user.colegioNombre || '' } }).catch(() => {});
+      }
     }
 
     const cfg  = await Config.findOne({ key: 'anoActual', colegioId: cid }).lean();
     const ano  = cfg?.value || String(new Date().getFullYear());
 
-    // Filtro robusto: cubre colegioId vacío '', null, o el valor real
-    // Esto evita que un documento guardado con colegioId:null no sea encontrado
-    // cuando el token tiene colegioId:'' (ambos deben tratarse igual)
+    // Filtro robusto: busca docs con colegioId correcto O colegioId vacío/null
+    // Cubre el caso de documentos guardados antes del fix multi-tenant
     const cidFilter = cid
-      ? { colegioId: cid }
+      ? { $or: [{ colegioId: cid }, { colegioId: '' }, { colegioId: null }] }
       : { $or: [{ colegioId: '' }, { colegioId: null }, { colegioId: { $exists: false } }] };
 
     // Función de guardado con reintentos para manejar race conditions y E11000
@@ -441,9 +448,9 @@ router.put('/notas/:estId/disciplina', authMiddleware, async (req, res) => {
     if (isNaN(val) || val < 0 || val > 5)
       return res.status(400).json({ error: 'Disciplina debe ser número entre 0.0 y 5.0' });
 
-    // Filtro robusto igual que en PUT notas
+    // Filtro robusto: incluye docs con colegioId vacío (pre-fix multi-tenant)
     const cidFilter = cid
-      ? { colegioId: cid }
+      ? { $or: [{ colegioId: cid }, { colegioId: '' }, { colegioId: null }] }
       : { $or: [{ colegioId: '' }, { colegioId: null }, { colegioId: { $exists: false } }] };
 
     let nota = await Nota.findOne({ estId: req.params.estId, anoLectivo: ano, ...cidFilter });
