@@ -839,6 +839,15 @@ function bootApp(){
     <div class="sbur">${CU.role==='superadmin'?'Super Admin':(CU.colegioNombre?CU.colegioNombre+' · '+CU.role:CU.role)}</div>
   </div>`;
   buildNav();
+  /* ── Mostrar logo del colegio en sidebar ── */
+  const _sbLogo = gi('sbLogoBox');
+  const _sbNombre = gi('sbColegioNombre');
+  if(_sbLogo && DB.colegioLogo){
+    _sbLogo.innerHTML = `<img src="${DB.colegioLogo}" style="width:100%;height:100%;object-fit:contain;border-radius:8px;background:rgba(255,255,255,.12);padding:3px" alt="Logo">`;
+  }
+  if(_sbNombre && CU.colegioNombre && CU.role !== 'superadmin'){
+    _sbNombre.textContent = CU.colegioNombre;
+  }
   goto(defPg());
   /* Notify student about extraordinary period changes */
   if(CU.role==='est') notifyExtPeriod();

@@ -105,7 +105,7 @@ input,select,textarea,button{font-family:var(--fn)}
 .sbli{width:38px;height:38px;border-radius:11px;flex-shrink:0;
   background:linear-gradient(135deg,var(--tl),var(--bl3));
   display:flex;align-items:center;justify-content:center;font-size:17px;
-  box-shadow:0 4px 12px rgba(14,165,160,.3)}
+  box-shadow:0 4px 12px rgba(14,165,160,.3);overflow:hidden}
 .sbln{font-size:14px;font-weight:800;line-height:1.2;color:#fff}
 .sbls{font-size:10px;opacity:.4;margin-top:1px;color:#fff}
 .sbu{margin:14px 14px 0;padding:11px 13px;background:rgba(255,255,255,.07);border-radius:11px;
