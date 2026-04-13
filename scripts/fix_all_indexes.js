@@ -69,6 +69,20 @@ const NEW_COL_INDEXES = [
   },
 ];
 
+// ── Índices de excusas: no UNIQUE, solo para búsqueda rápida ────────────────
+const EXCUSAS_INDEXES = [
+  {
+    col:         'excusas',
+    description: 'Excusas: índices para filtrar por colegio y por estudiante',
+    indexes: [
+      { fields: { colegioId: 1 },           options: { name: 'colegioId_1' } },
+      { fields: { estId: 1, colegioId: 1 },  options: { name: 'estId_1_colegioId_1' } },
+      { fields: { dest: 1, colegioId: 1 },   options: { name: 'dest_1_colegioId_1' } },
+      { fields: { salon: 1, colegioId: 1 },  options: { name: 'salon_1_colegioId_1' } },
+    ],
+  },
+];
+
 async function fixCollection(fix) {
   const col = mongoose.connection.collection(fix.col);
   const indexes = await col.indexes();
@@ -188,7 +202,45 @@ async function main() {
     else indexes.forEach(i => console.log(`   - "${i.name}"  ${i.unique ? '[UNIQUE]' : ''}  ${JSON.stringify(i.key)}`));
   }
 
-  await mongoose.disconnect();
+  // ── Índices de excusas ──────────────────────────────────────────────────────
+  console.log('\n\n🆕  Verificando índices de colección excusas...');
+  for (const entry of EXCUSAS_INDEXES) {
+    const col = mongoose.connection.collection(entry.col);
+    let existingIdxs = [];
+    try { existingIdxs = await col.indexes(); } catch (_) {}
+    console.log(`\n  [${entry.col}] — ${entry.description}`);
+    if (!existingIdxs.length) console.log('    (colección vacía o nueva)');
+    else existingIdxs.forEach(i => console.log(`    - "${i.name}"  ${i.unique ? '[UNIQUE]' : ''}  ${JSON.stringify(i.key)}`));
+    for (const idx of entry.indexes) {
+      const ya = existingIdxs.find(i => i.name === idx.options.name);
+      if (ya) {
+        console.log(`  ✅  "${idx.options.name}" ya existe`);
+      } else {
+        console.log(`  ⚠️   Creando "${idx.options.name}"...`);
+        if (!DRY_RUN) {
+          try {
+            await col.createIndex(idx.fields, idx.options);
+            console.log(`  ✅  "${idx.options.name}" creado`);
+          } catch (e) { console.error(`  ❌  Error: ${e.message}`); }
+        } else {
+          console.log(`  [DRY-RUN] Se crearía ${JSON.stringify(idx.fields)}`);
+        }
+      }
+    }
+  }
+
+  // ── Reporte: excusas sin colegioId (creadas antes del fix multi-tenant) ─────
+  const colExc = mongoose.connection.collection('excusas');
+  const sinColegio = await colExc.countDocuments({
+    $or: [{ colegioId: { $exists: false } }, { colegioId: '' }, { colegioId: null }]
+  });
+  if (sinColegio > 0) {
+    console.log(`\n  ℹ️   ${sinColegio} excusa(s) sin colegioId — visibles a todos los colegios hasta migración manual.`);
+  } else {
+    console.log('\n  ✅  Todas las excusas tienen colegioId');
+  }
+
+    await mongoose.disconnect();
   console.log('\n🏁  Listo. Reinicia el servidor en Render para aplicar los cambios.\n');
 }
 

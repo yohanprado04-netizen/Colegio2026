@@ -35,6 +35,10 @@ router.get('/', authMiddleware, async (req, res) => {
     }
 
     const cf = { colegioId: cid };
+    // excCf: para excusas, incluir docs con colegioId vacío (creados antes del fix multi-tenant)
+    const excCf = cid
+      ? { $or: [{ colegioId: cid }, { colegioId: '' }, { colegioId: null }] }
+      : {};
 
     // ── Cargar todo en paralelo con filtro de tenant ──────────────────────────
     const [
@@ -49,7 +53,7 @@ router.get('/', authMiddleware, async (req, res) => {
       Area.find(cf).sort({ ciclo: 1, orden: 1, nombre: 1 }).lean(),
       Nota.find(cf).lean(),
       Asistencia.find(cf).lean(),
-      Excusa.find(cf).lean(),
+      Excusa.find(excCf).lean(),
       VClase.find(cf).lean(),
       // Uploads: excluir dataUrl del listado masivo para no saturar memoria
       Upload.find(cf, '-dataUrl').lean(),

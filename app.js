@@ -4257,7 +4257,7 @@ function pgEExc(){
   const e=CU;
   const prfsDelSalon=profsInSalon(e.salon);
   const destOpts=[{id:'admin',label:'Administrador'},...prfsDelSalon.map(p=>({id:p.id,label:p.nombre}))];
-  const mis=DB.exc.filter(x=>x.eid===e.id).slice().reverse();
+  const mis=DB.exc.filter(x=>x.estId===e.id||x.eid===e.id).slice().reverse(); // FIX: backend usa estId
   const ventanaOk=excusasOk();
   return`<div class="ph"><h2>Módulo de Excusas</h2>
     <p>Horario de envío: 18:00 – 07:00 ${ventanaOk?'<span class="bdg bgr">✓ Abierto</span>':'<span class="bdg brd">✗ Cerrado</span>'}</p>

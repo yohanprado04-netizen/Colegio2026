@@ -675,8 +675,39 @@ router.put('/asistencias', authMiddleware, requireRole('admin', 'profe', 'supera
 // ═══════════════════════════════════════════════════════════════════
 router.get('/excusas', authMiddleware, async (req, res) => {
   try {
-    const filter = { ...tenantFilter(req) };
-    if (req.query.estId) filter.estId = req.query.estId;
+    const cid = tenantId(req) || req.user.colegioId || '';
+    // Base tenant filter — incluye docs con colegioId vacío para compatibilidad
+    const cidFilter = cid
+      ? { $or: [{ colegioId: cid }, { colegioId: '' }, { colegioId: null }] }
+      : {};
+
+    const filter = { ...cidFilter };
+
+    // Estudiante: solo ve SUS propias excusas (por su estId)
+    if (req.user.role === 'est') {
+      filter.estId = req.user.id;
+    } else if (req.query.estId) {
+      // Admin/profe puede filtrar por estudiante específico
+      filter.estId = req.query.estId;
+    }
+
+    // Profe: ve excusas dirigidas a él O de cualquier salón que administra
+    if (req.user.role === 'profe' && !req.query.estId) {
+      const profSalones = req.user.salones || [];
+      const excFilter = [
+        { dest: req.user.nombre },
+        ...(profSalones.length ? [{ salon: { $in: profSalones } }] : []),
+      ];
+      // Combinar con tenant filter mediante $and
+      filter.$and = [
+        cidFilter,
+        { $or: excFilter },
+      ];
+      // Limpiar keys individuales que ya están en $and
+      delete filter.$or;
+      Object.keys(cidFilter).forEach(k => delete filter[k]);
+    }
+
     const list = await Excusa.find(filter).sort({ createdAt: -1 }).lean();
     res.json(list);
   } catch (err) { res.status(500).json({ error: err.message }); }
