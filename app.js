@@ -692,8 +692,8 @@ function sF(fields){
   return fields.map(f=>`<div style="text-align:left;margin-bottom:10px">
     <label style="font-size:11px;font-weight:800;text-transform:uppercase;color:var(--sl);display:block;margin-bottom:4px">${f.lb}</label>
     <input id="${f.id}" type="${f.tp||'text'}" class="swal2-input"
-      value="${f.val||''}" placeholder="${f.lb}"
-      style="margin:0;width:100%;box-sizing:border-box;height:38px;font-size:13px">
+      value="${f.val||''}" placeholder="${f.ph||f.lb}"
+      style="margin:0;width:100%;box-sizing:border-box;height:38px;font-size:13px" ${f.attr||''}>
   </div>`).join('');
 }
 
@@ -1353,7 +1353,7 @@ function pgAEst(ciclo){
   </div>
     <div class="fg">
       <div class="fld"><label>Nombre</label><input id="nen" placeholder="Nombre completo"></div>
-      <div class="fld"><label>${ciclo==='bachillerato'?'T.I./C.C.':'T.I.'}</label><input id="neti" placeholder="${ciclo==='bachillerato'?'CC-000001':'TI-000001'}"></div>
+      <div class="fld"><label>${ciclo==='bachillerato'?'T.I./C.C.':'T.I.'}</label><input id="neti" placeholder="${ciclo==='bachillerato'?'Ej: 1234567890':'Ej: 1234567890'}" inputmode="numeric" pattern="[0-9]*" oninput="this.value=this.value.replace(/[^0-9]/g,'')"></div>
       <div class="fld"><label>Salón</label><select id="nes"><option value="">Sin salón</option>${sOpts}</select></div>
       <div class="fld"><label>Usuario</label><input id="neu" placeholder="usuario"></div>
       <div class="fld"><label>Contraseña</label><input id="nep" type="password" placeholder="contraseña"></div>
@@ -1482,7 +1482,7 @@ function openAddPrf(ciclo){
   /* For primaria: only salones. For bach: salones checkboxes, then per-salon materia assignment */
   Swal.fire({title:`Nuevo Profesor — ${ciclo==='primaria'?'Primaria':'Bachillerato'}`,width:600,
     html:`<div style="text-align:left;font-family:var(--fn)">
-      ${sF([{id:'npn',lb:'Nombre'},{id:'npti',lb:'C.C.'},{id:'npu',lb:'Usuario'},{id:'npp',lb:'Contraseña'}])}
+      ${sF([{id:'npn',lb:'Nombre'},{id:'npti',lb:'C.C.',ph:'Ej: 1234567890',attr:'inputmode="numeric" pattern="[0-9]*" oninput="this.value=this.value.replace(/[^0-9]/g,\'\')"'},{id:'npu',lb:'Usuario'},{id:'npp',lb:'Contraseña'}])}
       <div style="text-align:left;margin-bottom:0">
         <label style="font-size:11px;font-weight:800;text-transform:uppercase;color:var(--sl);display:block;margin-bottom:6px">Salones (todos los disponibles para bachillerato, máx 1 para primaria)</label>
         <div style="display:flex;flex-wrap:wrap;gap:8px">
@@ -1498,7 +1498,7 @@ function openAddPrf(ciclo){
     preConfirm:()=>{
       const salones=qq('.nps:checked').map(c=>c.value);
       if(salones.length>MAX){Swal.showValidationMessage(MAX===Infinity?`Sin límite de salones`:`Máximo ${MAX} salón(es)`);return false;}
-      return{nombre:gi('npn').value.trim(),ti:gi('npti').value.trim(),
+      return{nombre:gi('npn').value.trim(),ti:gi('npti').value.trim().replace(/[^0-9]/g,''),
         usuario:gi('npu').value.trim(),password:gi('npp').value.trim(),salones};
     }
   }).then(async r=>{
@@ -1580,7 +1580,7 @@ function editPrf(pid){
   const sals=DB.sals.filter(s=>s.ciclo===p.ciclo);
   Swal.fire({title:'Editar Profesor',width:600,
     html:`<div style="text-align:left;font-family:var(--fn)">
-      ${sF([{id:'epn',lb:'Nombre',val:p.nombre},{id:'epti',lb:'C.C.',val:p.ti||''},
+      ${sF([{id:'epn',lb:'Nombre',val:p.nombre},{id:'epti',lb:'C.C.',val:p.ti||'',ph:'Ej: 1234567890',attr:'inputmode="numeric" pattern="[0-9]*" oninput="this.value=this.value.replace(/[^0-9]/g,\'\')"'},
         {id:'epu',lb:'Usuario',val:p.usuario},{id:'epp',lb:'Nueva Contraseña (dejar vacío para no cambiar)',val:'',tp:'password'}])}
       <div style="text-align:left;margin-bottom:0">
         <label style="font-size:11px;font-weight:800;text-transform:uppercase;color:var(--sl);display:block;margin-bottom:6px">Salones (todos los disponibles para bachillerato, máx 1 para primaria)</label>
@@ -1603,7 +1603,7 @@ function editPrf(pid){
     preConfirm:()=>{
       const salones=qq('.eps:checked').map(c=>c.value);
       if(salones.length>MAX){Swal.showValidationMessage(MAX===Infinity?`Sin límite de salones`:`Máximo ${MAX}`);return false;}
-      return{nombre:gi('epn').value.trim(),ti:gi('epti').value.trim(),
+      return{nombre:gi('epn').value.trim(),ti:gi('epti').value.trim().replace(/[^0-9]/g,''),
         usuario:gi('epu').value.trim(),newPwd:gi('epp').value.trim(),salones};
     }
   }).then(async r=>{

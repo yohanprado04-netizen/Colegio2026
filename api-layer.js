@@ -345,7 +345,7 @@ function logAuditAnon(usuario, msg) {
 // ═══════════════════════════════════════════════════════════════════
 async function addEst(ciclo) {
   const n  = gi('nen').value.trim();
-  const ti = gi('neti').value.trim();
+  const ti = gi('neti').value.trim().replace(/[^0-9]/g,'');
   const s  = gi('nes').value;
   const u  = gi('neu').value.trim();
   const p  = gi('nep').value.trim();
@@ -1031,7 +1031,7 @@ function editEst(eid, ciclo) {
     title: 'Editar Estudiante', width: 500,
     html: sF([
       { id: 'een', lb: 'Nombre', val: e.nombre },
-      { id: 'eeti', lb: 'T.I.', val: e.ti || '' },
+      { id: 'eeti', lb: 'T.I.', val: e.ti || '', ph: 'Ej: 1234567890', attr: 'inputmode="numeric" pattern="[0-9]*" oninput="this.value=this.value.replace(/[^0-9]/g,\'\')"' },
       { id: 'eeu', lb: 'Usuario', val: e.usuario },
       { id: 'eep', lb: 'Nueva Contraseña (dejar vacío para no cambiar)', val: '', tp: 'password' }
     ]) + `<div style="text-align:left;margin-bottom:10px">
@@ -1040,7 +1040,7 @@ function editEst(eid, ciclo) {
         <option value="">Sin salón</option>${sOpts}</select></div>`,
     showCancelButton: true, confirmButtonText: 'Guardar',
     preConfirm: () => ({
-      nombre: gi('een').value.trim(), ti: gi('eeti').value.trim(),
+      nombre: gi('een').value.trim(), ti: gi('eeti').value.trim().replace(/[^0-9]/g,''),
       usuario: gi('eeu').value.trim(), newPwd: gi('eep').value.trim(), salon: gi('ees').value
     })
   }).then(async r => {
