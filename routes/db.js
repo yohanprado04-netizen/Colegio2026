@@ -265,18 +265,30 @@ async function saveFullDB(DB, colegioId = '') {
   const anoActual = DB.anoActual || String(new Date().getFullYear());
   for (const [estId, perData] of Object.entries(DB.notas || {})) {
     const periodos   = [];
-    const disciplina = perData.disciplina || '';
+    const disciplinaGlobal = typeof perData.disciplina === 'number' ? perData.disciplina : null;
+    const conductaGlobal   = typeof perData.conducta   === 'number' ? perData.conducta   : null;
     for (const [periodo, mats] of Object.entries(perData)) {
-      if (periodo === 'disciplina') continue;
+      // saltar campos raíz (globales)
+      if (periodo === 'disciplina' || periodo === 'conducta') continue;
+      if (!mats || typeof mats !== 'object') continue;
       const materiasMap = {};
-      for (const [m, v] of Object.entries(mats || {})) {
-        materiasMap[m] = { a: v.a || 0, c: v.c || 0, r: v.r || 0 };
+      for (const [m, v] of Object.entries(mats)) {
+        if (m === 'disciplina' || m === 'conducta') continue;
+        if (v && typeof v === 'object' && 'a' in v)
+          materiasMap[m] = { a: v.a || 0, c: v.c || 0, r: v.r || 0 };
       }
-      periodos.push({ periodo, materias: materiasMap, disciplina });
+      const perEntry = { periodo, materias: materiasMap };
+      // Preservar disciplina/conducta por periodo si las tiene
+      if (typeof mats.disciplina === 'number') perEntry.disciplina = mats.disciplina;
+      if (typeof mats.conducta   === 'number') perEntry.conducta   = mats.conducta;
+      periodos.push(perEntry);
     }
+    const updatePayload = { periodos, colegioId };
+    if (disciplinaGlobal !== null) updatePayload.disciplina = disciplinaGlobal;
+    if (conductaGlobal   !== null) updatePayload.conducta   = conductaGlobal;
     await Nota.findOneAndUpdate(
       { estId, anoLectivo: anoActual, colegioId },
-      { periodos, disciplina, colegioId },
+      updatePayload,
       { upsert: true }
     );
   }

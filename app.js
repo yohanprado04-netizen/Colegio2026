@@ -2938,8 +2938,13 @@ function loadPN(){
         syncN(e.id);
         const pp = pprom(e.id, per);
         const tieneNotas = mats.some(m => { const t = DB.notas[e.id]?.[per]?.[m]; return t && (t.a > 0 || t.c > 0 || t.r > 0); });
-        const discVal = DB.notas[e.id]?.[per]?.disciplina ?? DB.notas[e.id]?.[per]?._disciplina ?? DB.notas[e.id]?.[per]?.disc ?? (typeof DB.notas[e.id]?.disciplina === 'number' ? DB.notas[e.id].disciplina : 0);
-        const condValCard = DB.notas[e.id]?.[per]?.conducta ?? DB.notas[e.id]?.[per]?._conducta ?? (typeof DB.notas[e.id]?.conducta === 'number' ? DB.notas[e.id].conducta : 0);
+        // Leer SOLO del periodo activo — sin mezclar con el promedio global
+        const discVal = typeof DB.notas[e.id]?.[per]?.disciplina === 'number'
+          ? DB.notas[e.id][per].disciplina
+          : (typeof DB.notas[e.id]?.[per]?._disciplina === 'number' ? DB.notas[e.id][per]._disciplina : 0);
+        const condValCard = typeof DB.notas[e.id]?.[per]?.conducta === 'number'
+          ? DB.notas[e.id][per].conducta
+          : (typeof DB.notas[e.id]?.[per]?._conducta === 'number' ? DB.notas[e.id][per]._conducta : 0);
         const camposHTML = mats.map(m => {
           const t = DB.notas[e.id][per][m] || {a:0,c:0,r:0};
           const d = def(t);
@@ -4670,7 +4675,13 @@ function dlBoletin(estId,perFilter,anno,snapData){
   const isTodos=perFilter==='TODOS';
   const allPers=DB.pers;
   const pers2render=isTodos
-    ?allPers.filter(per=>mats.some(m=>{const t=notas[per]?.[m];return t&&(t.a>0||t.c>0||t.r>0);}))
+    ?allPers.filter(per=>{
+        // Incluir periodo si tiene notas de materias O tiene conducta/disciplina
+        const tieneNotas=mats.some(m=>{const t=notas[per]?.[m];return t&&(t.a>0||t.c>0||t.r>0);});
+        const tieneCond=typeof notas[per]?.conducta==='number'||typeof notas[per]?._conducta==='number';
+        const tieneDisc=typeof notas[per]?.disciplina==='number'||typeof notas[per]?._disciplina==='number';
+        return tieneNotas||tieneCond||tieneDisc;
+      })
     :allPers.filter(p=>p===decodeURIComponent(perFilter));
   if(!pers2render.length){sw('info','Sin datos',`No hay notas registradas${isTodos?' en ningún periodo':' en este periodo'}.`);return;}
 
@@ -4716,16 +4727,15 @@ function dlBoletin(estId,perFilter,anno,snapData){
     const ppPer=pers2render.map(per=>+(mats.reduce((s,m)=>s+def(notas[per]?.[m]||{a:0,c:0,r:0}),0)/mats.length).toFixed(2));
     const thPers=pers2render.map((p,i)=>`<th style="background:#333;color:#fff;padding:5px 7px;text-align:center;font-size:10px;border:1px solid #999">${p}<br><span style="font-weight:400;opacity:.8">${fmt(ppPer[i])}</span></th>`).join('');
 
+    // ─── Pre-calcular Disciplina/Conducta por periodo ANTES de buildDiscRow ─────
+    // CRÍTICO: deben declararse aquí para evitar "Cannot access before initialization"
+    const discPorPerPre = pers2render.map(per=>{const dv=notas[per]?.disciplina??notas[per]?._disciplina??notas[per]?.disc??null;return typeof dv==='number'?dv:null;});
+    const condPorPerPre = pers2render.map(per=>{const cv=notas[per]?.conducta??notas[per]?._conducta??null;return typeof cv==='number'?cv:null;});
+
     // Función para fila de conducta/disciplina
     const buildDiscRow = () => {
-      const discPorPer = pers2render.map(per=>{
-        const dv=notas[per]?.disciplina??notas[per]?._disciplina??notas[per]?.disc??null;
-        return typeof dv==='number'?dv:null;
-      });
-      const condPorPer = pers2render.map(per=>{
-        const cv=notas[per]?.conducta??notas[per]?._conducta??null;
-        return typeof cv==='number'?cv:null;
-      });
+      const discPorPer = discPorPerPre;
+      const condPorPer = condPorPerPre;
       const conductaGlobal = notas?.conducta ?? null;
       const disciplinaGlobal = typeof notas?.disciplina==='number'?notas.disciplina:null;
       // Si ningún periodo tiene el dato individualmente, usar el valor global como fallback
@@ -4868,9 +4878,12 @@ function dlBoletin(estId,perFilter,anno,snapData){
         tableBody=buildMatRows(mats);
       }
 
-      // Disciplina y Conducta del periodo
-      const discValPer = notas[per]?.disciplina ?? notas[per]?._disciplina ?? notas[per]?.disc ?? (typeof notas?.disciplina==='number'?notas.disciplina:null);
-      const condValPer = notas[per]?.conducta ?? notas[per]?._conducta ?? (typeof notas?.conducta==='number'?notas.conducta:null);
+      // Disciplina y Conducta del periodo — SOLO del periodo actual, sin fallback al global
+      const discValPer = typeof notas[per]?.disciplina==='number' ? notas[per].disciplina
+        : (typeof notas[per]?._disciplina==='number' ? notas[per]._disciplina
+        : (typeof notas[per]?.disc==='number' ? notas[per].disc : null));
+      const condValPer = typeof notas[per]?.conducta==='number' ? notas[per].conducta
+        : (typeof notas[per]?._conducta==='number' ? notas[per]._conducta : null);
       const discPerRow = (typeof discValPer==='number' || typeof condValPer==='number')
         // ORDEN BOLETÍN: primero Conducta, luego Disciplina
         ? `${typeof condValPer==='number'?`<tr style="background:#fafaf0">
@@ -4967,11 +4980,16 @@ function dlBoletin(estId,perFilter,anno,snapData){
     }
   }
 
-  // ─── Disciplina y Conducta ────────────────────────────────────────────────
-  const discPer=isTodos?pers2render.map(per=>{const dv=notas[per]?.disciplina??notas[per]?._disciplina??notas[per]?.disc??null;return typeof dv==='number'?dv:null;}).filter(d=>d!==null):[];
-  const discProm=discPer.length?+(discPer.reduce((s,d)=>s+d,0)/discPer.length).toFixed(2):(notas?.disciplina??null);
-  const condPer=isTodos?pers2render.map(per=>{const cv=notas[per]?.conducta??notas[per]?._conducta??null;return typeof cv==='number'?cv:null;}).filter(c=>c!==null):[];
-  const condProm=condPer.length?+(condPer.reduce((s,c)=>s+c,0)/condPer.length).toFixed(2):(notas?.conducta??null);
+  // ─── Disciplina y Conducta (promedios definitivos para el bloque lateral) ─
+  // discPorPerPre/condPorPerPre ya fueron calculados arriba dentro del bloque isTodos.
+  // Aquí se calculan los promedios finales para el sidebar/encabezado del boletín.
+  // discPorPerPre/condPorPerPre solo existen en el bloque isTodos
+  const _dpp = (isTodos && typeof discPorPerPre !== 'undefined') ? discPorPerPre : [];
+  const _cpp = (isTodos && typeof condPorPerPre !== 'undefined') ? condPorPerPre : [];
+  const discPer = _dpp.filter(d=>d!==null);
+  const discProm = discPer.length ? +(discPer.reduce((s,d)=>s+d,0)/discPer.length).toFixed(2) : (notas?.disciplina??null);
+  const condPer = _cpp.filter(c=>c!==null);
+  const condProm = condPer.length ? +(condPer.reduce((s,c)=>s+c,0)/condPer.length).toFixed(2) : (notas?.conducta??null);
 
   // ─── HTML DEL BOLETÍN ─────────────────────────────────────────────────────
   const _logo = DB.colegioLogo||'';

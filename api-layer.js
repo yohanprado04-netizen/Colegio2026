@@ -837,14 +837,15 @@ async function saveDisc(eid, v, periodo) {
   }
   if (val > 5) val = 5;
   syncN(eid);
-  // Guardar en el periodo actual si se conoce
-  if (periodo && DB.notas[eid]) {
-    if (!DB.notas[eid][periodo]) DB.notas[eid][periodo] = {};
-    DB.notas[eid][periodo].disciplina = val;
+  // periodo puede llegar encodeURIComponent — decodificar antes de indexar DB.notas
+  const perDec = periodo ? decodeURIComponent(periodo) : '';
+  if (perDec && DB.notas[eid]) {
+    if (!DB.notas[eid][perDec]) DB.notas[eid][perDec] = {};
+    DB.notas[eid][perDec].disciplina = val;
   }
   try {
     const res = await apiFetch(`/api/notas/${eid}/disciplina`, {
-      method: 'PUT', body: JSON.stringify({ disciplina: val, periodo: periodo || '' })
+      method: 'PUT', body: JSON.stringify({ disciplina: val, periodo: perDec })
     });
     // Actualizar promedio global en memoria
     if (res && res.disciplinaGlobal != null) DB.notas[eid].disciplina = res.disciplinaGlobal;
@@ -863,13 +864,15 @@ async function saveConducta(eid, v, periodo) {
   }
   if (val > 5) val = 5;
   syncN(eid);
-  if (periodo && DB.notas[eid]) {
-    if (!DB.notas[eid][periodo]) DB.notas[eid][periodo] = {};
-    DB.notas[eid][periodo].conducta = val;
+  // periodo puede llegar encodeURIComponent — decodificar antes de indexar DB.notas
+  const perDec = periodo ? decodeURIComponent(periodo) : '';
+  if (perDec && DB.notas[eid]) {
+    if (!DB.notas[eid][perDec]) DB.notas[eid][perDec] = {};
+    DB.notas[eid][perDec].conducta = val;
   }
   try {
     const res = await apiFetch(`/api/notas/${eid}/conducta`, {
-      method: 'PUT', body: JSON.stringify({ conducta: val, periodo: periodo || '' })
+      method: 'PUT', body: JSON.stringify({ conducta: val, periodo: perDec })
     });
     if (res && res.conductaGlobal != null) DB.notas[eid].conducta = res.conductaGlobal;
     else DB.notas[eid].conducta = val;
