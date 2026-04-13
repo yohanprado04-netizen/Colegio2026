@@ -207,6 +207,8 @@ function getNotaPct(){
   return{a,c,r};
 }
 function def(t){const p=getNotaPct();return+((t.a||0)*p.a+(t.c||0)*p.c+(t.r||0)*p.r).toFixed(2);}
+// fmt(n): 4.00→"4.0", 3.85→"3.85" — una decimal si termina en cero, dos si no
+function fmt(n){if(n===null||n===undefined||isNaN(n))return'—';const s=n.toFixed(2);return s.endsWith('0')?n.toFixed(1):s;}
 
 function pprom(eid,per){
   syncN(eid);
@@ -4078,7 +4080,7 @@ function initEB(){
   }
 
   h+=`<div class="sr">
-    <div class="scc" data-i="📊"><div class="sv" style="color:${scCol(pg)}">${pg.toFixed(2)}</div><div class="sl">Prom. General</div><div class="bar"></div></div>
+    <div class="scc" data-i="📊"><div class="sv" style="color:${scCol(pg)}">${fmt(pg)}</div><div class="sl">Prom. General</div><div class="bar"></div></div>
     <div class="scc" data-i="🏆"><div class="sv">${ps}</div><div class="sl">Puesto Salón</div><div class="bar"></div></div>
     <div class="scc" data-i="🏫"><div class="sv" style="font-size:${(e.salon||'—').length>4?'15px':'22px'};margin-top:2px">${e.salon||'—'}</div><div class="sl">Mi Salón</div><div class="bar"></div></div>
     <div class="scc" data-i="⚠️"><div class="sv" style="color:${cantPerdidas>0?'var(--red)':'var(--grn)'}">${cantPerdidas}</div><div class="sl">${labelPerdidas}</div><div class="bar"></div></div>
@@ -4103,7 +4105,7 @@ function initEB(){
         if(!matsArea.length) return;
         const defsA=matsArea.map(m=>def(DB.notas[e.id]?.[per]?.[m]||{a:0,c:0,r:0})).filter(d=>d>0);
         const da=defsA.length?+(defsA.reduce((s,v)=>s+v,0)/defsA.length).toFixed(2):0;
-        tablaBody+=`<tr style="background:#f0f0f0"><td colspan="7" style="padding:5px 8px;font-weight:800;font-size:12px">▸ ${areaNombre} — Def. Área: <span class="${scC(da)}">${da===0?'—':da.toFixed(2)}</span></td></tr>`;
+        tablaBody+=`<tr style="background:#f0f0f0"><td colspan="7" style="padding:5px 8px;font-weight:800;font-size:12px">▸ ${areaNombre} — Def. Área: <span class="${scC(da)}">${da===0?'—':fmt(da)}</span></td></tr>`;
         matsArea.forEach(m=>{
           const t=DB.notas[e.id]?.[per]?.[m]||{a:0,c:0,r:0};const d=def(t);
           const prf=profForMat(m,e.salon);
@@ -4111,7 +4113,7 @@ function initEB(){
             <td style="font-family:var(--mn);font-size:12px">${t.a.toFixed(1)}</td>
             <td style="font-family:var(--mn);font-size:12px">${t.c.toFixed(1)}</td>
             <td style="font-family:var(--mn);font-size:12px">${t.r.toFixed(1)}</td>
-            <td><span class="${scC(d)}">${d.toFixed(2)}</span></td>
+            <td><span class="${scC(d)}">${fmt(d)}</span></td>
             <td><span class="bdg ${d>=3?'bgr':'brd'}">${d===0?'Sin nota':d>=3?'Aprobado':'Reprobado'}</span></td>
             <td style="font-size:12px;color:var(--sl2)">${prf?prf.nombre:'Sin asignar'}</td>
           </tr>`;
@@ -4124,7 +4126,7 @@ function initEB(){
           <td style="font-family:var(--mn);font-size:12px">${t.a.toFixed(1)}</td>
           <td style="font-family:var(--mn);font-size:12px">${t.c.toFixed(1)}</td>
           <td style="font-family:var(--mn);font-size:12px">${t.r.toFixed(1)}</td>
-          <td><span class="${scC(d)}">${d.toFixed(2)}</span></td>
+          <td><span class="${scC(d)}">${fmt(d)}</span></td>
           <td><span class="bdg ${d>=3?'bgr':'brd'}">${d===0?'Sin nota':d>=3?'Aprobado':'Reprobado'}</span></td>
           <td style="font-size:12px;color:var(--sl2)">${prf?prf.nombre:'Sin asignar'}</td>
         </tr>`;
@@ -4137,7 +4139,7 @@ function initEB(){
           <td style="font-family:var(--mn);font-size:12px">${t.a.toFixed(1)}</td>
           <td style="font-family:var(--mn);font-size:12px">${t.c.toFixed(1)}</td>
           <td style="font-family:var(--mn);font-size:12px">${t.r.toFixed(1)}</td>
-          <td><span class="${scC(d)}">${d.toFixed(2)}</span></td>
+          <td><span class="${scC(d)}">${fmt(d)}</span></td>
           <td><span class="bdg ${d>=3?'bgr':'brd'}">${d===0?'Sin nota':d>=3?'Aprobado':'Reprobado'}</span></td>
           <td style="font-size:12px;color:var(--sl2)">${prf?prf.nombre:'Sin asignar'}</td>
         </tr>`;
@@ -4147,11 +4149,25 @@ function initEB(){
       <span class="cti">${per}</span>
       <div style="display:flex;align-items:center;gap:12px">
         <span style="font-size:12px;color:var(--sl2)">Puesto: <strong>${ppu}</strong></span>
-        <span class="${scC(pp)}" style="font-size:14px">Prom. ${pp.toFixed(2)}</span>
+        <span class="${scC(pp)}" style="font-size:14px">Prom. ${fmt(pp)}</span>
       </div></div>
       <div class="tw"><table><thead>
         <tr><th>Materia</th><th>Ser</th><th>Saber</th><th>Saber Hacer</th><th>Definitiva</th><th>Estado</th><th>Profesor</th></tr>
-      </thead><tbody>${tablaBody}</tbody></table></div></div>`;
+      </thead><tbody>${tablaBody}${(()=>{
+        // Conducta y Disciplina del periodo — siempre al final
+        const _condEB = DB.notas[e.id]?.[per]?.conducta ?? DB.notas[e.id]?.[per]?._conducta ?? null;
+        const _discEB = DB.notas[e.id]?.[per]?.disciplina ?? DB.notas[e.id]?.[per]?._disciplina ?? null;
+        let rows = '';
+        if(typeof _condEB === 'number'){
+          const lbl = _condEB>=4.6?'Superior':_condEB>=4?'Alto':_condEB>=3?'Básico':'Bajo';
+          rows += `<tr style="background:#fafaf0"><td style="font-weight:700;padding-left:8px">Conducta</td><td>—</td><td>—</td><td>—</td><td><span class="${scC(_condEB)}">${fmt(_condEB)}</span></td><td><span class="bdg ${_condEB>=3?'bgr':'brd'}">${lbl}</span></td><td style="font-size:12px;color:var(--sl2)">—</td></tr>`;
+        }
+        if(typeof _discEB === 'number'){
+          const lbl = _discEB>=4.6?'Superior':_discEB>=4?'Alto':_discEB>=3?'Básico':'Bajo';
+          rows += `<tr style="background:#f5f5f5"><td style="font-weight:700;padding-left:8px">Disciplina</td><td>—</td><td>—</td><td>—</td><td><span class="${scC(_discEB)}">${fmt(_discEB)}</span></td><td><span class="bdg ${_discEB>=3?'bgr':'brd'}">${lbl}</span></td><td style="font-size:12px;color:var(--sl2)">—</td></tr>`;
+        }
+        return rows;
+      })()}</tbody></table></div></div>`;
   });
 
   h+=mkBoletinUI(e.id,'est');
@@ -4698,7 +4714,7 @@ function dlBoletin(estId,perFilter,anno,snapData){
       return+(act.reduce((s,p)=>s+def(notas[p]?.[m]||{a:0,c:0,r:0}),0)/act.length).toFixed(2);
     };
     const ppPer=pers2render.map(per=>+(mats.reduce((s,m)=>s+def(notas[per]?.[m]||{a:0,c:0,r:0}),0)/mats.length).toFixed(2));
-    const thPers=pers2render.map((p,i)=>`<th style="background:#333;color:#fff;padding:5px 7px;text-align:center;font-size:10px;border:1px solid #999">${p}<br><span style="font-weight:400;opacity:.8">${ppPer[i].toFixed(2)}</span></th>`).join('');
+    const thPers=pers2render.map((p,i)=>`<th style="background:#333;color:#fff;padding:5px 7px;text-align:center;font-size:10px;border:1px solid #999">${p}<br><span style="font-weight:400;opacity:.8">${fmt(ppPer[i])}</span></th>`).join('');
 
     // Función para fila de conducta/disciplina
     const buildDiscRow = () => {
@@ -4723,12 +4739,12 @@ function dlBoletin(estId,perFilter,anno,snapData){
           ? +(condPorPer.filter(v=>v!==null).reduce((s,v)=>s+v,0)/condPorPer.filter(v=>v!==null).length).toFixed(2)
           : (conductaGlobal ?? null);
         const condCells = condPorPer.map(cv=>
-          `<td style="padding:5px 7px;border:1px solid #ddd;text-align:center;font-weight:700;font-size:12px;color:${cv!==null?bCol(cv):'#aaa'}">${cv!==null?cv.toFixed(2):'—'}</td>`
+          `<td style="padding:5px 7px;border:1px solid #ddd;text-align:center;font-weight:700;font-size:12px;color:${cv!==null?bCol(cv):'#aaa'}">${cv!==null?fmt(cv):'—'}</td>`
         ).join('');
         rows += `<tr style="background:#fafaf0">
           <td style="padding:5px 8px;border:1px solid #ddd;font-size:12px;font-weight:700">Conducta</td>
           ${condCells}
-          <td style="padding:5px 7px;border:1px solid #ddd;text-align:center;font-weight:900;font-size:13px;color:${condProm!==null?bCol(condProm):'#aaa'}">${condProm!==null?condProm.toFixed(2):'—'}</td>
+          <td style="padding:5px 7px;border:1px solid #ddd;text-align:center;font-weight:900;font-size:13px;color:${condProm!==null?bCol(condProm):'#aaa'}">${condProm!==null?fmt(condProm):'—'}</td>
           <td style="padding:5px 7px;border:1px solid #ddd;text-align:center;font-size:11px;font-weight:700;color:${condProm!==null?bCol(condProm):'#aaa'}">${condProm!==null?bDes(condProm):'—'}</td>
           <td style="padding:5px 7px;border:1px solid #ddd;font-size:10px;color:#555">—</td>
         </tr>`;
@@ -4739,12 +4755,12 @@ function dlBoletin(estId,perFilter,anno,snapData){
           ? +(_discValidos.reduce((s,v)=>s+v,0)/_discValidos.length).toFixed(2)
           : disciplinaGlobal;
         const discCells = discPorPer.map(dv=>
-          `<td style="padding:5px 7px;border:1px solid #ddd;text-align:center;font-weight:700;font-size:12px;color:${dv!==null?bCol(dv):'#aaa'}">${dv!==null?dv.toFixed(2):'—'}</td>`
+          `<td style="padding:5px 7px;border:1px solid #ddd;text-align:center;font-weight:700;font-size:12px;color:${dv!==null?bCol(dv):'#aaa'}">${dv!==null?fmt(dv):'—'}</td>`
         ).join('');
         rows += `<tr style="background:#f5f5f5">
           <td style="padding:5px 8px;border:1px solid #ddd;font-size:12px;font-weight:700">Disciplina</td>
           ${discCells}
-          <td style="padding:5px 7px;border:1px solid #ddd;text-align:center;font-weight:900;font-size:13px;color:${discPromLocal!==null?bCol(discPromLocal):'#aaa'}">${discPromLocal!==null?discPromLocal.toFixed(2):'—'}</td>
+          <td style="padding:5px 7px;border:1px solid #ddd;text-align:center;font-weight:900;font-size:13px;color:${discPromLocal!==null?bCol(discPromLocal):'#aaa'}">${discPromLocal!==null?fmt(discPromLocal):'—'}</td>
           <td style="padding:5px 7px;border:1px solid #ddd;text-align:center;font-size:11px;font-weight:700;color:${discPromLocal!==null?bCol(discPromLocal):'#aaa'}">${discPromLocal!==null?bDes(discPromLocal):'—'}</td>
           <td style="padding:5px 7px;border:1px solid #ddd;font-size:10px;color:#555">—</td>
         </tr>`;
@@ -4755,14 +4771,14 @@ function dlBoletin(estId,perFilter,anno,snapData){
     const buildRows = (matsArr, showArea) => matsArr.map((m,idx)=>{
       const perCells=pers2render.map(per=>{
         const d=def(notas[per]?.[m]||{a:0,c:0,r:0});
-        return`<td style="padding:5px 7px;border:1px solid #ddd;text-align:center;font-weight:700;font-size:12px;color:${bCol(d)}">${d===0?'—':d.toFixed(2)}</td>`;
+        return`<td style="padding:5px 7px;border:1px solid #ddd;text-align:center;font-weight:700;font-size:12px;color:${bCol(d)}">${d===0?'—':fmt(d)}</td>`;
       }).join('');
       const df=defFinal(m);
       const prf=profForMat(m,salon);
       return`<tr style="background:${idx%2===0?'#fafafa':'#fff'}">
         <td style="padding:5px 8px;border:1px solid #ddd;font-size:12px">${m}</td>
         ${perCells}
-        <td style="padding:5px 7px;border:1px solid #ddd;text-align:center;font-weight:900;font-size:13px;color:${bCol(df)}">${df.toFixed(2)}</td>
+        <td style="padding:5px 7px;border:1px solid #ddd;text-align:center;font-weight:900;font-size:13px;color:${bCol(df)}">${fmt(df)}</td>
         <td style="padding:5px 7px;border:1px solid #ddd;text-align:center;font-size:11px;font-weight:700;color:${bCol(df)}">${bDes(df)}</td>
         <td style="padding:5px 7px;border:1px solid #ddd;font-size:10px;color:#555">${prf?prf.nombre:'—'}</td>
       </tr>`;
@@ -4790,13 +4806,13 @@ function dlBoletin(estId,perFilter,anno,snapData){
         const perCellsArea = pers2render.map(per=>{
           const defsP = matsArea.map(m=>def(notas[per]?.[m]||{a:0,c:0,r:0})).filter(d=>d>0);
           const dp = defsP.length ? +(defsP.reduce((s,v)=>s+v,0)/defsP.length).toFixed(2) : 0;
-          return`<td style="padding:4px 7px;border:1px solid #bbb;text-align:center;font-weight:700;font-size:11px;background:#e8e8e8">${dp===0?'—':dp.toFixed(2)}</td>`;
+          return`<td style="padding:4px 7px;border:1px solid #bbb;text-align:center;font-weight:700;font-size:11px;background:#e8e8e8">${dp===0?'—':fmt(dp)}</td>`;
         }).join('');
         // Fila de área (cabecera de sección)
         bodyHTML += `<tr style="background:#e0e0e0">
           <td style="padding:5px 8px;border:1px solid #bbb;font-weight:800;font-size:12px;color:#111">▸ ${areaNombre}</td>
           ${perCellsArea}
-          <td style="padding:5px 7px;border:1px solid #bbb;text-align:center;font-weight:900;font-size:13px;color:${bCol(promArea)}">${promArea===0?'—':promArea.toFixed(2)}</td>
+          <td style="padding:5px 7px;border:1px solid #bbb;text-align:center;font-weight:900;font-size:13px;color:${bCol(promArea)}">${promArea===0?'—':fmt(promArea)}</td>
           <td style="padding:5px 7px;border:1px solid #bbb;text-align:center;font-size:11px;font-weight:700;color:${bCol(promArea)}">${promArea===0?'—':bDes(promArea)}</td>
           <td style="padding:5px 7px;border:1px solid #bbb;text-align:center;font-size:10px;font-weight:700;color:${promArea===0?'#aaa':bCol(promArea)}">${promArea===0?'—':bDes(promArea)}</td>
         </tr>`;
@@ -4825,7 +4841,7 @@ function dlBoletin(estId,perFilter,anno,snapData){
           <td style="padding:5px 7px;border:1px solid #ddd;text-align:center;font-size:12px">${t.a.toFixed(1)}</td>
           <td style="padding:5px 7px;border:1px solid #ddd;text-align:center;font-size:12px">${t.c.toFixed(1)}</td>
           <td style="padding:5px 7px;border:1px solid #ddd;text-align:center;font-size:12px">${t.r.toFixed(1)}</td>
-          <td style="padding:5px 7px;border:1px solid #ddd;text-align:center;font-weight:900;font-size:13px;color:${bCol(d)}">${d.toFixed(2)}</td>
+          <td style="padding:5px 7px;border:1px solid #ddd;text-align:center;font-weight:900;font-size:13px;color:${bCol(d)}">${fmt(d)}</td>
           <td style="padding:5px 7px;border:1px solid #ddd;text-align:center;font-size:11px;font-weight:700;color:${bCol(d)}">${d===0?'—':bDes(d)}</td>
           <td style="padding:5px 7px;border:1px solid #ddd;font-size:10px;color:#555">${prf?prf.nombre:'—'}</td>
         </tr>`;
@@ -4842,7 +4858,7 @@ function dlBoletin(estId,perFilter,anno,snapData){
           const dp=defsArea.length?+(defsArea.reduce((s,v)=>s+v,0)/defsArea.length).toFixed(2):0;
           tableBody+=`<tr style="background:#e0e0e0">
             <td style="padding:5px 8px;border:1px solid #bbb;font-weight:800;font-size:12px" colspan="5">▸ ${areaNombre}</td>
-            <td style="padding:5px 7px;border:1px solid #bbb;text-align:center;font-weight:900;font-size:13px;color:${bCol(dp)}">${dp===0?'—':dp.toFixed(2)}</td>
+            <td style="padding:5px 7px;border:1px solid #bbb;text-align:center;font-weight:900;font-size:13px;color:${bCol(dp)}">${dp===0?'—':fmt(dp)}</td>
             <td style="padding:5px 7px;border:1px solid #bbb;text-align:center;font-size:10px;font-weight:700;color:${dp===0?'#aaa':bCol(dp)}">${dp===0?'—':bDes(dp)}</td>
           </tr>`;
           tableBody+=buildMatRows(matsArea);
@@ -4860,21 +4876,21 @@ function dlBoletin(estId,perFilter,anno,snapData){
         ? `${typeof condValPer==='number'?`<tr style="background:#fafaf0">
             <td style="padding:5px 8px;border:1px solid #ddd;font-size:12px;font-weight:700">Conducta</td>
             <td colspan="3" style="padding:5px 7px;border:1px solid #ddd;text-align:center;font-size:12px">—</td>
-            <td style="padding:5px 7px;border:1px solid #ddd;text-align:center;font-weight:900;font-size:13px;color:${bCol(condValPer)}">${condValPer.toFixed(2)}</td>
+            <td style="padding:5px 7px;border:1px solid #ddd;text-align:center;font-weight:900;font-size:13px;color:${bCol(condValPer)}">${fmt(condValPer)}</td>
             <td style="padding:5px 7px;border:1px solid #ddd;text-align:center;font-size:11px;font-weight:700;color:${bCol(condValPer)}">${bDes(condValPer)}</td>
             <td style="padding:5px 7px;border:1px solid #ddd;font-size:10px;color:#555">—</td>
           </tr>`:''}
           ${typeof discValPer==='number'?`<tr style="background:#f5f5f5">
             <td style="padding:5px 8px;border:1px solid #ddd;font-size:12px;font-weight:700">Disciplina</td>
             <td colspan="3" style="padding:5px 7px;border:1px solid #ddd;text-align:center;font-size:12px">—</td>
-            <td style="padding:5px 7px;border:1px solid #ddd;text-align:center;font-weight:900;font-size:13px;color:${bCol(discValPer)}">${discValPer.toFixed(2)}</td>
+            <td style="padding:5px 7px;border:1px solid #ddd;text-align:center;font-weight:900;font-size:13px;color:${bCol(discValPer)}">${fmt(discValPer)}</td>
             <td style="padding:5px 7px;border:1px solid #ddd;text-align:center;font-size:11px;font-weight:700;color:${bCol(discValPer)}">${bDes(discValPer)}</td>
             <td style="padding:5px 7px;border:1px solid #ddd;font-size:10px;color:#555">—</td>
           </tr>`:''}` : '';
       return`<div style="margin-bottom:18px;page-break-inside:avoid">
         <div style="background:#e8e8e8;color:#111;padding:8px 12px;display:flex;justify-content:space-between;align-items:center;border:1px solid #ccc">
           <strong style="font-size:13px">${per}</strong>
-          <span style="font-size:11px;color:#555">Promedio: <strong>${pp.toFixed(2)}</strong> &nbsp;|&nbsp; Puesto: <strong>${ppu}${ppu!=='—'?'°':''}</strong></span>
+          <span style="font-size:11px;color:#555">Promedio: <strong>${fmt(pp)}</strong> &nbsp;|&nbsp; Puesto: <strong>${ppu}${ppu!=='—'?'°':''}</strong></span>
         </div>
         <table style="width:100%;border-collapse:collapse;font-size:11px">
           <thead><tr>
@@ -4990,7 +5006,7 @@ function dlBoletin(estId,perFilter,anno,snapData){
         ${isTodos
           ?`<div style="font-size:12px;line-height:1.9"><strong>Promedio General:</strong> <span style="font-weight:900;font-size:15px">${pg.toFixed(2)}</span></div>
              <div style="font-size:12px;line-height:1.9"><strong>Puesto en Salón:</strong> <strong>${ps}${ps!=='—'?'°':''}</strong></div>
-             ${discProm!==null?`<div style="font-size:12px;line-height:1.9"><strong>Disciplina:</strong> <span style="font-weight:700;color:${bCol(discProm)}">${discProm.toFixed(2)} — ${bDes(discProm)}</span></div>`:''}
+             ${discProm!==null?`<div style="font-size:12px;line-height:1.9"><strong>Disciplina:</strong> <span style="font-weight:700;color:${bCol(discProm)}">${fmt(discProm)} — ${bDes(discProm)}</span></div>`:''}
              ${condProm!==null?`<div style="font-size:12px;line-height:1.9"><strong>Conducta:</strong> <span style="font-weight:700;color:${bCol(condProm)}">${condProm.toFixed(2)} — ${bDes(condProm)}</span></div>`:''}`
           :`<div style="font-size:12px;line-height:1.9"><strong>Promedio Periodo:</strong> <span style="font-weight:900;font-size:15px">${perPromVal.toFixed(2)}</span></div>
              <div style="font-size:12px;line-height:1.9"><strong>Puesto en Salón:</strong> <strong>${perPuestoVal}${perPuestoVal!=='—'?'°':''}</strong></div>`}
