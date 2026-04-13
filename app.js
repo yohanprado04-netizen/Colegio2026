@@ -2123,20 +2123,6 @@ function pgAFec(){
     ${perRows||'<div class="mty"><p>Sin periodos configurados</p></div>'}
   </div>
   <div class="g2">
-    <div class="card"><div class="chd"><span class="cti">📅 Rango Global (fallback)</span></div>
-      <div style="font-size:12px;color:var(--sl2);margin-bottom:10px">Se aplica cuando un periodo no tiene rango propio configurado.</div>
-      <div class="fld"><label>Fecha Inicio</label>
-        <input type="date" id="drs" value="${DB.dr.s}"
-          min="${DB.anoActual||new Date().getFullYear()}-01-01"
-          max="${DB.anoActual||new Date().getFullYear()}-12-31">
-      </div>
-      <div class="fld"><label>Fecha Fin</label>
-        <input type="date" id="dre" value="${DB.dr.e}"
-          min="${DB.anoActual||new Date().getFullYear()}-01-01"
-          max="${DB.anoActual||new Date().getFullYear()}-12-31">
-      </div>
-      <button class="btn bn" onclick="saveDR()">Guardar Rango Global</button>
-    </div>
     <div class="card"><div class="chd"><span class="cti">🔄 Periodo Extraordinario</span></div>
       <div class="al aly" style="margin-bottom:10px">Solo para estudiantes con 1 o 2 materias perdidas.</div>
       <div class="fld"><label>Inicio</label>

@@ -1051,20 +1051,31 @@ router.get('/diag/salon', authMiddleware, requireRole('admin','profe','superadmi
     // Datos del profesor autenticado
     const profDoc = await Usuario.findOne({ id: req.user.id }).lean();
 
-    // Todos los ests del colegio
-    const todosEsts = cid
-      ? await Usuario.find({ colegioId: cid, role: 'est' }, 'id nombre salon colegioId').lean()
-      : [];
+    // Consultas específicas: solo los datos necesarios, sin cargar todos los estudiantes
+    const baseFilter = cid ? { colegioId: cid, role: 'est' } : { role: 'est' };
 
-    // Ests del salón pedido (comparación exacta)
+    // Contar total de ests del colegio (sin traer todos los docs)
+    const totalEstsColegio = cid ? await Usuario.countDocuments(baseFilter) : 0;
+
+    // Ests del salón pedido (comparación exacta) — solo si se especificó salon
     const estsSalon = salon
-      ? todosEsts.filter(e => e.salon === salon)
+      ? await Usuario.find({ ...baseFilter, salon }, 'id nombre salon colegioId').lean()
       : [];
 
-    // Ests con salon similar (para detectar espacios/casing)
+    // Ests con salon similar pero diferente escritura (espacios/casing) — solo si salon fue dado
     const estsSimilar = salon
-      ? todosEsts.filter(e => (e.salon||'').trim().toUpperCase() === salon.toUpperCase() && e.salon !== salon)
+      ? await Usuario.find({
+          ...baseFilter,
+          salon: { $regex: `^${salon.trim()}$`, $options: 'i' },
+        }, 'id nombre salon colegioId').lean().then(docs =>
+          docs.filter(e => e.salon !== salon)
+        )
       : [];
+
+    // Muestra de hasta 10 ests del colegio para diagnóstico (solo si no hay salon)
+    const muestraEsts = salon
+      ? []
+      : await Usuario.find(baseFilter, 'nombre salon colegioId').limit(10).lean();
 
     res.json({
       profesorId:       req.user.id,
@@ -1072,10 +1083,10 @@ router.get('/diag/salon', authMiddleware, requireRole('admin','profe','superadmi
       profesorColegioId: cid,
       profesorSalones:  profDoc?.salones || [],
       salonBuscado:     salon,
-      totalEstsColegio: todosEsts.length,
+      totalEstsColegio,
       estsSalonExacto:  estsSalon.length,
       estsSimilar:      estsSimilar.map(e => ({ nombre: e.nombre, salon: JSON.stringify(e.salon) })),
-      muestraEsts:      todosEsts.slice(0, 10).map(e => ({ nombre: e.nombre, salon: e.salon, colegioId: e.colegioId })),
+      muestraEsts:      muestraEsts.map(e => ({ nombre: e.nombre, salon: e.salon, colegioId: e.colegioId })),
     });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
