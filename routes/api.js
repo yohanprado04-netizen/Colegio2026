@@ -905,7 +905,15 @@ router.delete('/auditoria', authMiddleware, requireRole('admin', 'superadmin'), 
 // ═══════════════════════════════════════════════════════════════════
 router.get('/bloqueos', authMiddleware, requireRole('admin', 'superadmin'), async (req, res) => {
   try {
-    const list = await Bloqueo.find({ on: true, ...tenantFilter(req) }).lean();
+    // Para admin: solo ver bloqueos de su propio colegio
+    // Para superadmin: ver todos (o filtrar por ?colegioId)
+    let filter = { on: true };
+    if (req.user.role === 'admin') {
+      filter.colegioId = req.user.colegioId;
+    } else if (req.query.colegioId) {
+      filter.colegioId = req.query.colegioId;
+    }
+    const list = await Bloqueo.find(filter).lean();
     res.json(list);
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
@@ -913,7 +921,19 @@ router.get('/bloqueos', authMiddleware, requireRole('admin', 'superadmin'), asyn
 router.put('/bloqueos/:usuario', authMiddleware, requireRole('admin', 'superadmin'), async (req, res) => {
   try {
     const cid = tenantId(req) || req.user.colegioId || '';
-    const b   = await Bloqueo.findOneAndUpdate(
+
+    // Verificar que el usuario a bloquear/desbloquear pertenece al mismo colegio (para admin)
+    if (req.user.role === 'admin') {
+      const targetUser = await Usuario.findOne({ usuario: req.params.usuario }).select('colegioId role').lean();
+      if (!targetUser) return res.status(404).json({ error: 'Usuario no encontrado' });
+      if (targetUser.colegioId !== req.user.colegioId)
+        return res.status(403).json({ error: 'No tienes permisos sobre este usuario' });
+      // Admin no puede bloquear a otros admins ni superadmin
+      if (['admin', 'superadmin'].includes(targetUser.role))
+        return res.status(403).json({ error: 'No se puede bloquear a un administrador' });
+    }
+
+    const b = await Bloqueo.findOneAndUpdate(
       { usuario: req.params.usuario },
       { ...req.body, colegioId: cid },
       { upsert: true, new: true }

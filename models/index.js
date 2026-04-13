@@ -261,9 +261,10 @@ const EstHistSchema = new Schema({
 }, { timestamps: true, collection: 'est_historial' });
 
 const BloqueoSchema = new Schema({
-  usuario: { type: String, required: true, unique: true },
-  on:      { type: Boolean, default: true },
-  ts:      { type: String, default: '' },
+  usuario:   { type: String, required: true, unique: true },
+  on:        { type: Boolean, default: true },
+  ts:        { type: String, default: '' },
+  colegioId: { type: String, default: '', index: true },
 }, { collection: 'bloqueos' });
 
 const EstadisticaSchema = new Schema({

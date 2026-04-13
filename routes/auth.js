@@ -49,16 +49,20 @@ router.post('/login', async (req, res) => {
       }
     }
 
-    const blk = await Bloqueo.findOne({ usuario, on: true });
-    if (blk) {
-      const elapsed = Date.now() - new Date(blk.ts).getTime();
-      if (elapsed < LOCKOUT_MS) {
-        const remaining = Math.ceil((LOCKOUT_MS - elapsed) / 60000);
-        return res.status(403).json({ error: `Cuenta bloqueada. Espera ${remaining} min.` });
+    // Verificar bloqueo en BD (solo para est y profe — admin/superadmin nunca se bloquean)
+    const userRoleCheck = await Usuario.findOne({ usuario }).select('role').lean();
+    if (userRoleCheck && !['admin', 'superadmin'].includes(userRoleCheck.role)) {
+      const blk = await Bloqueo.findOne({ usuario, on: true });
+      if (blk) {
+        const elapsed = Date.now() - new Date(blk.ts).getTime();
+        if (elapsed < LOCKOUT_MS) {
+          const remaining = Math.ceil((LOCKOUT_MS - elapsed) / 60000);
+          return res.status(403).json({ error: `Cuenta bloqueada. Espera ${remaining} min.` });
+        }
+        // Desbloqueo automático al expirar
+        blk.on = false;
+        await blk.save();
       }
-      // Desbloqueo automático al expirar
-      blk.on = false;
-      await blk.save();
     }
 
     const user = await Usuario.findOne({ usuario });
@@ -72,13 +76,17 @@ router.post('/login', async (req, res) => {
     const sha256legacy = !ok && sha256Match(password, user.password);
 
     if (!ok && !sha256legacy) {
+      // admin y superadmin: mensaje genérico, sin contador ni bloqueo automático
+      if (['admin', 'superadmin'].includes(user.role)) {
+        return res.status(401).json({ error: 'Credenciales incorrectas.' });
+      }
+
       failedAttempts[usuario] = (failedAttempts[usuario] || 0) + 1;
 
-      // superadmin y admin nunca se bloquean automáticamente
-      if (failedAttempts[usuario] >= MAX_INTENTOS && !['admin', 'superadmin'].includes(user.role)) {
+      if (failedAttempts[usuario] >= MAX_INTENTOS) {
         await Bloqueo.findOneAndUpdate(
           { usuario },
-          { on: true, ts: new Date().toISOString() },
+          { on: true, ts: new Date().toISOString(), colegioId: user.colegioId || '' },
           { upsert: true }
         );
         await Auditoria.create({
