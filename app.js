@@ -149,6 +149,15 @@ function syncN(eid){
   });
 }
 
+/* ── Ordena DB.sals por número y luego por letra (ej: 1A,1B,2A,10A) ── */
+function sortSals(){
+  DB.sals.sort((a,b)=>{
+    const parse=n=>{const m=n.match(/^(\d+)(.*)$/);return m?[parseInt(m[1],10),m[2].toUpperCase()]:[Infinity,n.toUpperCase()];};
+    const [na,la]=parse(a.nombre);
+    const [nb,lb]=parse(b.nombre);
+    return na!==nb?na-nb:la.localeCompare(lb,'es');
+  });
+}
 function cicloOf(sname){return DB.sals.find(s=>s.nombre===sname)?.ciclo||'bachillerato';}
 
 /* getMats: returns subjects for a student.
