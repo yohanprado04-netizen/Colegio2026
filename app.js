@@ -647,16 +647,18 @@ function estsByCiclo(ciclo){
   });
 }
 function profForMat(mat,salon){
-  /* Bach: first check salonMaterias[salon], then global materias */
+  /* DB.profs ya viene filtrado por colegioId desde el servidor.
+     Bach: primero buscar en salonMaterias[salon], luego materias globales */
   const bp=DB.profs.find(p=>{
     if(p.ciclo!=='bachillerato') return false;
     if(!(p.salones||[]).includes(salon)) return false;
     const sm=(p.salonMaterias||{})[salon];
     if(sm&&sm.length) return sm.includes(mat);
+    // Fallback: si no tiene salonMaterias configurado pero tiene la materia en su lista global
     return(p.materias||[]).includes(mat);
   });
   if(bp) return bp;
-  /* Primaria: any prof in that salon */
+  /* Primaria: cualquier prof asignado al salón */
   return DB.profs.find(p=>p.ciclo==='primaria'&&(p.salones||[]).includes(salon))||null;
 }
 function profsInSalon(salon){
@@ -1542,10 +1544,22 @@ function openSalonMaterias(pid,cb){
       const allMats=[...new Set(Object.values(sm).flat())];
       return{salonMaterias:sm,materias:allMats,materia:allMats[0]||''};
     }
-  }).then(r=>{
+  }).then(async r=>{
     if(!r.isConfirmed){if(cb)cb();return;}
-    Object.assign(p,r.value);dbSave();
-    if(cb)cb();sw('success','Asignaciones guardadas','',1400);
+    Object.assign(p,r.value);
+    // Persistir salonMaterias en el servidor
+    const upd={
+      salonMaterias: r.value.salonMaterias,
+      materias:      r.value.materias,
+      materia:       r.value.materia
+    };
+    try{
+      await apiFetch(`/api/usuarios/${p.id}`,{method:'PUT',body:JSON.stringify(upd)});
+      sw('success','Asignaciones guardadas','',1400);
+    }catch(e){
+      sw('error','Error al guardar: '+e.message);
+    }
+    if(cb)cb();
   });
 }
 
@@ -4734,14 +4748,18 @@ function dlBoletin(estId,perFilter,anno,snapData){
         </tr>`;
       }
       if(hasDisc){
+        const _discValidos = discPorPer.filter(v=>v!==null);
+        const discPromLocal = _discValidos.length
+          ? +(_discValidos.reduce((s,v)=>s+v,0)/_discValidos.length).toFixed(2)
+          : disciplinaGlobal;
         const discCells = discPorPer.map(dv=>
           `<td style="padding:5px 7px;border:1px solid #ddd;text-align:center;font-weight:700;font-size:12px;color:${dv!==null?bCol(dv):'#aaa'}">${dv!==null?dv.toFixed(2):'—'}</td>`
         ).join('');
         rows += `<tr style="background:#f5f5f5">
           <td style="padding:5px 8px;border:1px solid #ddd;font-size:12px;font-weight:700">Disciplina</td>
           ${discCells}
-          <td style="padding:5px 7px;border:1px solid #ddd;text-align:center;font-weight:900;font-size:13px;color:${discProm!==null?bCol(discProm):'#aaa'}">${discProm!==null?discProm.toFixed(2):'—'}</td>
-          <td style="padding:5px 7px;border:1px solid #ddd;text-align:center;font-size:11px;font-weight:700;color:${discProm!==null?bCol(discProm):'#aaa'}">${discProm!==null?bDes(discProm):'—'}</td>
+          <td style="padding:5px 7px;border:1px solid #ddd;text-align:center;font-weight:900;font-size:13px;color:${discPromLocal!==null?bCol(discPromLocal):'#aaa'}">${discPromLocal!==null?discPromLocal.toFixed(2):'—'}</td>
+          <td style="padding:5px 7px;border:1px solid #ddd;text-align:center;font-size:11px;font-weight:700;color:${discPromLocal!==null?bCol(discPromLocal):'#aaa'}">${discPromLocal!==null?bDes(discPromLocal):'—'}</td>
           <td style="padding:5px 7px;border:1px solid #ddd;font-size:10px;color:#555">—</td>
         </tr>`;
       }
