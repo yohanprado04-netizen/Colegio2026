@@ -411,9 +411,11 @@ async function addSal() {
   // CORRECCIÓN: siempre enviar colegioId y colegioNombre en el body como respaldo al token.
   // Garantiza que el backend identifica el tenant aunque el token del admin
   // tenga colegioId vacío (bug en usuarios creados sin colegioId asignado).
+  const j = (gi('nsj')?.value || '').trim();
   const payload = {
     nombre:        n,
     ciclo:         c,
+    jornada:       j,
     mats:          [],
     colegioId:     CU.colegioId     || '',
     colegioNombre: CU.colegioNombre || '',
@@ -421,7 +423,7 @@ async function addSal() {
 
   try {
     const s = await apiFetch('/api/salones', { method: 'POST', body: JSON.stringify(payload) });
-    DB.sals.push({ nombre: n, ciclo: c, mats: [], colegioId: CU.colegioId || '', colegioNombre: CU.colegioNombre || '' });
+    DB.sals.push({ nombre: n, ciclo: c, jornada: j, mats: [], colegioId: CU.colegioId || '', colegioNombre: CU.colegioNombre || '' });
     gi('nsn').value = '';
     renderSals();
     sw('success', `Salón ${n} creado`, '', 2000);

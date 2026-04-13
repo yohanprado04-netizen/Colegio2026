@@ -39,6 +39,7 @@ UsuarioSchema.index({ colegioId: 1, role: 1 });
 const SalonSchema = new Schema({
   nombre:        { type: String, required: true, trim: true },
   ciclo:         { type: String, enum: ['primaria','bachillerato'], required: true },
+  jornada:       { type: String, enum: ['mañana','tarde','noche',''], default: '' },
   mats:          [{ type: String }],
   colegioId:     { type: String, required: true, index: true },
   colegioNombre: { type: String, default: '' },   // nombre del colegio al que pertenece

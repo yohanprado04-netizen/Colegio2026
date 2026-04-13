@@ -1082,6 +1082,12 @@ function pgASal(){
         <option value="primaria">Primaria (1°–5°)</option>
         <option value="bachillerato">Bachillerato (6°–11°)</option>
       </select></div>
+      <div class="fld"><label>Jornada</label><select id="nsj">
+        <option value="">Sin especificar</option>
+        <option value="mañana">Mañana</option>
+        <option value="tarde">Tarde</option>
+        <option value="noche">Noche</option>
+      </select></div>
       <div class="fld" style="display:flex;align-items:flex-end">
         <button class="btn bn" onclick="addSal()">Agregar</button>
       </div>
@@ -1150,6 +1156,7 @@ function renderSals(){
           <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
             <strong style="font-size:15px">${s.nombre}</strong>
             <span class="bdg bgy">${ebySalon(s.nombre).length} est.</span>
+            ${s.jornada?`<span class="bdg" style="font-size:10px;background:#e0f2fe;color:#0369a1;border:1px solid #7dd3fc;text-transform:capitalize">🕐 ${s.jornada}</span>`:''}
             ${matsLabel}
             ${areasLabel}
           </div>
@@ -4635,6 +4642,9 @@ function dlBoletin(estId,perFilter,anno,snapData){
   const suffix=isTodos?'todos_periodos':decodeURIComponent(perFilter).replace(/\s+/g,'_');
   const fechaGen=new Date().toLocaleDateString('es-CO',{year:'numeric',month:'long',day:'numeric'});
   const subtitle=isTodos?`Año Lectivo ${anno} — Todos los Periodos`:`Año Lectivo ${anno} — ${decodeURIComponent(perFilter)}`;
+  // ─── Jornada del salón ────────────────────────────────────────────────────
+  const salonObj = (DB.sals||[]).find(s => s.nombre === salon) || {};
+  const jornadaLabel = salonObj.jornada ? salonObj.jornada.toUpperCase() : '';
 
   // ─── Obtener mapa de áreas para este estudiante ───────────────────────────
   const areaMap = e ? getAreaMatsMap(estId) : {};
@@ -4675,7 +4685,7 @@ function dlBoletin(estId,perFilter,anno,snapData){
     }).join('');
 
     const tableHeader = `<thead><tr>
-      <th style="background:#111;color:#fff;padding:6px 8px;text-align:left;font-size:11px;border:1px solid #999">Materia / Asignatura</th>
+      <th style="background:#111;color:#fff;padding:6px 8px;text-align:left;font-size:11px;border:1px solid #999">ÁREAS/ASIGNATURAS</th>
       ${thPers}
       <th style="background:#111;color:#fff;padding:6px 8px;text-align:center;font-size:11px;border:1px solid #999">Def. Final</th>
       <th style="background:#111;color:#fff;padding:6px 8px;text-align:center;font-size:11px;border:1px solid #999">Desempeño</th>
@@ -4762,7 +4772,7 @@ function dlBoletin(estId,perFilter,anno,snapData){
         </div>
         <table style="width:100%;border-collapse:collapse;font-size:11px">
           <thead><tr>
-            <th style="background:#333;color:#fff;padding:5px 8px;text-align:left;border:1px solid #999">Materia / Asignatura</th>
+            <th style="background:#333;color:#fff;padding:5px 8px;text-align:left;border:1px solid #999">ÁREAS/ASIGNATURAS</th>
             <th style="background:#444;color:#fff;padding:5px 7px;text-align:center;font-size:10px;border:1px solid #999">Ser (${pa}%)</th>
             <th style="background:#444;color:#fff;padding:5px 7px;text-align:center;font-size:10px;border:1px solid #999">Saber (${pc}%)</th>
             <th style="background:#444;color:#fff;padding:5px 7px;text-align:center;font-size:10px;border:1px solid #999">Hacer (${pr}%)</th>
@@ -4847,26 +4857,31 @@ function dlBoletin(estId,perFilter,anno,snapData){
 
   box.innerHTML=`<div style="font-family:'Arial',sans-serif;background:#fff;max-width:760px;color:#111">
     <!-- ENCABEZADO -->
-    <div style="border-bottom:3px solid #111;padding:16px 24px 12px;display:flex;justify-content:space-between;align-items:center">
-      <div style="flex:1">
-        ${_nomColegio?`<div style="font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:#444;margin-bottom:2px">${_nomColegio}</div>`:''}
-        <div style="font-size:18px;font-weight:900;letter-spacing:-.3px">BOLETÍN DE CALIFICACIONES</div>
-        <div style="font-size:11px;color:#555;margin-top:3px">${subtitle} · Emitido: ${fechaGen}</div>
+    <div style="border-bottom:3px solid #111;padding:14px 24px 10px;text-align:center;position:relative">
+      <div style="display:flex;align-items:center;justify-content:center;gap:16px;margin-bottom:6px">
+        ${_logo?`<img src="${_logo}" style="height:70px;width:auto;object-fit:contain" alt="Logo">`:''}
+        <div>
+          ${_nomColegio?`<div style="font-size:15px;font-weight:900;text-transform:uppercase;letter-spacing:.04em">${_nomColegio}</div>`:''}
+          <div style="font-size:11px;color:#555;margin-top:2px">BOLETIN DE CALIFICACIONES - SEDE PRINCIPAL</div>
+        </div>
       </div>
-      ${_logo?`<img src="${_logo}" style="height:60px;width:auto;object-fit:contain;margin-left:16px" alt="Logo">`:''}
+      <div style="font-size:12px;font-weight:700;margin-top:6px;letter-spacing:.03em">
+        AÑO: ${anno}${jornadaLabel?' &nbsp; JORNADA: '+jornadaLabel:''} &nbsp; CURSO: <strong>${esc(salon)||'—'}</strong> &nbsp; ${isTodos?'TODOS LOS PERIODOS':'PERIODO: <strong>'+decodeURIComponent(perFilter)+'</strong>'}
+      </div>
+      <div style="font-size:10px;color:#666;margin-top:3px">Generado: ${fechaGen}</div>
     </div>
     <!-- DATOS DEL ESTUDIANTE -->
-    <div style="border-bottom:1.5px solid #ccc;padding:10px 24px;display:grid;grid-template-columns:1fr 1fr;gap:8px">
+    <div style="border-bottom:1.5px solid #ccc;padding:8px 24px;display:grid;grid-template-columns:1fr 1fr;gap:6px">
       <div>
         <div style="font-size:12px;line-height:1.9"><strong>Estudiante:</strong> ${esc(nombre)}</div>
-        <div style="font-size:12px;line-height:1.9"><strong>T.I.:</strong> ${esc(ti)||'No registrado'}</div>
-        <div style="font-size:12px;line-height:1.9"><strong>Salón:</strong> ${esc(salon)||'—'} &nbsp;·&nbsp; <strong>Ciclo:</strong> ${ciclo==='primaria'?'Primaria':'Bachillerato'}</div>
+        <div style="font-size:12px;line-height:1.9"><strong>Código / T.I.:</strong> ${esc(ti)||'No registrado'}</div>
+        <div style="font-size:12px;line-height:1.9"><strong>Ciclo:</strong> ${ciclo==='primaria'?'Primaria':'Bachillerato'}</div>
       </div>
       <div>
         ${isTodos
           ?`<div style="font-size:12px;line-height:1.9"><strong>Promedio General:</strong> <span style="font-weight:900;font-size:15px">${pg.toFixed(2)}</span></div>
              <div style="font-size:12px;line-height:1.9"><strong>Puesto en Salón:</strong> <strong>${ps}${ps!=='—'?'°':''}</strong></div>`
-          :`<div style="font-size:12px;line-height:1.9"><strong>Promedio ${decodeURIComponent(perFilter)}:</strong> <span style="font-weight:900;font-size:15px">${perPromVal.toFixed(2)}</span></div>
+          :`<div style="font-size:12px;line-height:1.9"><strong>Promedio Periodo:</strong> <span style="font-weight:900;font-size:15px">${perPromVal.toFixed(2)}</span></div>
              <div style="font-size:12px;line-height:1.9"><strong>Puesto en Salón:</strong> <strong>${perPuestoVal}${perPuestoVal!=='—'?'°':''}</strong></div>`}
         ${discProm!==null?`<div style="font-size:12px;line-height:1.9"><strong>Comportamiento Social:</strong> ${discProm.toFixed(2)} — ${bDes(discProm)}</div>`:''}
       </div>
