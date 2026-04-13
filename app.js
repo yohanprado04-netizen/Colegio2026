@@ -1950,7 +1950,7 @@ function renderANotTbl(salon,per,list){
         <td id="dc_${e.id}_${em}_${ep}" style="background:#f0f8ff;padding:5px">
           <span class="${scC(d)}" style="font-size:11px">${d.toFixed(2)}</span></td>`;
     }).join('');
-    const _discValPer1 = DB.notas[e.id]?.[per]?.disciplina;
+    const _discValPer1 = DB.notas[e.id]?.[per]?.disciplina ?? DB.notas[e.id]?.[per]?._disciplina;
     const _condValPer1 = DB.notas[e.id]?.[per]?.conducta ?? DB.notas[e.id]?.[per]?._conducta;
     tr.innerHTML=`<td><strong>${esc(e.nombre)}</strong></td>${cells}
       <td style="padding:4px">
@@ -2936,7 +2936,7 @@ function loadPN(){
         syncN(e.id);
         const pp = pprom(e.id, per);
         const tieneNotas = mats.some(m => { const t = DB.notas[e.id]?.[per]?.[m]; return t && (t.a > 0 || t.c > 0 || t.r > 0); });
-        const discVal = DB.notas[e.id]?.[per]?.disciplina ?? DB.notas[e.id]?.[per]?.disc ?? (typeof DB.notas[e.id]?.disciplina === 'number' ? DB.notas[e.id].disciplina : 0);
+        const discVal = DB.notas[e.id]?.[per]?.disciplina ?? DB.notas[e.id]?.[per]?._disciplina ?? DB.notas[e.id]?.[per]?.disc ?? (typeof DB.notas[e.id]?.disciplina === 'number' ? DB.notas[e.id].disciplina : 0);
         const condValCard = DB.notas[e.id]?.[per]?.conducta ?? DB.notas[e.id]?.[per]?._conducta ?? (typeof DB.notas[e.id]?.conducta === 'number' ? DB.notas[e.id].conducta : 0);
         const camposHTML = mats.map(m => {
           const t = DB.notas[e.id][per][m] || {a:0,c:0,r:0};
@@ -3153,7 +3153,7 @@ function loadPN(){
           <td id="dc_${e.id}_${em}_${ep}" style="background:#f0f8ff;padding:5px">
             <span class="${scC(d)}" style="font-size:11px">${d.toFixed(2)}</span></td>`;
       }).join('');
-      const discVal = DB.notas[e.id]?.[per]?.disciplina ?? DB.notas[e.id]?.[per]?.disc ?? null;
+      const discVal = DB.notas[e.id]?.[per]?.disciplina ?? DB.notas[e.id]?.[per]?._disciplina ?? DB.notas[e.id]?.[per]?.disc ?? null;
       const condVal = DB.notas[e.id]?.[per]?.conducta ?? DB.notas[e.id]?.[per]?._conducta ?? null;
       const discValDisp = typeof discVal==='number'?discVal:0;
       const condValDisp = typeof condVal==='number'?condVal:0;
@@ -4703,11 +4703,11 @@ function dlBoletin(estId,perFilter,anno,snapData){
     // Función para fila de conducta/disciplina
     const buildDiscRow = () => {
       const discPorPer = pers2render.map(per=>{
-        const dv=notas[per]?.disciplina??notas[per]?.disc??null;
+        const dv=notas[per]?.disciplina??notas[per]?._disciplina??notas[per]?.disc??null;
         return typeof dv==='number'?dv:null;
       });
       const condPorPer = pers2render.map(per=>{
-        const cv=notas[per]?._conducta??notas[per]?.conducta??null;
+        const cv=notas[per]?.conducta??notas[per]?._conducta??null;
         return typeof cv==='number'?cv:null;
       });
       const conductaGlobal = notas?.conducta ?? null;
@@ -4847,8 +4847,8 @@ function dlBoletin(estId,perFilter,anno,snapData){
       }
 
       // Disciplina y Conducta del periodo
-      const discValPer = notas[per]?.disciplina ?? notas[per]?.disc ?? null;
-      const condValPer = notas[per]?._conducta ?? notas[per]?.conducta ?? null;
+      const discValPer = notas[per]?.disciplina ?? notas[per]?._disciplina ?? notas[per]?.disc ?? null;
+      const condValPer = notas[per]?.conducta ?? notas[per]?._conducta ?? null;
       const discPerRow = (typeof discValPer==='number' || typeof condValPer==='number')
         // ORDEN BOLETÍN: primero Conducta, luego Disciplina
         ? `${typeof condValPer==='number'?`<tr style="background:#fafaf0">
@@ -4946,9 +4946,9 @@ function dlBoletin(estId,perFilter,anno,snapData){
   }
 
   // ─── Disciplina y Conducta ────────────────────────────────────────────────
-  const discPer=isTodos?pers2render.map(per=>{const dv=notas[per]?.disciplina??notas[per]?.disc??null;return typeof dv==='number'?dv:null;}).filter(d=>d!==null):[];
+  const discPer=isTodos?pers2render.map(per=>{const dv=notas[per]?.disciplina??notas[per]?._disciplina??notas[per]?.disc??null;return typeof dv==='number'?dv:null;}).filter(d=>d!==null):[];
   const discProm=discPer.length?+(discPer.reduce((s,d)=>s+d,0)/discPer.length).toFixed(2):(notas?.disciplina??null);
-  const condPer=isTodos?pers2render.map(per=>{const cv=notas[per]?._conducta??notas[per]?.conducta??null;return typeof cv==='number'?cv:null;}).filter(c=>c!==null):[];
+  const condPer=isTodos?pers2render.map(per=>{const cv=notas[per]?.conducta??notas[per]?._conducta??null;return typeof cv==='number'?cv:null;}).filter(c=>c!==null):[];
   const condProm=condPer.length?+(condPer.reduce((s,c)=>s+c,0)/condPer.length).toFixed(2):(notas?.conducta??null);
 
   // ─── HTML DEL BOLETÍN ─────────────────────────────────────────────────────

@@ -84,12 +84,12 @@ router.get('/', authMiddleware, async (req, res) => {
         // reciba siempre los nombres originales como "Ed. Física", "Ed. Artística", etc.
         ).forEach(([m, v]) => { mats[m.replace(/\uFF0E/g, '.')] = v; });
         notasObj[n.estId][p.periodo] = mats;
-        // Guardar disciplina por periodo también
+        // Guardar disciplina por periodo (sin guión bajo para que el boletín la lea directamente)
         if (p.disciplina != null && !isNaN(p.disciplina))
-          notasObj[n.estId][p.periodo]._disciplina = p.disciplina;
+          notasObj[n.estId][p.periodo].disciplina = p.disciplina;
         // Guardar conducta por periodo
         if (p.conducta != null && !isNaN(p.conducta))
-          notasObj[n.estId][p.periodo]._conducta = p.conducta;
+          notasObj[n.estId][p.periodo].conducta = p.conducta;
       });
       // Usar campo raíz nota.disciplina (promedio global calculado) — puede ser 0
       if (n.disciplina != null && !isNaN(n.disciplina))
@@ -114,10 +114,17 @@ router.get('/', authMiddleware, async (req, res) => {
           : Object.entries(p.materias || {})
         ).forEach(([m, v]) => { mats[m.replace(/\uFF0E/g, '.')] = v; });
         estNotas[p.periodo] = mats;
+        // Disciplina y conducta por periodo (para boletines de años anteriores)
+        if (p.disciplina != null && !isNaN(p.disciplina))
+          estNotas[p.periodo].disciplina = p.disciplina;
+        if (p.conducta != null && !isNaN(p.conducta))
+          estNotas[p.periodo].conducta = p.conducta;
       });
       // Disciplina global del documento raíz
       if (n.disciplina != null && !isNaN(n.disciplina))
         estNotas.disciplina = n.disciplina;
+      if (n.conducta != null && !isNaN(n.conducta))
+        estNotas.conducta = n.conducta;
       notasPorAno[yr][n.estId] = estNotas;
     });
 
