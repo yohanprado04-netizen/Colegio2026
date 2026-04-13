@@ -1449,7 +1449,7 @@ function renderPrfTbl(){
     const list=DB.profs.filter(p=>p.ciclo===c);
     if(!list.length){el.innerHTML='<div class="mty" style="padding:20px"><div class="ei">👩‍🏫</div><p>Sin profesores</p></div>';return;}
     el.innerHTML=`<div class="tw"><table>
-      <thead><tr><th>Nombre</th><th>T.I.</th>${c==='bachillerato'?'<th>Salón → Materias</th>':'<th>Salones</th>'}<th></th></tr></thead>
+      <thead><tr><th>Nombre</th><th>C.C.</th>${c==='bachillerato'?'<th>Salón → Materias</th>':'<th>Salones</th>'}<th></th></tr></thead>
       <tbody>${list.map(p=>`<tr>
         <td><strong>${esc(p.nombre)}</strong><br>
           <span style="font-family:var(--mn);font-size:11px;color:var(--sl3)">${esc(p.usuario||"")}</span></td>
@@ -1482,7 +1482,7 @@ function openAddPrf(ciclo){
   /* For primaria: only salones. For bach: salones checkboxes, then per-salon materia assignment */
   Swal.fire({title:`Nuevo Profesor — ${ciclo==='primaria'?'Primaria':'Bachillerato'}`,width:600,
     html:`<div style="text-align:left;font-family:var(--fn)">
-      ${sF([{id:'npn',lb:'Nombre'},{id:'npti',lb:'T.I./CC'},{id:'npu',lb:'Usuario'},{id:'npp',lb:'Contraseña'}])}
+      ${sF([{id:'npn',lb:'Nombre'},{id:'npti',lb:'C.C.'},{id:'npu',lb:'Usuario'},{id:'npp',lb:'Contraseña'}])}
       <div style="text-align:left;margin-bottom:0">
         <label style="font-size:11px;font-weight:800;text-transform:uppercase;color:var(--sl);display:block;margin-bottom:6px">Salones (todos los disponibles para bachillerato, máx 1 para primaria)</label>
         <div style="display:flex;flex-wrap:wrap;gap:8px">
@@ -1580,7 +1580,7 @@ function editPrf(pid){
   const sals=DB.sals.filter(s=>s.ciclo===p.ciclo);
   Swal.fire({title:'Editar Profesor',width:600,
     html:`<div style="text-align:left;font-family:var(--fn)">
-      ${sF([{id:'epn',lb:'Nombre',val:p.nombre},{id:'epti',lb:'T.I./CC',val:p.ti||''},
+      ${sF([{id:'epn',lb:'Nombre',val:p.nombre},{id:'epti',lb:'C.C.',val:p.ti||''},
         {id:'epu',lb:'Usuario',val:p.usuario},{id:'epp',lb:'Nueva Contraseña (dejar vacío para no cambiar)',val:'',tp:'password'}])}
       <div style="text-align:left;margin-bottom:0">
         <label style="font-size:11px;font-weight:800;text-transform:uppercase;color:var(--sl);display:block;margin-bottom:6px">Salones (todos los disponibles para bachillerato, máx 1 para primaria)</label>
@@ -3427,7 +3427,7 @@ function dlRptXls(salon,per,matFilter){
   const infoRows=[
     ['REPORTE DOCENTE — INFORME DE CALIFICACIONES'],[''],
     ['Profesor:',CU.nombre],
-    ['T.I./CC:',CU.ti||'—'],
+    ['C.C.:',CU.ti||'—'],
     ['Ciclo:',CU.ciclo==='bachillerato'?'Bachillerato (6°–11°)':'Primaria (1°–5°)'],
     ['Materias reportadas:',mats.join(', ')||'Todas las del salón'],
     ['Salón:',salon],
@@ -4400,7 +4400,7 @@ function pgEProf(){
   return`<div class="ph"><h2>Mis Profesores</h2><button class="btn xs bg" onclick="showHelp('eprof')" style="margin-top:6px">❓ Ayuda</button></div>
   <div class="card"><div class="chd"><span class="cti">Salón: <span class="bdg bbl">${e.salon||'Sin salón'}</span></span></div>
   ${e.salon&&prfs.length?`<div class="tw"><table><thead>
-    <tr><th>Profesor</th><th>Ciclo</th><th>Materias</th><th>T.I./CC</th></tr></thead>
+    <tr><th>Profesor</th><th>Ciclo</th><th>Materias</th></tr></thead>
     <tbody>${prfs.map(p=>`<tr>
       <td><strong>${esc(p.nombre)}</strong></td>
       <td><span class="bdg ${p.ciclo==='bachillerato'?'bte':'bbl'}">${p.ciclo}</span></td>
@@ -4408,7 +4408,6 @@ function pgEProf(){
         ${(p.materias||[]).map(m=>`<span class="bdg bbl" style="margin:1px">${m}</span>`).join('')||
           '<span style="font-size:12px;color:var(--sl3)">Todas (Primaria)</span>'}
       </div></td>
-      <td style="font-family:var(--mn);font-size:12px">${p.ti||'—'}</td>
     </tr>`).join('')}</tbody></table></div>`
   :'<div class="mty"><div class="ei">👩‍🏫</div><p>Sin profesores asignados</p></div>'}
   </div>`;
