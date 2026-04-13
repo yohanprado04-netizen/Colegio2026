@@ -269,6 +269,7 @@ async function saveTri(inp) {
   }
   const eid = inp.dataset.eid;
   const per = decodeURIComponent(inp.dataset.per);
+  // mat = nombre original de la materia (puede tener puntos, ej: "Ed. Física")
   const mat = decodeURIComponent(inp.dataset.mat);
   const f   = inp.dataset.f;
   let v = parseFloat(inp.value);
@@ -280,6 +281,8 @@ async function saveTri(inp) {
   if (v > 5) { v = 5; inp.value = '5.0'; }
 
   syncN(eid);
+  // Inicializar si no existe aún (por si syncN no lo creó con este nombre)
+  if (!DB.notas[eid][per][mat]) DB.notas[eid][per][mat] = { a: 0, c: 0, r: 0 };
   const oldDef = def(DB.notas[eid][per][mat]);
   DB.notas[eid][per][mat][f] = v;
 
@@ -290,6 +293,7 @@ async function saveTri(inp) {
   if (apr) { const px = pprom(eid, per); apr.innerHTML = `<span class="${scC(px)}">${px.toFixed(2)}</span>`; }
 
   try {
+    // Enviar mat original en la URL — el backend sanitiza los puntos para MongoDB
     await apiFetch(`/api/notas/${eid}/${encodeURIComponent(per)}/${encodeURIComponent(mat)}`, {
       method: 'PUT',
       body: JSON.stringify(DB.notas[eid][per][mat])
@@ -846,6 +850,30 @@ async function saveDisc(eid, v, periodo) {
     if (res && res.disciplinaGlobal != null) DB.notas[eid].disciplina = res.disciplinaGlobal;
     else DB.notas[eid].disciplina = val;
   } catch (e) { console.warn('saveDisc error:', e); }
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// saveConducta() — guarda la nota de conducta (0.0-5.0)
+// ═══════════════════════════════════════════════════════════════════
+async function saveConducta(eid, v, periodo) {
+  if (!validateSession() || !['admin', 'profe'].includes(CU.role)) return;
+  let val = parseFloat(v);
+  if (isNaN(val) || val < 0) {
+    sw('error', 'Conducta inválida', 'Ingresa un número entre 0.0 y 5.0'); return;
+  }
+  if (val > 5) val = 5;
+  syncN(eid);
+  if (periodo && DB.notas[eid]) {
+    if (!DB.notas[eid][periodo]) DB.notas[eid][periodo] = {};
+    DB.notas[eid][periodo].conducta = val;
+  }
+  try {
+    const res = await apiFetch(`/api/notas/${eid}/conducta`, {
+      method: 'PUT', body: JSON.stringify({ conducta: val, periodo: periodo || '' })
+    });
+    if (res && res.conductaGlobal != null) DB.notas[eid].conducta = res.conductaGlobal;
+    else DB.notas[eid].conducta = val;
+  } catch (e) { console.warn('saveConducta error:', e); }
 }
 
 // ═══════════════════════════════════════════════════════════════════

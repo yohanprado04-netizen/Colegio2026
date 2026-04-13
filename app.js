@@ -1924,10 +1924,10 @@ function renderANotTbl(salon,per,list){
     <thead>
       <tr><th>Estudiante</th>
         ${mats.map(m=>`<th colspan="4" style="text-align:center;border-left:2px solid var(--bd)">${m}</th>`).join('')}
-        <th>Disciplina</th><th>Prom.</th></tr>
+        <th>Disciplina</th><th>Conducta</th><th>Prom.</th></tr>
       <tr><td></td>
         ${(()=>{const p=DB.notaPct||{};const a=p.a??60,c=p.c??20,r=p.r??20;return mats.map(()=>`<th style="font-size:9px;color:var(--sl2);border-left:2px solid var(--bd)">Apt.${a}%</th><th style="font-size:9px;color:var(--sl2)">Act.${c}%</th><th style="font-size:9px;color:var(--sl2)">Res.${r}%</th><th style="font-size:9px;background:#e8f4fd">Def.</th>`).join('')})()}
-        <td></td><td></td></tr>
+        <td></td><td></td><td></td></tr>
     </thead>
     <tbody id="anB"></tbody>
   </table></div>`;
@@ -1962,6 +1962,17 @@ function renderANotTbl(salon,per,list){
           ${typeof DB.notas[e.id]?.disciplina==='number'?discLabel(DB.notas[e.id].disciplina):'—'}
         </div>
       </td>
+      <td style="padding:4px">
+        <input type="number" class="ni" min="0" max="5" step="0.1"
+          style="width:62px;text-align:center"
+          value="${typeof DB.notas[e.id]?.conducta==='number'?DB.notas[e.id].conducta.toFixed(1):''}"
+          placeholder="0-5"
+          title="Conducta 0.0-5.0"
+          oninput="clampNota(this)" onchange="saveConducta('${e.id}',this.value,'${ep}')">
+        <div style="font-size:10px;color:var(--sl3);text-align:center">
+          ${typeof DB.notas[e.id]?.conducta==='number'?discLabel(DB.notas[e.id].conducta):'—'}
+        </div>
+      </td>
       <td id="apr_${e.id}"><span class="${scC(pp)}">${pp.toFixed(2)}</span></td>`;
     body.appendChild(tr);
   });
@@ -1970,6 +1981,8 @@ function renderANotTbl(salon,per,list){
 async function saveTri(inp){ /* implementado en api-layer.js */ }
 /* ── SOBREESCRITA por api-layer.js ── */
 async function saveDisc(eid,v){ /* implementado en api-layer.js */ }
+/* ── SOBREESCRITA por api-layer.js ── */
+async function saveConducta(eid,v){ /* implementado en api-layer.js */ }
 
 /* ============================================================
    REHAB
@@ -2348,11 +2361,11 @@ function dlSalonTodos(){
   function next(){
     if(i>=conDatos.length)return;
     dlBoletin(conDatos[i].id,per,anno);
-    i++;setTimeout(next,2000);
+    i++;setTimeout(next,3500);
   }
   sw('info',`Descargando ${conDatos.length} boletín(es)...`,
     ests.length-conDatos.length>0?`(${ests.length-conDatos.length} estudiante(s) sin notas omitidos)`:'');
-  setTimeout(next,600);
+  setTimeout(next,800);
 }
 
 /* ============================================================
@@ -2978,6 +2991,11 @@ function loadPN(){
                 value="${discVal.toFixed(1)}" placeholder="0.0"
                 oninput="clampNota(this)" onchange="saveDisc('${e.id}',this.value,'${ep_global}')">
               <span style="color:var(--sl3);font-size:11px">${discLabel(discVal)}</span>
+              <span style="color:var(--sl2);margin-left:12px">Conducta:</span>
+              <input type="number" class="ni" min="0" max="5" step="0.1" style="width:64px;text-align:center"
+                value="${(typeof DB.notas[e.id]?.conducta==='number'?DB.notas[e.id].conducta:0).toFixed(1)}" placeholder="0.0"
+                oninput="clampNota(this)" onchange="saveConducta('${e.id}',this.value,'${ep_global}')">
+              <span style="color:var(--sl3);font-size:11px">${discLabel(typeof DB.notas[e.id]?.conducta==='number'?DB.notas[e.id].conducta:0)}</span>
               <span style="margin-left:auto;font-size:12px">Prom. periodo: <strong id="apr_${e.id}" class="${scC(pp)}">${pp.toFixed(2)}</strong></span>
             </div>
             ${(()=>{
@@ -3102,10 +3120,10 @@ function loadPN(){
       <thead>
         <tr><th>Estudiante</th>
           ${mats.map(m=>`<th colspan="4" style="text-align:center;border-left:2px solid var(--bd)">${m}</th>`).join('')}
-          <th>Disciplina</th><th>Prom.</th></tr>
+          <th>Disciplina</th><th>Conducta</th><th>Prom.</th></tr>
         <tr><td></td>
           ${(()=>{const p=DB.notaPct||{};const a=p.a??60,c=p.c??20,r=p.r??20;return mats.map(()=>`<th style="font-size:9px;color:var(--sl2);border-left:2px solid var(--bd)">Apt.${a}%</th><th style="font-size:9px;color:var(--sl2)">Act.${c}%</th><th style="font-size:9px;color:var(--sl2)">Res.${r}%</th><th style="font-size:9px;background:#e8f4fd">Def.</th>`).join('')})()}
-          <td></td><td></td></tr>
+          <td></td><td></td><td></td></tr>
       </thead>
       <tbody id="pnB"></tbody>
     </table></div>
@@ -3133,6 +3151,7 @@ function loadPN(){
             <span class="${scC(d)}" style="font-size:11px">${d.toFixed(2)}</span></td>`;
       }).join('');
       const discVal=typeof DB.notas[e.id]?.disciplina==='number'?DB.notas[e.id].disciplina:0;
+      const condVal=typeof DB.notas[e.id]?.conducta==='number'?DB.notas[e.id].conducta:0;
       tr.innerHTML=`<td><strong>${esc(e.nombre)}</strong></td>${cells}
         <td style="padding:4px">
           <input type="number" class="ni" min="0" max="5" step="0.1"
@@ -3142,6 +3161,15 @@ function loadPN(){
             title="Disciplina 0.0-5.0"
             oninput="clampNota(this)" onchange="saveDisc('${e.id}',this.value,'${ep}')">
           <div style="font-size:10px;color:var(--sl3);text-align:center">${discLabel(discVal)}</div>
+        </td>
+        <td style="padding:4px">
+          <input type="number" class="ni" min="0" max="5" step="0.1"
+            style="width:62px;text-align:center"
+            value="${condVal.toFixed(1)}"
+            placeholder="0.0"
+            title="Conducta 0.0-5.0"
+            oninput="clampNota(this)" onchange="saveConducta('${e.id}',this.value,'${ep}')">
+          <div style="font-size:10px;color:var(--sl3);text-align:center">${discLabel(condVal)}</div>
         </td>
         <td id="apr_${e.id}"><span class="${scC(pp)}">${pp.toFixed(2)}</span></td>`;
       body.appendChild(tr);
@@ -4669,21 +4697,47 @@ function dlBoletin(estId,perFilter,anno,snapData){
 
     // Función para fila de conducta/disciplina
     const buildDiscRow = () => {
-      if(!discPer.length) return '';
       const discPorPer = pers2render.map(per=>{
         const dv=notas[per]?.disciplina??notas[per]?.disc??null;
         return typeof dv==='number'?dv:null;
       });
-      const discCells = discPorPer.map(dv=>
-        `<td style="padding:5px 7px;border:1px solid #ddd;text-align:center;font-weight:700;font-size:12px;color:${dv!==null?bCol(dv):'#aaa'}">${dv!==null?dv.toFixed(2):'—'}</td>`
-      ).join('');
-      return `<tr style="background:#f5f5f5">
-        <td style="padding:5px 8px;border:1px solid #ddd;font-size:12px;font-weight:700">Conducta / Disciplina</td>
-        ${discCells}
-        <td style="padding:5px 7px;border:1px solid #ddd;text-align:center;font-weight:900;font-size:13px;color:${bCol(discProm)}">${discProm!==null?discProm.toFixed(2):'—'}</td>
-        <td style="padding:5px 7px;border:1px solid #ddd;text-align:center;font-size:11px;font-weight:700;color:${discProm!==null?bCol(discProm):'#aaa'}">${discProm!==null?bDes(discProm):'—'}</td>
-        <td style="padding:5px 7px;border:1px solid #ddd;font-size:10px;color:#555">—</td>
-      </tr>`;
+      const condPorPer = pers2render.map(per=>{
+        const cv=notas[per]?._conducta??notas[per]?.conducta??null;
+        return typeof cv==='number'?cv:null;
+      });
+      const conductaGlobal = notas?.conducta ?? null;
+      const hasDisc = discPorPer.some(v=>v!==null);
+      const hasCond = condPorPer.some(v=>v!==null);
+      if(!hasDisc && !hasCond) return '';
+      let rows = '';
+      if(hasDisc){
+        const discCells = discPorPer.map(dv=>
+          `<td style="padding:5px 7px;border:1px solid #ddd;text-align:center;font-weight:700;font-size:12px;color:${dv!==null?bCol(dv):'#aaa'}">${dv!==null?dv.toFixed(2):'—'}</td>`
+        ).join('');
+        rows += `<tr style="background:#f5f5f5">
+          <td style="padding:5px 8px;border:1px solid #ddd;font-size:12px;font-weight:700">Disciplina</td>
+          ${discCells}
+          <td style="padding:5px 7px;border:1px solid #ddd;text-align:center;font-weight:900;font-size:13px;color:${discProm!==null?bCol(discProm):'#aaa'}">${discProm!==null?discProm.toFixed(2):'—'}</td>
+          <td style="padding:5px 7px;border:1px solid #ddd;text-align:center;font-size:11px;font-weight:700;color:${discProm!==null?bCol(discProm):'#aaa'}">${discProm!==null?bDes(discProm):'—'}</td>
+          <td style="padding:5px 7px;border:1px solid #ddd;font-size:10px;color:#555">—</td>
+        </tr>`;
+      }
+      if(hasCond){
+        const condProm = condPorPer.filter(v=>v!==null).length
+          ? +(condPorPer.filter(v=>v!==null).reduce((s,v)=>s+v,0)/condPorPer.filter(v=>v!==null).length).toFixed(2)
+          : (conductaGlobal ?? null);
+        const condCells = condPorPer.map(cv=>
+          `<td style="padding:5px 7px;border:1px solid #ddd;text-align:center;font-weight:700;font-size:12px;color:${cv!==null?bCol(cv):'#aaa'}">${cv!==null?cv.toFixed(2):'—'}</td>`
+        ).join('');
+        rows += `<tr style="background:#fafaf0">
+          <td style="padding:5px 8px;border:1px solid #ddd;font-size:12px;font-weight:700">Conducta</td>
+          ${condCells}
+          <td style="padding:5px 7px;border:1px solid #ddd;text-align:center;font-weight:900;font-size:13px;color:${condProm!==null?bCol(condProm):'#aaa'}">${condProm!==null?condProm.toFixed(2):'—'}</td>
+          <td style="padding:5px 7px;border:1px solid #ddd;text-align:center;font-size:11px;font-weight:700;color:${condProm!==null?bCol(condProm):'#aaa'}">${condProm!==null?bDes(condProm):'—'}</td>
+          <td style="padding:5px 7px;border:1px solid #ddd;font-size:10px;color:#555">—</td>
+        </tr>`;
+      }
+      return rows;
     };
     // Función para generar filas con o sin agrupación por áreas
     const buildRows = (matsArr, showArea) => matsArr.map((m,idx)=>{
@@ -4786,16 +4840,24 @@ function dlBoletin(estId,perFilter,anno,snapData){
         tableBody=buildMatRows(mats);
       }
 
-      // Disciplina del periodo
+      // Disciplina y Conducta del periodo
       const discValPer = notas[per]?.disciplina ?? notas[per]?.disc ?? null;
-      const discPerRow = typeof discValPer==='number'
-        ? `<tr style="background:#f5f5f5">
-            <td style="padding:5px 8px;border:1px solid #ddd;font-size:12px;font-weight:700">Conducta / Disciplina</td>
+      const condValPer = notas[per]?._conducta ?? notas[per]?.conducta ?? null;
+      const discPerRow = (typeof discValPer==='number' || typeof condValPer==='number')
+        ? `${typeof discValPer==='number'?`<tr style="background:#f5f5f5">
+            <td style="padding:5px 8px;border:1px solid #ddd;font-size:12px;font-weight:700">Disciplina</td>
             <td colspan="3" style="padding:5px 7px;border:1px solid #ddd;text-align:center;font-size:12px">—</td>
             <td style="padding:5px 7px;border:1px solid #ddd;text-align:center;font-weight:900;font-size:13px;color:${bCol(discValPer)}">${discValPer.toFixed(2)}</td>
             <td style="padding:5px 7px;border:1px solid #ddd;text-align:center;font-size:11px;font-weight:700;color:${bCol(discValPer)}">${bDes(discValPer)}</td>
             <td style="padding:5px 7px;border:1px solid #ddd;font-size:10px;color:#555">—</td>
-          </tr>` : '';
+          </tr>`:''}
+          ${typeof condValPer==='number'?`<tr style="background:#fafaf0">
+            <td style="padding:5px 8px;border:1px solid #ddd;font-size:12px;font-weight:700">Conducta</td>
+            <td colspan="3" style="padding:5px 7px;border:1px solid #ddd;text-align:center;font-size:12px">—</td>
+            <td style="padding:5px 7px;border:1px solid #ddd;text-align:center;font-weight:900;font-size:13px;color:${bCol(condValPer)}">${condValPer.toFixed(2)}</td>
+            <td style="padding:5px 7px;border:1px solid #ddd;text-align:center;font-size:11px;font-weight:700;color:${bCol(condValPer)}">${bDes(condValPer)}</td>
+            <td style="padding:5px 7px;border:1px solid #ddd;font-size:10px;color:#555">—</td>
+          </tr>`:''}` : '';
       return`<div style="margin-bottom:18px;page-break-inside:avoid">
         <div style="background:#e8e8e8;color:#111;padding:8px 12px;display:flex;justify-content:space-between;align-items:center;border:1px solid #ccc">
           <strong style="font-size:13px">${per}</strong>
@@ -4876,9 +4938,11 @@ function dlBoletin(estId,perFilter,anno,snapData){
     }
   }
 
-  // ─── Disciplina ───────────────────────────────────────────────────────────
+  // ─── Disciplina y Conducta ────────────────────────────────────────────────
   const discPer=isTodos?pers2render.map(per=>{const dv=notas[per]?.disciplina??notas[per]?.disc??null;return typeof dv==='number'?dv:null;}).filter(d=>d!==null):[];
-  const discProm=discPer.length?+(discPer.reduce((s,d)=>s+d,0)/discPer.length).toFixed(2):null;
+  const discProm=discPer.length?+(discPer.reduce((s,d)=>s+d,0)/discPer.length).toFixed(2):(notas?.disciplina??null);
+  const condPer=isTodos?pers2render.map(per=>{const cv=notas[per]?._conducta??notas[per]?.conducta??null;return typeof cv==='number'?cv:null;}).filter(c=>c!==null):[];
+  const condProm=condPer.length?+(condPer.reduce((s,c)=>s+c,0)/condPer.length).toFixed(2):(notas?.conducta??null);
 
   // ─── HTML DEL BOLETÍN ─────────────────────────────────────────────────────
   const _logo = DB.colegioLogo||'';
@@ -4889,8 +4953,8 @@ function dlBoletin(estId,perFilter,anno,snapData){
   box.innerHTML=`<div style="font-family:'Arial',sans-serif;background:#fff;max-width:760px;color:#111">
     <!-- ENCABEZADO -->
     <div style="border-bottom:3px solid #111;padding:14px 24px 10px;text-align:center;position:relative">
-      <div style="display:flex;align-items:center;justify-content:center;gap:16px;margin-bottom:6px">
-        ${_logo?`<img src="${_logo}" style="height:70px;width:auto;object-fit:contain" alt="Logo">`:''}
+      <div style="display:flex;align-items:center;justify-content:flex-start;gap:20px;margin-bottom:6px">
+        ${_logo?`<img src="${_logo}" style="height:90px;width:auto;object-fit:contain;flex-shrink:0" alt="Logo">`:''}
         <div>
           ${_nomColegio?`<div style="font-size:15px;font-weight:900;text-transform:uppercase;letter-spacing:.04em">${_nomColegio}</div>`:''}
           <div style="font-size:11px;color:#555;margin-top:2px">BOLETIN DE CALIFICACIONES - SEDE PRINCIPAL</div>
@@ -4911,7 +4975,9 @@ function dlBoletin(estId,perFilter,anno,snapData){
       <div>
         ${isTodos
           ?`<div style="font-size:12px;line-height:1.9"><strong>Promedio General:</strong> <span style="font-weight:900;font-size:15px">${pg.toFixed(2)}</span></div>
-             <div style="font-size:12px;line-height:1.9"><strong>Puesto en Salón:</strong> <strong>${ps}${ps!=='—'?'°':''}</strong></div>`
+             <div style="font-size:12px;line-height:1.9"><strong>Puesto en Salón:</strong> <strong>${ps}${ps!=='—'?'°':''}</strong></div>
+             ${discProm!==null?`<div style="font-size:12px;line-height:1.9"><strong>Disciplina:</strong> <span style="font-weight:700;color:${bCol(discProm)}">${discProm.toFixed(2)} — ${bDes(discProm)}</span></div>`:''}
+             ${condProm!==null?`<div style="font-size:12px;line-height:1.9"><strong>Conducta:</strong> <span style="font-weight:700;color:${bCol(condProm)}">${condProm.toFixed(2)} — ${bDes(condProm)}</span></div>`:''}`
           :`<div style="font-size:12px;line-height:1.9"><strong>Promedio Periodo:</strong> <span style="font-weight:900;font-size:15px">${perPromVal.toFixed(2)}</span></div>
              <div style="font-size:12px;line-height:1.9"><strong>Puesto en Salón:</strong> <strong>${perPuestoVal}${perPuestoVal!=='—'?'°':''}</strong></div>`}
       </div>
@@ -5277,7 +5343,7 @@ async function modalNuevoColegio() {
             <input type="file" id="snLogo" accept="image/png,image/jpeg,image/svg+xml,image/webp" style="display:none"
               onchange="(function(inp){
                 const file=inp.files[0];if(!file)return;
-                if(file.size>600000){sw('error','El logo supera 600 KB. Usa una imagen más pequeña.');inp.value='';return;}
+                if(file.size>2000000){sw('error','El logo supera 2 MB. Usa una imagen más pequeña.');inp.value='';return;}
                 const reader=new FileReader();
                 reader.onload=function(ev){
                   window._snLogoB64=ev.target.result;
@@ -5291,7 +5357,7 @@ async function modalNuevoColegio() {
           </label>
           <img id="snLogoPreview" src="" alt="preview" style="display:none;width:52px;height:52px;object-fit:contain;border-radius:8px;border:1.5px solid #e2e8f0;background:#f7fafc">
         </div>
-        <div id="snLogoLabel" style="font-size:11px;color:#a0aec0;margin-top:3px">PNG, JPG, SVG o WEBP · máx 600 KB</div>
+        <div id="snLogoLabel" style="font-size:11px;color:#a0aec0;margin-top:3px">PNG, JPG, SVG o WEBP · máx 2 MB</div>
       </div>
       <hr style="margin:.5rem 0">
       <p style="margin:.5rem 1rem;font-size:.85rem;color:#555;text-align:left;font-weight:700">📊 Porcentajes de calificación (deben sumar 100%)</p>
@@ -5380,7 +5446,7 @@ async function modalEditColegio(id) {
             <input type="file" id="enLogo" accept="image/png,image/jpeg,image/svg+xml,image/webp" style="display:none"
               onchange="(function(inp){
                 const file=inp.files[0];if(!file)return;
-                if(file.size>600000){sw('error','El logo supera 600 KB.');inp.value='';return;}
+                if(file.size>2000000){sw('error','El logo supera 2 MB.');inp.value='';return;}
                 const reader=new FileReader();
                 reader.onload=function(ev){
                   window._enLogoB64=ev.target.result;
@@ -5392,7 +5458,7 @@ async function modalEditColegio(id) {
           </label>
           <img id="enLogoPreview" src="" alt="" style="display:none;width:52px;height:52px;object-fit:contain;border-radius:8px;border:1.5px solid #38a169;background:#f0fff4">
         </div>
-        ${col.logo ? '<div style="font-size:11px;color:#a0aec0;margin-top:3px">Deja vacío para mantener el logo actual</div>' : '<div style="font-size:11px;color:#a0aec0;margin-top:3px">PNG, JPG, SVG o WEBP · máx 600 KB</div>'}
+        ${col.logo ? '<div style="font-size:11px;color:#a0aec0;margin-top:3px">Deja vacío para mantener el logo actual</div>' : '<div style="font-size:11px;color:#a0aec0;margin-top:3px">PNG, JPG, SVG o WEBP · máx 2 MB</div>'}
       </div>
     `,
     focusConfirm: false, showCancelButton: true, confirmButtonText: 'Guardar',

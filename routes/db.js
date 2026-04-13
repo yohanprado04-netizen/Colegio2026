@@ -80,17 +80,25 @@ router.get('/', authMiddleware, async (req, res) => {
         (p.materias instanceof Map
           ? [...p.materias.entries()]
           : Object.entries(p.materias || {})
-        ).forEach(([m, v]) => { mats[m] = v; });
+        // Revertir sanitización: \uFF0E (punto ancho completo) → '.' para que el frontend
+        // reciba siempre los nombres originales como "Ed. Física", "Ed. Artística", etc.
+        ).forEach(([m, v]) => { mats[m.replace(/\uFF0E/g, '.')] = v; });
         notasObj[n.estId][p.periodo] = mats;
         // Guardar disciplina por periodo también
         if (p.disciplina != null && !isNaN(p.disciplina))
           notasObj[n.estId][p.periodo]._disciplina = p.disciplina;
+        // Guardar conducta por periodo
+        if (p.conducta != null && !isNaN(p.conducta))
+          notasObj[n.estId][p.periodo]._conducta = p.conducta;
       });
       // Usar campo raíz nota.disciplina (promedio global calculado) — puede ser 0
       if (n.disciplina != null && !isNaN(n.disciplina))
         notasObj[n.estId].disciplina = n.disciplina;
       else if (typeof n.disciplina === 'undefined')
         notasObj[n.estId].disciplina = 0;
+      // Conducta global
+      if (n.conducta != null && !isNaN(n.conducta))
+        notasObj[n.estId].conducta = n.conducta;
     });
 
     // ── notasPorAno ──────────────────────────────────────────────────────────
@@ -104,7 +112,7 @@ router.get('/', authMiddleware, async (req, res) => {
         (p.materias instanceof Map
           ? [...p.materias.entries()]
           : Object.entries(p.materias || {})
-        ).forEach(([m, v]) => { mats[m] = v; });
+        ).forEach(([m, v]) => { mats[m.replace(/\uFF0E/g, '.')] = v; });
         estNotas[p.periodo] = mats;
       });
       // Disciplina global del documento raíz

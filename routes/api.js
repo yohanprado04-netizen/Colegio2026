@@ -474,7 +474,13 @@ router.get('/notas/:estId', authMiddleware, async (req, res) => {
 
 router.put('/notas/:estId/:periodo/:materia', authMiddleware, async (req, res) => {
   try {
-    const { estId, periodo, materia } = req.params;
+    const { estId } = req.params;
+    // Express auto-decodifica los params, pero hacemos decode explícito por seguridad
+    const periodo = decodeURIComponent(req.params.periodo);
+    // Sanitizar la materia: los puntos (.) en claves de MongoDB causan errores de path.
+    // Reemplazamos '.' por '\uFF0E' (punto de ancho completo) solo para la clave de BD.
+    const materiaRaw = decodeURIComponent(req.params.materia);
+    const materia = materiaRaw.replace(/\./g, '\uFF0E');
     const { a, c, r, disciplina }    = req.body;
     const cid = tenantId(req) || req.user.colegioId || '';
 
@@ -576,7 +582,6 @@ router.put('/notas/:estId/disciplina', authMiddleware, async (req, res) => {
     if (isNaN(val) || val < 0 || val > 5)
       return res.status(400).json({ error: 'Disciplina debe ser número entre 0.0 y 5.0' });
 
-    // Filtro robusto: incluye docs con colegioId vacío (pre-fix multi-tenant)
     const cidFilter = cid
       ? { $or: [{ colegioId: cid }, { colegioId: '' }, { colegioId: null }] }
       : { $or: [{ colegioId: '' }, { colegioId: null }, { colegioId: { $exists: false } }] };
@@ -598,6 +603,43 @@ router.put('/notas/:estId/disciplina', authMiddleware, async (req, res) => {
     res.json({ ok: true, disciplinaGlobal: nota.disciplina });
   } catch (err) {
     console.error('[disciplina:PUT] Error:', err.message, '| code:', err.code);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ─── PUT /api/notas/:estId/conducta — guardar nota de conducta ────────────────
+router.put('/notas/:estId/conducta', authMiddleware, async (req, res) => {
+  try {
+    const cid   = tenantId(req) || req.user.colegioId || '';
+    const cfg   = await Config.findOne({ key: 'anoActual', colegioId: cid }).lean();
+    const ano   = cfg?.value || String(new Date().getFullYear());
+    const { conducta, periodo } = req.body;
+    const val   = parseFloat(conducta);
+    if (isNaN(val) || val < 0 || val > 5)
+      return res.status(400).json({ error: 'Conducta debe ser número entre 0.0 y 5.0' });
+
+    const cidFilter = cid
+      ? { $or: [{ colegioId: cid }, { colegioId: '' }, { colegioId: null }] }
+      : { $or: [{ colegioId: '' }, { colegioId: null }, { colegioId: { $exists: false } }] };
+
+    let nota = await Nota.findOne({ estId: req.params.estId, anoLectivo: ano, ...cidFilter });
+    if (!nota) nota = new Nota({ estId: req.params.estId, anoLectivo: ano, periodos: [], colegioId: cid });
+
+    if (periodo) {
+      let perEntry = nota.periodos.find(p => p.periodo === periodo);
+      if (!perEntry) { nota.periodos.push({ periodo, materias: {}, conducta: val }); }
+      else { perEntry.conducta = val; }
+      nota.markModified('periodos');
+    }
+    // Calcular promedio global de conducta entre todos los periodos que la tengan
+    const perConCond = nota.periodos.filter(p => p.conducta != null && !isNaN(p.conducta));
+    nota.conducta = perConCond.length
+      ? +(perConCond.reduce((s, p) => s + p.conducta, 0) / perConCond.length).toFixed(2)
+      : val;
+    await nota.save();
+    res.json({ ok: true, conductaGlobal: nota.conducta });
+  } catch (err) {
+    console.error('[conducta:PUT] Error:', err.message, '| code:', err.code);
     res.status(500).json({ error: err.message });
   }
 });
