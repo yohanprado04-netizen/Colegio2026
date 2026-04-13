@@ -4812,7 +4812,7 @@ function dlBoletin(estId,perFilter,anno,snapData){
           ${perCellsArea}
           <td style="padding:5px 7px;border:1px solid #bbb;text-align:center;font-weight:900;font-size:13px;color:${bCol(promArea)}">${promArea===0?'—':promArea.toFixed(2)}</td>
           <td style="padding:5px 7px;border:1px solid #bbb;text-align:center;font-size:11px;font-weight:700;color:${bCol(promArea)}">${promArea===0?'—':bDes(promArea)}</td>
-          <td style="padding:5px 7px;border:1px solid #bbb;font-size:10px;color:#666">Área</td>
+          <td style="padding:5px 7px;border:1px solid #bbb;text-align:center;font-size:10px;font-weight:700;color:${promArea===0?'#aaa':bCol(promArea)}">${promArea===0?'—':bDes(promArea)}</td>
         </tr>`;
         // Filas de materias del área
         bodyHTML += buildRows(matsArea, true);
@@ -4857,7 +4857,7 @@ function dlBoletin(estId,perFilter,anno,snapData){
           tableBody+=`<tr style="background:#e0e0e0">
             <td style="padding:5px 8px;border:1px solid #bbb;font-weight:800;font-size:12px" colspan="5">▸ ${areaNombre}</td>
             <td style="padding:5px 7px;border:1px solid #bbb;text-align:center;font-weight:900;font-size:13px;color:${bCol(dp)}">${dp===0?'—':dp.toFixed(2)}</td>
-            <td style="padding:5px 7px;border:1px solid #bbb;font-size:10px;color:#666">Área</td>
+            <td style="padding:5px 7px;border:1px solid #bbb;text-align:center;font-size:10px;font-weight:700;color:${dp===0?'#aaa':bCol(dp)}">${dp===0?'—':bDes(dp)}</td>
           </tr>`;
           tableBody+=buildMatRows(matsArea);
         });
