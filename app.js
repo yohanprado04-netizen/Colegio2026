@@ -1950,27 +1950,29 @@ function renderANotTbl(salon,per,list){
         <td id="dc_${e.id}_${em}_${ep}" style="background:#f0f8ff;padding:5px">
           <span class="${scC(d)}" style="font-size:11px">${d.toFixed(2)}</span></td>`;
     }).join('');
+    const _discValPer1 = DB.notas[e.id]?.[per]?.disciplina;
+    const _condValPer1 = DB.notas[e.id]?.[per]?.conducta ?? DB.notas[e.id]?.[per]?._conducta;
     tr.innerHTML=`<td><strong>${esc(e.nombre)}</strong></td>${cells}
       <td style="padding:4px">
         <input type="number" class="ni" min="0" max="5" step="0.1"
           style="width:62px;text-align:center"
-          value="${typeof DB.notas[e.id]?.disciplina==='number'?DB.notas[e.id].disciplina.toFixed(1):''}"
+          value="${typeof _discValPer1==='number'?_discValPer1.toFixed(1):''}"
           placeholder="0-5"
-          title="Disciplina 0.0-5.0 — se promedia entre todos los periodos"
+          title="Disciplina ${ep} — 0.0 a 5.0"
           oninput="clampNota(this)" onchange="saveDisc('${e.id}',this.value,'${ep}')">
         <div style="font-size:10px;color:var(--sl3);text-align:center">
-          ${typeof DB.notas[e.id]?.disciplina==='number'?discLabel(DB.notas[e.id].disciplina):'—'}
+          ${typeof _discValPer1==='number'?discLabel(_discValPer1):'—'}
         </div>
       </td>
       <td style="padding:4px">
         <input type="number" class="ni" min="0" max="5" step="0.1"
           style="width:62px;text-align:center"
-          value="${typeof DB.notas[e.id]?.conducta==='number'?DB.notas[e.id].conducta.toFixed(1):''}"
+          value="${typeof _condValPer1==='number'?_condValPer1.toFixed(1):''}"
           placeholder="0-5"
-          title="Conducta 0.0-5.0"
+          title="Conducta ${ep} — 0.0 a 5.0"
           oninput="clampNota(this)" onchange="saveConducta('${e.id}',this.value,'${ep}')">
         <div style="font-size:10px;color:var(--sl3);text-align:center">
-          ${typeof DB.notas[e.id]?.conducta==='number'?discLabel(DB.notas[e.id].conducta):'—'}
+          ${typeof _condValPer1==='number'?discLabel(_condValPer1):'—'}
         </div>
       </td>
       <td id="apr_${e.id}"><span class="${scC(pp)}">${pp.toFixed(2)}</span></td>`;
@@ -2934,7 +2936,8 @@ function loadPN(){
         syncN(e.id);
         const pp = pprom(e.id, per);
         const tieneNotas = mats.some(m => { const t = DB.notas[e.id]?.[per]?.[m]; return t && (t.a > 0 || t.c > 0 || t.r > 0); });
-        const discVal = typeof DB.notas[e.id]?.disciplina === 'number' ? DB.notas[e.id].disciplina : 0;
+        const discVal = DB.notas[e.id]?.[per]?.disciplina ?? DB.notas[e.id]?.[per]?.disc ?? (typeof DB.notas[e.id]?.disciplina === 'number' ? DB.notas[e.id].disciplina : 0);
+        const condValCard = DB.notas[e.id]?.[per]?.conducta ?? DB.notas[e.id]?.[per]?._conducta ?? (typeof DB.notas[e.id]?.conducta === 'number' ? DB.notas[e.id].conducta : 0);
         const camposHTML = mats.map(m => {
           const t = DB.notas[e.id][per][m] || {a:0,c:0,r:0};
           const d = def(t);
@@ -2993,9 +2996,9 @@ function loadPN(){
               <span style="color:var(--sl3);font-size:11px">${discLabel(discVal)}</span>
               <span style="color:var(--sl2);margin-left:12px">Conducta:</span>
               <input type="number" class="ni" min="0" max="5" step="0.1" style="width:64px;text-align:center"
-                value="${(typeof DB.notas[e.id]?.conducta==='number'?DB.notas[e.id].conducta:0).toFixed(1)}" placeholder="0.0"
+                value="${condValCard.toFixed(1)}" placeholder="0.0"
                 oninput="clampNota(this)" onchange="saveConducta('${e.id}',this.value,'${ep_global}')">
-              <span style="color:var(--sl3);font-size:11px">${discLabel(typeof DB.notas[e.id]?.conducta==='number'?DB.notas[e.id].conducta:0)}</span>
+              <span style="color:var(--sl3);font-size:11px">${discLabel(condValCard)}</span>
               <span style="margin-left:auto;font-size:12px">Prom. periodo: <strong id="apr_${e.id}" class="${scC(pp)}">${pp.toFixed(2)}</strong></span>
             </div>
             ${(()=>{
@@ -3150,26 +3153,28 @@ function loadPN(){
           <td id="dc_${e.id}_${em}_${ep}" style="background:#f0f8ff;padding:5px">
             <span class="${scC(d)}" style="font-size:11px">${d.toFixed(2)}</span></td>`;
       }).join('');
-      const discVal=typeof DB.notas[e.id]?.disciplina==='number'?DB.notas[e.id].disciplina:0;
-      const condVal=typeof DB.notas[e.id]?.conducta==='number'?DB.notas[e.id].conducta:0;
+      const discVal = DB.notas[e.id]?.[per]?.disciplina ?? DB.notas[e.id]?.[per]?.disc ?? null;
+      const condVal = DB.notas[e.id]?.[per]?.conducta ?? DB.notas[e.id]?.[per]?._conducta ?? null;
+      const discValDisp = typeof discVal==='number'?discVal:0;
+      const condValDisp = typeof condVal==='number'?condVal:0;
       tr.innerHTML=`<td><strong>${esc(e.nombre)}</strong></td>${cells}
         <td style="padding:4px">
           <input type="number" class="ni" min="0" max="5" step="0.1"
             style="width:62px;text-align:center"
-            value="${discVal.toFixed(1)}"
+            value="${typeof discVal==='number'?discVal.toFixed(1):''}"
             placeholder="0.0"
-            title="Disciplina 0.0-5.0"
+            title="Disciplina ${ep} — 0.0 a 5.0"
             oninput="clampNota(this)" onchange="saveDisc('${e.id}',this.value,'${ep}')">
-          <div style="font-size:10px;color:var(--sl3);text-align:center">${discLabel(discVal)}</div>
+          <div style="font-size:10px;color:var(--sl3);text-align:center">${typeof discVal==='number'?discLabel(discValDisp):'—'}</div>
         </td>
         <td style="padding:4px">
           <input type="number" class="ni" min="0" max="5" step="0.1"
             style="width:62px;text-align:center"
-            value="${condVal.toFixed(1)}"
+            value="${typeof condVal==='number'?condVal.toFixed(1):''}"
             placeholder="0.0"
-            title="Conducta 0.0-5.0"
+            title="Conducta ${ep} — 0.0 a 5.0"
             oninput="clampNota(this)" onchange="saveConducta('${e.id}',this.value,'${ep}')">
-          <div style="font-size:10px;color:var(--sl3);text-align:center">${discLabel(condVal)}</div>
+          <div style="font-size:10px;color:var(--sl3);text-align:center">${typeof condVal==='number'?discLabel(condValDisp):'—'}</div>
         </td>
         <td id="apr_${e.id}"><span class="${scC(pp)}">${pp.toFixed(2)}</span></td>`;
       body.appendChild(tr);
@@ -4710,18 +4715,7 @@ function dlBoletin(estId,perFilter,anno,snapData){
       const hasCond = condPorPer.some(v=>v!==null);
       if(!hasDisc && !hasCond) return '';
       let rows = '';
-      if(hasDisc){
-        const discCells = discPorPer.map(dv=>
-          `<td style="padding:5px 7px;border:1px solid #ddd;text-align:center;font-weight:700;font-size:12px;color:${dv!==null?bCol(dv):'#aaa'}">${dv!==null?dv.toFixed(2):'—'}</td>`
-        ).join('');
-        rows += `<tr style="background:#f5f5f5">
-          <td style="padding:5px 8px;border:1px solid #ddd;font-size:12px;font-weight:700">Disciplina</td>
-          ${discCells}
-          <td style="padding:5px 7px;border:1px solid #ddd;text-align:center;font-weight:900;font-size:13px;color:${discProm!==null?bCol(discProm):'#aaa'}">${discProm!==null?discProm.toFixed(2):'—'}</td>
-          <td style="padding:5px 7px;border:1px solid #ddd;text-align:center;font-size:11px;font-weight:700;color:${discProm!==null?bCol(discProm):'#aaa'}">${discProm!==null?bDes(discProm):'—'}</td>
-          <td style="padding:5px 7px;border:1px solid #ddd;font-size:10px;color:#555">—</td>
-        </tr>`;
-      }
+      // ORDEN DEL BOLETÍN: primero Conducta, luego Disciplina (siempre al final)
       if(hasCond){
         const condProm = condPorPer.filter(v=>v!==null).length
           ? +(condPorPer.filter(v=>v!==null).reduce((s,v)=>s+v,0)/condPorPer.filter(v=>v!==null).length).toFixed(2)
@@ -4734,6 +4728,18 @@ function dlBoletin(estId,perFilter,anno,snapData){
           ${condCells}
           <td style="padding:5px 7px;border:1px solid #ddd;text-align:center;font-weight:900;font-size:13px;color:${condProm!==null?bCol(condProm):'#aaa'}">${condProm!==null?condProm.toFixed(2):'—'}</td>
           <td style="padding:5px 7px;border:1px solid #ddd;text-align:center;font-size:11px;font-weight:700;color:${condProm!==null?bCol(condProm):'#aaa'}">${condProm!==null?bDes(condProm):'—'}</td>
+          <td style="padding:5px 7px;border:1px solid #ddd;font-size:10px;color:#555">—</td>
+        </tr>`;
+      }
+      if(hasDisc){
+        const discCells = discPorPer.map(dv=>
+          `<td style="padding:5px 7px;border:1px solid #ddd;text-align:center;font-weight:700;font-size:12px;color:${dv!==null?bCol(dv):'#aaa'}">${dv!==null?dv.toFixed(2):'—'}</td>`
+        ).join('');
+        rows += `<tr style="background:#f5f5f5">
+          <td style="padding:5px 8px;border:1px solid #ddd;font-size:12px;font-weight:700">Disciplina</td>
+          ${discCells}
+          <td style="padding:5px 7px;border:1px solid #ddd;text-align:center;font-weight:900;font-size:13px;color:${discProm!==null?bCol(discProm):'#aaa'}">${discProm!==null?discProm.toFixed(2):'—'}</td>
+          <td style="padding:5px 7px;border:1px solid #ddd;text-align:center;font-size:11px;font-weight:700;color:${discProm!==null?bCol(discProm):'#aaa'}">${discProm!==null?bDes(discProm):'—'}</td>
           <td style="padding:5px 7px;border:1px solid #ddd;font-size:10px;color:#555">—</td>
         </tr>`;
       }
@@ -4844,18 +4850,19 @@ function dlBoletin(estId,perFilter,anno,snapData){
       const discValPer = notas[per]?.disciplina ?? notas[per]?.disc ?? null;
       const condValPer = notas[per]?._conducta ?? notas[per]?.conducta ?? null;
       const discPerRow = (typeof discValPer==='number' || typeof condValPer==='number')
-        ? `${typeof discValPer==='number'?`<tr style="background:#f5f5f5">
-            <td style="padding:5px 8px;border:1px solid #ddd;font-size:12px;font-weight:700">Disciplina</td>
-            <td colspan="3" style="padding:5px 7px;border:1px solid #ddd;text-align:center;font-size:12px">—</td>
-            <td style="padding:5px 7px;border:1px solid #ddd;text-align:center;font-weight:900;font-size:13px;color:${bCol(discValPer)}">${discValPer.toFixed(2)}</td>
-            <td style="padding:5px 7px;border:1px solid #ddd;text-align:center;font-size:11px;font-weight:700;color:${bCol(discValPer)}">${bDes(discValPer)}</td>
-            <td style="padding:5px 7px;border:1px solid #ddd;font-size:10px;color:#555">—</td>
-          </tr>`:''}
-          ${typeof condValPer==='number'?`<tr style="background:#fafaf0">
+        // ORDEN BOLETÍN: primero Conducta, luego Disciplina
+        ? `${typeof condValPer==='number'?`<tr style="background:#fafaf0">
             <td style="padding:5px 8px;border:1px solid #ddd;font-size:12px;font-weight:700">Conducta</td>
             <td colspan="3" style="padding:5px 7px;border:1px solid #ddd;text-align:center;font-size:12px">—</td>
             <td style="padding:5px 7px;border:1px solid #ddd;text-align:center;font-weight:900;font-size:13px;color:${bCol(condValPer)}">${condValPer.toFixed(2)}</td>
             <td style="padding:5px 7px;border:1px solid #ddd;text-align:center;font-size:11px;font-weight:700;color:${bCol(condValPer)}">${bDes(condValPer)}</td>
+            <td style="padding:5px 7px;border:1px solid #ddd;font-size:10px;color:#555">—</td>
+          </tr>`:''}
+          ${typeof discValPer==='number'?`<tr style="background:#f5f5f5">
+            <td style="padding:5px 8px;border:1px solid #ddd;font-size:12px;font-weight:700">Disciplina</td>
+            <td colspan="3" style="padding:5px 7px;border:1px solid #ddd;text-align:center;font-size:12px">—</td>
+            <td style="padding:5px 7px;border:1px solid #ddd;text-align:center;font-weight:900;font-size:13px;color:${bCol(discValPer)}">${discValPer.toFixed(2)}</td>
+            <td style="padding:5px 7px;border:1px solid #ddd;text-align:center;font-size:11px;font-weight:700;color:${bCol(discValPer)}">${bDes(discValPer)}</td>
             <td style="padding:5px 7px;border:1px solid #ddd;font-size:10px;color:#555">—</td>
           </tr>`:''}` : '';
       return`<div style="margin-bottom:18px;page-break-inside:avoid">
