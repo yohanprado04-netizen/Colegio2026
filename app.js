@@ -839,18 +839,35 @@ function bootApp(){
     <div class="sbur">${CU.role==='superadmin'?'Super Admin':(CU.colegioNombre?CU.colegioNombre+' · '+CU.role:CU.role)}</div>
   </div>`;
   buildNav();
-  /* ── Mostrar logo en sidebar ── */
-  const _sbLogo = gi('sbLogoBox');
+  /* ── Mostrar logo en sidebar — robusto contra fugas entre roles ── */
+  const _sbLogo   = gi('sbLogoBox');
   const _sbNombre = gi('sbColegioNombre');
+  const _sbSub    = gi('sbColegioSub'); // puede no existir, no es crítico
+  /* SVG "E" canónico del superadmin — siempre restaurado cuando aplica */
+  const _EDUSISTEMA_SVG = `<svg width="22" height="22" viewBox="0 0 82 82" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <rect x="1" y="41" width="56" height="56" rx="14" transform="rotate(-45 1 41)" fill="url(#sblg1sa)"/>
+    <text x="41" y="49" text-anchor="middle" dominant-baseline="middle" font-family="'Outfit',sans-serif" font-size="36" font-weight="800" fill="#ffffff">E</text>
+    <defs>
+      <linearGradient id="sblg1sa" x1="0" y1="0" x2="82" y2="82" gradientUnits="userSpaceOnUse">
+        <stop offset="0%" stop-color="#0ea5a0"/>
+        <stop offset="100%" stop-color="#1e40af"/>
+      </linearGradient>
+    </defs>
+  </svg>`;
   if(CU.role === 'superadmin'){
+    /* Siempre forzar el SVG "E" — nunca dejar logo de colegio */
+    if(_sbLogo)   _sbLogo.innerHTML = _EDUSISTEMA_SVG;
     if(_sbNombre) _sbNombre.textContent = 'EduSistema';
   } else {
-    if(_sbLogo && DB.colegioLogo){
-      _sbLogo.innerHTML = `<img src="${DB.colegioLogo}" style="width:100%;height:100%;object-fit:contain;border-radius:8px;background:rgba(255,255,255,.12);padding:3px" alt="Logo">`;
+    /* Para otros roles: mostrar logo del colegio si existe, si no el SVG "E" */
+    if(_sbLogo){
+      if(DB.colegioLogo){
+        _sbLogo.innerHTML = `<img src="${DB.colegioLogo}" style="width:100%;height:100%;object-fit:contain;border-radius:8px;background:rgba(255,255,255,.12);padding:3px" alt="Logo">`;
+      } else {
+        _sbLogo.innerHTML = _EDUSISTEMA_SVG;
+      }
     }
-    if(_sbNombre && CU.colegioNombre){
-      _sbNombre.textContent = CU.colegioNombre;
-    }
+    if(_sbNombre) _sbNombre.textContent = CU.colegioNombre || 'EduSistema';
   }
   goto(defPg());
   /* Notify student about extraordinary period changes */
@@ -2261,6 +2278,62 @@ async function unblk(u){ /* implementado en api-layer.js */ }
 ============================================================ */
 function pgAAud(){
   const list=(DB.audit||[]).slice().reverse();
+
+  /* Formatea valor A/C/R legible */
+  const fmtV = (v) => {
+    if(!v || v==='?' || v==='—') return `<span style="color:#a0aec0">${v||'—'}</span>`;
+    try{
+      const o=JSON.parse(v);
+      if(typeof o==='object' && o!==null && ('a' in o||'c' in o||'r' in o)){
+        const p=[];
+        if(o.a!==undefined) p.push(`<b style="color:#3182ce">Apt</b> ${Number(o.a).toFixed(1)}`);
+        if(o.c!==undefined) p.push(`<b style="color:#805ad5">Act</b> ${Number(o.c).toFixed(1)}`);
+        if(o.r!==undefined) p.push(`<b style="color:#38a169">Res</b> ${Number(o.r).toFixed(1)}`);
+        return `<span style="font-size:.78rem;line-height:1.6">${p.join(' · ')}</span>`;
+      }
+    }catch(_){}
+    const n=parseFloat(v);
+    if(!isNaN(n)) return `<b>${n.toFixed(2)}</b>`;
+    return `<span style="font-size:.82rem">${esc(String(v))}</span>`;
+  };
+
+  /* Nombre legible del campo */
+  const fmtCampo = (mat, accion) => {
+    if(accion && !mat) return `<span style="color:#718096;font-size:.82rem">📌 ${esc(accion)}</span>`;
+    if(!mat) return '<span style="color:#a0aec0">—</span>';
+    /* mat suele ser "Matemáticas (Periodo 1)" */
+    const match = mat.match(/^(.+?)\s*\((.+?)\)$/);
+    if(match) return `<div style="font-size:.82rem"><b>${esc(match[1])}</b><br><span style="color:#718096">${esc(match[2])}</span></div>`;
+    /* mat con sufijo (a),(c),(r) = subcampo */
+    const sub = mat.match(/^(.+?)\(([acr])\)$/);
+    if(sub){
+      const lbl={a:'Aptitud',c:'Actitud',r:'Responsab.'}[sub[2]]||sub[2];
+      return `<div style="font-size:.82rem"><b>${esc(sub[1])}</b><br><span style="color:#718096">${lbl}</span></div>`;
+    }
+    /* Acciones especiales */
+    const icons={'Sesión cerrada':'🔒','login':'🔑','Login':'🔑','Auditoria limpiada':'🗑️','bloqueado':'🔴','desbloqueado':'🟢','taller':'📎'};
+    const icon=Object.entries(icons).find(([k])=>mat.includes(k))?.[1]||'';
+    return `<span style="font-size:.82rem">${icon} ${esc(mat)}</span>`;
+  };
+
+  /* Nombre del estudiante desde DB si está disponible */
+  const fmtEst = (estId) => {
+    if(!estId) return '<span style="color:#a0aec0">—</span>';
+    const e = DB.ests?.find(x=>x.id===estId);
+    if(e) return `<div style="font-size:.82rem"><b>${esc(e.nombre)}</b><br><span style="color:#a0aec0;font-size:.75rem">${esc(estId.slice(-10))}</span></div>`;
+    return `<span style="font-size:.78rem;color:#718096">${esc(estId.slice(-12))}</span>`;
+  };
+
+  const fmtTs = (ts) => {
+    if(!ts) return '—';
+    try{
+      const d=new Date(ts);
+      if(isNaN(d)) return ts.slice(0,16);
+      return d.toLocaleDateString('es-CO',{day:'2-digit',month:'2-digit',year:'numeric'})
+        +' '+d.toLocaleTimeString('es-CO',{hour:'2-digit',minute:'2-digit'});
+    }catch(_){return ts.slice(0,16);}
+  };
+
   return`<div class="ph"><h2>Historial de Auditoría</h2><button class="btn xs bg" onclick="showHelp('aaud')" style="margin-top:6px">❓ Ayuda</button></div>
   <div class="card"><div class="chd">
     <span class="cti">📋 Cambios (${list.length})</span>
@@ -2270,16 +2343,16 @@ function pgAAud(){
     </div>
   </div>
   <div class="tw"><table><thead>
-    <tr><th>Timestamp</th><th>ID</th><th>Por</th><th>Estudiante</th><th>Campo</th><th>Anterior</th><th>Nueva</th><th>IP</th></tr>
+    <tr><th>Fecha</th><th>Por</th><th>Estudiante</th><th>Campo</th><th>Anterior</th><th>Nueva</th><th>IP</th></tr>
   </thead><tbody>${list.length?list.map(l=>`<tr>
-    <td style="font-family:var(--mn);font-size:11px">${l.ts}</td>
-    <td style="font-family:var(--mn);font-size:11px">${l.uid}</td>
-    <td><span class="bdg ${l.role==='admin'?'bor':'bbl'}">${l.who}</span></td>
-    <td>${l.est||l.user||'—'}</td><td style="font-size:12px">${l.mat||l.accion||'—'}</td>
-    <td><span class="${scC(l.old)}">${l.old||'—'}</span></td>
-    <td><span class="${scC(l.nw)}">${l.nw||'—'}</span></td>
-    <td style="font-family:var(--mn);font-size:11px">${l.ip||'—'}</td>
-  </tr>`).join(''):'<tr><td colspan="8" style="text-align:center;padding:24px;color:var(--sl3)">Sin registros</td></tr>'}
+    <td style="font-family:var(--mn);font-size:.75rem;white-space:nowrap">${fmtTs(l.ts)}</td>
+    <td><span class="bdg ${l.role==='admin'?'bor':'bbl'}" style="font-size:.75rem">${esc(l.who||l.user||'—')}</span></td>
+    <td>${fmtEst(l.est)}</td>
+    <td>${fmtCampo(l.mat,l.accion)}</td>
+    <td>${fmtV(l.old)}</td>
+    <td>${fmtV(l.nw)}</td>
+    <td style="font-family:var(--mn);font-size:.72rem;color:#a0aec0">${l.ip||'—'}</td>
+  </tr>`).join(''):'<tr><td colspan="7" style="text-align:center;padding:24px;color:var(--sl3)">Sin registros</td></tr>'}
   </tbody></table></div></div>`;
 }
 /* ── SOBREESCRITA por api-layer.js ── */
@@ -5973,20 +6046,33 @@ async function initSAEstadisticas() {
 function pgSAAuditoria() {
   return `<div class="card">
     <h2>🔍 Auditoría Global</h2>
-    <div style="display:flex;gap:.75rem;margin-bottom:1rem;flex-wrap:wrap">
+    <div style="display:flex;gap:.75rem;margin-bottom:1rem;flex-wrap:wrap;align-items:center">
       <select id="saAudCol" class="inp" style="min-width:200px" onchange="loadSAAuditoria()">
         <option value="">Todos los colegios</option>
       </select>
-      <input id="saAudSearch" class="inp" placeholder="🔍 Buscar acción o usuario…" oninput="loadSAAuditoria()">
+      <select id="saAudRol" class="inp" style="min-width:140px" onchange="loadSAAuditoria()">
+        <option value="">Todos los roles</option>
+        <option value="admin">Admin</option>
+        <option value="profe">Profesor</option>
+        <option value="est">Estudiante</option>
+        <option value="superadmin">Superadmin</option>
+      </select>
+      <input id="saAudSearch" class="inp" placeholder="🔍 Buscar acción o usuario…" oninput="loadSAAuditoria()" style="min-width:200px">
     </div>
     <div id="saAudTable" style="overflow-x:auto">Cargando…</div>
   </div>`;
 }
 
+/* Mapa colegioId → nombre, construido en initSAAuditoria */
+let _saColMap = {};
+
 async function initSAAuditoria() {
   try {
     const raw = await saApiFetch('/api/superadmin/colegios');
     const colegios = Array.isArray(raw) ? raw : [];
+    /* Construir mapa id→nombre para resolver en la tabla */
+    _saColMap = {};
+    colegios.forEach(c => { _saColMap[c.id] = c.nombre; });
     const sel = gi('saAudCol');
     if (sel) sel.innerHTML = '<option value="">Todos los colegios</option>' +
       colegios.map(c => `<option value="${c.id}">${esc(c.nombre)}</option>`).join('');
@@ -5994,29 +6080,112 @@ async function initSAAuditoria() {
   } catch (e) { const el = gi('saAudTable'); if (el) el.innerHTML = `<p style="color:red">Error: ${esc(e.message)}</p>`; }
 }
 
+/* Convierte una acción técnica a texto legible */
+function _fmtAccion(l) {
+  const accion = l.accion || '';
+  const mat    = l.mat    || '';
+  const est    = l.est    || '';
+
+  /* Registro de nota */
+  if (mat && mat.includes('(') && !accion) {
+    return `📝 Nota ingresada — <b>${mat}</b>${est ? ` · Est: <code>${est.slice(-8)}</code>` : ''}`;
+  }
+  /* Acciones con texto descriptivo */
+  if (accion) {
+    const icons = {
+      'Sesión cerrada': '🔒', 'login': '🔑', 'Login': '🔑',
+      'Colegio creado': '🏫', 'creado': '✅', 'eliminado': '🗑️',
+      'Intento': '⚠️', 'bloqueado': '🔴', 'desbloqueado': '🟢',
+      'contraseña': '🔑', 'reset': '🔄', 'Backup': '💾',
+      'Auditoria limpiada': '🗑️', 'taller': '📎',
+    };
+    const icon = Object.entries(icons).find(([k]) => accion.includes(k))?.[1] || '📌';
+    return `${icon} ${accion}`;
+  }
+  return mat || '—';
+}
+
+/* Formatea valor anterior/nuevo de notas: {"a":2.3,"c":0,"r":0} → A:2.3 C:0 R:0 */
+function _fmtVal(v) {
+  if (!v || v === '?' || v === '—') return `<span style="color:#a0aec0">${v || '—'}</span>`;
+  try {
+    const o = JSON.parse(v);
+    if (typeof o === 'object' && o !== null && ('a' in o || 'c' in o || 'r' in o)) {
+      const parts = [];
+      if (o.a !== undefined) parts.push(`<b style="color:#3182ce">Apt:</b>${Number(o.a).toFixed(1)}`);
+      if (o.c !== undefined) parts.push(`<b style="color:#805ad5">Act:</b>${Number(o.c).toFixed(1)}`);
+      if (o.r !== undefined) parts.push(`<b style="color:#38a169">Res:</b>${Number(o.r).toFixed(1)}`);
+      return `<span style="font-size:.78rem">${parts.join(' ')}</span>`;
+    }
+  } catch(_){}
+  /* Valor numérico simple */
+  const n = parseFloat(v);
+  if (!isNaN(n)) return `<span style="font-weight:600;color:#2d3748">${n.toFixed(2)}</span>`;
+  return `<span style="font-size:.8rem">${esc(String(v))}</span>`;
+}
+
 async function loadSAAuditoria() {
-  const cid = gi('saAudCol')?.value;
-  const q = (gi('saAudSearch')?.value || '').toLowerCase();
-  const el = gi('saAudTable');
+  const cid  = gi('saAudCol')?.value;
+  const rol  = gi('saAudRol')?.value;
+  const q    = (gi('saAudSearch')?.value || '').toLowerCase();
+  const el   = gi('saAudTable');
   if (!el) return;
   el.textContent = 'Cargando…';
   try {
-    let url = '/api/superadmin/auditoria?limit=300';
+    let url = '/api/superadmin/auditoria?limit=400';
     if (cid) url += `&colegioId=${cid}`;
     const raw = await saApiFetch(url);
     let logs = Array.isArray(raw) ? raw : [];
-    if (q) logs = logs.filter(l => (l.accion || '').toLowerCase().includes(q) || (l.who || '').toLowerCase().includes(q));
-    if (!logs.length) { el.innerHTML = '<p style="color:#888;text-align:center;padding:2rem">Sin registros de auditoría.</p>'; return; }
+
+    /* Filtros client-side */
+    if (rol) logs = logs.filter(l => l.role === rol);
+    if (q)   logs = logs.filter(l =>
+      (l.accion || '').toLowerCase().includes(q) ||
+      (l.who    || '').toLowerCase().includes(q) ||
+      (l.mat    || '').toLowerCase().includes(q) ||
+      (l.est    || '').toLowerCase().includes(q)
+    );
+
+    if (!logs.length) {
+      el.innerHTML = '<p style="color:#888;text-align:center;padding:2rem">Sin registros de auditoría.</p>';
+      return;
+    }
+
+    const rolBadge = (r) => {
+      const cls = r === 'superadmin' ? 'bpurp' : r === 'admin' ? 'bor' : r === 'profe' ? 'bbl' : 'bgr';
+      const label = r === 'superadmin' ? 'superadmin' : r === 'admin' ? 'admin' : r === 'profe' ? 'profe' : r || '?';
+      return `<span class="bdg ${cls}">${label}</span>`;
+    };
+
+    const fmtTs = (ts) => {
+      if (!ts) return '—';
+      try {
+        const d = new Date(ts);
+        if (isNaN(d)) return ts.slice(0,16);
+        return d.toLocaleDateString('es-CO', { day:'2-digit', month:'2-digit', year:'numeric' })
+          + ' ' + d.toLocaleTimeString('es-CO', { hour:'2-digit', minute:'2-digit' });
+      } catch(_){ return ts.slice(0,16); }
+    };
+
+    const resolveCol = (colegioId) => {
+      if (!colegioId || colegioId === 'global') return '<span style="color:#a0aec0;font-style:italic">global</span>';
+      return `<span title="${esc(colegioId)}">${esc(_saColMap[colegioId] || colegioId)}</span>`;
+    };
+
     el.innerHTML = `<table class="tbl"><thead><tr>
-      <th>Fecha</th><th>Usuario</th><th>Rol</th><th>Acción</th><th>Colegio</th>
-    </tr></thead><tbody>${logs.slice(0, 200).map(l => `<tr>
-      <td style="font-size:.78rem">${(l.ts || '').slice(0, 16)}</td>
-      <td>${l.who || l.user || ''}</td>
-      <td><span class="bdg ${l.role === 'superadmin' ? 'bpurp' : l.role === 'admin' ? 'bor' : 'bbl'}">${l.role || ''}</span></td>
-      <td>${l.accion || ''}</td>
-      <td style="font-size:.78rem;color:#718096">${l.colegioId || 'global'}</td>
+      <th>Fecha</th><th>Usuario</th><th>Rol</th><th>Acción / Campo</th><th>Anterior</th><th>Nueva</th><th>Colegio</th>
+    </tr></thead><tbody>${logs.slice(0, 300).map(l => `<tr>
+      <td style="font-size:.78rem;white-space:nowrap">${fmtTs(l.ts)}</td>
+      <td style="font-weight:500">${esc(l.who || l.user || '—')}</td>
+      <td>${rolBadge(l.role)}</td>
+      <td style="font-size:.82rem;max-width:280px">${_fmtAccion(l)}</td>
+      <td style="font-size:.8rem">${_fmtVal(l.old)}</td>
+      <td style="font-size:.8rem">${_fmtVal(l.nw)}</td>
+      <td style="font-size:.78rem">${resolveCol(l.colegioId)}</td>
     </tr>`).join('')}</tbody></table>
-    <p style="font-size:.75rem;color:#a0aec0;margin-top:.5rem;text-align:right">Mostrando ${Math.min(200, logs.length)} de ${logs.length} registros</p>`;
+    <p style="font-size:.75rem;color:#a0aec0;margin-top:.5rem;text-align:right">
+      Mostrando ${Math.min(300, logs.length)} de ${logs.length} registros
+    </p>`;
   } catch (e) { el.innerHTML = `<p style="color:red">Error: ${e.message} <button class="btn bsm" onclick="loadSAAuditoria()">Reintentar</button></p>`; }
 }
 
@@ -6034,18 +6203,25 @@ function pgSAMantenimiento() {
         </div>
       </div>
       <div class="card">
-        <h3>🔑 Reset Masivo de Contraseñas</h3>
-        <p style="color:#888;margin-bottom:.75rem">Actualiza contraseñas de todos los usuarios de un colegio.</p>
-        <div style="display:flex;gap:.75rem;flex-wrap:wrap;align-items:center">
-          <select id="saResetCol" class="inp" style="min-width:200px"><option value="">— Selecciona colegio —</option></select>
-          <select id="saResetRole" class="inp">
-            <option value="">Todos los roles</option>
-            <option value="est">Estudiantes</option>
-            <option value="profe">Profesores</option>
-            <option value="admin">Admins</option>
-          </select>
-          <input id="saResetPwd" class="inp" type="password" placeholder="Nueva contraseña" style="min-width:180px">
-          <button class="btn bdan" onclick="resetMasivo()">⚠️ Resetear</button>
+        <h3>🔑 Reset de Contraseña por Usuario</h3>
+        <p style="color:#888;margin-bottom:.75rem">Selecciona un colegio y un usuario específico para cambiarle la contraseña.</p>
+        <div style="display:grid;gap:.75rem">
+          <div style="display:flex;gap:.75rem;flex-wrap:wrap;align-items:center">
+            <select id="saResetCol" class="inp" style="min-width:200px" onchange="loadSAResetUsuarios()">
+              <option value="">— Selecciona colegio —</option>
+            </select>
+            <input id="saResetSearch" class="inp" placeholder="🔍 Buscar usuario por nombre o ID…" oninput="filtrarSAResetUsuarios()" style="min-width:200px">
+          </div>
+          <div id="saResetUserList" style="display:none">
+            <select id="saResetUser" class="inp" size="6" style="width:100%;min-height:140px;font-size:.85rem">
+              <option value="">Cargando usuarios…</option>
+            </select>
+            <div id="saResetUserInfo" style="font-size:.78rem;color:#718096;margin-top:4px;padding:4px 0"></div>
+          </div>
+          <div style="display:flex;gap:.75rem;flex-wrap:wrap;align-items:center">
+            <input id="saResetPwd" class="inp" type="password" placeholder="Nueva contraseña (mín. 4 caracteres)" style="min-width:220px">
+            <button class="btn bdan" onclick="resetUsuario()">🔑 Cambiar contraseña</button>
+          </div>
         </div>
       </div>
     </div>
@@ -6062,6 +6238,88 @@ async function initSAMantenimiento() {
       sel.innerHTML = '<option value="">— Selecciona colegio —</option>' +
         colegios.map(c => `<option value="${c.id}">${esc(c.nombre)}</option>`).join('');
     });
+  } catch (e) { sw('error', e.message); }
+}
+
+/* Cache de usuarios del colegio seleccionado para el reset */
+let _saResetUsuariosList = [];
+
+async function loadSAResetUsuarios() {
+  const cid = gi('saResetCol')?.value;
+  const listBox = gi('saResetUserList');
+  const sel = gi('saResetUser');
+  const info = gi('saResetUserInfo');
+  _saResetUsuariosList = [];
+  if (!cid) {
+    if (listBox) listBox.style.display = 'none';
+    return;
+  }
+  if (sel) sel.innerHTML = '<option value="">Cargando…</option>';
+  if (listBox) listBox.style.display = 'block';
+  try {
+    /* Usa la ruta de usuarios del colegio filtrada por colegioId */
+    const raw = await saApiFetch(`/api/superadmin/usuarios-colegio/${cid}`);
+    _saResetUsuariosList = Array.isArray(raw) ? raw : [];
+    renderSAResetUsuarios(_saResetUsuariosList);
+    if (info) info.textContent = `${_saResetUsuariosList.length} usuarios cargados`;
+  } catch (e) {
+    if (sel) sel.innerHTML = `<option value="">Error: ${esc(e.message)}</option>`;
+    if (info) info.textContent = '';
+  }
+}
+
+function filtrarSAResetUsuarios() {
+  const q = (gi('saResetSearch')?.value || '').toLowerCase();
+  const filtrados = q
+    ? _saResetUsuariosList.filter(u =>
+        (u.nombre || '').toLowerCase().includes(q) ||
+        (u.usuario || '').toLowerCase().includes(q) ||
+        (u.id || '').toLowerCase().includes(q) ||
+        (u.role || '').toLowerCase().includes(q)
+      )
+    : _saResetUsuariosList;
+  renderSAResetUsuarios(filtrados);
+}
+
+function renderSAResetUsuarios(lista) {
+  const sel = gi('saResetUser');
+  const info = gi('saResetUserInfo');
+  if (!sel) return;
+  if (!lista.length) {
+    sel.innerHTML = '<option value="">Sin resultados</option>';
+    if (info) info.textContent = 'Sin usuarios que coincidan con la búsqueda';
+    return;
+  }
+  const roleLabel = { admin: '👤 Admin', profe: '🧑‍🏫 Profe', est: '🎓 Est' };
+  sel.innerHTML = lista.map(u =>
+    `<option value="${esc(u.id)}">[${roleLabel[u.role] || u.role}] ${esc(u.nombre)} — ${esc(u.usuario || u.id)}</option>`
+  ).join('');
+  if (info) info.textContent = `Mostrando ${lista.length} de ${_saResetUsuariosList.length} usuarios`;
+}
+
+async function resetUsuario() {
+  const uid = gi('saResetUser')?.value;
+  const pwd = gi('saResetPwd')?.value?.trim();
+  if (!uid) return sw('warning', 'Selecciona un usuario de la lista');
+  if (!pwd || pwd.length < 4) return sw('warning', 'La contraseña debe tener al menos 4 caracteres');
+
+  const u = _saResetUsuariosList.find(x => x.id === uid);
+  const nombre = u ? u.nombre : uid;
+  const conf = await Swal.fire({
+    title: '¿Cambiar contraseña?',
+    html: `Se cambiará la contraseña de <b>${esc(nombre)}</b>.`,
+    icon: 'warning', showCancelButton: true,
+    confirmButtonText: 'Sí, cambiar', cancelButtonText: 'Cancelar',
+    confirmButtonColor: '#e53e3e'
+  });
+  if (!conf.isConfirmed) return;
+  try {
+    const res = await saApiFetch(`/api/superadmin/reset-password-usuario/${uid}`, {
+      method: 'POST', body: JSON.stringify({ newPassword: pwd })
+    });
+    if (!res) return;
+    sw('success', `✅ Contraseña de ${esc(nombre)} actualizada`);
+    const inp = gi('saResetPwd'); if (inp) inp.value = '';
   } catch (e) { sw('error', e.message); }
 }
 
@@ -6084,24 +6342,7 @@ async function descargarBackup() {
   } catch (e) { sw('error', e.message); }
 }
 
-async function resetMasivo() {
-  const cid = gi('saResetCol')?.value;
-  const role = gi('saResetRole')?.value;
-  const pwd = gi('saResetPwd')?.value;
-  if (!cid || !pwd) return sw('warning', 'Completa los campos requeridos');
-  const conf = await Swal.fire({
-    title: '⚠️ ¿Confirmas el reset?',
-    text: `Esto cambiará la contraseña de ${role || 'TODOS los usuarios'} del colegio seleccionado.`,
-    icon: 'warning', showCancelButton: true, confirmButtonText: 'Sí, resetear', confirmButtonColor: '#e53e3e'
-  });
-  if (!conf.isConfirmed) return;
-  try {
-    const res = await saApiFetch(`/api/superadmin/reset-passwords/${cid}`, { method: 'POST', body: JSON.stringify({ role: role || undefined, newPassword: pwd }) });
-    if (!res) return;
-    sw('success', `${res.updated} contraseñas actualizadas`);
-    const inp = gi('saResetPwd'); if (inp) inp.value = '';
-  } catch (e) { sw('error', e.message); }
-}
+/* resetMasivo() eliminado — reemplazado por resetUsuario() (reset por usuario individual) */
 
 /* ─── SUGERENCIAS — superadmin recibe ──────────────────── */
 function pgSASug() {

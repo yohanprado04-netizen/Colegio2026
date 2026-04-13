@@ -383,4 +383,45 @@ router.post('/reset-passwords/:colegioId', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
+/* ── GET /api/superadmin/usuarios-colegio/:colegioId ───────────────────────
+   Lista todos los usuarios de un colegio (sin contraseñas) para el selector
+   de reset individual de contraseña en Mantenimiento.
+────────────────────────────────────────────────────────────────────────────── */
+router.get('/usuarios-colegio/:colegioId', async (req, res) => {
+  try {
+    const cid = req.params.colegioId;
+    if (!cid) return res.status(400).json({ error: 'colegioId requerido' });
+    const usuarios = await Usuario.find(
+      { colegioId: cid, role: { $in: ['admin', 'profe', 'est'] } },
+      '-password -__v'
+    ).sort({ role: 1, nombre: 1 }).lean();
+    res.json(usuarios);
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+/* ── POST /api/superadmin/reset-password-usuario/:userId ───────────────────
+   Cambia la contraseña de un usuario específico por su campo `id`.
+────────────────────────────────────────────────────────────────────────────── */
+router.post('/reset-password-usuario/:userId', async (req, res) => {
+  try {
+    const { newPassword } = req.body;
+    if (!newPassword || newPassword.length < 4)
+      return res.status(400).json({ error: 'Contraseña demasiado corta (mínimo 4 caracteres)' });
+    const hashed = await bcrypt.hash(newPassword, 12);
+    const result = await Usuario.findOneAndUpdate(
+      { id: req.params.userId },
+      { password: hashed },
+      { new: false }
+    );
+    if (!result) return res.status(404).json({ error: 'Usuario no encontrado' });
+    Auditoria.create({
+      ts: new Date().toISOString(), uid: 'superadmin', who: 'superadmin',
+      role: 'superadmin',
+      accion: `Contraseña reseteada por superadmin → ${result.nombre} (${result.usuario})`,
+      colegioId: result.colegioId || ''
+    }).catch(() => {});
+    res.json({ ok: true, usuario: result.nombre });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
 module.exports = router;
