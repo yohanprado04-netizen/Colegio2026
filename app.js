@@ -260,11 +260,11 @@ function getAreaMatsMap(eid){
   const ciclo = cicloOf(e?.salon||'');
   const matDocs = DB.materiasDocs||[];
 
-  // Áreas asignadas al salón; si no hay, usar todas las del ciclo
+  // Áreas asignadas al salón; si el salón no tiene áreas propias, no heredar globales
   const areasEnSalon = (DB.salAreas||{})[e?.salon||''] || [];
-  const todasAreasDelCiclo = getAreasDelColegio(ciclo).map(a=>a.nombre);
-  const areasAplicables = areasEnSalon.length > 0 ? areasEnSalon : todasAreasDelCiclo;
+  const areasAplicables = areasEnSalon; // solo las del salón, nunca las globales
 
+  if(!areasAplicables.length) return { '_sinArea': mats };
   const map = {};
   areasAplicables.forEach(nombre=>{ map[nombre]=[]; });
 
@@ -4667,6 +4667,24 @@ function dlBoletin(estId,perFilter,anno,snapData){
     const ppPer=pers2render.map(per=>+(mats.reduce((s,m)=>s+def(notas[per]?.[m]||{a:0,c:0,r:0}),0)/mats.length).toFixed(2));
     const thPers=pers2render.map((p,i)=>`<th style="background:#333;color:#fff;padding:5px 7px;text-align:center;font-size:10px;border:1px solid #999">${p}<br><span style="font-weight:400;opacity:.8">${ppPer[i].toFixed(2)}</span></th>`).join('');
 
+    // Función para fila de conducta/disciplina
+    const buildDiscRow = () => {
+      if(!discPer.length) return '';
+      const discPorPer = pers2render.map(per=>{
+        const dv=notas[per]?.disciplina??notas[per]?.disc??null;
+        return typeof dv==='number'?dv:null;
+      });
+      const discCells = discPorPer.map(dv=>
+        `<td style="padding:5px 7px;border:1px solid #ddd;text-align:center;font-weight:700;font-size:12px;color:${dv!==null?bCol(dv):'#aaa'}">${dv!==null?dv.toFixed(2):'—'}</td>`
+      ).join('');
+      return `<tr style="background:#f5f5f5">
+        <td style="padding:5px 8px;border:1px solid #ddd;font-size:12px;font-weight:700">Conducta / Disciplina</td>
+        ${discCells}
+        <td style="padding:5px 7px;border:1px solid #ddd;text-align:center;font-weight:900;font-size:13px;color:${bCol(discProm)}">${discProm!==null?discProm.toFixed(2):'—'}</td>
+        <td style="padding:5px 7px;border:1px solid #ddd;text-align:center;font-size:11px;font-weight:700;color:${discProm!==null?bCol(discProm):'#aaa'}">${discProm!==null?bDes(discProm):'—'}</td>
+        <td style="padding:5px 7px;border:1px solid #ddd;font-size:10px;color:#555">—</td>
+      </tr>`;
+    };
     // Función para generar filas con o sin agrupación por áreas
     const buildRows = (matsArr, showArea) => matsArr.map((m,idx)=>{
       const perCells=pers2render.map(per=>{
@@ -4694,10 +4712,11 @@ function dlBoletin(estId,perFilter,anno,snapData){
 
     if(tieneAreas && e){
       // Renderizar agrupado por áreas
-      const areaEntries = Object.entries(areaMap).filter(([k])=>k!=='_sinArea');
-      const sinArea = areaMap['_sinArea']||[];
+      const areaEntries = Object.entries(areaMap).filter(([k])=>k!=='_sinArea').sort(([a],[b])=>a.localeCompare(b,'es'));
+      const sinArea = (areaMap['_sinArea']||[]).slice().sort((a,b)=>a.localeCompare(b,'es'));
       let bodyHTML = '';
       areaEntries.forEach(([areaNombre, matsArea])=>{
+        matsArea.sort((a,b)=>a.localeCompare(b,'es'));
         if(!matsArea.length) return;
         // Definitiva del área
         const defsArea = matsArea.map(m=>defFinal(m)).filter(d=>d>0);
@@ -4719,10 +4738,11 @@ function dlBoletin(estId,perFilter,anno,snapData){
         bodyHTML += buildRows(matsArea, true);
       });
       if(sinArea.length) bodyHTML += buildRows(sinArea, false);
+      bodyHTML += buildDiscRow();
       persHTML = `<table style="width:100%;border-collapse:collapse;font-size:11px;margin-bottom:16px">${tableHeader}<tbody>${bodyHTML}</tbody></table>`;
     } else {
       // Sin áreas: tabla plana
-      persHTML = `<table style="width:100%;border-collapse:collapse;font-size:11px;margin-bottom:16px">${tableHeader}<tbody>${buildRows(mats,false)}</tbody></table>`;
+      persHTML = `<table style="width:100%;border-collapse:collapse;font-size:11px;margin-bottom:16px">${tableHeader}<tbody>${buildRows(mats,false)}${buildDiscRow()}</tbody></table>`;
     }
   } else {
     // Vista por periodo individual — tabla con desglose tripartita
@@ -4747,9 +4767,10 @@ function dlBoletin(estId,perFilter,anno,snapData){
 
       let tableBody = '';
       if(tieneAreas && e){
-        const areaEntries = Object.entries(areaMap).filter(([k])=>k!=='_sinArea');
-        const sinArea = areaMap['_sinArea']||[];
+        const areaEntries = Object.entries(areaMap).filter(([k])=>k!=='_sinArea').sort(([a],[b])=>a.localeCompare(b,'es'));
+        const sinArea = (areaMap['_sinArea']||[]).slice().sort((a,b)=>a.localeCompare(b,'es'));
         areaEntries.forEach(([areaNombre, matsArea])=>{
+          matsArea.sort((a,b)=>a.localeCompare(b,'es'));
           if(!matsArea.length) return;
           const defsArea=matsArea.map(m=>def(notas[per]?.[m]||{a:0,c:0,r:0})).filter(d=>d>0);
           const dp=defsArea.length?+(defsArea.reduce((s,v)=>s+v,0)/defsArea.length).toFixed(2):0;
@@ -4765,10 +4786,20 @@ function dlBoletin(estId,perFilter,anno,snapData){
         tableBody=buildMatRows(mats);
       }
 
+      // Disciplina del periodo
+      const discValPer = notas[per]?.disciplina ?? notas[per]?.disc ?? null;
+      const discPerRow = typeof discValPer==='number'
+        ? `<tr style="background:#f5f5f5">
+            <td style="padding:5px 8px;border:1px solid #ddd;font-size:12px;font-weight:700">Conducta / Disciplina</td>
+            <td colspan="3" style="padding:5px 7px;border:1px solid #ddd;text-align:center;font-size:12px">—</td>
+            <td style="padding:5px 7px;border:1px solid #ddd;text-align:center;font-weight:900;font-size:13px;color:${bCol(discValPer)}">${discValPer.toFixed(2)}</td>
+            <td style="padding:5px 7px;border:1px solid #ddd;text-align:center;font-size:11px;font-weight:700;color:${bCol(discValPer)}">${bDes(discValPer)}</td>
+            <td style="padding:5px 7px;border:1px solid #ddd;font-size:10px;color:#555">—</td>
+          </tr>` : '';
       return`<div style="margin-bottom:18px;page-break-inside:avoid">
-        <div style="background:#111;color:#fff;padding:8px 12px;display:flex;justify-content:space-between;align-items:center">
+        <div style="background:#e8e8e8;color:#111;padding:8px 12px;display:flex;justify-content:space-between;align-items:center;border:1px solid #ccc">
           <strong style="font-size:13px">${per}</strong>
-          <span style="font-size:11px;opacity:.8">Promedio: ${pp.toFixed(2)} &nbsp;|&nbsp; Puesto: ${ppu}${ppu!=='—'?'°':''}</span>
+          <span style="font-size:11px;color:#555">Promedio: <strong>${pp.toFixed(2)}</strong> &nbsp;|&nbsp; Puesto: <strong>${ppu}${ppu!=='—'?'°':''}</strong></span>
         </div>
         <table style="width:100%;border-collapse:collapse;font-size:11px">
           <thead><tr>
@@ -4780,7 +4811,7 @@ function dlBoletin(estId,perFilter,anno,snapData){
             <th style="background:#333;color:#fff;padding:5px 7px;text-align:center;font-size:10px;border:1px solid #999">Desempeño</th>
             <th style="background:#444;color:#fff;padding:5px 7px;text-align:left;font-size:10px;border:1px solid #999">Docente</th>
           </tr></thead>
-          <tbody>${tableBody}</tbody>
+          <tbody>${tableBody}${discPerRow}</tbody>
         </table>
       </div>`;
     }).join('');
@@ -4883,7 +4914,6 @@ function dlBoletin(estId,perFilter,anno,snapData){
              <div style="font-size:12px;line-height:1.9"><strong>Puesto en Salón:</strong> <strong>${ps}${ps!=='—'?'°':''}</strong></div>`
           :`<div style="font-size:12px;line-height:1.9"><strong>Promedio Periodo:</strong> <span style="font-weight:900;font-size:15px">${perPromVal.toFixed(2)}</span></div>
              <div style="font-size:12px;line-height:1.9"><strong>Puesto en Salón:</strong> <strong>${perPuestoVal}${perPuestoVal!=='—'?'°':''}</strong></div>`}
-        ${discProm!==null?`<div style="font-size:12px;line-height:1.9"><strong>Comportamiento Social:</strong> ${discProm.toFixed(2)} — ${bDes(discProm)}</div>`:''}
       </div>
     </div>
     <!-- NOTAS -->
@@ -4892,7 +4922,6 @@ function dlBoletin(estId,perFilter,anno,snapData){
         Sistema tripartita: Ser (${DB.notaPct?.a??60}%) + Saber (${DB.notaPct?.c??20}%) + Saber Hacer (${DB.notaPct?.r??20}%) = Definitiva
       </div>`:''}
       ${persHTML}
-      ${veredictoHTML}
     </div>
     <!-- FIRMAS -->
     <div style="display:flex;justify-content:space-around;margin-top:40px;padding:0 24px 28px">
