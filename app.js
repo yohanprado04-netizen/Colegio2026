@@ -839,14 +839,18 @@ function bootApp(){
     <div class="sbur">${CU.role==='superadmin'?'Super Admin':(CU.colegioNombre?CU.colegioNombre+' · '+CU.role:CU.role)}</div>
   </div>`;
   buildNav();
-  /* ── Mostrar logo del colegio en sidebar ── */
+  /* ── Mostrar logo en sidebar ── */
   const _sbLogo = gi('sbLogoBox');
   const _sbNombre = gi('sbColegioNombre');
-  if(_sbLogo && DB.colegioLogo){
-    _sbLogo.innerHTML = `<img src="${DB.colegioLogo}" style="width:100%;height:100%;object-fit:contain;border-radius:8px;background:rgba(255,255,255,.12);padding:3px" alt="Logo">`;
-  }
-  if(_sbNombre && CU.colegioNombre && CU.role !== 'superadmin'){
-    _sbNombre.textContent = CU.colegioNombre;
+  if(CU.role === 'superadmin'){
+    if(_sbNombre) _sbNombre.textContent = 'EduSistema';
+  } else {
+    if(_sbLogo && DB.colegioLogo){
+      _sbLogo.innerHTML = `<img src="${DB.colegioLogo}" style="width:100%;height:100%;object-fit:contain;border-radius:8px;background:rgba(255,255,255,.12);padding:3px" alt="Logo">`;
+    }
+    if(_sbNombre && CU.colegioNombre){
+      _sbNombre.textContent = CU.colegioNombre;
+    }
   }
   goto(defPg());
   /* Notify student about extraordinary period changes */
@@ -1060,7 +1064,18 @@ function initPg(pid){
    DASHBOARD
 ============================================================ */
 function pgDash(){
-  return`<div class="ph"><h2>Panel General</h2><p>Resumen del sistema</p><button class="btn xs bg" onclick="showHelp('dash')" style="margin-top:6px">❓ Ayuda</button></div>
+  const _logoD = DB.colegioLogo||'';
+  const _nomD  = CU.colegioNombre||'';
+  return`<div class="ph" style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:12px">
+    <div>
+      <h2>Panel General</h2><p>Resumen del sistema</p>
+      <button class="btn xs bg" onclick="showHelp('dash')" style="margin-top:6px">❓ Ayuda</button>
+    </div>
+    ${_logoD ? `<div style="display:flex;flex-direction:column;align-items:center;gap:6px">
+      <img src="${_logoD}" alt="Logo" style="height:72px;width:auto;max-width:130px;object-fit:contain;border-radius:10px;box-shadow:0 4px 18px rgba(0,0,0,.13);background:var(--bg2);padding:6px">
+      ${_nomD ? `<span style="font-size:11px;font-weight:700;color:var(--sl2);text-align:center;max-width:130px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${_nomD}</span>` : ''}
+    </div>` : ''}
+  </div>
   <div class="sr" id="dSt"></div>
   <div class="g2">
     <div class="card"><div class="chd"><span class="cti">🏆 Mejores por Salón</span></div><div id="dTop"></div></div>
@@ -2782,7 +2797,19 @@ function initAVcl(){
 ============================================================ */
 function pgPH(){
   const p=CU;
-  return`<div class="ph"><h2>Bienvenido, ${esc(p.nombre)}</h2><p>${p.ciclo==='bachillerato'?'Bachillerato':'Primaria'}</p><button class="btn xs bg" onclick="showHelp('ph')" style="margin-top:6px">❓ Ayuda</button></div>
+  const _logoP = DB.colegioLogo||'';
+  const _nomP  = CU.colegioNombre||'';
+  return`<div class="ph" style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:12px">
+    <div>
+      <h2>Bienvenido, ${esc(p.nombre)}</h2>
+      <p>${p.ciclo==='bachillerato'?'Bachillerato':'Primaria'}</p>
+      <button class="btn xs bg" onclick="showHelp('ph')" style="margin-top:6px">❓ Ayuda</button>
+    </div>
+    ${_logoP ? `<div style="display:flex;flex-direction:column;align-items:center;gap:6px">
+      <img src="${_logoP}" alt="Logo" style="height:72px;width:auto;max-width:130px;object-fit:contain;border-radius:10px;box-shadow:0 4px 18px rgba(0,0,0,.13);background:var(--bg2);padding:6px">
+      ${_nomP ? `<span style="font-size:11px;font-weight:700;color:var(--sl2);text-align:center;max-width:130px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${_nomP}</span>` : ''}
+    </div>` : ''}
+  </div>
   <div class="sr">
     <div class="scc" data-i="🏫"><div class="sv">${(p.salones||[]).length}</div><div class="sl">Mis Salones</div><div class="bar"></div></div>
     ${p.ciclo==='bachillerato'?`<div class="scc" data-i="📖"><div class="sv" style="font-size:14px;margin-top:2px">${(p.materias||[]).join(', ')||'—'}</div><div class="sl">Mis Materias</div><div class="bar"></div></div>`:''}
@@ -4084,7 +4111,19 @@ async function abrirHistRec(db,idx){
   _abrirDataUrl(r.dataUrl,r.type,r.nombre);
 }
 
-function pgEB(){return`<div class="ph"><h2>Mi Boletín</h2><button class="btn xs bg" onclick="showHelp('eb')">❓ Ayuda</button></div><div id="ebB"></div>`;}
+function pgEB(){
+  const _logoEB = DB.colegioLogo||'';
+  const _nomEB  = CU.colegioNombre||'';
+  return`<div class="ph" style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:12px">
+    <div>
+      <h2>Mi Boletín</h2>
+      <button class="btn xs bg" onclick="showHelp('eb')" style="margin-top:6px">❓ Ayuda</button>
+    </div>
+    ${_logoEB ? `<div style="display:flex;flex-direction:column;align-items:center;gap:6px">
+      <img src="${_logoEB}" alt="Logo" style="height:72px;width:auto;max-width:130px;object-fit:contain;border-radius:10px;box-shadow:0 4px 18px rgba(0,0,0,.13);background:var(--bg2);padding:6px">
+      ${_nomEB ? `<span style="font-size:11px;font-weight:700;color:var(--sl2);text-align:center;max-width:130px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${_nomEB}</span>` : ''}
+    </div>` : ''}
+  </div><div id="ebB"></div>`;}
 
 function initEB(){
   const e=CU;syncN(e.id);
@@ -5136,9 +5175,25 @@ function pgSADash() {
   return `<div id="saDashCard">
     <div class="card" style="background:linear-gradient(135deg,#1a365d 0%,#2b6cb0 100%);color:#fff;margin-bottom:1rem">
       <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:.75rem">
-        <div>
-          <h2 style="color:#fff;margin-bottom:.25rem">🌐 Panel Global — Super Admin</h2>
-          <p style="opacity:.85;font-size:.9rem;margin:0">Bienvenido, <strong>${CU.nombre}</strong> · EduSistema Pro</p>
+        <div style="display:flex;align-items:center;gap:18px">
+          <svg width="52" height="52" viewBox="0 0 82 82" fill="none" xmlns="http://www.w3.org/2000/svg" style="flex-shrink:0;filter:drop-shadow(0 3px 10px rgba(0,0,0,.3))">
+            <rect x="1" y="41" width="56" height="56" rx="14" transform="rotate(-45 1 41)" fill="url(#sadlg1)"/>
+            <rect x="5" y="41" width="50" height="50" rx="11" transform="rotate(-45 5 41)" fill="url(#sadlg2)" opacity="0.55"/>
+            <text x="41" y="49" text-anchor="middle" dominant-baseline="middle" font-family="'Outfit',sans-serif" font-size="30" font-weight="800" fill="#ffffff" letter-spacing="-1">E</text>
+            <defs>
+              <linearGradient id="sadlg1" x1="0" y1="0" x2="82" y2="82" gradientUnits="userSpaceOnUse">
+                <stop offset="0%" stop-color="#0ea5a0"/><stop offset="100%" stop-color="#1e40af"/>
+              </linearGradient>
+              <linearGradient id="sadlg2" x1="0" y1="0" x2="82" y2="82" gradientUnits="userSpaceOnUse">
+                <stop offset="0%" stop-color="#ffffff" stop-opacity="0.25"/><stop offset="100%" stop-color="#ffffff" stop-opacity="0"/>
+              </linearGradient>
+            </defs>
+          </svg>
+          <div>
+            <div style="font-size:11px;text-transform:uppercase;letter-spacing:.12em;opacity:.6;font-weight:600;margin-bottom:3px">EduSistema Pro</div>
+            <h2 style="color:#fff;margin-bottom:.2rem">Panel Global</h2>
+            <p style="opacity:.8;font-size:.9rem;margin:0">Bienvenido, <strong>${CU.nombre}</strong></p>
+          </div>
         </div>
         <div style="display:flex;gap:.5rem;flex-wrap:wrap;align-items:center">
           <span id="saSugBadge" style="display:none;background:#e53e3e;color:#fff;border-radius:20px;padding:4px 12px;font-size:12px;font-weight:700;cursor:pointer" onclick="goto('sasug')">💡 Sugerencias</span>
