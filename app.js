@@ -4257,7 +4257,7 @@ function pgEExc(){
   const e=CU;
   const prfsDelSalon=profsInSalon(e.salon);
   const destOpts=[{id:'admin',label:'Administrador'},...prfsDelSalon.map(p=>({id:p.id,label:p.nombre}))];
-  const mis=DB.exc.filter(x=>x.estId===e.id||x.eid===e.id).slice().reverse(); // FIX: backend usa estId
+  const mis=DB.exc.filter(x=>x.eid===e.id).slice().reverse();
   const ventanaOk=excusasOk();
   return`<div class="ph"><h2>Módulo de Excusas</h2>
     <p>Horario de envío: 18:00 – 07:00 ${ventanaOk?'<span class="bdg bgr">✓ Abierto</span>':'<span class="bdg brd">✗ Cerrado</span>'}</p>
@@ -4711,8 +4711,10 @@ function dlBoletin(estId,perFilter,anno,snapData){
         return typeof cv==='number'?cv:null;
       });
       const conductaGlobal = notas?.conducta ?? null;
-      const hasDisc = discPorPer.some(v=>v!==null);
-      const hasCond = condPorPer.some(v=>v!==null);
+      const disciplinaGlobal = typeof notas?.disciplina==='number'?notas.disciplina:null;
+      // Si ningún periodo tiene el dato individualmente, usar el valor global como fallback
+      const hasDisc = discPorPer.some(v=>v!==null) || disciplinaGlobal!==null;
+      const hasCond = condPorPer.some(v=>v!==null) || conductaGlobal!==null;
       if(!hasDisc && !hasCond) return '';
       let rows = '';
       // ORDEN DEL BOLETÍN: primero Conducta, luego Disciplina (siempre al final)
@@ -4847,8 +4849,8 @@ function dlBoletin(estId,perFilter,anno,snapData){
       }
 
       // Disciplina y Conducta del periodo
-      const discValPer = notas[per]?.disciplina ?? notas[per]?._disciplina ?? notas[per]?.disc ?? null;
-      const condValPer = notas[per]?.conducta ?? notas[per]?._conducta ?? null;
+      const discValPer = notas[per]?.disciplina ?? notas[per]?._disciplina ?? notas[per]?.disc ?? (typeof notas?.disciplina==='number'?notas.disciplina:null);
+      const condValPer = notas[per]?.conducta ?? notas[per]?._conducta ?? (typeof notas?.conducta==='number'?notas.conducta:null);
       const discPerRow = (typeof discValPer==='number' || typeof condValPer==='number')
         // ORDEN BOLETÍN: primero Conducta, luego Disciplina
         ? `${typeof condValPer==='number'?`<tr style="background:#fafaf0">
@@ -4960,11 +4962,12 @@ function dlBoletin(estId,perFilter,anno,snapData){
   box.innerHTML=`<div style="font-family:'Arial',sans-serif;background:#fff;max-width:760px;color:#111">
     <!-- ENCABEZADO -->
     <div style="border-bottom:3px solid #111;padding:14px 24px 10px;text-align:center;position:relative">
-      <div style="display:flex;align-items:center;justify-content:flex-start;gap:20px;margin-bottom:6px">
-        ${_logo?`<img src="${_logo}" style="height:90px;width:auto;object-fit:contain;flex-shrink:0" alt="Logo">`:''}
-        <div>
-          ${_nomColegio?`<div style="font-size:15px;font-weight:900;text-transform:uppercase;letter-spacing:.04em">${_nomColegio}</div>`:''}
-          <div style="font-size:11px;color:#555;margin-top:2px">BOLETIN DE CALIFICACIONES - SEDE PRINCIPAL</div>
+      <div style="display:flex;align-items:center;justify-content:center;gap:20px;margin-bottom:6px">
+        ${_logo?`<img src="${_logo}" style="height:110px;width:auto;object-fit:contain;flex-shrink:0" alt="Logo">`:''}
+        <div style="text-align:center">
+          ${_nomColegio?`<div style="font-size:17px;font-weight:900;text-transform:uppercase;letter-spacing:.04em;text-align:center">${_nomColegio}</div>`:''}
+          <div style="font-size:12px;color:#555;margin-top:4px;text-align:center;font-weight:600">BOLETÍN DE CALIFICACIONES</div>
+          <div style="font-size:11px;color:#555;margin-top:2px;text-align:center">SEDE PRINCIPAL</div>
         </div>
       </div>
       <div style="font-size:12px;font-weight:700;margin-top:6px;letter-spacing:.03em">
