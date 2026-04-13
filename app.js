@@ -1042,7 +1042,7 @@ function initPg(pid){
    DASHBOARD
 ============================================================ */
 function pgDash(){
-  return`<div class="ph"><h2>Panel General</h2><button class="btn xs bg" style="margin-top:4px" onclick="showHelp('adash')">❓ Ayuda</button><p>Resumen del sistema</p></div>
+  return`<div class="ph"><h2>Panel General</h2><p>Resumen del sistema</p><button class="btn xs bg" onclick="showHelp('dash')" style="margin-top:6px">❓ Ayuda</button></div>
   <div class="sr" id="dSt"></div>
   <div class="g2">
     <div class="card"><div class="chd"><span class="cti">🏆 Mejores por Salón</span></div><div id="dTop"></div></div>
@@ -1078,7 +1078,7 @@ function initDash(){
    SALONES
 ============================================================ */
 function pgASal(){
-  return`<div class="ph"><h2>Salones & Grados</h2><button class="btn xs bg" style="margin-top:4px" onclick="showHelp('asal')">❓ Ayuda</button></div>
+  return`<div class="ph"><h2>Salones & Grados</h2><button class="btn xs bg" onclick="showHelp('asal')" style="margin-top:6px">❓ Ayuda</button></div>
   <div class="card"><div class="chd"><span class="cti">➕ Nuevo Salón</span></div>
     <div class="fg">
       <div class="fld"><label>Nombre (ej: 6A)</label><input id="nsn" placeholder="6A"></div>
@@ -1338,7 +1338,7 @@ async function editSalAreas(sname){
 function pgAEst(ciclo){
   const tt=ciclo==='primaria'?'Primaria (1°-5°)':'Bachillerato (6°-11°)';
   const sOpts=DB.sals.filter(s=>s.ciclo===ciclo).map(s=>`<option value="${s.nombre}">${s.nombre}</option>`).join('');
-  return`<div class="ph"><h2>Estudiantes — ${tt}</h2><button class="btn xs bg" style="margin-top:4px" onclick="showHelp('aest')">❓ Ayuda</button></div>
+  return`<div class="ph"><h2>Estudiantes — ${tt}</h2><button class="btn xs bg" onclick="showHelp('${ciclo==='primaria'?'apri':'abac'}')" style="margin-top:6px">❓ Ayuda</button></div>
   <div class="card"><div class="chd"><span class="cti">➕ Agregar Estudiante</span>
     <button class="btn bg sm" onclick="abrirCSVEst('${ciclo}')" title="Cargar múltiples estudiantes desde archivo CSV">📂 Carga Masiva CSV</button>
   </div>
@@ -1417,7 +1417,7 @@ function expEstXls(ciclo){
    PROFESORES
 ============================================================ */
 function pgAPrf(){
-  return`<div class="ph"><h2>Profesores</h2><button class="btn xs bg" style="margin-top:4px" onclick="showHelp('aprf')">❓ Ayuda</button></div>
+  return`<div class="ph"><h2>Profesores</h2><button class="btn xs bg" onclick="showHelp('aprf')" style="margin-top:6px">❓ Ayuda</button></div>
   <div class="g2">
     <div class="card"><div class="chd"><span class="cti">📚 Primaria</span>
       <div style="display:flex;gap:6px">
@@ -1629,7 +1629,7 @@ function delPrf(pid,ciclo){
    MATERIAS & PERIODOS
 ============================================================ */
 function pgAMat(){
-  return`<div class="ph"><h2>Áreas & Materias</h2><button class="btn xs bg" style="margin-top:4px" onclick="showHelp('amat')">❓ Ayuda</button></div>
+  return`<div class="ph"><h2>Áreas & Materias</h2><button class="btn xs bg" onclick="showHelp('amat')" style="margin-top:6px">❓ Ayuda</button></div>
   <div class="g2">
     <div class="card">
       <div class="chd"><span class="cti">📚 Primaria — Áreas y Materias</span></div>
@@ -2005,7 +2005,7 @@ async function saveConducta(eid,v){ /* implementado en api-layer.js */ }
 /* ============================================================
    REHAB
 ============================================================ */
-function pgAReh(){return`<div class="ph"><h2>Recuperaciones</h2><button class="btn xs bg" style="margin-top:4px" onclick="showHelp('areh')">❓ Ayuda</button></div><div id="arB"></div>`;}
+function pgAReh(){return`<div class="ph"><h2>Recuperaciones</h2><button class="btn xs bg" onclick="showHelp('areh')" style="margin-top:6px">❓ Ayuda</button></div><div id="arB"></div>`;}
 function initAReh(){
   const el=gi('arB');if(!el)return;
   if(!DB.ext.on){el.innerHTML=`<div class="al aly">⚠️ Activa el Periodo Extraordinario en <strong>Control de Fechas</strong>.</div>`;return;}
@@ -2167,394 +2167,41 @@ function extExpirado(){
    SISTEMA DE AYUDA CONTEXTUAL
 ============================================================ */
 const HELP={
-  // ── PROFESOR ────────────────────────────────────────────────────────────────
-  ph:`<b>🏠 Panel del Profesor</b><br>
-Vista general de tu actividad docente. Desde aquí puedes ver:<br><br>
-<b>📊 Resumen rápido:</b> cuántos salones tienes a cargo, tus materias asignadas (bachillerato) y el total de estudiantes.<br>
-<b>🏫 Mis Salones:</b> lista de todos tus estudiantes agrupados por salón.<br>
-<b>✉️ Excusas recibidas:</b> las excusas enviadas por estudiantes que te tienen como destinatario.<br>
-<b>📥 Descargar Informe:</b> genera un PDF o Excel con las calificaciones de tu salón sin necesidad de abrir la tabla de notas.<br><br>
-⚠️ Si hay recuperaciones pendientes de revisión, aparece un aviso naranja. Haz clic en él para ir directamente.`,
-
-  pnot:`<b>📝 Ingresar Notas</b><br>
-<b>Paso a paso:</b><br>
-1. Selecciona el <b>Salón</b> y el <b>Periodo</b> en los desplegables.<br>
-2. Haz clic en <b>Cargar</b> para ver la lista de estudiantes.<br>
-3. Para cada estudiante ingresa los tres componentes:<br>
-&nbsp;&nbsp;&nbsp;• <b>Aptitud</b> (Ser): evalúa actitudes y valores — peso configurado por el colegio.<br>
-&nbsp;&nbsp;&nbsp;• <b>Actitud</b> (Saber): evalúa conocimiento y desempeño académico.<br>
-&nbsp;&nbsp;&nbsp;• <b>Responsabilidad</b> (Hacer): evalúa cumplimiento y entrega de trabajos.<br>
-4. La <b>Definitiva</b> se calcula automáticamente al salir del campo.<br>
-5. Al final de cada fila puedes ingresar <b>Disciplina</b> y <b>Conducta</b> (0.0–5.0) para ese periodo.<br><br>
-<b>🔒 Restricción de fechas:</b> solo puedes ingresar notas durante el rango de fechas configurado para ese periodo. Los periodos cerrados aparecen en gris con 🔒.<br><br>
-<b>🔄 Periodo Extraordinario:</b> cuando está activo, solo el periodo de recuperación configurado acepta notas. Los demás quedan bloqueados.<br><br>
-<b>📊 Escala de desempeño:</b> Bajo &lt;3.0 · Básico 3.0–3.9 · Alto 4.0–4.5 · Superior &gt;4.5`,
-
-  past:`<b>✅ Asistencias</b><br>
-Registra la asistencia diaria de tus estudiantes.<br><br>
-<b>Cómo funciona:</b><br>
-1. Selecciona el <b>Salón</b> y la <b>Fecha</b>.<br>
-2. Marca el estado de cada estudiante:<br>
-&nbsp;&nbsp;&nbsp;• ✅ <b>Presente</b><br>
-&nbsp;&nbsp;&nbsp;• ❌ <b>Ausente</b><br>
-&nbsp;&nbsp;&nbsp;• 🕐 <b>Tarde</b><br>
-3. Haz clic en <b>Guardar Asistencia</b>.<br><br>
-Los estudiantes pueden ver su historial en la sección <em>Mi Asistencia</em>. Las ausencias justificadas con excusa aparecen marcadas.`,
-
-  pvir:`<b>💻 Clases Virtuales</b><br>
-Publica y gestiona los enlaces de tus clases en línea.<br><br>
-<b>Para crear una clase:</b><br>
-1. Selecciona el salón destinatario.<br>
-2. Ingresa la fecha, hora y enlace de reunión (Meet, Zoom, Teams u otro).<br>
-3. Opcionalmente agrega una descripción o tema de la clase.<br>
-4. Haz clic en <b>Publicar</b>.<br><br>
-Los estudiantes verán el enlace activo en su sección <em>Mis Clases Virtuales</em>. El administrador también puede ver todas las clases programadas.`,
-
-  ptar:`<b>📂 Tareas Recibidas</b><br>
-Aquí aparecen todos los archivos que los estudiantes te han enviado como tareas o talleres.<br><br>
-<b>Flujo de revisión:</b><br>
-1. Abre cada archivo con el botón <b>📂 Abrir</b>.<br>
-2. Una vez revisado, haz clic en <b>✓ Marcar Revisado</b>.<br>
-3. Solo puedes <b>eliminar</b> archivos que ya están marcados como revisados.<br><br>
-⚠️ Si intentas eliminar un archivo sin revisar, la acción queda registrada en la <b>Auditoría</b>.<br><br>
-<b>Filtros disponibles:</b> puedes buscar por nombre del estudiante, materia o periodo usando el buscador.`,
-
-  prec:`<b>🔄 Recuperaciones</b><br>
-Este módulo se activa cuando el <b>Periodo Extraordinario</b> está habilitado por el administrador.<br><br>
-<b>¿Cómo funciona?</b><br>
-1. <b>Crea un Plan</b> de recuperación con título, descripción y (opcionalmente) un archivo adjunto.<br>
-2. Puedes enviarlo a un <b>estudiante específico</b> o a <b>todo el salón</b>.<br>
-3. Establece una <b>fecha límite</b> para que el estudiante entregue su respuesta.<br>
-4. El estudiante sube su trabajo desde <em>Mi Recuperación</em>.<br>
-5. Aquí verás su respuesta — ábrela y márcala como <b>✓ Revisado</b>.<br><br>
-<b>📤 Exportar:</b> puedes descargar el historial completo de planes en Excel.<br><br>
-⚠️ Los estudiantes con 1–2 materias/áreas perdidas van a recuperación. Con 3 o más pierden el año directamente.`,
-
-  phist:`<b>📚 Historial de Recuperaciones Recibidas</b><br>
-Archivo de todas las recuperaciones de periodos anteriores que recibiste como docente.<br><br>
-<b>Contenido:</b><br>
-• Trabajos de recuperación enviados por estudiantes en periodos ya cerrados.<br>
-• Estado de revisión de cada entrega.<br>
-• Puedes abrir y descargar cualquier archivo archivado.<br><br>
-<b>🔍 Búsqueda:</b> usa el buscador para filtrar por nombre del estudiante, materia o nombre del archivo.`,
-
-  // ── ESTUDIANTE ──────────────────────────────────────────────────────────────
-  eb:`<b>📋 Mi Boletín</b><br>
-Consulta tus calificaciones oficiales de forma clara y detallada.<br><br>
-<b>Opciones de visualización:</b><br>
-• <b>Todos los Periodos:</b> muestra las definitivas finales de cada materia calculadas como el promedio de todos los periodos.<br>
-• <b>Por Periodo (1, 2, 3 o 4):</b> muestra el desglose tripartita (Aptitud / Actitud / Responsabilidad) de cada periodo.<br><br>
-<b>📊 Escala de desempeño:</b><br>
-• 🔴 Bajo: menos de 3.0<br>
-• 🟡 Básico: 3.0 – 3.9<br>
-• 🟢 Alto: 4.0 – 4.5<br>
-• 🏆 Superior: más de 4.5<br><br>
-<b>📄 Descargar PDF:</b> haz clic en el botón correspondiente para guardar tu boletín oficial en PDF. Puedes descargarlo por periodo individual o con todos los periodos.<br><br>
-<b>🎓 Veredicto anual:</b> al seleccionar "Todos los Periodos" verás si apruebas, vas a recuperación o pierdes el año, con el detalle de cada materia o área.`,
-
-  east:`<b>📆 Mi Asistencia</b><br>
-Consulta tu historial de asistencia durante el año lectivo.<br><br>
-<b>Información disponible:</b><br>
-• Días <b>Presente</b> ✅, <b>Ausente</b> ❌ y <b>Tarde</b> 🕐.<br>
-• Porcentaje de asistencia general.<br>
-• Las ausencias con excusa enviada aparecen diferenciadas.<br><br>
-💡 Si faltaste y tienes una excusa válida, envíala desde el módulo <em>Excusas</em> entre las 6:00 PM y las 7:00 AM del día siguiente.`,
-
-  etare:`<b>📎 Tareas & Talleres</b><br>
-Desde aquí envías tus trabajos directamente a tu docente.<br><br>
-<b>Para enviar un archivo:</b><br>
-1. Selecciona la <b>Materia</b>, el <b>Periodo</b> y el <b>Docente</b> destinatario.<br>
-2. Escribe una descripción breve del trabajo.<br>
-3. Adjunta el archivo (PDF, Word o Excel — máximo <b>5 MB</b>).<br>
-4. Haz clic en <b>Subir</b>.<br><br>
-<b>📬 Mis Archivos Enviados:</b> puedes ver el estado de cada entrega:<br>
-• ⏳ <b>Pendiente:</b> el docente aún no lo ha revisado.<br>
-• ✅ <b>Revisado:</b> el docente lo marcó como visto. Puedes eliminarlo si ya no lo necesitas.<br><br>
-⚠️ Los archivos pendientes de revisión no se pueden eliminar.`,
-
-  eexc:`<b>✉️ Módulo de Excusas</b><br>
-Envía una excusa formal cuando no puedas asistir a clases.<br><br>
-<b>Condiciones:</b><br>
-• Solo puedes enviar excusas en el horario permitido: <b>6:00 PM – 7:00 AM</b>.<br>
-• Fuera de ese horario el formulario aparece bloqueado.<br><br>
-<b>Para enviar una excusa:</b><br>
-1. Selecciona la <b>fecha de la ausencia</b>.<br>
-2. Elige a quién va dirigida (Administrador o un docente).<br>
-3. Selecciona la <b>causa</b> de la inasistencia.<br>
-4. Agrega una descripción adicional si es necesario.<br>
-5. Haz clic en <b>Enviar Excusa</b>.<br><br>
-En <em>Mis Excusas</em> puedes ver si ya fue respondida. Si el docente adjuntó talleres, podrás descargarlos desde allí.`,
-
-  ereh:`<b>🔄 Mi Recuperación</b><br>
-Disponible cuando tienes <b>1 o 2 materias/áreas perdidas</b> y el Periodo Extraordinario está activo.<br><br>
-<b>¿Cómo funciona?</b><br>
-1. Tu docente crea un Plan de Recuperación con instrucciones y (opcionalmente) un archivo guía.<br>
-2. El plan aparece aquí con su fecha límite de entrega.<br>
-3. Adjunta tu trabajo (PDF, Word o Excel — máx 5 MB) y haz clic en <b>Enviar Respuesta</b>.<br>
-4. Una vez que el docente lo revise, verás el estado <b>✅ Revisado</b> y podrás eliminar el registro.<br><br>
-⚠️ <b>Importante:</b> si pierdes 3 o más áreas, pierdes el año directamente y no tienes acceso a recuperación.<br><br>
-🔒 Si el Periodo Extraordinario venció, el formulario se bloquea y no puedes enviar más respuestas.`,
-
-  ehist:`<b>📚 Historial de Recuperaciones</b><br>
-Archivo de todos los trabajos de recuperación que enviaste en periodos anteriores.<br><br>
-<b>Información disponible:</b><br>
-• Materia y nombre del archivo entregado.<br>
-• Fecha de envío y estado de revisión del docente.<br>
-• Puedes abrir y descargar cualquier archivo archivado.<br><br>
-💡 Usa el buscador para encontrar rápidamente entregas de periodos específicos.`,
-
-  // ── ADMINISTRADOR ──────────────────────────────────────────────────────────
-  anot:`<b>📊 Gestión de Notas (Administrador)</b><br>
-Vista y edición de notas de <b>cualquier salón y periodo</b>, sin restricción de fechas.<br><br>
-<b>Cómo usar:</b><br>
-1. Selecciona el <b>Salón</b> y el <b>Periodo</b> en los desplegables.<br>
-2. Haz clic en <b>Cargar</b>.<br>
-3. Edita directamente los campos de cada estudiante:<br>
-&nbsp;&nbsp;&nbsp;• <b>Aptitud / Actitud / Responsabilidad</b> (0.0 – 5.0).<br>
-&nbsp;&nbsp;&nbsp;• <b>Disciplina</b> y <b>Conducta</b> por periodo (0.0 – 5.0).<br>
-4. La Definitiva se actualiza automáticamente.<br><br>
-<b>🔍 Buscador:</b> filtra estudiantes por nombre en tiempo real.<br><br>
-⚠️ Como administrador tienes acceso completo aunque los periodos estén cerrados. Los cambios quedan registrados en Auditoría.`,
-
-  afec:`<b>📅 Control de Fechas y Periodos</b><br>
-Configura cuándo los profesores pueden ingresar notas en cada periodo.<br><br>
-<b>🎓 Año Lectivo Activo:</b> el año lectivo actual del sistema. Cambiar de año archiva automáticamente las notas del año anterior en el historial.<br><br>
-<b>📅 Rangos por Periodo:</b> para cada periodo puedes definir:<br>
-&nbsp;&nbsp;&nbsp;• <b>Inicio / Fin:</b> fechas en que el periodo acepta notas.<br>
-&nbsp;&nbsp;&nbsp;• <b>Periodo Ext.:</b> si este periodo se cierra, ¿a qué periodo irán las notas de recuperación?<br>
-&nbsp;&nbsp;&nbsp;• Si no configuras rango, el periodo queda <b>siempre abierto</b>.<br><br>
-<b>🔄 Periodo Extraordinario:</b> se activa cuando marca el campo correspondiente. Al activarse:<br>
-&nbsp;&nbsp;&nbsp;• Solo el periodo configurado como "Ext." acepta notas de recuperación.<br>
-&nbsp;&nbsp;&nbsp;• Todos los demás periodos quedan bloqueados para los profesores.<br><br>
-<b>🌐 Rango Global:</b> aplica a todos los periodos que no tienen su propio rango configurado.`,
-
-  aaud:`<b>🔍 Historial de Auditoría</b><br>
-Registro automático e inmutable de todas las acciones sensibles del sistema.<br><br>
-<b>¿Qué se registra?</b><br>
-• Cambios de notas: quién cambió, de qué valor a qué valor y cuándo.<br>
-• Intentos de eliminar tareas sin revisar.<br>
-• Cambios críticos de configuración.<br>
-• Inicio de sesión y acciones administrativas.<br><br>
-<b>Columnas del registro:</b> Fecha/Hora · Usuario · Rol · Estudiante · Campo modificado · Valor anterior → Nuevo valor.<br><br>
-💡 Usa el buscador para filtrar por nombre de usuario, estudiante o campo. Solo el administrador puede ver esta sección.`,,
-  // ── ADMIN ───────────────────────────────────────────────────────────────────
-  adash:`<b>📊 Panel General (Administrador)</b><br>
-Vista central del sistema con métricas en tiempo real.<br><br>
-<b>📈 Estadísticas rápidas:</b> total de estudiantes, profesores, salones y materias activas.<br>
-<b>🏆 Mejores por Salón:</b> top 3 estudiantes con mayor promedio general en cada salón.<br>
-<b>🕐 Últimas Auditorías:</b> los 8 cambios de notas más recientes — quién los hizo, qué cambió y en qué materia.<br><br>
-💡 Usa el menú lateral para acceder a cualquier módulo del sistema.`,
-
-  asal:`<b>🏫 Salones & Grados</b><br>
-Crea y gestiona los salones del colegio.<br><br>
-<b>➕ Crear un salón:</b><br>
-1. Escribe el nombre (ej: <em>6A</em>, <em>10B</em>).<br>
-2. Selecciona el ciclo: <b>Primaria</b> (1°–5°) o <b>Bachillerato</b> (6°–11°).<br>
-3. Selecciona la jornada (Mañana / Tarde / Noche).<br>
-4. Haz clic en <b>Agregar</b>.<br><br>
-<b>📋 Lista de salones:</b> los salones aparecen separados por ciclo. Puedes eliminar un salón (solo si no tiene estudiantes asignados).<br><br>
-⚠️ El ciclo del salón determina qué materias y qué profesores pueden ser asignados a él.`,
-
-  aest:`<b>🎓 Estudiantes</b><br>
-Gestión completa de la matrícula de estudiantes.<br><br>
-<b>➕ Agregar individualmente:</b> completa nombre, T.I./C.C., salón, usuario y contraseña. El estudiante podrá iniciar sesión de inmediato.<br><br>
-<b>📂 Carga Masiva CSV:</b> importa varios estudiantes a la vez desde un archivo CSV con columnas: <em>nombre, ti, salon, usuario, password</em>.<br><br>
-<b>📤 Exportar Excel:</b> descarga la lista completa del ciclo en formato .xlsx.<br><br>
-<b>🎓 Promover Año:</b> al finalizar el año lectivo, mueve automáticamente a los estudiantes al siguiente salón según sus resultados. Los que pierden el año se quedan en el mismo salón.<br><br>
-<b>🔍 Buscador:</b> filtra por nombre, T.I. o salón en tiempo real.<br><br>
-⚠️ La eliminación de un estudiante conserva su historial académico en <em>Historial de Estudiantes</em>.`,
-
-  aprf:`<b>👩‍🏫 Profesores</b><br>
-Gestión de los docentes del colegio.<br><br>
-<b>➕ Agregar profesor:</b> haz clic en el botón <b>➕</b> junto al ciclo correspondiente. Completa nombre, T.I./CC, usuario, contraseña, salones asignados y materias.<br><br>
-<b>📂 Carga Masiva CSV:</b> importa varios profesores desde un archivo CSV.<br><br>
-<b>Primaria:</b> el profesor ve todos los salones asignados y todas las materias.<br>
-<b>Bachillerato:</b> cada profesor tiene materias específicas por salón (ej: el Prof. Gómez dicta Matemáticas solo en 9A y 10B).<br><br>
-<b>✏️ Editar:</b> haz clic en el nombre del profesor para modificar sus datos, salones y materias.<br>
-<b>🗑️ Eliminar:</b> elimina al profesor del sistema (sus notas registradas se conservan).`,
-
-  amat:`<b>📖 Áreas & Materias</b><br>
-Configura la estructura académica del colegio.<br><br>
-<b>📚 Áreas:</b> agrupan materias relacionadas. La definitiva del área es el promedio de sus materias. El año se gana/pierde por áreas (no por materias individuales):<br>
-&nbsp;&nbsp;&nbsp;• 0 áreas perdidas → Aprueba el año.<br>
-&nbsp;&nbsp;&nbsp;• 1–2 áreas perdidas → Va a recuperación.<br>
-&nbsp;&nbsp;&nbsp;• 3+ áreas perdidas → Pierde el año.<br><br>
-<b>➕ Crear área:</b> escribe el nombre y haz clic en el botón. Luego asigna materias a esa área.<br><br>
-<b>📝 Materias sin área:</b> se evalúan individualmente (compatible con colegios sin áreas).<br><br>
-<b>📅 Periodos:</b> agrega los periodos del año (ej: <em>Período 1</em>, <em>Período 2</em>…). El orden aquí es el orden de aparición en boletines y notas.<br><br>
-⚠️ Cambiar el nombre de una materia actualiza automáticamente todas las notas registradas.`,
-
-  areh:`<b>🔄 Recuperaciones (Admin)</b><br>
-Vista general de los planes de recuperación activos durante el Periodo Extraordinario.<br><br>
-<b>¿Qué muestra?</b><br>
-• Todos los planes enviados por los profesores a sus estudiantes.<br>
-• Estado de cada plan: si el estudiante ya respondió y si el profesor lo revisó.<br><br>
-<b>Activar el Periodo Extraordinario:</b> ve a <em>Control de Fechas</em> y habilita el rango del Periodo Extraordinario.<br><br>
-⚠️ Si el Periodo Extraordinario no está activo, esta sección mostrará un aviso. Los estudiantes con 3 o más áreas perdidas no tienen derecho a recuperación.`,
-
-  ablk:`<b>🔐 Usuarios Bloqueados</b><br>
-Lista de usuarios que han sido bloqueados automáticamente por el sistema.<br><br>
-<b>¿Cuándo se bloquea un usuario?</b><br>
-• Múltiples intentos de inicio de sesión fallidos (detección de ataques de fuerza bruta).<br>
-• Acciones sospechosas detectadas por el sistema.<br><br>
-<b>🔓 Desbloquear:</b> haz clic en el botón junto al usuario para restaurar su acceso. El desbloqueo queda registrado en Auditoría.<br><br>
-💡 Si un estudiante o profesor no puede iniciar sesión, verifica aquí si está bloqueado.`,
-
-  aexp:`<b>📤 Exportar Datos</b><br>
-Genera reportes y boletines descargables.<br><br>
-<b>📊 Consolidado de Notas (Excel):</b> descarga todas las notas del año activo organizadas por salón, estudiante, materia y periodo. Ideal para respaldos o análisis externos.<br><br>
-<b>📋 Historial Auditoría (Excel):</b> exporta el registro completo de cambios de notas.<br><br>
-<b>📄 Boletín PDF — Por Estudiante:</b> selecciona un estudiante, elige el año y el periodo (o todos), y descarga su boletín oficial en PDF.<br><br>
-<b>🏫 Boletín PDF — Por Salón:</b> selecciona un salón y genera los boletines de todos sus estudiantes de forma individual. Puedes descargarlos uno a uno.<br><br>
-💡 Los boletines incluyen: datos del colegio, logo, notas por materia/área, Conducta/Disciplina y el veredicto de aprobación del año.`,
-
-  ahist:`<b>📚 Historial de Estudiantes</b><br>
-Registro permanente de todos los estudiantes que alguna vez fueron matriculados.<br><br>
-<b>Información disponible:</b><br>
-• Nombre completo, T.I./CC, salón en el que estaba y fecha de registro.<br>
-• Estado: <b>Activo</b> (aún matriculado) o <b>Eliminado</b> (dado de baja).<br>
-• Fecha de eliminación si fue retirado del sistema.<br><br>
-<b>📊 Ver notas:</b> consulta el historial académico completo de cualquier estudiante, incluso los eliminados.<br><br>
-<b>♻️ Restaurar:</b> reactiva a un estudiante eliminado. Recupera todos sus datos y notas previas.<br><br>
-<b>🔍 Filtros:</b> busca por nombre, T.I. o salón, y filtra entre Activos/Eliminados/Todos.`,
-
-  aexc:`<b>✉️ Excusas Recibidas (Admin)</b><br>
-Vista de todas las excusas enviadas por estudiantes al administrador.<br><br>
-<b>Horario de envío:</b> los estudiantes solo pueden enviar excusas entre las <b>18:00 y las 07:00</b> del día siguiente.<br><br>
-<b>Información de cada excusa:</b><br>
-• Estudiante, salón, fecha de ausencia, causa y descripción.<br>
-• Si el estudiante incluyó descripción adicional.<br><br>
-<b>✅ Responder:</b> escribe una respuesta al estudiante. Puedes incluir talleres adjuntos y definir días extra para su entrega.<br><br>
-<b>Talleres adjuntos:</b> puedes subir archivos (PDF, Word, Excel) que el estudiante podrá descargar desde su sección de Excusas.`,
-
-  avcl:`<b>💻 Clases Virtuales (Admin)</b><br>
-Vista de todas las clases virtuales programadas por los profesores.<br><br>
-<b>Información visible:</b><br>
-• Salón, profesor, materias del profesor, fecha, hora y enlace de la reunión.<br>
-• Descripción o tema de la clase.<br><br>
-💡 Esta vista es de solo lectura para el administrador. Los profesores crean y eliminan sus propias clases desde su panel.`,
-
-  asug:`<b>💡 Sugerencias</b><br>
-Envía comentarios, reportes o sugerencias al super administrador de la plataforma.<br><br>
-<b>Para enviar una sugerencia:</b><br>
-1. Escribe un título descriptivo (opcional).<br>
-2. Selecciona la categoría (General, Académico, Técnico, Sugerencia, Felicitación, Queja).<br>
-3. Escribe tu mensaje.<br>
-4. Haz clic en <b>Enviar</b>.<br><br>
-En <em>Mis Sugerencias Enviadas</em> puedes ver si ya fue leída o respondida por el super administrador.`,
-
-  // ── PROFESOR ─────────────────────────────────────────────────────────────────
-  psug:`<b>💡 Sugerencias</b><br>
-Envía comentarios, reportes o sugerencias al super administrador de la plataforma.<br><br>
-<b>Para enviar una sugerencia:</b><br>
-1. Escribe un título descriptivo (opcional).<br>
-2. Selecciona la categoría (General, Académico, Técnico, Sugerencia, Felicitación, Queja).<br>
-3. Escribe tu mensaje.<br>
-4. Haz clic en <b>Enviar</b>.<br><br>
-En <em>Mis Sugerencias Enviadas</em> puedes ver si ya fue leída o respondida.`,
-
-  // ── ESTUDIANTE ───────────────────────────────────────────────────────────────
-  eprof:`<b>👩‍🏫 Mis Profesores</b><br>
-Lista de los docentes asignados a tu salón.<br><br>
-<b>Información disponible:</b><br>
-• Nombre del profesor, ciclo, materias que dicta y T.I./CC.<br><br>
-💡 Para enviar una tarea a un profesor ve a <em>Tareas & Talleres</em>. Para enviar una excusa ve a <em>Excusas</em> y selecciona al docente destinatario.`,
-
-  evir:`<b>💻 Mis Clases Virtuales</b><br>
-Aquí aparecen los enlaces de reuniones publicados por tus profesores.<br><br>
-<b>¿Cómo usarlo?</b><br>
-• Verás las clases programadas para tu salón ordenadas por fecha.<br>
-• Haz clic en <b>🔗 Unirse</b> para abrir el enlace de la reunión (Meet, Zoom, Teams u otro).<br>
-• Puedes ver la fecha, hora, profesor y descripción de cada clase.<br><br>
-⚠️ Si no ves ninguna clase, consulta a tu profesor si ya publicó el enlace.`,
-
-  esug:`<b>💡 Sugerencias</b><br>
-Envía comentarios, reportes o sugerencias al super administrador de la plataforma.<br><br>
-<b>Para enviar una sugerencia:</b><br>
-1. Escribe un título descriptivo (opcional).<br>
-2. Selecciona la categoría (General, Académico, Técnico, Sugerencia, Felicitación, Queja).<br>
-3. Escribe tu mensaje.<br>
-4. Haz clic en <b>Enviar</b>.<br><br>
-En <em>Mis Sugerencias Enviadas</em> puedes ver si ya fue leída o respondida.`,
-
-  // ── SUPERADMIN ───────────────────────────────────────────────────────────────
-  sadash:`<b>🌐 Panel Global — Super Admin</b><br>
-Vista ejecutiva de todo el sistema multi-institución.<br><br>
-<b>📈 Métricas globales:</b> total de colegios, estudiantes, profesores y notas registradas en toda la plataforma.<br>
-<b>📊 Gráfica de actividad:</b> comparativa por colegio (notas promedio, estudiantes, profesores). Cambia entre vista de barras y líneas.<br>
-<b>📋 Tabla de instituciones:</b> estado, actividad y métricas de cada colegio registrado.<br><br>
-💡 Desde aquí puedes navegar rápidamente a cualquier módulo de gestión usando el menú lateral.`,
-
-  sacolegios:`<b>🏫 Colegios & Admins</b><br>
-Gestión completa de las instituciones educativas registradas en la plataforma.<br><br>
-<b>➕ Nuevo Colegio:</b> registra una institución con nombre, NIT, dirección, teléfono, sedes y jornadas.<br><br>
-<b>Por cada colegio puedes:</b><br>
-• <b>✏️ Editar</b> sus datos básicos.<br>
-• <b>👤 Gestionar Admin:</b> crear o cambiar el usuario administrador de esa institución.<br>
-• <b>🟢/🔴 Activar/Desactivar:</b> habilita o bloquea el acceso de toda la institución.<br>
-• <b>🖼️ Logo:</b> subir el logo oficial del colegio (aparece en los boletines PDF).<br>
-• <b>🗑️ Eliminar:</b> elimina permanentemente el colegio y todos sus datos.<br><br>
-⚠️ La eliminación de un colegio es irreversible. Todos sus estudiantes, profesores, notas y configuración se borran permanentemente.`,
-
-  saplan:`<b>📖 Plan de Estudios</b><br>
-Define la estructura curricular oficial de cada institución.<br><br>
-<b>¿Qué es el Plan de Estudios?</b><br>
-Es el catálogo de áreas, asignaturas e intensidades horarias por ciclo y grado. Sirve como referencia para la asignación de materias.<br><br>
-<b>Para configurar:</b><br>
-1. Selecciona el colegio.<br>
-2. Selecciona el ciclo (Primaria o Bachillerato).<br>
-3. Agrega áreas, asignaturas e intensidades por grado.<br><br>
-💡 Este módulo es de configuración inicial. Los profesores y materias activas se gestionan desde el panel de cada colegio.`,
-
-  saestadisticas:`<b>📊 Estadísticas Globales</b><br>
-Análisis detallado del rendimiento académico de todos los colegios registrados.<br><br>
-<b>Métricas disponibles:</b><br>
-• Total de estudiantes, profesores y notas por institución.<br>
-• Promedio general de notas por colegio.<br>
-• Porcentaje de asistencia.<br>
-• Actividad reciente (últimas 24h, 7 días, 30 días).<br><br>
-<b>🔄 Actualizar:</b> recarga los datos en tiempo real desde la base de datos.<br><br>
-<b>🔍 Filtros:</b> busca por nombre de colegio y ordena por diferentes métricas.`,
-
-  saauditoria:`<b>🔍 Auditoría Global</b><br>
-Registro completo de todas las acciones sensibles de toda la plataforma.<br><br>
-<b>¿Qué se registra?</b><br>
-• Cambios de notas: quién, qué colegio, qué estudiante, de qué valor a qué valor.<br>
-• Intentos de eliminar archivos sin revisar.<br>
-• Cambios de configuración crítica.<br>
-• Acciones administrativas.<br><br>
-<b>Filtros disponibles:</b><br>
-• Por colegio (para ver solo las acciones de una institución específica).<br>
-• Búsqueda libre por usuario, estudiante o campo modificado.<br><br>
-💡 Esta vista tiene acceso solo el super administrador.`,
-
-  samantenimiento:`<b>⚙️ Mantenimiento Técnico</b><br>
-Herramientas avanzadas de administración del sistema.<br><br>
-<b>💾 Copia de Seguridad:</b> descarga un backup completo en formato JSON de una institución. Recomendado antes de cambios importantes.<br><br>
-<b>🔧 Reparar Índices:</b> reconstruye los índices de la base de datos. Útil si ocurren errores de duplicados o inconsistencias.<br><br>
-<b>🗑️ Limpiar Auditoría:</b> elimina registros antiguos del historial de auditoría para liberar espacio.<br><br>
-⚠️ Estas herramientas son de uso técnico. Úsalas solo si sabes lo que estás haciendo o si hay un problema específico.`,
-
-  sasug:`<b>💡 Sugerencias Recibidas (Super Admin)</b><br>
-Bandeja de entrada de todas las sugerencias enviadas por admins, profesores y estudiantes de cualquier institución.<br><br>
-<b>Información de cada sugerencia:</b><br>
-• Institución, nombre del remitente, rol y categoría.<br>
-• Fecha de envío y estado (leída / sin leer).<br><br>
-<b>✅ Marcar como leída:</b> confirma que revisaste la sugerencia.<br>
-<b>📨 Responder:</b> escribe una respuesta que el remitente verá en su panel.<br><br>
-<b>Filtros:</b> filtra por colegio, estado (leída/no leída) o categoría.`,
+  ph:`<b>📊 Panel Principal</b><br>Resumen de tus salones, materias y estado del periodo activo. Usa el menú lateral para navegar a cada sección.`,
+  pnot:`<b>📝 Ingresar Notas</b><br>1. Selecciona el <b>Salón</b> y el <b>Periodo</b>.<br>2. Haz clic en <b>Cargar</b>.<br>3. Ingresa: <b>Aptitud (60%)</b>, <b>Actitud (20%)</b> y <b>Responsabilidad (20%)</b>.<br>La definitiva se calcula automáticamente.<br>⚠️ Solo puedes ingresar notas durante el rango de fechas configurado para ese periodo.`,
+  past:`<b>✅ Pasar Asistencia</b><br>Selecciona el salón y la fecha, marca ✓ a los presentes y ✗ a los ausentes. Guarda al terminar.`,
+  pvir:`<b>💻 Clases Virtuales</b><br>Publica enlaces de reuniones (Meet, Zoom, Teams) para tus salones. Los estudiantes ven el enlace activo en su sección.`,
+  ptar:`<b>📂 Tareas Recibidas</b><br>Archivos que los estudiantes te enviaron. Ábrelos y márcalos como <b>✓ Revisado</b>. Solo puedes eliminar los ya revisados; los intentos de eliminar sin revisar quedan en Auditoría.`,
+  prec:`<b>🔄 Recuperaciones</b><br>Activo durante el Periodo Extraordinario.<br>1. Envía un Plan de Recuperación al salón o individual.<br>2. Los estudiantes responden antes de la fecha límite.<br>3. Revisa sus respuestas aquí y márcalas como revisadas.<br>Puedes exportar el historial de planes en Excel.`,
+  phist:`<b>📚 Historial Recuperaciones</b><br>Recuperaciones de periodos anteriores. Usa el buscador para filtrar por nombre de archivo, estudiante o materia. Puedes abrir cualquier archivo archivado.`,
+  eb:`<b>📋 Mi Boletín</b><br>Tus notas de todos los periodos y materias. Descárgalo en PDF con el botón correspondiente.`,
+  east:`<b>📆 Mi Asistencia</b><br>Historial de asistencia: días presentes, ausentes y con excusa presentada.`,
+  etare:`<b>📎 Tareas & Talleres</b><br>1. Selecciona materia, periodo y docente.<br>2. Escribe una descripción breve.<br>3. Adjunta el archivo (PDF, Word, Excel — máx 5 MB) y haz clic en Subir.<br>En <em>Mis Archivos Enviados</em> verás si el docente ya lo revisó. Puedes eliminar los revisados.`,
+  eexc:`<b>✉️ Excusas</b><br>Envía una excusa cuando faltaste. Solo en horario permitido (6:00 PM – 7:00 AM). Selecciona el motivo y el docente destinatario.`,
+  ereh:`<b>🔄 Mi Recuperación</b><br>Disponible cuando tienes 1–2 materias perdidas y el Periodo Extraordinario está activo.<br>Cada plan de tu docente aparece aquí. Respóndelo adjuntando tu trabajo antes de la fecha límite.<br>Una vez que el docente lo revise, el formulario se bloquea y puedes eliminar el registro.`,
+  ehist:`<b>📚 Historial Recuperaciones</b><br>Todos los trabajos de recuperación que enviaste en periodos anteriores, con su estado de revisión.`,
+  afec:`<b>📅 Control de Fechas</b><br><b>Rangos por Periodo:</b> define cuándo puede cada periodo recibir notas. Si no se configura, el periodo permanece siempre abierto.<br><b>Periodo Ext.:</b> a qué periodo van las notas de recuperación.<br><b>Rango Global:</b> aplica cuando un periodo no tiene rango propio.<br>Al cerrar el rango de un periodo, el Periodo Extraordinario se activa automáticamente si tiene fechas.`,
+  anot:`<b>📊 Gestión de Notas (Admin)</b><br>Ve y edita notas de cualquier salón y periodo sin restricción de fechas.`,
+  aaud:`<b>🔍 Auditoría</b><br>Registro automático de acciones sensibles: intentos de eliminar talleres sin revisar, cambios críticos. Solo visible para el administrador.`,
+  dash:`<b>🏠 Panel General</b><br>Resumen estadístico del colegio: total de estudiantes, profesores, salones y materias.<br>Muestra el ranking de los mejores estudiantes por salón y las últimas acciones registradas en auditoría.<br>Usa el menú lateral para navegar a cualquier sección del sistema.`,
+  asal:`<b>🏫 Salones & Grados</b><br>Crea y gestiona los salones del colegio separados por ciclo (Primaria y Bachillerato).<br>1. Escribe el nombre del salón (ej: 6A), selecciona ciclo y jornada, y haz clic en <b>Agregar</b>.<br>2. Desde cada salón puedes editar sus materias o eliminarlo si no tiene estudiantes activos.`,
+  apri:`<b>🎓 Estudiantes — Primaria</b><br>Gestiona los estudiantes de primaria (1°–5°).<br>Puedes agregar estudiantes uno a uno o hacer <b>Carga Masiva CSV</b>.<br>Edita datos como nombre, T.I., salón y contraseña. Usa el buscador para filtrar por nombre o salón.<br>Al final del año puedes usar <b>Promover Año</b> para avanzar automáticamente a los estudiantes según sus resultados.`,
+  abac:`<b>🎓 Estudiantes — Bachillerato</b><br>Gestiona los estudiantes de bachillerato (6°–11°).<br>Puedes agregar estudiantes uno a uno o hacer <b>Carga Masiva CSV</b>.<br>Edita datos como nombre, T.I., salón y contraseña. Usa el buscador para filtrar por nombre o salón.<br>Al final del año puedes usar <b>Promover Año</b> para avanzar automáticamente a los estudiantes según sus resultados.`,
+  aprf:`<b>👩‍🏫 Profesores</b><br>Crea y administra los docentes del colegio por ciclo (Primaria / Bachillerato).<br>Al crear un profesor asigna sus <b>salones</b> y las <b>materias</b> que imparte en cada salón.<br>Puedes hacer carga masiva desde un archivo CSV. Edita o elimina profesores en cualquier momento.`,
+  amat:`<b>📖 Áreas & Materias</b><br>Define las áreas académicas y las materias que las componen para cada ciclo.<br>Las áreas agrupan materias y determinan si el estudiante aprueba, recupera o pierde el año.<br>Configura también los porcentajes de calificación (Aptitud, Actitud, Responsabilidad) y el año lectivo que aparecerá en los boletines.`,
+  areh:`<b>🔄 Recuperaciones (Admin)</b><br>Vista global de todos los estudiantes en periodo de recuperación.<br>Muestra quién tiene materias pendidas y en qué materias. El docente correspondiente envía el plan de recuperación desde su panel.<br>Al cerrar el periodo puedes archivar todos los registros.`,
+  ablk:`<b>🔒 Usuarios Bloqueados</b><br>Lista de usuarios que han sido bloqueados por intentos fallidos de inicio de sesión.<br>Haz clic en <b>Desbloquear</b> para permitir que el usuario vuelva a ingresar al sistema.`,
+  aexp:`<b>📤 Exportar Datos</b><br>Descarga información del sistema en formato <b>Excel</b> o genera <b>Boletines PDF</b>.<br>• <b>Excel:</b> exporta notas consolidadas, asistencia o datos de estudiantes por salón.<br>• <b>Boletín individual:</b> selecciona un estudiante y descarga su reporte académico.<br>• <b>Boletines por salón:</b> genera todos los boletines de un grupo en un solo clic.`,
+  ahist:`<b>📚 Historial de Estudiantes</b><br>Registro de todos los estudiantes que alguna vez fueron dados de alta en el sistema, incluso los ya eliminados.<br>Puedes buscar por nombre o documento. El historial mantiene el año y salón en que estuvieron matriculados.`,
+  aexc:`<b>✉️ Excusas Recibidas</b><br>Bandeja de excusas enviadas por los estudiantes (horario permitido: 18:00 – 07:00).<br>Haz clic en una excusa para leerla y escribir una <b>respuesta</b> al estudiante.<br>Las excusas respondidas quedan marcadas y el estudiante puede verlas en su módulo.`,
+  avcl:`<b>💻 Clases Virtuales (Admin)</b><br>Vista general de todos los enlaces de clases virtuales publicados por los docentes.<br>Cada tarjeta muestra el salón, la fecha, el docente y el enlace de la reunión (Meet, Zoom, Teams).<br>Los estudiantes ven estos enlaces activos en su sección de Clases Virtuales.`,
+  eprof:`<b>👩‍🏫 Mis Profesores</b><br>Lista de todos los docentes asignados a tu salón con sus materias y datos de contacto.<br>Consulta aquí el nombre y materias de cada profesor para saber a quién dirigirte.`,
+  evir:`<b>💻 Mis Clases Virtuales</b><br>Aquí aparecen los enlaces de reuniones (Meet, Zoom, Teams) que tus docentes han publicado para tu salón.<br>Haz clic en el enlace para unirte a la clase virtual en el horario indicado.`,
 };
 function showHelp(panel){
   const txt=HELP[panel]||'Sin ayuda disponible para esta sección.';
-  Swal.fire({
-    title:'❓ Ayuda',
-    html:`<div style="text-align:left;font-size:14px;line-height:1.9;max-height:65vh;overflow-y:auto;padding-right:4px">${txt}</div>`,
-    confirmButtonText:'Entendido ✓',
-    confirmButtonColor:'#2b6cb0',
-    icon:'info',
-    width:'min(600px, 95vw)',
-    customClass:{htmlContainer:'swal-help-body'}
-  });
+  Swal.fire({title:'❓ Ayuda',html:`<div style="text-align:left;font-size:14px;line-height:1.8">${txt}</div>`,
+    confirmButtonText:'Entendido',icon:'info'});
 }
 /* Log audit entry */
 function logAudit(msg,extra){ /* implementado en api-layer.js */ }
@@ -2564,7 +2211,7 @@ function logAudit(msg,extra){ /* implementado en api-layer.js */ }
 ============================================================ */
 function pgABlk(){
   const list=Object.entries(DB.blk).filter(([,v])=>v.on);
-  return`<div class="ph"><h2>Usuarios Bloqueados</h2><button class="btn xs bg" style="margin-top:4px" onclick="showHelp('ablk')">❓ Ayuda</button></div>
+  return`<div class="ph"><h2>Usuarios Bloqueados</h2><button class="btn xs bg" onclick="showHelp('ablk')" style="margin-top:6px">❓ Ayuda</button></div>
   <div class="card">${list.length?`<div class="tw"><table>
     <thead><tr><th>Usuario</th><th>Bloqueado en</th><th>Acción</th></tr></thead>
     <tbody>${list.map(([u,v])=>`<tr>
@@ -2581,7 +2228,7 @@ async function unblk(u){ /* implementado en api-layer.js */ }
 ============================================================ */
 function pgAAud(){
   const list=(DB.audit||[]).slice().reverse();
-  return`<div class="ph"><h2>Historial de Auditoría</h2><button class="btn xs bg" style="margin-top:4px" onclick="showHelp('aaud')">❓ Ayuda</button></div>
+  return`<div class="ph"><h2>Historial de Auditoría</h2><button class="btn xs bg" onclick="showHelp('aaud')" style="margin-top:6px">❓ Ayuda</button></div>
   <div class="card"><div class="chd">
     <span class="cti">📋 Cambios (${list.length})</span>
     <div style="display:flex;gap:8px">
@@ -2631,7 +2278,7 @@ function pgAExp(){
   const yr=new Date().getFullYear();
   const annos=Array.from({length:4},(_,i)=>yr-1+i);
   const salOpts=DB.sals.map(s=>`<option value="${s.nombre}">${s.nombre} (${cicloOf(s.nombre)==='primaria'?'Primaria':'Bach.'})</option>`).join('');
-  return`<div class="ph"><h2>Exportar Datos</h2><button class="btn xs bg" style="margin-top:4px" onclick="showHelp('aexp')">❓ Ayuda</button></div>
+  return`<div class="ph"><h2>Exportar Datos</h2><button class="btn xs bg" onclick="showHelp('aexp')" style="margin-top:6px">❓ Ayuda</button></div>
   <div class="g2">
     <!-- Excel exports -->
     <div class="card"><div class="chd"><span class="cti">📊 Exportar Excel</span></div>
@@ -2743,8 +2390,8 @@ function dlSalonTodos(){
    ADMIN — HISTORIAL DE ESTUDIANTES
 ============================================================ */
 function pgAHist(){
-  return`<div class="ph"><h2>Historial de Estudiantes</h2><button class="btn xs bg" style="margin-top:4px" onclick="showHelp('ahist')">❓ Ayuda</button>
-    <p>Registro de todos los estudiantes que alguna vez fueron dados de alta en el sistema.</p></div>
+  return`<div class="ph"><h2>Historial de Estudiantes</h2>
+    <p>Registro de todos los estudiantes que alguna vez fueron dados de alta en el sistema.</p><button class="btn xs bg" onclick="showHelp('ahist')" style="margin-top:6px">❓ Ayuda</button></div>
   <div class="card">
     <div class="chd">
       <span class="cti">📚 Registro Histórico (${(DB.estHist||[]).length})</span>
@@ -2982,7 +2629,7 @@ function filtrarHist(){
 /* ============================================================
    ADMIN — EXCUSAS
 ============================================================ */
-function pgAExc(){return`<div class="ph"><h2>Excusas Recibidas</h2><button class="btn xs bg" style="margin-top:4px" onclick="showHelp('aexc')">❓ Ayuda</button><p>Horario de envío: 18:00 – 07:00</p></div><div id="aexcB"></div>`;}
+function pgAExc(){return`<div class="ph"><h2>Excusas Recibidas</h2><p>Horario de envío: 18:00 – 07:00</p><button class="btn xs bg" onclick="showHelp('aexc')" style="margin-top:6px">❓ Ayuda</button></div><div id="aexcB"></div>`;}
 function initAExc(){
   const el=gi('aexcB');if(!el)return;
   const list=(DB.exc||[]).slice().reverse();
@@ -3092,7 +2739,7 @@ async function responderExcusa(excId){
 /* ============================================================
    ADMIN — CLASES VIRTUALES
 ============================================================ */
-function pgAVcl(){return`<div class="ph"><h2>Clases Virtuales</h2><button class="btn xs bg" style="margin-top:4px" onclick="showHelp('avcl')">❓ Ayuda</button></div><div id="avcB"></div>`;}
+function pgAVcl(){return`<div class="ph"><h2>Clases Virtuales</h2><button class="btn xs bg" onclick="showHelp('avcl')" style="margin-top:6px">❓ Ayuda</button></div><div id="avcB"></div>`;}
 function initAVcl(){
   const el=gi('avcB');if(!el)return;
   const clases=(DB.vclases||[]).slice().reverse();
@@ -3117,7 +2764,7 @@ function initAVcl(){
 ============================================================ */
 function pgPH(){
   const p=CU;
-  return`<div class="ph"><h2>Bienvenido, ${esc(p.nombre)}</h2><button class="btn xs bg" style="margin-top:4px" onclick="showHelp('ph')">❓ Ayuda</button><p>${p.ciclo==='bachillerato'?'Bachillerato':'Primaria'}</p></div>
+  return`<div class="ph"><h2>Bienvenido, ${esc(p.nombre)}</h2><p>${p.ciclo==='bachillerato'?'Bachillerato':'Primaria'}</p><button class="btn xs bg" onclick="showHelp('ph')" style="margin-top:6px">❓ Ayuda</button></div>
   <div class="sr">
     <div class="scc" data-i="🏫"><div class="sv">${(p.salones||[]).length}</div><div class="sl">Mis Salones</div><div class="bar"></div></div>
     ${p.ciclo==='bachillerato'?`<div class="scc" data-i="📖"><div class="sv" style="font-size:14px;margin-top:2px">${(p.materias||[]).join(', ')||'—'}</div><div class="sl">Mis Materias</div><div class="bar"></div></div>`:''}
@@ -3793,7 +3440,7 @@ function dlRptXls(salon,per,matFilter){
 ============================================================ */
 function pgPAst(){
   const sO=(CU.salones||[]).map(s=>`<option value="${s}">${s}</option>`).join('');
-  return`<div class="ph"><h2>Asistencias</h2><button class="btn xs bg" style="margin-top:4px" onclick="showHelp('past')">❓ Ayuda</button></div>
+  return`<div class="ph"><h2>Asistencias</h2><button class="btn xs bg" onclick="showHelp('past')" style="margin-top:6px">❓ Ayuda</button></div>
   <div class="card">
     <div class="fg">
       <div class="fld"><label>Salón</label><select id="pas">${sO||'<option>Sin salones</option>'}</select></div>
@@ -3835,7 +3482,7 @@ async function saveAst(key){ /* implementado en api-layer.js */ }
 function pgPVir(){
   const sO=(CU.salones||[]).map(s=>`<option value="${s}">${s}</option>`).join('');
   const mis=(DB.vclases||[]).filter(c=>c.profId===CU.id).slice().reverse();
-  return`<div class="ph"><h2>Clases Virtuales</h2><button class="btn xs bg" style="margin-top:4px" onclick="showHelp('pvir')">❓ Ayuda</button></div>
+  return`<div class="ph"><h2>Clases Virtuales</h2><button class="btn xs bg" onclick="showHelp('pvir')" style="margin-top:6px">❓ Ayuda</button></div>
   <div class="card"><div class="chd"><span class="cti">📅 Programar Clase Virtual</span></div>
     <div class="fg">
       <div class="fld"><label>Salón</label><select id="vcs">${sO||'<option value="">Sin salones asignados</option>'}</select></div>
@@ -4308,7 +3955,7 @@ async function marcarRecRevisado(id){ /* implementado en api-layer.js */ }
 function pgEHist(){
   const hist=(DB.histRecs||[]).filter(r=>r.estId===CU.id).slice().reverse();
   const periodos=[...new Set(hist.map(r=>r._periodo))];
-  if(!hist.length) return`<div class="ph"><h2>Historial Recuperaciones</h2></div>
+  if(!hist.length) return`<div class="ph"><h2>Historial Recuperaciones</h2><button class="btn xs bg" onclick="showHelp('ehist')" style="margin-top:6px">❓ Ayuda</button></div>
     <div class="al alb">📭 Aún no hay periodos de recuperación archivados.</div>`;
   const cards=periodos.map(per=>{
     const items=hist.filter(r=>r._periodo===per);
@@ -4347,7 +3994,7 @@ function pgPHist(){
   const hist=(DB.histRecs||[]).filter(r=>r.profId===CU.id).slice().reverse();
   const periodos=[...new Set(hist.map(r=>r._periodo))];
   const busqId='phistBusq_'+Date.now();
-  if(!hist.length) return`<div class="ph"><h2>Historial Recuperaciones</h2></div>
+  if(!hist.length) return`<div class="ph"><h2>Historial Recuperaciones</h2><button class="btn xs bg" onclick="showHelp('phist')" style="margin-top:6px">❓ Ayuda</button></div>
     <div class="al alb">📭 Aún no hay periodos de recuperación archivados.</div>`;
   return`<div class="ph"><h2>Historial de Recuperaciones Recibidas</h2>
     <button class="btn xs bg" style="margin-top:4px" onclick="showHelp('phist')">❓ Ayuda</button>
@@ -4647,8 +4294,9 @@ function pgEExc(){
   const destOpts=[{id:'admin',label:'Administrador'},...prfsDelSalon.map(p=>({id:p.id,label:p.nombre}))];
   const mis=DB.exc.filter(x=>x.eid===e.id).slice().reverse();
   const ventanaOk=excusasOk();
-  return`<div class="ph"><h2>Módulo de Excusas</h2><button class="btn xs bg" style="margin-top:4px" onclick="showHelp('eexc')">❓ Ayuda</button>
+  return`<div class="ph"><h2>Módulo de Excusas</h2>
     <p>Horario de envío: 18:00 – 07:00 ${ventanaOk?'<span class="bdg bgr">✓ Abierto</span>':'<span class="bdg brd">✗ Cerrado</span>'}</p>
+    <button class="btn xs bg" onclick="showHelp('eexc')" style="margin-top:6px">❓ Ayuda</button>
   </div>
   ${!ventanaOk?`<div class="al aly">⚠️ Las excusas solo pueden enviarse entre las 18:00 y las 07:00.</div>`:''}
   <div class="card"><div class="chd"><span class="cti">✉️ Redactar Excusa</span></div>
@@ -4740,7 +4388,7 @@ function renderPExcR(){
 ============================================================ */
 function pgEProf(){
   const e=CU;const prfs=profsInSalon(e.salon);
-  return`<div class="ph"><h2>Mis Profesores</h2><button class="btn xs bg" style="margin-top:4px" onclick="showHelp('eprof')">❓ Ayuda</button></div>
+  return`<div class="ph"><h2>Mis Profesores</h2><button class="btn xs bg" onclick="showHelp('eprof')" style="margin-top:6px">❓ Ayuda</button></div>
   <div class="card"><div class="chd"><span class="cti">Salón: <span class="bdg bbl">${e.salon||'Sin salón'}</span></span></div>
   ${e.salon&&prfs.length?`<div class="tw"><table><thead>
     <tr><th>Profesor</th><th>Ciclo</th><th>Materias</th><th>T.I./CC</th></tr></thead>
@@ -4764,7 +4412,7 @@ function pgEVir(){
   const e=CU;
   const clases=(DB.vclases||[]).filter(c=>c.salon===e.salon)
     .sort((a,b)=>b.fecha.localeCompare(a.fecha));
-  return`<div class="ph"><h2>Mis Clases Virtuales</h2><button class="btn xs bg" style="margin-top:4px" onclick="showHelp('evir')">❓ Ayuda</button><p>Salón: <strong>${e.salon||'Sin salón'}</strong></p></div>
+  return`<div class="ph"><h2>Mis Clases Virtuales</h2><p>Salón: <strong>${e.salon||'Sin salón'}</strong></p><button class="btn xs bg" onclick="showHelp('evir')" style="margin-top:6px">❓ Ayuda</button></div>
   ${clases.length?clases.map(c=>`
     <div class="vc-card">
       <div>
@@ -4782,8 +4430,8 @@ function pgEVir(){
 ============================================================ */
 function pgEReh(){
   const e=CU;const mp=matPerd(e.id);
-  if(!DB.ext.on) return`<div class="ph"><h2>Mi Recuperación</h2></div><div class="al aly">⚠️ El periodo extraordinario no está activo.</div>`;
-  if(!mp.length) return`<div class="ph"><h2>Mi Recuperación</h2></div><div class="al alg">✅ No tienes materias en recuperación. ¡Bien hecho!</div>`;
+  if(!DB.ext.on) return`<div class="ph"><h2>Mi Recuperación</h2><button class="btn xs bg" onclick="showHelp('ereh')" style="margin-top:6px">❓ Ayuda</button></div><div class="al aly">⚠️ El periodo extraordinario no está activo.</div>`;
+  if(!mp.length) return`<div class="ph"><h2>Mi Recuperación</h2><button class="btn xs bg" onclick="showHelp('ereh')" style="margin-top:6px">❓ Ayuda</button></div><div class="al alg">✅ No tienes materias en recuperación. ¡Bien hecho!</div>`;
 
   /* Mark all plans as seen */
   let planesChanged=false;
@@ -4886,8 +4534,8 @@ function pgEReh(){
 
   const dot=document.querySelector('#ni_ereh .notif-dot');if(dot)dot.remove();
 
-  return`<div class="ph"><h2>Mi Recuperación</h2><button class="btn xs bg" style="margin-top:4px" onclick="showHelp('ereh')">❓ Ayuda</button>
-    <p>Tienes <strong>${mp.length}</strong> materia(s) en periodo extraordinario.</p></div>
+  return`<div class="ph"><h2>Mi Recuperación</h2>
+    <p>Tienes <strong>${mp.length}</strong> materia(s) en periodo extraordinario.</p><button class="btn xs bg" onclick="showHelp('ereh')" style="margin-top:6px">❓ Ayuda</button></div>
   <div class="al aly" style="margin-bottom:14px">📅 Periodo Extraordinario: <strong>${DB.ext.s} → ${DB.ext.e}</strong></div>
   ${tarjetas}`;
 }
@@ -5472,7 +5120,7 @@ function pgSADash() {
     <div class="card" style="background:linear-gradient(135deg,#1a365d 0%,#2b6cb0 100%);color:#fff;margin-bottom:1rem">
       <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:.75rem">
         <div>
-          <h2 style="color:#fff;margin-bottom:.25rem">🌐 Panel Global — Super Admin <button class="btn xs bg" style="margin-top:4px;background:rgba(255,255,255,.2);border:1px solid rgba(255,255,255,.4);color:#fff" onclick="showHelp('sadash')">❓ Ayuda</button></h2>
+          <h2 style="color:#fff;margin-bottom:.25rem">🌐 Panel Global — Super Admin</h2>
           <p style="opacity:.85;font-size:.9rem;margin:0">Bienvenido, <strong>${CU.nombre}</strong> · EduSistema Pro</p>
         </div>
         <div style="display:flex;gap:.5rem;flex-wrap:wrap;align-items:center">
@@ -5665,7 +5313,7 @@ async function initSADash() {
 function pgSAColegios() {
   return `<div class="card">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;flex-wrap:wrap;gap:.5rem">
-      <h2>🏫 Colegios & Admins <button class="btn xs bg" style="margin-top:4px" onclick="showHelp('sacolegios')">❓ Ayuda</button></h2>
+      <h2>🏫 Colegios & Admins</h2>
       <button class="btn" onclick="modalNuevoColegio()">＋ Nuevo Colegio</button>
     </div>
     <input id="saColSearch" class="inp" style="max-width:300px;margin-bottom:1rem" placeholder="🔍 Buscar colegio…" oninput="filtrarColegios()">
@@ -5962,7 +5610,7 @@ async function toggleAdmin(id, blocked) {
 /* ─── PLAN DE ESTUDIOS ─────────────────────────────────── */
 function pgSAPlan() {
   return `<div class="card">
-    <h2>📖 Plan de Estudios <button class="btn xs bg" style="margin-top:4px" onclick="showHelp('saplan')">❓ Ayuda</button></h2>
+    <h2>📖 Plan de Estudios</h2>
     <p style="color:#888;margin-bottom:1rem">Define áreas, asignaturas e intensidades horarias por colegio.</p>
     <div style="display:flex;gap:.75rem;flex-wrap:wrap;margin-bottom:1rem">
       <select id="saPlanCol" class="inp" style="min-width:200px" onchange="loadSAPlan()">
@@ -6080,7 +5728,7 @@ function pgSAEstadisticas() {
   return `<div id="saEstPage">
     <div class="card" style="background:linear-gradient(135deg,#1a365d 0%,#2b6cb0 100%);color:#fff;margin-bottom:1rem">
       <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:.5rem;margin-bottom:1rem">
-        <h2 style="color:#fff;margin:0">📊 Estadísticas Globales del Sistema <button class="btn xs bg" style="background:rgba(255,255,255,.2);border:1px solid rgba(255,255,255,.4);color:#fff" onclick="showHelp('saestadisticas')">❓ Ayuda</button></h2>
+        <h2 style="color:#fff;margin:0">📊 Estadísticas Globales del Sistema</h2>
         <div style="display:flex;gap:.5rem;flex-wrap:wrap">
           <button class="btn" style="background:rgba(255,255,255,.15);color:#fff;border:1px solid rgba(255,255,255,.3);font-size:.8rem" onclick="initSAEstadisticas()">🔄 Actualizar</button>
           <button class="btn" style="background:rgba(255,255,255,.15);color:#fff;border:1px solid rgba(255,255,255,.3);font-size:.8rem" onclick="exportarEstCSV()">📤 CSV</button>
@@ -6252,7 +5900,7 @@ async function initSAEstadisticas() {
 /* ─── AUDITORÍA GLOBAL ──────────────────────────────────── */
 function pgSAAuditoria() {
   return `<div class="card">
-    <h2>🔍 Auditoría Global <button class="btn xs bg" style="margin-top:4px" onclick="showHelp('saauditoria')">❓ Ayuda</button></h2>
+    <h2>🔍 Auditoría Global</h2>
     <div style="display:flex;gap:.75rem;margin-bottom:1rem;flex-wrap:wrap">
       <select id="saAudCol" class="inp" style="min-width:200px" onchange="loadSAAuditoria()">
         <option value="">Todos los colegios</option>
@@ -6303,7 +5951,7 @@ async function loadSAAuditoria() {
 /* ─── MANTENIMIENTO TÉCNICO ─────────────────────────────── */
 function pgSAMantenimiento() {
   return `<div class="card">
-    <h2>⚙️ Mantenimiento Técnico <button class="btn xs bg" style="margin-top:4px" onclick="showHelp('samantenimiento')">❓ Ayuda</button></h2>
+    <h2>⚙️ Mantenimiento Técnico</h2>
     <div style="display:grid;gap:1.5rem">
       <div class="card">
         <h3>💾 Copia de Seguridad</h3>
@@ -6386,7 +6034,7 @@ async function resetMasivo() {
 /* ─── SUGERENCIAS — superadmin recibe ──────────────────── */
 function pgSASug() {
   return `<div class="card">
-    <h2>💡 Sugerencias Recibidas <button class="btn xs bg" style="margin-top:4px" onclick="showHelp('sasug')">❓ Ayuda</button></h2>
+    <h2>💡 Sugerencias Recibidas</h2>
     <div style="display:flex;gap:.75rem;margin-bottom:1rem;flex-wrap:wrap;align-items:center">
       <select id="saSugFiltCol" class="inp" style="min-width:180px" onchange="loadSASug()">
         <option value="">Todos los colegios</option>
@@ -6472,7 +6120,7 @@ async function eliminarSug(id) {
 
 /* ─── SUGERENCIAS — admin/profe/est envían ──────────────── */
 function pgSugerencias() {
-  return `<div class="ph"><h2>💡 Sugerencias</h2><button class="btn xs bg" style="margin-top:4px" onclick="showHelp(CU?.role==='admin'?'asug':CU?.role==='profe'?'psug':'esug')">❓ Ayuda</button><p>Envía sugerencias, comentarios o reportes al super administrador de la plataforma.</p></div>
+  return `<div class="ph"><h2>💡 Sugerencias</h2><p>Envía sugerencias, comentarios o reportes al super administrador de la plataforma.</p></div>
   <div class="card">
     <div class="chd"><span class="cti">Nueva Sugerencia</span></div>
     <div class="fg">
