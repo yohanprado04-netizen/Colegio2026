@@ -770,7 +770,7 @@ const ROLE_MAP={
   superadmin:new Set(['sadash','sacolegios','saestadisticas','saauditoria','samantenimiento','saplan','sasug']),
   admin:new Set(['dash','asal','apri','abac','aprf','amat','anot','areh','afec','ablk','aaud','aexp','aexc','avcl','ahist','asug']),
   profe:new Set(['ph','pnot','past','pvir','ptar','prec','phist','psug']),
-  est:new Set(['eb','east','etare','eexc','eprof','evir','ereh','ehist','esug'])
+  est:new Set(['eb','east','etare','eexc','eprof','evir','ereh','ehist','esug','eicfes'])
 };
 /* ── 2. REEMPLAZA canAccess ── */
 function canAccess(pid){
@@ -1046,6 +1046,8 @@ function navItems(){
     {id:'ehist',ic:'📚',lb:'Historial Recuperaciones'},
     {id:'esug',ic:'💡',lb:'Sugerencias'},
   ];
+  // Simulacro ICFES solo para bachillerato
+  if(cicloOf(CU.salon)==='bachillerato') it.push({id:'eicfes',ic:'🎯',lb:'Simulacro ICFES'});
   const mp=matPerd(CU.id);
   if(DB.ext.on&&mp.length>=1&&mp.length<=2) it.push({id:'ereh',ic:'🔄',lb:'Mi Recuperación'});
   return it;
@@ -1087,7 +1089,7 @@ function renderPg(pid){
     ablk:pgABlk,aaud:pgAAud,aexp:pgAExp,aexc:pgAExc,avcl:pgAVcl,ahist:pgAHist,
     ph:pgPH,pnot:pgPNot,past:pgPAst,pvir:pgPVir,ptar:pgPTar,prec:pgPRec,phist:pgPHist,
     eb:pgEB,east:pgEAst,etare:pgETare,eexc:pgEExc,eprof:pgEProf,
-    evir:pgEVir,ereh:pgEReh,ehist:pgEHist,
+    evir:pgEVir,ereh:pgEReh,ehist:pgEHist,eicfes:pgEIcfes,
     sadash:pgSADash,sacolegios:pgSAColegios,saplan:pgSAPlan,
     saestadisticas:pgSAEstadisticas,saauditoria:pgSAAuditoria,samantenimiento:pgSAMantenimiento,
     sasug:pgSASug,
@@ -1099,7 +1101,7 @@ function initPg(pid){
   const map={
     dash:initDash,asal:initASal,apri:()=>initAEst('primaria'),abac:()=>initAEst('bachillerato'),
     aprf:initAPrf,amat:initAMat,anot:initANot,areh:initAReh,aexc:initAExc,avcl:initAVcl,
-    pnot:initPNot,past:initPAst,eb:initEB,
+    pnot:initPNot,past:initPAst,eb:initEB,eicfes:initEIcfes,
     ph:()=>{ setTimeout(()=>{ renderPExcR(); notifNuevasExcusas(); },0); },
     sadash:initSADash,sacolegios:initSAColegios,saplan:initSAPlan,
     saestadisticas:initSAEstadisticas,saauditoria:initSAAuditoria,samantenimiento:initSAMantenimiento,
@@ -5515,6 +5517,422 @@ function dlBoletin(estId,perFilter,anno,snapData){
     html2canvas:{scale:2.5,useCORS:true,logging:false,letterRendering:true},
     jsPDF:{unit:'mm',format:'a4',orientation:'portrait'}
   }).from(box).save().then(()=>box.classList.add('hidden'));
+}
+
+/* ============================================================
+   SIMULACRO ICFES
+============================================================ */
+
+// ─── Base de preguntas ICFES (pruebas colombianas 2023-2025) ────────────────
+const ICFES_PREGUNTAS = {
+
+'Lectura Crítica': [
+  {p:"Lee el siguiente fragmento: «El hombre es el único animal que tropieza dos veces con la misma piedra.» ¿Cuál es la intención comunicativa principal de este enunciado?",o:["A) Describir el comportamiento animal","B) Criticar la capacidad reflexiva humana","C) Explicar un fenómeno natural","D) Narrar una anécdota histórica"],r:"B"},
+  {p:"En el texto «La soledad de América Latina» de Gabriel García Márquez, el autor afirma que América Latina ha sido incomprendida por Europa. ¿Qué recurso argumentativo utiliza principalmente?",o:["A) La analogía con Asia","B) Datos estadísticos comparativos","C) Ejemplos históricos y literarios propios de la región","D) Testimonios de líderes políticos europeos"],r:"C"},
+  {p:"¿Cuál de las siguientes opciones representa mejor el propósito de un texto expositivo?",o:["A) Persuadir al lector de adoptar una postura","B) Entretener mediante una narración ficticia","C) Informar y explicar un tema de manera objetiva","D) Expresar los sentimientos del autor"],r:"C"},
+  {p:"Un texto argumentativo es aquel que busca principalmente:",o:["A) Describir personajes y ambientes","B) Convencer al lector mediante razones y evidencias","C) Narrar hechos en orden cronológico","D) Presentar instrucciones paso a paso"],r:"B"},
+  {p:"Lee: «El río baja cantando entre las piedras.» ¿Qué figura literaria se emplea?",o:["A) Hipérbole","B) Antítesis","C) Personificación","D) Metáfora"],r:"C"},
+  {p:"¿Cuál de los siguientes enunciados corresponde a una opinión y no a un hecho?",o:["A) Colombia tiene 32 departamentos","B) El río Amazonas nace en Perú","C) La educación pública es más valiosa que la privada","D) La Constitución colombiana fue promulgada en 1991"],r:"C"},
+  {p:"En el poema «Veinte poemas de amor» de Pablo Neruda, el verso «Puedo escribir los versos más tristes esta noche» expresa principalmente:",o:["A) Una orden al lector","B) Un estado emocional del yo poético","C) Una descripción objetiva del entorno","D) Una predicción sobre el futuro"],r:"B"},
+  {p:"¿Qué tipo de narrador es aquel que participa como personaje dentro de la historia?",o:["A) Narrador omnisciente","B) Narrador en tercera persona","C) Narrador en primera persona (protagonista)","D) Narrador testigo externo"],r:"C"},
+  {p:"Una inferencia textual es:",o:["A) Copiar literalmente información del texto","B) Resumir el texto con palabras propias","C) Deducir información implícita a partir de lo que dice el texto","D) Identificar el tema central del texto"],r:"C"},
+  {p:"Lee: «No era un hombre ordinario; era, en todo el sentido de la palabra, un genio.» ¿Qué conectivo lógico se utiliza?",o:["A) Adversativo","B) Causal","C) Consecutivo","D) Concesivo"],r:"A"},
+  {p:"El párrafo de cierre de un texto argumentativo generalmente:",o:["A) Presenta nuevos argumentos","B) Introduce el tema por primera vez","C) Sintetiza las ideas y reafirma la tesis","D) Contradice los argumentos del desarrollo"],r:"C"},
+  {p:"¿Cuál es la función del lenguaje predominante en los textos publicitarios?",o:["A) Referencial","B) Emotiva","C) Metalingüística","D) Apelativa o conativa"],r:"D"},
+  {p:"En la frase «Sus ojos eran dos luceros brillantes», ¿qué figura literaria se utiliza?",o:["A) Hipérbole","B) Comparación (símil)","C) Metáfora","D) Ironía"],r:"C"},
+  {p:"¿Cuál de los siguientes textos tiene estructura de problema-solución?",o:["A) Una biografía de Simón Bolívar","B) Un informe sobre causas del desempleo juvenil y políticas para reducirlo","C) Un poema sobre la naturaleza","D) Una fábula con moraleja"],r:"B"},
+  {p:"La coherencia en un texto se refiere a:",o:["A) El uso correcto de signos de puntuación","B) La unidad temática y lógica entre las ideas del texto","C) La variedad de vocabulario empleado","D) El número de párrafos del escrito"],r:"B"},
+  {p:"¿Qué es una tesis en un texto argumentativo?",o:["A) Un ejemplo que apoya una idea","B) La conclusión final del texto","C) La postura o afirmación central que el autor defiende","D) Un resumen de otros autores"],r:"C"},
+  {p:"Lee: «Aunque llovía a cántaros, decidió salir sin paraguas.» La relación lógica entre las dos partes de la oración es:",o:["A) Causal","B) Consecutiva","C) Concesiva","D) Condicional"],r:"C"},
+  {p:"Un texto con intención satírica busca principalmente:",o:["A) Informar sobre hechos históricos","B) Criticar o ridiculizar algo usando el humor","C) Describir ambientes naturales","D) Instruir al lector en alguna habilidad"],r:"B"},
+  {p:"¿Qué es el contexto de enunciación en un texto?",o:["A) El vocabulario técnico utilizado","B) Las condiciones de tiempo, lugar y situación en que se produce el mensaje","C) El número de palabras del texto","D) El formato visual del documento"],r:"B"},
+  {p:"En el cuento «El coronel no tiene quien le escriba» de García Márquez, la espera prolongada simboliza principalmente:",o:["A) La puntualidad del protagonista","B) La indiferencia del Estado y la esperanza que se niega a morir","C) La vagancia del coronel","D) Un problema logístico de correos"],r:"B"},
+],
+
+'Matemáticas': [
+  {p:"Si f(x) = 2x² – 3x + 1, ¿cuál es el valor de f(2)?",o:["A) 3","B) 5","C) 7","D) 9"],r:"A"},
+  {p:"¿Cuál es el conjunto solución de la inecuación 3x – 7 > 2?",o:["A) x > 3","B) x < 3","C) x > –3","D) x < –3"],r:"A"},
+  {p:"En un triángulo rectángulo, si los catetos miden 3 y 4 cm, ¿cuánto mide la hipotenusa?",o:["A) 6 cm","B) 5 cm","C) 7 cm","D) 4,5 cm"],r:"B"},
+  {p:"¿Cuánto es el 15% de 240?",o:["A) 24","B) 36","C) 30","D) 48"],r:"B"},
+  {p:"La expresión algebraica que representa «el triple de un número disminuido en 4» es:",o:["A) 3 + x – 4","B) 3(x – 4)","C) 3x – 4","D) x/3 – 4"],r:"C"},
+  {p:"¿Cuál es la pendiente de la recta que pasa por los puntos (1, 2) y (3, 8)?",o:["A) 2","B) 3","C) 4","D) 5"],r:"B"},
+  {p:"Si un rectángulo tiene perímetro de 36 cm y su largo es el doble de su ancho, ¿cuánto mide el ancho?",o:["A) 4 cm","B) 6 cm","C) 8 cm","D) 12 cm"],r:"B"},
+  {p:"¿Cuál es la mediana del siguiente conjunto de datos: {5, 8, 12, 3, 9}?",o:["A) 8","B) 9","C) 7,4","D) 5"],r:"A"},
+  {p:"Simplifica la expresión: (x² – 4) / (x – 2)",o:["A) x + 2","B) x – 2","C) x²","D) 2x"],r:"A"},
+  {p:"Un móvil recorre 120 km en 2 horas. ¿Cuál es su velocidad media?",o:["A) 240 km/h","B) 60 km/h","C) 30 km/h","D) 80 km/h"],r:"B"},
+  {p:"¿Cuántos ejes de simetría tiene un cuadrado?",o:["A) 2","B) 3","C) 4","D) 6"],r:"C"},
+  {p:"El volumen de un cubo de arista 4 cm es:",o:["A) 16 cm³","B) 48 cm³","C) 64 cm³","D) 96 cm³"],r:"C"},
+  {p:"¿Cuál es el resultado de: log₂(8)?",o:["A) 2","B) 3","C) 4","D) 8"],r:"B"},
+  {p:"Si se lanza una moneda dos veces, ¿cuál es la probabilidad de obtener cara dos veces?",o:["A) 1/2","B) 1/3","C) 1/4","D) 1/8"],r:"C"},
+  {p:"¿Cuál es la solución del sistema: x + y = 5 y x – y = 1?",o:["A) x=3, y=2","B) x=2, y=3","C) x=4, y=1","D) x=1, y=4"],r:"A"},
+  {p:"La gráfica de y = x² es:",o:["A) Una recta","B) Una parábola que abre hacia arriba","C) Una circunferencia","D) Una hipérbola"],r:"B"},
+  {p:"¿Cuánto es 2³ × 2⁴?",o:["A) 2⁷","B) 4⁷","C) 2¹²","D) 6⁷"],r:"A"},
+  {p:"El ángulo suplementario de 65° mide:",o:["A) 25°","B) 115°","C) 295°","D) 90°"],r:"B"},
+  {p:"¿Cuál es el mínimo común múltiplo de 6 y 9?",o:["A) 3","B) 18","C) 36","D) 54"],r:"B"},
+  {p:"Un artículo cuesta $80.000 y tiene un descuento del 25%. ¿Cuánto se paga?",o:["A) $55.000","B) $60.000","C) $65.000","D) $70.000"],r:"B"},
+],
+
+'Sociales y Ciudadanas': [
+  {p:"¿En qué año se promulgó la Constitución Política de Colombia actualmente vigente?",o:["A) 1886","B) 1948","C) 1991","D) 2001"],r:"C"},
+  {p:"¿Cuál es el órgano legislativo en Colombia?",o:["A) La Presidencia de la República","B) El Congreso de la República","C) La Corte Constitucional","D) El Ministerio de Justicia"],r:"B"},
+  {p:"La Declaración Universal de los Derechos Humanos fue adoptada por la ONU en:",o:["A) 1945","B) 1948","C) 1960","D) 1975"],r:"B"},
+  {p:"¿Qué es el Derecho Internacional Humanitario (DIH)?",o:["A) Las leyes que regulan el comercio entre países","B) Las normas que protegen a las personas en conflictos armados","C) Los acuerdos climáticos internacionales","D) Las reglas del deporte olímpico"],r:"B"},
+  {p:"¿Cuál de los siguientes es un mecanismo de participación ciudadana en Colombia?",o:["A) El habeas corpus","B) La tutela","C) El referendo","D) La acción popular"],r:"C"},
+  {p:"El fenómeno de la globalización se caracteriza principalmente por:",o:["A) El aislamiento de las economías nacionales","B) La integración económica, cultural y política entre países","C) El aumento de las guerras entre naciones","D) La desaparición de los estados"],r:"B"},
+  {p:"¿Qué fue la Independencia de Colombia el 20 de julio de 1810?",o:["A) La firma del tratado con España","B) El inicio del proceso que llevaría a la independencia de la Nueva Granada","C) La batalla definitiva contra el ejército español","D) La creación de la primera Constitución colombiana"],r:"B"},
+  {p:"¿Cuál es la función principal del Banco de la República de Colombia?",o:["A) Otorgar créditos a empresas privadas","B) Regular la moneda y velar por la estabilidad económica del país","C) Administrar los impuestos nacionales","D) Financiar los programas sociales del gobierno"],r:"B"},
+  {p:"El concepto de «soberanía popular» significa que:",o:["A) El presidente tiene poderes ilimitados","B) El poder del Estado reside en el pueblo","C) Solo los partidos políticos gobiernan","D) Las leyes provienen de la tradición religiosa"],r:"B"},
+  {p:"¿Qué causa principal generó la Primera Guerra Mundial?",o:["A) La invasión de Polonia por Alemania","B) El atentado al archiduque Francisco Fernando de Austria en Sarajevo","C) La revolución bolchevique en Rusia","D) La crisis económica de 1929"],r:"B"},
+  {p:"¿A qué se denomina «Estado Social de Derecho»?",o:["A) Un estado donde solo rige la ley sin importar la justicia social","B) Un estado que garantiza derechos individuales y promueve la igualdad y el bienestar social","C) Un estado gobernado exclusivamente por militares","D) Un estado sin separación de poderes"],r:"B"},
+  {p:"Los Acuerdos de Paz de Colombia (2016) se firmaron entre el gobierno colombiano y:",o:["A) El ELN","B) Las AUC","C) Las FARC-EP","D) El M-19"],r:"C"},
+  {p:"¿Cuál es la principal característica del sistema democrático?",o:["A) El poder es hereditario","B) Un solo partido controla el Estado","C) Los ciudadanos eligen a sus gobernantes mediante el voto","D) Las decisiones las toma un grupo de expertos sin elecciones"],r:"C"},
+  {p:"La Corte Constitucional de Colombia tiene como función principal:",o:["A) Juzgar delitos comunes","B) Administrar los recursos del Estado","C) Guardar la integridad y supremacía de la Constitución","D) Dirigir la política exterior"],r:"C"},
+  {p:"¿Qué es el desplazamiento forzado?",o:["A) La migración voluntaria por trabajo","B) El traslado obligado de personas de su lugar de origen por amenazas o violencia","C) El turismo interno en Colombia","D) Los programas de movilidad estudiantil"],r:"B"},
+  {p:"El Producto Interno Bruto (PIB) mide:",o:["A) El valor de las importaciones de un país","B) El nivel de desempleo de una nación","C) El valor total de bienes y servicios producidos en un país en un período","D) La deuda externa de un Estado"],r:"C"},
+  {p:"¿Cuál fue el principal objetivo del Plan Marshall después de la Segunda Guerra Mundial?",o:["A) Juzgar a los criminales de guerra nazis","B) Reconstruir económicamente a Europa Occidental","C) Crear la OTAN","D) Dividir Alemania en dos estados"],r:"B"},
+  {p:"La acción de tutela en Colombia protege principalmente:",o:["A) Los derechos colectivos","B) Los derechos económicos","C) Los derechos fundamentales de los ciudadanos","D) El patrimonio del Estado"],r:"C"},
+  {p:"¿Qué es la corrupción en el ámbito público?",o:["A) El mal uso del presupuesto familiar","B) El abuso del poder público para obtener beneficios personales o de terceros","C) La crítica legítima al gobierno","D) La competencia desleal entre empresas privadas"],r:"B"},
+  {p:"¿Cuál fue la causa principal del conflicto armado colombiano del siglo XX?",o:["A) Diferencias religiosas entre católicos y protestantes","B) Disputas territoriales con Venezuela","C) La desigualdad social, política y económica, junto con el surgimiento de grupos guerrilleros","D) La invasión extranjera al territorio colombiano"],r:"C"},
+],
+
+'Ciencias Naturales': [
+  {p:"¿Cuál es la unidad básica de la vida?",o:["A) El tejido","B) El órgano","C) La célula","D) El organismo"],r:"C"},
+  {p:"El ADN (ácido desoxirribonucleico) se encuentra principalmente en:",o:["A) La membrana celular","B) El citoplasma","C) El núcleo de la célula","D) Las mitocondrias"],r:"C"},
+  {p:"¿Cuál de los siguientes es un proceso de la fotosíntesis?",o:["A) Transformación de glucosa en CO₂ y H₂O","B) Conversión de energía lumínica en energía química","C) Descomposición de proteínas","D) Producción de calor a partir de grasas"],r:"B"},
+  {p:"La Ley de Newton que establece que «a toda acción corresponde una reacción igual y contraria» es:",o:["A) Primera Ley","B) Segunda Ley","C) Tercera Ley","D) Ley de la Gravedad"],r:"C"},
+  {p:"¿Qué tipo de energía posee un objeto en movimiento?",o:["A) Energía potencial gravitatoria","B) Energía cinética","C) Energía química","D) Energía nuclear"],r:"B"},
+  {p:"El número atómico de un elemento indica:",o:["A) La masa del átomo","B) El número de neutrones en el núcleo","C) El número de protones en el núcleo","D) El número de electrones en la última capa"],r:"C"},
+  {p:"¿Cuál de los siguientes procesos libera energía en los organismos vivos?",o:["A) La fotosíntesis","B) La respiración celular","C) La síntesis de proteínas","D) La mitosis"],r:"B"},
+  {p:"¿Qué capa de la atmósfera protege la Tierra de la radiación ultravioleta del Sol?",o:["A) Tropósfera","B) Mesósfera","C) Termósfera","D) Estratósfera (capa de ozono)"],r:"D"},
+  {p:"En la tabla periódica, los elementos de un mismo grupo comparten:",o:["A) El mismo número de neutrones","B) La misma masa atómica","C) El mismo número de electrones en su capa de valencia","D) El mismo estado de agregación"],r:"C"},
+  {p:"¿Cuál es el producto de la fermentación alcohólica realizada por las levaduras?",o:["A) Ácido láctico y CO₂","B) Etanol y CO₂","C) Glucosa y H₂O","D) Oxígeno y ATP"],r:"B"},
+  {p:"¿Qué tipo de reproducción genera organismos genéticamente idénticos al progenitor?",o:["A) Reproducción sexual","B) Reproducción asexual","C) Fecundación cruzada","D) Meiosis"],r:"B"},
+  {p:"La velocidad de la luz en el vacío es aproximadamente:",o:["A) 300.000 km/s","B) 30.000 km/s","C) 3.000 km/s","D) 300 km/s"],r:"A"},
+  {p:"¿Cuál es la función principal de los glóbulos rojos (eritrocitos)?",o:["A) Combatir infecciones","B) Producir anticuerpos","C) Transportar oxígeno a los tejidos","D) Regular la temperatura corporal"],r:"C"},
+  {p:"¿Qué gas es producido principalmente por la combustión de combustibles fósiles y contribuye al efecto invernadero?",o:["A) Oxígeno (O₂)","B) Nitrógeno (N₂)","C) Dióxido de carbono (CO₂)","D) Hidrógeno (H₂)"],r:"C"},
+  {p:"El pH neutro corresponde al valor:",o:["A) 0","B) 7","C) 14","D) 5"],r:"B"},
+  {p:"¿Cuál es la diferencia entre mitosis y meiosis?",o:["A) La mitosis ocurre solo en animales","B) La meiosis produce 4 células haploides; la mitosis produce 2 células diploides idénticas","C) La mitosis solo ocurre en células reproductivas","D) La meiosis produce células somáticas"],r:"B"},
+  {p:"Un ecosistema se define como:",o:["A) Solo el conjunto de seres vivos de una región","B) La interacción entre comunidades bióticas y factores abióticos de un lugar","C) Únicamente el suelo y el agua de un lugar","D) El conjunto de plantas de una región"],r:"B"},
+  {p:"¿Qué es la teoría de la evolución propuesta por Charles Darwin?",o:["A) Los organismos cambian de forma aleatoria sin ningún patrón","B) Las especies evolucionan por selección natural: los más aptos sobreviven y se reproducen","C) Los organismos adquieren características durante su vida y las transmiten","D) Las especies son inmutables desde su creación"],r:"B"},
+  {p:"¿Cuál es la fórmula química del agua?",o:["A) H₂O₂","B) HO","C) H₂O","D) H₃O"],r:"C"},
+  {p:"El tejido nervioso está compuesto principalmente por:",o:["A) Osteocitos","B) Neuronas y células gliales","C) Eritrocitos","D) Adipocitos"],r:"B"},
+],
+
+'Inglés': [
+  {p:"Choose the correct option to complete the sentence: 'She ___ to school every day.'",o:["A) go","B) goes","C) going","D) gone"],r:"B"},
+  {p:"What is the past tense of the verb 'write'?",o:["A) writed","B) written","C) wrote","D) writ"],r:"C"},
+  {p:"Select the sentence in the present perfect tense:",o:["A) She will travel to London","B) She traveled to London","C) She has traveled to London","D) She was traveling to London"],r:"C"},
+  {p:"What does the word 'although' express?",o:["A) A cause","B) A contrast or concession","C) A consequence","D) A condition"],r:"B"},
+  {p:"Read: 'If I had studied more, I would have passed the exam.' This sentence is in:",o:["A) First conditional","B) Second conditional","C) Third conditional","D) Zero conditional"],r:"C"},
+  {p:"Choose the correct question tag: 'She doesn't like coffee, ___?'",o:["A) does she","B) doesn't she","C) is she","D) isn't she"],r:"A"},
+  {p:"Which sentence is written in passive voice?",o:["A) The teacher explained the lesson","B) The students were reading the book","C) The letter was written by Maria","D) They will visit the museum"],r:"C"},
+  {p:"What is the meaning of the word 'acknowledge'?",o:["A) To ignore","B) To recognize or accept something","C) To forget","D) To refuse"],r:"B"},
+  {p:"Choose the correct option: 'This is the city ___ I was born.'",o:["A) who","B) which","C) where","D) when"],r:"C"},
+  {p:"Which is the correct plural form of 'child'?",o:["A) childs","B) childes","C) children","D) childrens"],r:"C"},
+  {p:"Read: 'He said he was tired.' This is an example of:",o:["A) Direct speech","B) Reported speech","C) Passive voice","D) Conditional"],r:"B"},
+  {p:"What does 'despite' mean in English?",o:["A) Because of","B) In order to","C) In spite of / even though","D) So that"],r:"C"},
+  {p:"Choose the correct sentence:",o:["A) She is more taller than her sister","B) She is the most tallest girl","C) She is taller than her sister","D) She is tall than her sister"],r:"C"},
+  {p:"The word 'however' is used to:",o:["A) Add information","B) Introduce a result","C) Show contrast between ideas","D) Express a condition"],r:"C"},
+  {p:"Read: 'The movie was so boring that I fell asleep.' What type of clause is 'that I fell asleep'?",o:["A) Relative clause","B) Conditional clause","C) Result clause (so...that)","D) Purpose clause"],r:"C"},
+  {p:"Which sentence uses the modal verb 'should' correctly?",o:["A) You should to exercise more","B) You should exercising more","C) You should exercise more","D) You should exercises more"],r:"C"},
+  {p:"What is the meaning of the idiom 'break the ice'?",o:["A) To break something frozen","B) To start a conversation and reduce tension","C) To stop working","D) To solve a difficult problem"],r:"B"},
+  {p:"Choose the correct preposition: 'She is interested ___ learning new languages.'",o:["A) at","B) for","C) in","D) on"],r:"C"},
+  {p:"Which is NOT a linking word to show cause?",o:["A) because","B) since","C) however","D) due to"],r:"C"},
+  {p:"Read: 'By the time they arrived, we had already eaten.' The verb 'had eaten' is in the:",o:["A) Simple past","B) Past perfect","C) Present perfect","D) Future perfect"],r:"B"},
+]
+};
+
+// ─── Estado del simulacro (en memoria + localStorage) ──────────────────────
+function icfesKey(){ return 'icfes_' + CU.id; }
+
+function icfesGetState(){
+  try {
+    const raw = localStorage.getItem(icfesKey());
+    return raw ? JSON.parse(raw) : null;
+  } catch(e){ return null; }
+}
+
+function icfesSaveState(state){
+  try { localStorage.setItem(icfesKey(), JSON.stringify(state)); } catch(e){}
+}
+
+function icfesClearState(){
+  try { localStorage.removeItem(icfesKey()); } catch(e){}
+}
+
+// Mezclar array (Fisher-Yates)
+function icfesShuffle(arr){
+  const a = [...arr];
+  for(let i=a.length-1;i>0;i--){
+    const j=Math.floor(Math.random()*(i+1));
+    [a[i],a[j]]=[a[j],a[i]];
+  }
+  return a;
+}
+
+// Generar set aleatorio de 20 preguntas para una asignatura
+function icfesGenerar(asig){
+  const todas = ICFES_PREGUNTAS[asig] || [];
+  const mezcladas = icfesShuffle(todas);
+  return mezcladas.slice(0,20).map(q=>({
+    p: q.p,
+    o: icfesShuffle(q.o), // también mezclar opciones
+    r: q.r,
+    correcta: q.r // guardamos la correcta original por si las opciones se reordenan
+  }));
+}
+
+// ─── pgEIcfes — página principal del simulacro ────────────────────────────
+function pgEIcfes(){
+  return `<div id="icfesRoot"><div class="ph"><h2>🎯 Simulacro ICFES</h2>
+    <p style="font-size:13px;color:var(--sl2)">Practica con preguntas reales de las pruebas ICFES colombianas 2023-2025.</p>
+  </div><div id="icfesContent"></div></div>`;
+}
+
+function initEIcfes(){
+  const el = gi('icfesContent');
+  if(!el) return;
+  // Ver si hay progreso guardado
+  const state = icfesGetState();
+  if(state && state.activo){
+    icfesRenderMenu(el, state);
+  } else {
+    icfesRenderMenu(el, null);
+  }
+}
+
+// ─── Menú de selección de asignatura ──────────────────────────────────────
+function icfesRenderMenu(el, state){
+  const asigs = Object.keys(ICFES_PREGUNTAS);
+  const resultados = state?.resultados || {};
+  const en_curso = state?.activo ? state.asigActual : null;
+
+  const cards = asigs.map(a=>{
+    const res = resultados[a];
+    const enCurso = (a === en_curso);
+    const completada = res && res.finalizado;
+    const progreso = state?.progreso?.[a];
+    let badge = '';
+    if(completada){
+      badge = `<span class="bdg bgr" style="font-size:11px">✅ ${res.correctas}/20</span>`;
+    } else if(enCurso && progreso){
+      badge = `<span class="bdg bor" style="font-size:11px">▶ En curso (${progreso.actual+1}/20)</span>`;
+    } else if(progreso && !completada){
+      badge = `<span class="bdg bor" style="font-size:11px">⏸ Pausado (${progreso.actual+1}/20)</span>`;
+    }
+    const bg = completada ? '#f0fff4' : enCurso ? '#fffbeb' : 'var(--bg2)';
+    const border = completada ? '#68d391' : enCurso ? '#f6ad55' : 'var(--bd)';
+    const iconos = {'Lectura Crítica':'📖','Matemáticas':'🔢','Sociales y Ciudadanas':'🌎','Ciencias Naturales':'🔬','Inglés':'🇬🇧'};
+    return `<div onclick="icfesIniciarAsig('${encodeURIComponent(a)}')"
+      style="cursor:pointer;border:2px solid ${border};border-radius:12px;padding:16px;background:${bg};transition:box-shadow .2s"
+      onmouseover="this.style.boxShadow='0 4px 16px rgba(0,0,0,.12)'" onmouseout="this.style.boxShadow='none'">
+      <div style="font-size:24px;margin-bottom:6px">${iconos[a]||'📝'}</div>
+      <div style="font-weight:800;font-size:14px;margin-bottom:4px">${a}</div>
+      <div style="font-size:11px;color:var(--sl2);margin-bottom:8px">20 preguntas</div>
+      ${badge}
+    </div>`;
+  }).join('');
+
+  // Calcular si todas están completadas
+  const todasCompletas = asigs.every(a => resultados[a]?.finalizado);
+  const totalCorrectas = asigs.reduce((s,a)=> s + (resultados[a]?.correctas||0), 0);
+  const totalPreguntas = asigs.length * 20;
+
+  let resultadoFinalHtml = '';
+  if(todasCompletas){
+    const pct = Math.round((totalCorrectas/totalPreguntas)*100);
+    const color = pct>=70?'#276749':pct>=50?'#c05621':'#c53030';
+    resultadoFinalHtml = `<div style="background:#f0f4ff;border:2px solid #667eea;border-radius:12px;padding:20px;margin-bottom:20px;text-align:center">
+      <div style="font-size:28px;margin-bottom:8px">🏆</div>
+      <div style="font-size:18px;font-weight:900;color:${color};margin-bottom:4px">${totalCorrectas} / ${totalPreguntas} correctas</div>
+      <div style="font-size:14px;color:var(--sl2)">${pct}% de respuestas correctas en todas las asignaturas</div>
+      <button class="btn brd" style="margin-top:14px;font-size:13px" onclick="icfesReiniciarTodo()">🔄 Reiniciar simulacro</button>
+    </div>`;
+  }
+
+  el.innerHTML = `${resultadoFinalHtml}
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:14px;margin-bottom:20px">
+      ${cards}
+    </div>
+    ${state && !todasCompletas ? `<button class="btn bs" style="font-size:12px" onclick="icfesReiniciarTodo()">🗑 Reiniciar todo el progreso</button>` : ''}`;
+}
+
+// ─── Iniciar o continuar una asignatura ────────────────────────────────────
+function icfesIniciarAsig(asigEnc){
+  const asig = decodeURIComponent(asigEnc);
+  let state = icfesGetState() || { activo:false, resultados:{}, progreso:{} };
+
+  // Si la asignatura ya está finalizada, solo mostrar resultado
+  if(state.resultados?.[asig]?.finalizado){
+    const res = state.resultados[asig];
+    Swal.fire({
+      title:`Resultado: ${asig}`,
+      html:`<div style="font-size:28px;font-weight:900;color:#276749">${res.correctas}/20</div>
+        <div style="font-size:14px;margin-top:6px;color:#555">${res.correctas>=15?'🏆 Excelente':res.correctas>=10?'👍 Bien':' Puedes mejorar'}</div>`,
+      icon: res.correctas>=15?'success':res.correctas>=10?'info':'warning',
+      confirmButtonText:'Ver simulacro',
+      showCancelButton:true, cancelButtonText:'Cerrar'
+    }).then(r=>{ if(r.isConfirmed){ state.progreso[asig]=null; state.resultados[asig]=null; icfesSaveState(state); icfesIniciarAsig(asigEnc); } });
+    return;
+  }
+
+  // Continuar o crear nuevo progreso
+  let prog = state.progreso?.[asig];
+  if(!prog){
+    prog = { preguntas: icfesGenerar(asig), actual: 0, respuestas: [] };
+    if(!state.progreso) state.progreso = {};
+    state.progreso[asig] = prog;
+  }
+  state.activo = true;
+  state.asigActual = asig;
+  icfesSaveState(state);
+  icfesRenderPregunta(asig);
+}
+
+// ─── Renderizar pregunta actual ────────────────────────────────────────────
+function icfesRenderPregunta(asig){
+  const el = gi('icfesContent');
+  if(!el) return;
+  const state = icfesGetState();
+  if(!state) return;
+  const prog = state.progreso[asig];
+  if(!prog) return;
+
+  const total = prog.preguntas.length;
+  const idx = prog.actual;
+  if(idx >= total){
+    icfesFinalizarAsig(asig);
+    return;
+  }
+
+  const q = prog.preguntas[idx];
+  const pct = Math.round((idx/total)*100);
+
+  el.innerHTML = `
+    <div style="margin-bottom:14px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+        <span style="font-size:13px;font-weight:700;color:var(--sl2)">${asig}</span>
+        <span style="font-size:12px;color:var(--sl3)">Pregunta ${idx+1} de ${total}</span>
+      </div>
+      <div style="background:#e2e8f0;border-radius:99px;height:6px;overflow:hidden">
+        <div style="background:linear-gradient(90deg,#0ea5a0,#1e40af);height:100%;width:${pct}%;transition:width .3s"></div>
+      </div>
+    </div>
+    <div class="card" style="margin-bottom:14px">
+      <div style="font-size:14px;font-weight:700;line-height:1.6;padding:4px 0 16px">${idx+1}. ${q.p}</div>
+      <div style="display:flex;flex-direction:column;gap:10px">
+        ${q.o.map((op,i)=>`
+          <button onclick="icfesResponder('${encodeURIComponent(asig)}',${idx},'${encodeURIComponent(op.charAt(0))}')"
+            style="text-align:left;padding:12px 16px;border:2px solid var(--bd);border-radius:10px;background:var(--bg2);cursor:pointer;font-size:13px;font-family:var(--fn);transition:all .15s;width:100%"
+            onmouseover="this.style.borderColor='#667eea';this.style.background='#f0f4ff'"
+            onmouseout="this.style.borderColor='var(--bd)';this.style.background='var(--bg2)'">
+            ${op}
+          </button>
+        `).join('')}
+      </div>
+    </div>
+    <button onclick="icfesSalirAsig('${encodeURIComponent(asig)}')"
+      style="font-size:12px;color:var(--sl3);background:none;border:1px dashed var(--bd);border-radius:8px;padding:8px 14px;cursor:pointer">
+      ⏸ Pausar y salir (el progreso se guarda)
+    </button>`;
+}
+
+// ─── Registrar respuesta y avanzar ────────────────────────────────────────
+function icfesResponder(asigEnc, idx, respEnc){
+  const asig = decodeURIComponent(asigEnc);
+  const resp = decodeURIComponent(respEnc);
+  const state = icfesGetState();
+  if(!state) return;
+  const prog = state.progreso[asig];
+  if(!prog || prog.actual !== idx) return;
+
+  prog.respuestas[idx] = resp;
+  prog.actual = idx + 1;
+  icfesSaveState(state);
+
+  if(prog.actual >= prog.preguntas.length){
+    icfesFinalizarAsig(asig);
+  } else {
+    icfesRenderPregunta(asig);
+  }
+}
+
+// ─── Salir y pausar ────────────────────────────────────────────────────────
+function icfesSalirAsig(asigEnc){
+  const asig = decodeURIComponent(asigEnc);
+  const state = icfesGetState();
+  if(state){ state.activo = false; icfesSaveState(state); }
+  const el = gi('icfesContent');
+  if(el) icfesRenderMenu(el, icfesGetState());
+}
+
+// ─── Finalizar asignatura y mostrar resultado ──────────────────────────────
+function icfesFinalizarAsig(asig){
+  const state = icfesGetState();
+  if(!state) return;
+  const prog = state.progreso[asig];
+  if(!prog) return;
+
+  // Calcular puntaje
+  let correctas = 0;
+  prog.preguntas.forEach((q,i)=>{
+    // La respuesta correcta original es q.r (letra A/B/C/D)
+    // La respuesta del estudiante es la letra del botón pulsado
+    // Como las opciones se mezclaron, necesitamos encontrar cuál era la correcta
+    // q.r es la letra original; buscamos la opción que comienza con q.r en q.o
+    const opCorrecta = (q.o || []).find(op => op.startsWith(q.r + ')') || op.charAt(0) === q.r);
+    const respEst = prog.respuestas[i];
+    if(respEst && opCorrecta && respEst === opCorrecta.charAt(0)) correctas++;
+  });
+
+  if(!state.resultados) state.resultados = {};
+  state.resultados[asig] = { finalizado:true, correctas, total:20, fecha: new Date().toLocaleDateString('es-CO') };
+  state.activo = false;
+  icfesSaveState(state);
+
+  const asigs = Object.keys(ICFES_PREGUNTAS);
+  const todasCompletas = asigs.every(a => state.resultados?.[a]?.finalizado);
+  const totalCorrectas = asigs.reduce((s,a)=> s + (state.resultados?.[a]?.correctas||0), 0);
+  const color = correctas>=15?'#276749':correctas>=10?'#c05621':'#c53030';
+
+  const el = gi('icfesContent');
+  if(!el) return;
+
+  let siguienteHtml = '';
+  if(!todasCompletas){
+    const pendiente = asigs.find(a => !state.resultados?.[a]?.finalizado);
+    if(pendiente){
+      siguienteHtml = `<button class="btn bn" style="margin-top:10px" onclick="icfesIniciarAsig('${encodeURIComponent(pendiente)}')">
+        ➡️ Continuar con: ${pendiente}</button>`;
+    }
+  }
+
+  el.innerHTML = `<div class="card" style="text-align:center;padding:28px 20px">
+    <div style="font-size:40px;margin-bottom:12px">${correctas>=15?'🏆':correctas>=10?'👍':'📚'}</div>
+    <div style="font-size:28px;font-weight:900;color:${color};margin-bottom:6px">${correctas} / 20</div>
+    <div style="font-size:15px;color:var(--sl2);margin-bottom:4px"><strong>${asig}</strong></div>
+    <div style="font-size:13px;color:var(--sl3);margin-bottom:16px">${correctas>=15?'¡Excelente resultado!':correctas>=10?'Buen resultado, sigue practicando':'Sigue estudiando, tú puedes lograrlo'}</div>
+    ${todasCompletas?`<div style="background:#f0f4ff;border-radius:10px;padding:14px;margin-bottom:16px">
+      <div style="font-size:15px;font-weight:800">🎓 Simulacro completo: ${totalCorrectas}/${asigs.length*20} total</div>
+    </div>`:''}
+    <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap">
+      <button class="btn bs" onclick="icfesIniciarAsig('${encodeURIComponent(asig)}')">🔄 Repetir ${asig}</button>
+      <button class="btn bg" onclick="icfesSalirAsig('${encodeURIComponent(asig)}')">📋 Ver resumen</button>
+      ${siguienteHtml}
+    </div>
+  </div>`;
+}
+
+// ─── Reiniciar todo ────────────────────────────────────────────────────────
+function icfesReiniciarTodo(){
+  Swal.fire({title:'¿Reiniciar todo el progreso?',text:'Se borrarán todas las respuestas y resultados guardados.',icon:'warning',showCancelButton:true,confirmButtonText:'Sí, reiniciar',confirmButtonColor:'#e53e3e',cancelButtonText:'Cancelar'})
+  .then(r=>{
+    if(r.isConfirmed){
+      icfesClearState();
+      const el = gi('icfesContent');
+      if(el) icfesRenderMenu(el, null);
+    }
+  });
 }
 
 /* ============================================================
