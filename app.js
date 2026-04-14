@@ -1067,7 +1067,7 @@ function initPg(pid){
     dash:initDash,asal:initASal,apri:()=>initAEst('primaria'),abac:()=>initAEst('bachillerato'),
     aprf:initAPrf,amat:initAMat,anot:initANot,areh:initAReh,aexc:initAExc,avcl:initAVcl,
     pnot:initPNot,past:initPAst,eb:initEB,
-    ph:()=>{ setTimeout(renderPExcR,0); },
+    ph:()=>{ setTimeout(()=>{ renderPExcR(); notifNuevasExcusas(); },0); },
     sadash:initSADash,sacolegios:initSAColegios,saplan:initSAPlan,
     saestadisticas:initSAEstadisticas,saauditoria:initSAAuditoria,samantenimiento:initSAMantenimiento,
     sasug:initSASug,
@@ -2293,7 +2293,7 @@ function pgAAud(){
       }
     }catch(_){}
     const n=parseFloat(v);
-    if(!isNaN(n)) return `<b>${n.toFixed(2)}</b>`;
+    if(!isNaN(n)) return `<b>${fmt(n)}</b>`;
     return `<span style="font-size:.82rem">${esc(String(v))}</span>`;
   };
 
@@ -2894,6 +2894,9 @@ function pgPH(){
     return`<div style="margin-bottom:18px">
       <div style="font-size:13px;font-weight:800;color:var(--nv);margin-bottom:8px">${sal} <span class="bdg bgy">${ests.length} est.</span></div>
       <div style="display:flex;flex-wrap:wrap;gap:6px">${ests.map(e=>`<span style="font-size:12px;padding:4px 10px;background:var(--bg2);border-radius:7px;border:1px solid var(--bd)">${esc(e.nombre)}</span>`).join('')}</div>
+      <div style="margin-top:8px">
+        <button class="btn bg sm" onclick="irANotasSalon('${sal}')">📝 Ingresar notas → ${sal}</button>
+      </div>
     </div>`;
   }).join(''):'<div class="mty"><div class="ei">🏫</div><p>Sin salones</p></div>'}
   </div>
@@ -3051,6 +3054,8 @@ function loadPN(){
         <input id="pnFiltro" placeholder="🔍 Buscar estudiante..." style="flex:1;min-width:180px;padding:7px 12px;border:1px solid var(--bd);border-radius:8px;font-size:13px;font-family:var(--fn)"
           oninput="filtrarPN()">
         <span id="pnContador" style="font-size:12px;color:var(--sl2);white-space:nowrap">${ests.length} estudiantes</span>
+        <button class="btn bs sm" onclick="expandAllPN()" style="white-space:nowrap">📂 Expandir todos</button>
+        <button class="btn bs sm" onclick="collapseAllPN()" style="white-space:nowrap">📁 Colapsar todos</button>
       </div>
       <div id="pnCards"></div>
       <div style="margin-top:14px;display:flex;gap:10px;flex-wrap:wrap">
@@ -3109,7 +3114,7 @@ function loadPN(){
             </div>
             <div id="dc_${e.id}_${em}_${ep_global}" style="text-align:center;padding:4px 6px;background:${tieneVal?'#ebf8ff':'#f7fafc'};border-radius:6px">
               <span style="font-size:10px;color:var(--sl3);margin-right:4px">DEF.</span>
-              <span class="${scC(d)}" style="font-size:14px;font-weight:800">${tieneVal ? d.toFixed(2) : '—'}</span>
+              <span class="${scC(d)}" style="font-size:14px;font-weight:800">${tieneVal ? fmt(d) : '—'}</span>
             </div>
           </div>`;
         }).join('');
@@ -3119,7 +3124,7 @@ function loadPN(){
             <div style="width:32px;height:32px;border-radius:50%;background:${tieneNotas ? '#68d391' : '#e2e8f0'};display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;color:${tieneNotas ? '#276749' : '#718096'};flex-shrink:0">${idx+1}</div>
             <div style="flex:1;min-width:0">
               <div style="font-weight:700;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(e.nombre)}</div>
-              <div style="font-size:12px;color:var(--sl2);margin-top:2px">${tieneNotas ? `Prom. periodo: <strong class="${scC(pp)}" id="apr_hdr_${e.id}">${pp.toFixed(2)}</strong>` : '<span style="color:#a0aec0">▶ Clic para ingresar notas</span>'}</div>
+              <div style="font-size:12px;color:var(--sl2);margin-top:2px">${tieneNotas ? `Prom. periodo: <strong class="${scC(pp)}" id="apr_hdr_${e.id}">${fmt(pp)}</strong>` : '<span style="color:#a0aec0">▶ Clic para ingresar notas</span>'}</div>
             </div>
             <div id="pnArr_${e.id}" style="color:var(--sl2);font-size:16px;transition:transform .2s">▼</div>
           </div>
@@ -3138,7 +3143,7 @@ function loadPN(){
                 value="${condValCard.toFixed(1)}" placeholder="0.0"
                 oninput="clampNota(this)" onchange="saveConducta('${e.id}',this.value,'${ep_global}')">
               <span style="color:var(--sl3);font-size:11px">${discLabel(condValCard)}</span>
-              <span style="margin-left:auto;font-size:12px">Prom. periodo: <strong id="apr_${e.id}" class="${scC(pp)}">${pp.toFixed(2)}</strong></span>
+              <span style="margin-left:auto;font-size:12px">Prom. periodo: <strong id="apr_${e.id}" class="${scC(pp)}">${fmt(pp)}</strong></span>
             </div>
             ${(()=>{
               // ── Proyección / Veredicto final ──────────────────────────
@@ -3155,7 +3160,7 @@ function loadPN(){
                   const ic  = x.gana ? '✅' : '❌';
                   return `<tr>
                     <td style="padding:5px 10px;font-size:12px;font-weight:600">${ic} ${x.mat}</td>
-                    <td style="padding:5px 8px;text-align:center;font-size:13px;font-weight:800;color:${col}">${x.prom.toFixed(2)}</td>
+                    <td style="padding:5px 8px;text-align:center;font-size:13px;font-weight:800;color:${col}">${fmt(x.prom)}</td>
                     <td style="padding:5px 8px;font-size:11px;color:${col};font-weight:700">${x.gana ? 'Aprobada' : 'Perdida'}</td>
                   </tr>`;
                 }).join('');
@@ -3255,6 +3260,24 @@ function loadPN(){
       }
     };
     renderCards(ests);
+
+    // Expande / colapsa TODAS las tarjetas
+    window.expandAllPN = function(){
+      document.querySelectorAll('[id^="pnDet_"]').forEach(el=>{
+        if(el.style.display==='none'||el.style.display===''){
+          el.style.display='block';
+          const id=el.id.replace('pnDet_','');
+          const arr=gi('pnArr_'+id); if(arr) arr.style.transform='rotate(180deg)';
+        }
+      });
+    };
+    window.collapseAllPN = function(){
+      document.querySelectorAll('[id^="pnDet_"]').forEach(el=>{
+        el.style.display='none';
+        const id=el.id.replace('pnDet_','');
+        const arr=gi('pnArr_'+id); if(arr) arr.style.transform='';
+      });
+    };
 
   } else {
     // ── MODO TABLA: para grupos pequeños (<10 estudiantes) ──────────────────
@@ -4483,6 +4506,29 @@ function pgEExc(){
 }
 /* ── SOBREESCRITA por api-layer.js ── */
 async function envExcusa(){ /* implementado en api-layer.js */ }
+
+/* Navega a Ingresar Notas y preselecciona un salón */
+function irANotasSalon(salon){
+  goto('pnot');
+  setTimeout(()=>{
+    const sel=gi('pns');
+    if(sel){
+      sel.value=salon;
+      if(typeof updatePNMats==='function') updatePNMats();
+    }
+  },200);
+}
+
+/* Notifica al profesor sobre excusas nuevas — solo una vez por sesión */
+function notifNuevasExcusas(){
+  const sessionKey='excNotif_'+CU.id;
+  if(sessionStorage.getItem(sessionKey)) return; // ya notificado en esta sesión
+  const mis=DB.exc.filter(x=>x.dest===CU.nombre||(CU.salones||[]).includes(x.salon));
+  const nuevas=mis.filter(x=>!x.respProf);
+  if(!nuevas.length) return;
+  sessionStorage.setItem(sessionKey,'1');
+  sw('info',`📨 Tienes <strong>${nuevas.length}</strong> excusa${nuevas.length>1?'s':''} sin responder`);
+}
 
 /* Show excusas to professor in their home panel */
 function renderPExcR(){
