@@ -2870,47 +2870,267 @@ function initAVcl(){
 ============================================================ */
 function pgPH(){
   const p=CU;
-  const _logoP = DB.colegioLogo||'';
-  const _nomP  = CU.colegioNombre||'';
-  return`<div class="ph" style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:12px">
+  const _logoP=DB.colegioLogo||'';
+  const _nomP=CU.colegioNombre||'';
+  const sals=p.salones||[];
+  const totalEst=sals.reduce((t,s)=>t+ebySalon(s).length,0);
+  const excTotal=DB.exc.filter(x=>x.dest===CU.nombre||sals.includes(x.salon));
+  const excPend=excTotal.filter(x=>!x.respProf).length;
+  const pendRec=DB.ext.on?(DB.recs||[]).filter(r=>r.profId===CU.id&&!r.revisado).length:0;
+
+  return`
+  <!-- HEADER -->
+  <div class="ph" style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:12px">
     <div>
-      <h2>Bienvenido, ${esc(p.nombre)}</h2>
-      <p>${p.ciclo==='bachillerato'?'Bachillerato':'Primaria'}</p>
-      <button class="btn xs bg" onclick="showHelp('ph')" style="margin-top:6px">❓ Ayuda</button>
+      <h2 style="margin-bottom:2px">Bienvenido, ${esc(p.nombre)}</h2>
+      <span class="bdg ${p.ciclo==='bachillerato'?'bte':'bbl'}" style="font-size:11px">${p.ciclo==='bachillerato'?'Bachillerato':'Primaria'}</span>
+      <button class="btn xs bg" onclick="showHelp('ph')" style="margin-left:8px">❓ Ayuda</button>
     </div>
-    ${_logoP ? `<div style="display:flex;flex-direction:column;align-items:center;gap:6px">
-      <img src="${_logoP}" alt="Logo" style="height:72px;width:auto;max-width:130px;object-fit:contain;border-radius:10px;box-shadow:0 4px 18px rgba(0,0,0,.13);background:var(--bg2);padding:6px">
-      ${_nomP ? `<span style="font-size:11px;font-weight:700;color:var(--sl2);text-align:center;max-width:130px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${_nomP}</span>` : ''}
-    </div>` : ''}
+    ${_logoP?`<div style="display:flex;flex-direction:column;align-items:center;gap:4px">
+      <img src="${_logoP}" alt="Logo" style="height:64px;width:auto;max-width:110px;object-fit:contain;border-radius:10px;background:var(--bg2);padding:5px">
+      ${_nomP?`<span style="font-size:10px;font-weight:700;color:var(--sl2);max-width:110px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${_nomP}</span>`:''}
+    </div>`:''}
   </div>
-  <div class="sr">
-    <div class="scc" data-i="🏫"><div class="sv">${(p.salones||[]).length}</div><div class="sl">Mis Salones</div><div class="bar"></div></div>
-    ${p.ciclo==='bachillerato'?`<div class="scc" data-i="📖"><div class="sv" style="font-size:14px;margin-top:2px">${(p.materias||[]).join(', ')||'—'}</div><div class="sl">Mis Materias</div><div class="bar"></div></div>`:''}
-    <div class="scc" data-i="🎓"><div class="sv">${(p.salones||[]).reduce((t,s)=>t+ebySalon(s).length,0)}</div><div class="sl">Estudiantes</div><div class="bar"></div></div>
+
+  <!-- RESUMEN RÁPIDO -->
+  <div class="sr" style="margin-bottom:16px">
+    <div class="scc" data-i="🏫"><div class="sv">${sals.length}</div><div class="sl">Salones</div><div class="bar"></div></div>
+    <div class="scc" data-i="🎓"><div class="sv">${totalEst}</div><div class="sl">Estudiantes</div><div class="bar"></div></div>
+    <div class="scc" data-i="✉️" style="cursor:pointer" onclick="document.getElementById('phTabExc').click()">
+      <div class="sv" style="color:${excPend>0?'var(--red)':'var(--grn)'}">${excPend>0?excPend:'✓'}</div>
+      <div class="sl">${excPend>0?'Excusas pend.':'Sin pendientes'}</div><div class="bar"></div>
+    </div>
+    ${pendRec?`<div class="scc" data-i="🔄" style="cursor:pointer" onclick="goto('prec')">
+      <div class="sv" style="color:var(--ora)">${pendRec}</div>
+      <div class="sl">Recup. pend.</div><div class="bar"></div>
+    </div>`:''}
   </div>
-  <div class="card"><div class="chd"><span class="cti">🏫 Mis Salones</span></div>
-  ${(p.salones||[]).length?(p.salones||[]).map(sal=>{
-    const ests=ebySalon(sal);
-    return`<div style="margin-bottom:18px">
-      <div style="font-size:13px;font-weight:800;color:var(--nv);margin-bottom:8px">${sal} <span class="bdg bgy">${ests.length} est.</span></div>
-      <div style="display:flex;flex-wrap:wrap;gap:6px">${ests.map(e=>`<span style="font-size:12px;padding:4px 10px;background:var(--bg2);border-radius:7px;border:1px solid var(--bd)">${esc(e.nombre)}</span>`).join('')}</div>
-      <div style="margin-top:8px">
-        <button class="btn bg sm" onclick="irANotasSalon('${sal}')">📝 Ingresar notas → ${sal}</button>
-      </div>
-    </div>`;
-  }).join(''):'<div class="mty"><div class="ei">🏫</div><p>Sin salones</p></div>'}
-  </div>
-  <div class="card"><div class="chd"><span class="cti">✉️ Excusas Recibidas</span></div>
-  <div id="pExcR"></div></div>
-  ${DB.ext.on?(()=>{const pendRec=(DB.recs||[]).filter(r=>r.profId===CU.id&&!r.revisado).length;
-    return pendRec?`<div class="al aly" style="cursor:pointer" onclick="goto('prec')">
-      🔄 Tienes <strong>${pendRec}</strong> recuperación(es) pendiente(s) de revisión. <span style="text-decoration:underline">Ver ahora →</span>
-    </div>`:'';})():''}
-  <div class="card"><div class="chd"><span class="cti">📥 Descargar Informe</span></div>
-    <p style="font-size:13px;color:var(--sl2);margin-bottom:12px">Genera un PDF o Excel con las calificaciones de tu salón sin necesidad de cargar la tabla de notas.</p>
-    <button class="btn bg" onclick="selRptProf((CU.salones||[])[0]||'',DB.pers[0]||'','pdf')">📄 Descargar PDF</button>
-    <button class="btn bs" style="margin-left:10px" onclick="selRptProf((CU.salones||[])[0]||'',DB.pers[0]||'','xls')">📊 Descargar Excel</button>
+
+  ${pendRec?`<div class="al aly" style="cursor:pointer;margin-bottom:12px" onclick="goto('prec')">
+    🔄 Tienes <strong>${pendRec}</strong> recuperación(es) pendiente(s) de revisión. <span style="text-decoration:underline">Ver ahora →</span>
+  </div>`:''}
+
+  <!-- TABS PRINCIPALES -->
+  <div class="card" style="padding:0;overflow:hidden">
+    <!-- Tab bar -->
+    <div id="phTabBar" style="display:flex;border-bottom:2px solid var(--bd);background:var(--bg2);overflow-x:auto">
+      ${sals.map((sal,i)=>{
+        const n=ebySalon(sal).length;
+        const excSal=excTotal.filter(x=>x.salon===sal&&!x.respProf).length;
+        return`<button id="phTab_${sal}" onclick="phTab('${sal}')"
+          style="padding:12px 20px;border:none;background:${i===0?'var(--bg)':'transparent'};border-bottom:${i===0?'2px solid var(--nv)':'2px solid transparent'};
+          margin-bottom:-2px;font-size:13px;font-weight:${i===0?'800':'600'};color:${i===0?'var(--nv)':'var(--sl2)'};
+          cursor:pointer;white-space:nowrap;transition:all .15s;display:flex;align-items:center;gap:6px">
+          🏫 ${sal}
+          <span style="background:#e2e8f0;border-radius:20px;padding:1px 7px;font-size:10px;font-weight:700">${n}</span>
+          ${excSal?`<span style="background:var(--red);color:#fff;border-radius:20px;padding:1px 6px;font-size:10px;font-weight:800">✉${excSal}</span>`:''}
+        </button>`;
+      }).join('')}
+      <button id="phTabExc" onclick="phTab('__exc')"
+        style="padding:12px 20px;border:none;background:transparent;border-bottom:2px solid transparent;
+        margin-bottom:-2px;font-size:13px;font-weight:600;color:${excPend>0?'var(--red)':'var(--sl2)'};
+        cursor:pointer;white-space:nowrap;display:flex;align-items:center;gap:6px">
+        ✉️ Excusas
+        ${excPend?`<span style="background:var(--red);color:#fff;border-radius:20px;padding:1px 7px;font-size:10px;font-weight:800">${excPend}</span>`:`<span style="background:#c6f6d5;color:#276749;border-radius:20px;padding:1px 7px;font-size:10px;font-weight:800">✓</span>`}
+      </button>
+      <button id="phTabRpt" onclick="phTab('__rpt')"
+        style="padding:12px 20px;border:none;background:transparent;border-bottom:2px solid transparent;
+        margin-bottom:-2px;font-size:13px;font-weight:600;color:var(--sl2);cursor:pointer;white-space:nowrap">
+        📥 Informes
+      </button>
+    </div>
+
+    <!-- Tab content -->
+    <div id="phTabContent" style="padding:16px">
+      ${sals.length?renderPhSalonTab(sals[0]):'<div class="mty"><p>Sin salones asignados</p></div>'}
+    </div>
   </div>`;
+}
+
+/* Renderiza el contenido de un tab de salón */
+function renderPhSalonTab(sal){
+  const ests=ebySalon(sal);
+  if(!ests.length) return`<div class="mty"><div class="ei">🎓</div><p>Sin estudiantes en ${sal}</p></div>`;
+
+  // Stats del salón
+  const perActivo=DB.pers[DB.pers.length-1]||'';
+  const conNotas=ests.filter(e=>getMats(e.id).some(m=>{const t=DB.notas[e.id]?.[perActivo]?.[m];return t&&(t.a>0||t.c>0||t.r>0);})).length;
+  const sinNotas=ests.length-conNotas;
+  const excSal=DB.exc.filter(x=>(x.salon===sal||x.dest===CU.nombre)&&!x.respProf);
+
+  return`
+  <!-- Acciones rápidas del salón -->
+  <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px;align-items:center">
+    <button class="btn bg" onclick="irANotasSalon('${sal}')">📝 Ingresar notas</button>
+    <button class="btn bs" onclick="irAAsistSalon('${sal}')">✅ Asistencia</button>
+    <button class="btn bs" onclick="selRptProf('${sal}',DB.pers[0]||'','pdf')">📄 PDF Informe</button>
+    <button class="btn bs" onclick="selRptProf('${sal}',DB.pers[0]||'','xls')">📊 Excel</button>
+    ${excSal.length?`<span style="margin-left:auto;font-size:12px;color:var(--red);font-weight:700">⚠️ ${excSal.length} excusa${excSal.length>1?'s':''} sin responder</span>`:''}
+  </div>
+
+  <!-- Progreso notas -->
+  ${perActivo?`<div style="background:var(--bg2);border-radius:8px;padding:10px 14px;margin-bottom:14px;display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+    <span style="font-size:12px;color:var(--sl2)">Notas ${perActivo}:</span>
+    <div style="flex:1;min-width:120px;height:8px;background:#e2e8f0;border-radius:4px;overflow:hidden">
+      <div style="height:100%;width:${ests.length?Math.round(conNotas/ests.length*100):0}%;background:var(--grn);border-radius:4px;transition:width .4s"></div>
+    </div>
+    <span style="font-size:12px;font-weight:700;color:var(--grn)">${conNotas} con notas</span>
+    ${sinNotas?`<span style="font-size:12px;color:var(--sl3)">· ${sinNotas} sin ingresar</span>`:''}
+  </div>`:''}
+
+  <!-- Buscador + lista estudiantes -->
+  <div style="display:flex;gap:8px;margin-bottom:10px;align-items:center">
+    <input id="phBusq_${sal}" placeholder="🔍 Buscar estudiante en ${sal}…"
+      style="flex:1;padding:8px 12px;border:1px solid var(--bd);border-radius:8px;font-size:13px;font-family:var(--fn)"
+      oninput="filtrarPhEsts('${sal}')">
+    <span id="phCount_${sal}" style="font-size:12px;color:var(--sl2);white-space:nowrap">${ests.length} est.</span>
+  </div>
+  <div id="phEstList_${sal}" style="display:flex;flex-wrap:wrap;gap:6px">
+    ${ests.map(e=>{
+      const tieneN=getMats(e.id).some(m=>{const t=DB.notas[e.id]?.[perActivo]?.[m];return t&&(t.a>0||t.c>0||t.r>0);});
+      const excEst=DB.exc.filter(x=>x.eid===e.id&&!x.respProf).length;
+      return`<span data-nombre="${e.nombre.toLowerCase()}"
+        style="font-size:12px;padding:5px 11px;background:${tieneN?'#f0fff4':'var(--bg2)'};border-radius:7px;
+        border:1px solid ${tieneN?'#9ae6b4':'var(--bd)'};display:inline-flex;align-items:center;gap:4px">
+        ${esc(e.nombre)}
+        ${excEst?`<span style="background:var(--red);color:#fff;border-radius:10px;padding:0 5px;font-size:9px;font-weight:800">${excEst}</span>`:''}
+      </span>`;
+    }).join('')}
+  </div>`;
+}
+
+/* Renderiza tab de excusas con filtros */
+function renderPhExcTab(){
+  const sals=CU.salones||[];
+  const todas=DB.exc.filter(x=>x.dest===CU.nombre||sals.includes(x.salon))
+    .slice().sort((a,b)=>(b.ts||b.fecha||'').localeCompare(a.ts||a.fecha||''));
+  const pendientes=todas.filter(x=>!x.respProf);
+  const respondidas=todas.filter(x=>!!x.respProf);
+
+  if(!todas.length) return`<div class="mty" style="padding:24px"><div class="ei">📬</div><p>Sin excusas recibidas</p></div>`;
+
+  const renderExc=(list,label)=>{
+    if(!list.length) return`<p style="font-size:13px;color:var(--sl3);padding:8px 0">Sin ${label}</p>`;
+    return list.map(x=>{
+      const yaResp=!!(x.respProf);
+      return`<div style="border:1px solid ${yaResp?'#9ae6b4':'var(--red)'};border-left:4px solid ${yaResp?'#68d391':'var(--red)'};
+        border-radius:8px;padding:12px;margin-bottom:8px;background:${yaResp?'#f0fff4':'#fff5f5'}">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px">
+          <div>
+            <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:4px">
+              <strong style="font-size:13px">${esc(x.enombre||'—')}</strong>
+              <span class="bdg bgy" style="font-size:10px">${x.salon||'—'}</span>
+              <span class="bdg bor" style="font-size:10px">${x.causa||'—'}</span>
+              ${!yaResp?'<span class="bdg brd" style="font-size:9px">PENDIENTE</span>':''}
+            </div>
+            <span style="font-size:11px;color:var(--sl2)">📅 ${x.fecha||'—'}</span>
+            ${x.desc?`<div style="font-size:11px;color:var(--sl3);margin-top:3px">💬 ${esc(x.desc)}</div>`:''}
+          </div>
+          <button class="btn ${yaResp?'bs':'bn'} sm" onclick="responderExcusa('${x._id||x.id}')">
+            ${yaResp?'✏️ Ver/Editar':'📨 Responder'}
+          </button>
+        </div>
+        ${yaResp?`<div style="margin-top:8px;font-size:11px;background:#e6fffa;border-radius:6px;padding:8px;border:1px solid #b2f5ea">
+          ✅ <strong>Tu respuesta:</strong> ${esc(x.respProf)}
+          ${x.diasExtra>0?`<br>⏰ ${x.diasExtra} día(s) extra — Límite: ${x.fechaLimite||'—'}`:''}
+          ${(x.talleres||[]).length?`<br>📎 ${x.talleres.length} taller(es) adjunto(s)`:''}
+          ${x.respLeida?'<span class="bdg bgr" style="font-size:9px;margin-left:4px">✓ Vista por estudiante</span>':''}
+        </div>`:''}
+      </div>`;
+    }).join('');
+  };
+
+  return`
+  <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;align-items:center">
+    <span style="font-size:13px;font-weight:700">${todas.length} excusa${todas.length>1?'s':''} en total</span>
+    ${pendientes.length?`<span class="bdg brd">${pendientes.length} sin responder</span>`:'<span class="bdg bgr">✓ Todas respondidas</span>'}
+  </div>
+  ${pendientes.length?`
+  <div style="margin-bottom:20px">
+    <div style="font-size:12px;font-weight:800;color:var(--red);text-transform:uppercase;letter-spacing:.04em;margin-bottom:8px">
+      🔴 Sin Responder (${pendientes.length})
+    </div>
+    ${renderExc(pendientes,'pendientes')}
+  </div>`:''}
+  <div>
+    <div style="font-size:12px;font-weight:800;color:var(--sl2);text-transform:uppercase;letter-spacing:.04em;margin-bottom:8px">
+      ✅ Respondidas (${respondidas.length})
+    </div>
+    ${renderExc(respondidas,'respondidas')}
+  </div>`;
+}
+
+/* Renderiza tab de informes */
+function renderPhRptTab(){
+  const sals=CU.salones||[];
+  return`
+  <p style="font-size:13px;color:var(--sl2);margin-bottom:16px">Descarga el informe de cualquier salón y periodo directamente.</p>
+  <div style="display:grid;gap:12px">
+    ${sals.map(sal=>`
+    <div style="border:1px solid var(--bd);border-radius:10px;padding:14px;background:var(--bg2)">
+      <div style="font-size:14px;font-weight:800;margin-bottom:10px">🏫 ${sal}
+        <span class="bdg bgy" style="margin-left:6px">${ebySalon(sal).length} est.</span>
+      </div>
+      <div style="display:flex;flex-wrap:wrap;gap:8px">
+        ${DB.pers.map(per=>`
+        <button class="btn bs sm" onclick="selRptProf('${sal}','${per}','pdf')">📄 ${per} PDF</button>
+        <button class="btn bs sm" onclick="selRptProf('${sal}','${per}','xls')">📊 ${per} Excel</button>`).join('')}
+      </div>
+    </div>`).join('')}
+  </div>`;
+}
+
+/* Cambia entre tabs del panel profesor */
+function phTab(key){
+  const sals=CU.salones||[];
+  const content=gi('phTabContent');
+  if(!content) return;
+
+  // Reset all tab styles
+  [...(sals.map(s=>'phTab_'+s)),['phTabExc'],['phTabRpt']].flat().forEach(id=>{
+    const b=gi(id); if(!b) return;
+    b.style.background='transparent';
+    b.style.borderBottom='2px solid transparent';
+    b.style.fontWeight='600';
+    b.style.color=id==='phTabExc'&&(DB.exc.filter(x=>x.dest===CU.nombre||(CU.salones||[]).includes(x.salon)&&!x.respProf).length)?'var(--red)':'var(--sl2)';
+  });
+
+  // Activate selected tab
+  const activeId=key==='__exc'?'phTabExc':key==='__rpt'?'phTabRpt':'phTab_'+key;
+  const activeBtn=gi(activeId);
+  if(activeBtn){
+    activeBtn.style.background='var(--bg)';
+    activeBtn.style.borderBottom='2px solid var(--nv)';
+    activeBtn.style.fontWeight='800';
+    activeBtn.style.color='var(--nv)';
+  }
+
+  // Render content
+  if(key==='__exc') content.innerHTML=renderPhExcTab();
+  else if(key==='__rpt') content.innerHTML=renderPhRptTab();
+  else content.innerHTML=renderPhSalonTab(key);
+}
+
+/* Filtrar estudiantes en la lista del salón */
+function filtrarPhEsts(sal){
+  const q=(gi('phBusq_'+sal)?.value||'').toLowerCase().trim();
+  const cnt=gi('phCount_'+sal);
+  let visible=0;
+  document.querySelectorAll('#phEstList_'+sal+' > span[data-nombre]').forEach(el=>{
+    const match=!q||el.dataset.nombre.includes(q);
+    el.style.display=match?'inline-flex':'none';
+    if(match) visible++;
+  });
+  if(cnt) cnt.textContent=q?`${visible} de ${ebySalon(sal).length} est.`:`${ebySalon(sal).length} est.`;
+}
+
+/* Navega a Asistencias preseleccionando salón */
+function irAAsistSalon(salon){
+  goto('past');
+  setTimeout(()=>{
+    const sel=gi('pass');
+    if(sel){ sel.value=salon; sel.dispatchEvent(new Event('change')); }
+  },200);
 }
 
 /* ============================================================
@@ -4532,31 +4752,9 @@ function notifNuevasExcusas(){
 
 /* Show excusas to professor in their home panel */
 function renderPExcR(){
-  const el=gi('pExcR');if(!el)return;
-  const mis=DB.exc.filter(x=>x.dest===CU.nombre||(CU.salones||[]).includes(x.salon)).slice(-20).reverse();
-  if(!mis.length){el.innerHTML='<div class="mty" style="padding:16px"><div class="ei">📬</div><p>Sin excusas recibidas</p></div>';return;}
-  el.innerHTML=mis.map(x=>{
-    const yaResp=!!(x.respProf);
-    return`<div style="border:1px solid var(--bd);border-radius:8px;padding:10px;margin-bottom:8px;background:${yaResp?'#f0fff4':'var(--bg2)'}">
-      <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:6px">
-        <div>
-          <strong style="font-size:13px">${x.enombre}</strong>
-          <span class="bdg bgy" style="font-size:10px">${x.salon||'—'}</span><br>
-          <span style="font-size:11px;color:var(--sl2)">📅 ${x.fecha} &nbsp;·&nbsp; 📋 <span class="bdg bor" style="font-size:10px">${x.causa}</span></span>
-          ${x.desc?`<div style="font-size:11px;color:var(--sl3);margin-top:2px">💬 ${x.desc}</div>`:''}
-        </div>
-        <button class="btn ${yaResp?'bs':'bn'} sm" onclick="responderExcusa('${x._id||x.id}')">
-          ${yaResp?'✏️ Editar':'📨 Responder'}
-        </button>
-      </div>
-      ${yaResp?`<div style="margin-top:6px;font-size:11px;background:#e6fffa;border-radius:6px;padding:6px">
-        ✅ <strong>Tu respuesta:</strong> ${x.respProf}
-        ${x.diasExtra>0?`<br>⏰ ${x.diasExtra} día(s) extra — Límite: ${x.fechaLimite||'—'}`:''}
-        ${(x.talleres||[]).length?`<br>📎 ${x.talleres.length} taller(es) adjunto(s)`:''}
-        ${x.respLeida?'<span class=\"bdg bgr\" style=\"font-size:9px;margin-left:4px\">✓ Vista</span>':''}
-      </div>`:''}
-    </div>`;
-  }).join('');
+  // Panel de tabs activo — no se usa este contenedor
+  // Las excusas se muestran en el tab ✉️ del panel principal
+  const el=gi('pExcR');if(el) el.innerHTML='';
 }
 
 /* ============================================================
