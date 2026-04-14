@@ -846,7 +846,7 @@ function bootApp(){
   /* SVG "E" canónico del superadmin — siempre restaurado cuando aplica */
   const _EDUSISTEMA_SVG = `<svg width="22" height="22" viewBox="0 0 82 82" fill="none" xmlns="http://www.w3.org/2000/svg">
     <rect x="1" y="41" width="56" height="56" rx="14" transform="rotate(-45 1 41)" fill="url(#sblg1sa)"/>
-    <text x="41" y="49" text-anchor="middle" dominant-baseline="middle" font-family="'Outfit',sans-serif" font-size="36" font-weight="800" fill="#ffffff">E</text>
+    <text x="41" y="41" text-anchor="middle" dominant-baseline="central" font-family="'Outfit',sans-serif" font-size="38" font-weight="800" fill="#ffffff">E</text>
     <defs>
       <linearGradient id="sblg1sa" x1="0" y1="0" x2="82" y2="82" gradientUnits="userSpaceOnUse">
         <stop offset="0%" stop-color="#0ea5a0"/>
@@ -5562,7 +5562,7 @@ function pgSADash() {
           <svg width="52" height="52" viewBox="0 0 82 82" fill="none" xmlns="http://www.w3.org/2000/svg" style="flex-shrink:0;filter:drop-shadow(0 3px 10px rgba(0,0,0,.3))">
             <rect x="1" y="41" width="56" height="56" rx="14" transform="rotate(-45 1 41)" fill="url(#sadlg1)"/>
             <rect x="5" y="41" width="50" height="50" rx="11" transform="rotate(-45 5 41)" fill="url(#sadlg2)" opacity="0.55"/>
-            <text x="41" y="49" text-anchor="middle" dominant-baseline="middle" font-family="'Outfit',sans-serif" font-size="30" font-weight="800" fill="#ffffff" letter-spacing="-1">E</text>
+            <text x="41" y="41" text-anchor="middle" dominant-baseline="central" font-family="'Outfit',sans-serif" font-size="32" font-weight="800" fill="#ffffff" letter-spacing="-1">E</text>
             <defs>
               <linearGradient id="sadlg1" x1="0" y1="0" x2="82" y2="82" gradientUnits="userSpaceOnUse">
                 <stop offset="0%" stop-color="#0ea5a0"/><stop offset="100%" stop-color="#1e40af"/>
