@@ -872,7 +872,40 @@ function bootApp(){
   goto(defPg());
   /* Notify student about extraordinary period changes */
   if(CU.role==='est') notifyExtPeriod();
+  /* Notify student about unread excusa replies */
+  if(CU.role==='est') setTimeout(notifRespuestasExcusas, 800);
 }
+/* Notifica al estudiante si tiene respuestas de excusas no leídas */
+async function notifRespuestasExcusas(){
+  try {
+    // Fetch fresco para no depender del estado en memoria al login
+    const fresh = await apiFetch('/api/excusas').catch(()=>null);
+    if(Array.isArray(fresh)) DB.exc = fresh;
+    const misExcusas=(DB.exc||[]).filter(x=>x.estId===CU.id||x.eid===CU.id);
+    const noLeidas=misExcusas.filter(x=>x.respProf&&!x.respLeida);
+    if(!noLeidas.length) return;
+    await Swal.fire({
+      icon:'info',
+      title:`📩 Tienes ${noLeidas.length} respuesta${noLeidas.length>1?'s':''} de excusa${noLeidas.length>1?'s':''} sin leer`,
+      html:`<div style="font-family:var(--fn);text-align:left">
+        ${noLeidas.map(x=>`
+          <div style="background:#e6fffa;border-radius:8px;padding:10px;margin-bottom:8px;border:1px solid #9ae6b4">
+            <div style="font-size:12px;font-weight:700;color:#276749">📩 ${x.respProfNombre||'Tu profesor'} respondió tu excusa del ${x.fecha}</div>
+            <div style="font-size:13px;margin-top:4px">${x.respProf}</div>
+            ${x.diasExtra>0?`<div style="font-size:12px;margin-top:4px">⏰ <strong>Tiempo extra:</strong> ${x.diasExtra} día(s) — Límite: ${x.fechaLimite||'—'}</div>`:''}
+          </div>`).join('')}
+        <div style="background:#fffbeb;border:1.5px solid #f6ad55;border-radius:8px;padding:10px;margin-top:8px;font-size:12px;font-weight:700;color:#c05621">
+          ⚠️ Debes enviar el trabajo en <strong>Talleres y Tareas</strong> dentro del tiempo estipulado. Después de la fecha límite <strong>no se calificará</strong>.
+        </div>
+      </div>`,
+      confirmButtonText:'📬 Ver mis excusas',
+      confirmButtonColor:'#2b6cb0',
+      showCancelButton:true,
+      cancelButtonText:'Cerrar'
+    }).then(r=>{ if(r.isConfirmed) goto('eexc'); });
+  } catch(err) { console.warn('notifRespuestasExcusas error:', err); }
+}
+
 /* Notify student if extraordinary period opened or closed since last login */
 function notifyExtPeriod(){
   const mp=matPerd(CU.id);
@@ -2834,11 +2867,30 @@ async function responderExcusa(excId){
       method:'PUT',
       body:JSON.stringify({respProf:resp,diasExtra:dias,fechaLimite:fecha,talleres})
     });
-    // Actualizar en DB local
+    // Actualizar en DB local inmediatamente
     const idx=(DB.exc||[]).findIndex(x=>x._id===excId||x.id===excId);
     if(idx>=0) DB.exc[idx]=updated;
-    sw('success','Respuesta enviada al estudiante','',1600);
+    // Re-renderizar lista de excusas para mostrar "Respondida" de inmediato
     initAExc();
+    // Mostrar confirmación con resumen de lo enviado
+    await Swal.fire({
+      icon:'success',
+      title:'✅ Respuesta enviada',
+      html:`<div style="text-align:left;font-family:var(--fn);font-size:13px">
+        <div style="background:#f0fff4;border-radius:8px;padding:10px;margin-bottom:10px">
+          <strong>Estudiante:</strong> ${exc.enombre}<br>
+          <strong>Tu respuesta:</strong> ${resp}<br>
+          ${dias>0?`<strong>Tiempo extra:</strong> ${dias} día(s) — Entrega límite: ${fecha||'—'}<br>`:''}
+          ${talleres.length?`<strong>Talleres adjuntos:</strong> ${talleres.length} archivo(s)`:''}
+        </div>
+        <div style="background:#fffbeb;border:1.5px solid #f6ad55;border-radius:8px;padding:10px;font-size:12px;color:#c05621">
+          ⚠️ El estudiante verá esta respuesta en su bandeja de excusas junto con el recordatorio de entregar el trabajo a tiempo.
+        </div>
+      </div>`,
+      confirmButtonText:'Aceptar',
+      confirmButtonColor:'#276749',
+      timer:6000,timerProgressBar:true
+    });
   }catch(e){sw('error','Error: '+e.message);}
 }
 
@@ -4665,7 +4717,16 @@ function pgEExc(){
   const e=CU;
   const prfsDelSalon=profsInSalon(e.salon);
   const destOpts=[{id:'admin',label:'Administrador'},...prfsDelSalon.map(p=>({id:p.id,label:p.nombre}))];
-  const mis=DB.exc.filter(x=>x.eid===e.id).slice().reverse();
+  // Refrescar excusas desde el servidor para que el estudiante vea respuestas nuevas
+  apiFetch('/api/excusas').then(fresh=>{
+    if(Array.isArray(fresh)){
+      DB.exc=fresh;
+      // Re-renderizar solo la bandeja si ya está visible
+      const bandeja=gi('excBandeja');
+      if(bandeja) bandeja.innerHTML=renderBandejaEst(CU.id);
+    }
+  }).catch(()=>{});
+  const mis=DB.exc.filter(x=>x.estId===e.id||x.eid===e.id).slice().reverse();
   const ventanaOk=excusasOk();
   return`<div class="ph"><h2>Módulo de Excusas</h2>
     <p>Horario de envío: 18:00 – 07:00 ${ventanaOk?'<span class="bdg bgr">✓ Abierto</span>':'<span class="bdg brd">✗ Cerrado</span>'}</p>
@@ -4688,41 +4749,46 @@ function pgEExc(){
     <button class="btn bn" ${!ventanaOk?'disabled':''} onclick="envExcusa()">📨 Enviar Excusa</button>
   </div>
   <div class="card"><div class="chd"><span class="cti">📬 Mis Excusas</span></div>
-  ${mis.length
-    ? mis.map(x=>{
-        const tieneResp=!!(x.respProf);
-        const talleresHtml=(x.talleres||[]).map(t=>
-          `<div style="display:flex;align-items:center;gap:8px;padding:6px 10px;background:#ebf8ff;border-radius:6px;margin-top:4px">
-            <span>📎</span>
-            <span style="font-size:12px;flex:1">${t.nombre} <span style="font-size:10px;color:var(--sl3)">(${t.tamanio||''})</span></span>
-            <button class="btn xs bb" onclick="descargarTallerExcusa('${x._id||x.id}','${encodeURIComponent(t.nombre)}')">⬇️ Descargar</button>
-          </div>`).join('');
-        return`<div style="border:1.5px solid ${tieneResp?'#68d391':'var(--bd)'};border-radius:10px;padding:12px;margin-bottom:10px;background:${tieneResp?'#f0fff4':'var(--bg2)'}">
-          <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px;margin-bottom:6px">
-            <div>
-              <span style="font-size:12px;font-family:var(--mn)">📅 ${x.fecha}</span>&nbsp;
-              <span class="bdg bbl">${x.dest}</span>&nbsp;
-              <span class="bdg bor">${x.causa}</span>
-            </div>
-            <span class="bdg ${tieneResp?'bgr':'bwa'}">${tieneResp?'✅ Respondida':'⏳ Pendiente'}</span>
-          </div>
-          ${x.desc?`<div style="font-size:12px;color:var(--sl2);margin-bottom:6px">💬 ${x.desc}</div>`:''}
-          ${tieneResp?`<div style="background:#e6fffa;border-radius:8px;padding:10px;margin-top:6px">
-            <div style="font-size:12px;font-weight:700;color:#276749;margin-bottom:4px">📩 Respuesta de ${x.respProfNombre||'tu profesor'}:</div>
-            <div style="font-size:13px;color:#234e52">${x.respProf}</div>
-            ${x.diasExtra>0?`<div style="margin-top:6px;font-size:12px">⏰ <strong>Tiempo extra:</strong> ${x.diasExtra} día(s) — <strong>Fecha límite:</strong> ${x.fechaLimite||'—'}</div>`:''}
-            ${talleresHtml?`<div style="margin-top:8px"><strong style="font-size:12px">📚 Talleres a realizar:</strong>${talleresHtml}</div>`:''}
-            <div style="margin-top:10px;padding:10px;background:#fffbeb;border:1.5px solid #f6ad55;border-radius:8px;font-size:12px;font-weight:700;color:#c05621">
-              ⚠️ Debe enviar el taller en el apartado <strong>Talleres y Tareas</strong>
-            </div>
-            ${!x.respLeida
-              ?("<button class=\"btn xs bg\" style=\"margin-top:8px\" onclick=\"marcarRespLeida('"+( x._id||x.id)+"')\">👁️ Marcar como leída</button>")
-              :"<div style=\"font-size:10px;color:var(--sl3);margin-top:6px\">✓ Vista el "+(x.respTs||"")+"</div>"}
-          </div>`:''}
-        </div>`;
-      }).join('')
-    :'<div class="mty"><div class="ei">📬</div><p>Sin excusas</p></div>'}
+  <div id="excBandeja">${renderBandejaEst(e.id)}</div>
   </div>`;
+}
+
+function renderBandejaEst(estId){
+  const mis=(DB.exc||[]).filter(x=>x.estId===estId||x.eid===estId).slice().reverse();
+  if(!mis.length) return '<div class="mty"><div class="ei">📬</div><p>Sin excusas</p></div>';
+  return mis.map(x=>{
+    const tieneResp=!!(x.respProf);
+    const noLeida=tieneResp&&!x.respLeida;
+    const talleresHtml=(x.talleres||[]).map(t=>
+      `<div style="display:flex;align-items:center;gap:8px;padding:6px 10px;background:#ebf8ff;border-radius:6px;margin-top:4px">
+        <span>📎</span>
+        <span style="font-size:12px;flex:1">${t.nombre} <span style="font-size:10px;color:var(--sl3)">(${t.tamanio||''})</span></span>
+        <button class="btn xs bb" onclick="descargarTallerExcusa('${x._id||x.id}','${encodeURIComponent(t.nombre)}')">⬇️ Descargar</button>
+      </div>`).join('');
+    return`<div style="border:2px solid ${noLeida?'#f6ad55':tieneResp?'#68d391':'var(--bd)'};border-radius:10px;padding:12px;margin-bottom:10px;background:${noLeida?'#fffaf0':tieneResp?'#f0fff4':'var(--bg2)'}">
+      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px;margin-bottom:6px">
+        <div>
+          <span style="font-size:12px;font-family:var(--mn)">📅 ${x.fecha}</span>&nbsp;
+          <span class="bdg bbl">${x.dest}</span>&nbsp;
+          <span class="bdg bor">${x.causa}</span>
+        </div>
+        <span class="bdg ${noLeida?'bor':tieneResp?'bgr':'bwa'}">${noLeida?'🔔 Nueva respuesta':tieneResp?'✅ Respondida':'⏳ Pendiente'}</span>
+      </div>
+      ${x.desc?`<div style="font-size:12px;color:var(--sl2);margin-bottom:6px">💬 ${x.desc}</div>`:''}
+      ${tieneResp?`<div style="background:#e6fffa;border-radius:8px;padding:10px;margin-top:6px;border:1px solid ${noLeida?'#f6ad55':'#9ae6b4'}">
+        <div style="font-size:12px;font-weight:700;color:#276749;margin-bottom:4px">📩 Respuesta de ${x.respProfNombre||'tu profesor'}: <span style="font-size:10px;color:var(--sl3)">${x.respTs||''}</span></div>
+        <div style="font-size:13px;color:#234e52">${x.respProf}</div>
+        ${x.diasExtra>0?`<div style="margin-top:6px;font-size:12px">⏰ <strong>Tiempo extra:</strong> ${x.diasExtra} día(s) — <strong>Fecha límite:</strong> ${x.fechaLimite||'—'}</div>`:''}
+        ${talleresHtml?`<div style="margin-top:8px"><strong style="font-size:12px">📚 Talleres a realizar:</strong>${talleresHtml}</div>`:''}
+        <div style="margin-top:10px;padding:10px;background:#fffbeb;border:1.5px solid #f6ad55;border-radius:8px;font-size:12px;color:#c05621">
+          ⚠️ <strong>Debes enviar el trabajo en el apartado Talleres y Tareas dentro del tiempo estipulado. Después de la fecha límite no se calificará.</strong>
+        </div>
+        ${noLeida
+          ?`<button class="btn xs bg" style="margin-top:8px" onclick="marcarRespLeida('${x._id||x.id}')">👁️ Marcar como leída</button>`
+          :`<div style="font-size:10px;color:var(--sl3);margin-top:6px">✓ Vista el ${x.respTs||''}</div>`}
+      </div>`:''}
+    </div>`;
+  }).join('');
 }
 /* ── SOBREESCRITA por api-layer.js ── */
 async function envExcusa(){ /* implementado en api-layer.js */ }

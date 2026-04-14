@@ -496,24 +496,33 @@ async function marcarRespLeida(excId) {
     const idx = (DB.exc || []).findIndex(x => x._id === excId || x.id === excId);
     if (idx >= 0) DB.exc[idx] = updated;
     // Aviso automático al marcar como leída
+    // Obtener la excusa actualizada para mostrar detalles en el aviso
+    const exc = (DB.exc || []).find(x => x._id === excId || x.id === excId) || updated;
     await Swal.fire({
-      icon: 'info',
-      title: '📚 Recuerda',
-      html: `<div style="font-size:14px;line-height:1.6">
-        Debes enviar el taller o actividad asignada en el apartado<br>
-        <strong style="color:#2b6cb0;font-size:16px">📎 Talleres y Tareas</strong>
-        <br><br>
-        <div style="background:#fffbeb;border:1.5px solid #f6ad55;border-radius:8px;padding:10px;font-size:13px;color:#c05621">
-          ⚠️ No olvides enviar antes de la fecha límite indicada por tu profesor.
+      icon: 'warning',
+      title: '📚 Recuerda entregar el trabajo',
+      html: `<div style="font-size:13px;line-height:1.7;text-align:left">
+        ${exc.respProf ? `<div style="background:#e6fffa;border-radius:8px;padding:10px;margin-bottom:10px;border:1px solid #9ae6b4">
+          <strong>Indicaciones de tu profesor:</strong><br>${exc.respProf}
+          ${exc.diasExtra > 0 ? `<br><br>⏰ <strong>Tienes ${exc.diasExtra} día(s) extra.</strong> Fecha límite: <strong>${exc.fechaLimite || '—'}</strong>` : ''}
+        </div>` : ''}
+        <div style="background:#fffbeb;border:2px solid #f6ad55;border-radius:8px;padding:12px;font-size:13px;font-weight:700;color:#c05621">
+          ⚠️ Debes enviar el trabajo en el apartado<br>
+          <span style="font-size:15px;color:#2b6cb0">📎 Talleres y Tareas</span><br>
+          dentro del tiempo estipulado.<br>
+          <span style="color:#c53030">Después de la fecha límite NO se calificará.</span>
         </div>
       </div>`,
-      confirmButtonText: '✅ Entendido, ir a Talleres y Tareas',
+      confirmButtonText: '📎 Ir a Talleres y Tareas',
       confirmButtonColor: '#2b6cb0',
       showCancelButton: true,
       cancelButtonText: 'Cerrar',
     }).then(r => { if (r.isConfirmed) goto('etare'); });
-    // Refrescar la vista
-    if (typeof pgEExc === 'function') {
+    // Refrescar solo la bandeja (no toda la página)
+    const bandeja = document.getElementById('excBandeja');
+    if (bandeja && typeof renderBandejaEst === 'function') {
+      bandeja.innerHTML = renderBandejaEst(CU.id);
+    } else if (typeof pgEExc === 'function') {
       const el = document.getElementById('main') || document.getElementById('content');
       if (el) { const html = pgEExc(); if (html) el.innerHTML = html; }
     }
