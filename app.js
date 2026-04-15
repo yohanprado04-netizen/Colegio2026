@@ -768,9 +768,9 @@ function resetSessionTimer(){
 /* ── 1. AGREGAR EN ROLE_MAP (reemplaza la línea de ROLE_MAP completa) ── */
 const ROLE_MAP={
   superadmin:new Set(['sadash','sacolegios','saestadisticas','saauditoria','samantenimiento','saplan','sasug']),
-  admin:new Set(['dash','asal','apri','abac','aprf','amat','anot','areh','afec','ablk','aaud','aexp','aexc','avcl','ahist','asug']),
-  profe:new Set(['ph','pnot','past','pvir','ptar','prec','phist','psug']),
-  est:new Set(['eb','east','etare','eexc','eprof','evir','ereh','ehist','esug','eicfes'])
+  admin:new Set(['dash','asal','apri','abac','aprf','amat','anot','areh','afec','ablk','aaud','aexp','aexc','avcl','ahist','asug','acom']),
+  profe:new Set(['ph','pnot','past','pvir','ptar','prec','phist','psug','pcom']),
+  est:new Set(['eb','east','etare','eexc','eprof','evir','ereh','ehist','esug','eicfes','ecom'])
 };
 /* ── 2. REEMPLAZA canAccess ── */
 function canAccess(pid){

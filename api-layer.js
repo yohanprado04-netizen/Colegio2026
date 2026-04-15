@@ -20,7 +20,7 @@ const TokenStore = {
 window.TokenStore = TokenStore;
 
 // ─── Fetch con auth ──────────────────────────────────────────────
-async function apiFetch(path, opts = {}, _retries = 2) {
+async function apiFetch(path, opts = {}, _retries = 3) {
   const token = TokenStore.get();
 
   // Validar que hay token antes de llamadas protegidas
@@ -40,12 +40,32 @@ async function apiFetch(path, opts = {}, _retries = 2) {
     // Render free tier: el servidor puede estar en cold start o reiniciando
     // Reintentar automáticamente hasta _retries veces con espera progresiva
     if (_retries > 0) {
-      console.warn(`[apiFetch] Error de red en ${path} — reintentando en 2s... (${_retries} intentos restantes)`);
-      await new Promise(r => setTimeout(r, 2000));
+      const wait = _retries === 3 ? 3000 : _retries === 2 ? 5000 : 8000;
+      console.warn(`[apiFetch] Error de red en ${path} — reintentando en ${wait/1000}s... (${_retries} intentos restantes)`);
+      await new Promise(r => setTimeout(r, wait));
       return apiFetch(path, opts, _retries - 1);
     }
     throw new Error('Error de red. El servidor no responde — puede estar iniciando, intenta en 30 segundos.');
   }
+
+  // 502/503/504 = Render cold start / servidor reiniciando — reintentar con espera
+  if (res.status === 502 || res.status === 503 || res.status === 504) {
+    if (_retries > 0) {
+      const wait = _retries === 3 ? 4000 : _retries === 2 ? 7000 : 12000;
+      console.warn(`[apiFetch] HTTP ${res.status} en ${path} — servidor iniciando, reintentando en ${wait/1000}s... (${_retries} restantes)`);
+      // Mostrar banner de "servidor iniciando" si es el primer intento
+      if (_retries === 3) _showServerStartingBanner(true);
+      await new Promise(r => setTimeout(r, wait));
+      const result = await apiFetch(path, opts, _retries - 1);
+      if (result !== null) _showServerStartingBanner(false);
+      return result;
+    }
+    _showServerStartingBanner(false);
+    throw new Error(`El servidor está reiniciando (HTTP ${res.status}). Espera unos segundos y recarga la página.`);
+  }
+
+  // Si llegamos aquí con éxito, ocultar el banner si estaba visible
+  _showServerStartingBanner(false);
 
   // Token expirado o inválido → logout automático
   if (res.status === 401) {
@@ -77,6 +97,41 @@ async function apiFetch(path, opts = {}, _retries = 2) {
   }
 
   return res.json();
+}
+
+
+// ─── Banner de servidor iniciando (Render cold start) ────────────────────────
+function _showServerStartingBanner(show) {
+  let banner = document.getElementById('_serverBanner');
+  if (show) {
+    if (banner) return; // ya visible
+    banner = document.createElement('div');
+    banner.id = '_serverBanner';
+    banner.style.cssText = `
+      position:fixed;top:0;left:0;right:0;z-index:99999;
+      background:#744210;color:#fff;
+      padding:10px 20px;font-size:13px;font-weight:700;
+      display:flex;align-items:center;gap:12px;justify-content:center;
+      box-shadow:0 2px 12px rgba(0,0,0,.3);
+    `;
+    banner.innerHTML = `
+      <span style="font-size:18px">⏳</span>
+      <span>El servidor está iniciando (Render free tier). Reintentando automáticamente...</span>
+      <span id="_serverBannerDots">.</span>
+    `;
+    document.body.prepend(banner);
+    // Animación de puntos
+    let dots = 1;
+    banner._interval = setInterval(() => {
+      dots = (dots % 3) + 1;
+      const el = document.getElementById('_serverBannerDots');
+      if (el) el.textContent = '.'.repeat(dots);
+    }, 500);
+  } else {
+    if (!banner) return;
+    clearInterval(banner._interval);
+    banner.remove();
+  }
 }
 
 // ═══════════════════════════════════════════════════════════════════
@@ -118,6 +173,26 @@ async function dbLoad() {
     }
   } catch (err) {
     console.error('Error cargando DB:', err);
+    // Si es error de servidor (502/cold start), NO inicializar DB vacía —
+    // mostramos mensaje y dejamos que el usuario recargue
+    if (err.message && (err.message.includes('502') || err.message.includes('reiniciando') || err.message.includes('iniciando'))) {
+      if (typeof Swal !== 'undefined') {
+        Swal.fire({
+          icon: 'warning',
+          title: '⏳ Servidor iniciando',
+          html: `<div style="font-size:14px;line-height:1.7">
+            El servidor está despertando (Render free tier).<br>
+            <strong>Esto tarda entre 30 y 60 segundos</strong> la primera vez del día.<br><br>
+            <button onclick="location.reload()" style="padding:10px 24px;background:#2b6cb0;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer">
+              🔄 Recargar e intentar de nuevo
+            </button>
+          </div>`,
+          showConfirmButton: false,
+          allowOutsideClick: false,
+        });
+      }
+      return; // No inicializar DB vacía
+    }
     dbInit();
   }
 }
