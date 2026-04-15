@@ -301,6 +301,23 @@ const SugerenciaSchema = new Schema({
 SugerenciaSchema.index({ leida: 1, createdAt: -1 });
 SugerenciaSchema.index({ uid: 1 });
 
+// ─── COMUNICADOS DEL ADMIN ───────────────────────────────────────────────────
+// El admin crea comunicados con título, mensaje, destinatarios y duración.
+// Los profesores y estudiantes los ven al hacer login hasta que expiren.
+const ComunicadoSchema = new Schema({
+  id:          { type: String, required: true, unique: true },
+  titulo:      { type: String, required: true, trim: true },
+  mensaje:     { type: String, required: true, trim: true },
+  para:        { type: String, enum: ['todos', 'profe', 'est'], default: 'todos' },
+  color:       { type: String, enum: ['azul', 'verde', 'naranja', 'rojo', 'morado'], default: 'azul' },
+  fechaInicio: { type: String, required: true }, // YYYY-MM-DD
+  fechaFin:    { type: String, required: true },  // YYYY-MM-DD
+  activo:      { type: Boolean, default: true },
+  colegioId:   { type: String, default: '', index: true },
+  creadoPor:   { type: String, default: '' },
+}, { timestamps: true, collection: 'comunicados' });
+ComunicadoSchema.index({ colegioId: 1, activo: 1 });
+
 module.exports = {
   Area:          mongoose.model('Area',          AreaSchema),
   Materia:       mongoose.model('Materia',       MateriaSchema),
@@ -321,4 +338,5 @@ module.exports = {
   Bloqueo:       mongoose.model('Bloqueo',       BloqueoSchema),
   Estadistica:   mongoose.model('Estadistica',   EstadisticaSchema),
   Sugerencia:    mongoose.model('Sugerencia',    SugerenciaSchema),
+  Comunicado:    mongoose.model('Comunicado',    ComunicadoSchema),
 };

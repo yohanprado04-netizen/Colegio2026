@@ -815,12 +815,55 @@ const PL={
   dash:'Panel General',asal:'Salones & Grados',apri:'Primaria (1°-5°)',abac:'Bachillerato (6°-11°)',
   aprf:'Profesores',amat:'Materias & Periodos',anot:'Gestión de Notas',areh:'Recuperaciones',
   afec:'Control de Fechas',ablk:'Usuarios Bloqueados',aaud:'Auditoría',aexp:'Exportar',ahist:'Historial Estudiantes',
-  aexc:'Excusas (Admin)',avcl:'Clases Virtuales (Admin)',asug:'Sugerencias',
+  aexc:'Excusas (Admin)',avcl:'Clases Virtuales (Admin)',acom:'Comunicados',pcom:'Comunicados',ecom:'Comunicados',asug:'Sugerencias',
   ph:'Mi Panel',pnot:'Ingresar Notas',past:'Asistencias',pvir:'Clases Virtuales',ptar:'Tareas Recibidas',prec:'Recuperaciones',phist:'Historial Recuperaciones',psug:'Sugerencias',
   eb:'Mi Boletín',east:'Mi Asistencia',etare:'Tareas & Talleres',
   eexc:'Excusas',eprof:'Mis Profesores',ereh:'Mi Recuperación',evir:'Mis Clases Virtuales',
   ehist:'Historial Recuperaciones',esug:'Sugerencias'
 };
+
+
+/* ============================================================
+   COMUNICADOS — mostrar al hacer login (profe y estudiante)
+============================================================ */
+function mostrarComunicadosLogin(){
+  const role=CU?.role;
+  if(role!=='profe'&&role!=='est') return;
+  const hoy=today();
+  const coms=(DB.comunicados||[]).filter(c=>{
+    if(!c.activo) return false;
+    if(c.fechaFin<hoy||c.fechaInicio>hoy) return false;
+    if(c.para==='todos') return true;
+    return c.para===role;
+  });
+  if(!coms.length) return;
+
+  const colorMap={
+    azul:  {hdr:'#2b6cb0',bg:'#ebf8ff',icon:'🔵'},
+    verde: {hdr:'#276749',bg:'#f0fff4',icon:'🟢'},
+    naranja:{hdr:'#c05621',bg:'#fffaf0',icon:'🟠'},
+    rojo:  {hdr:'#c53030',bg:'#fff5f5',icon:'🔴'},
+    morado:{hdr:'#553c9a',bg:'#faf5ff',icon:'🟣'},
+  };
+
+  const htmlComs=coms.map(c=>{
+    const cs=colorMap[c.color]||colorMap.azul;
+    return`<div style="background:${cs.bg};border-left:4px solid ${cs.hdr};border-radius:0 10px 10px 0;padding:14px 16px;margin-bottom:12px;text-align:left">
+      <div style="font-weight:800;font-size:15px;color:${cs.hdr};margin-bottom:6px">${cs.icon} ${esc(c.titulo)}</div>
+      <div style="font-size:13px;color:#2d3748;white-space:pre-line;line-height:1.7">${esc(c.mensaje)}</div>
+      <div style="font-size:10px;color:#718096;margin-top:8px">Válido hasta: ${c.fechaFin}</div>
+    </div>`;
+  }).join('');
+
+  Swal.fire({
+    title:'📢 Comunicados del Colegio',
+    html:`<div style="max-height:65vh;overflow-y:auto;padding-right:4px;margin-top:8px">${htmlComs}</div>`,
+    confirmButtonText:'Entendido ✓',
+    confirmButtonColor:'#2b6cb0',
+    width:'min(620px,95vw)',
+    showClass:{popup:'swal2-show'},
+  });
+}
 
 function bootApp(){
   if(!CU||!CU.role){console.error('[bootApp] CU no disponible');return;}
@@ -870,6 +913,8 @@ function bootApp(){
     if(_sbNombre) _sbNombre.textContent = CU.colegioNombre || 'EduSistema';
   }
   goto(defPg());
+  /* Mostrar comunicados activos al iniciar sesión */
+  setTimeout(mostrarComunicadosLogin, 600);
   /* Notify student about extraordinary period changes */
   if(CU.role==='est') notifyExtPeriod();
   /* Notify student about unread excusa replies */
@@ -1023,7 +1068,7 @@ function navItems(){
     {id:'apri',ic:'📚',lb:'Primaria (1°-5°)'},{id:'abac',ic:'🎓',lb:'Bachillerato (6°-11°)'},
     {id:'aprf',ic:'👩‍🏫',lb:'Profesores'},{id:'amat',ic:'📖',lb:'Materias & Periodos'},
     {s:'Notas'},{id:'anot',ic:'📝',lb:'Gestión de Notas'},{id:'areh',ic:'🔄',lb:'Recuperaciones'},
-    {s:'Comunicación'},{id:'aexc',ic:'✉️',lb:'Excusas'},{id:'avcl',ic:'💻',lb:'Clases Virtuales'},
+    {s:'Comunicación'},{id:'acom',ic:'📢',lb:'Comunicados'},{id:'aexc',ic:'✉️',lb:'Excusas'},{id:'avcl',ic:'💻',lb:'Clases Virtuales'},
     {s:'Sistema'},{id:'afec',ic:'📅',lb:'Control de Fechas'},
     {id:'ablk',ic:'🔒',lb:'Usuarios Bloqueados'},
     {id:'aaud',ic:'🔍',lb:'Auditoría'},{id:'aexp',ic:'📤',lb:'Exportar'},{id:'ahist',ic:'📚',lb:'Historial'},
@@ -1031,6 +1076,7 @@ function navItems(){
   ];
   if(CU.role==='profe') return[
     {s:'Mi Panel'},{id:'ph',ic:'🏠',lb:'Inicio'},
+    {id:'pcom',ic:'📢',lb:'Comunicados'},
     {id:'pnot',ic:'📝',lb:'Ingresar Notas'},{id:'past',ic:'✅',lb:'Asistencias'},
     {id:'pvir',ic:'💻',lb:'Clases Virtuales'},
     {id:'ptar',ic:'📂',lb:'Tareas Recibidas'},
@@ -1040,6 +1086,7 @@ function navItems(){
   ];
   /* estudiante */
   const it=[
+    {s:'Comunicados'},{id:'ecom',ic:'📢',lb:'Comunicados'},
     {s:'Mi Perfil'},{id:'eb',ic:'📋',lb:'Mi Boletín'},{id:'east',ic:'✅',lb:'Mi Asistencia'},
     {id:'etare',ic:'📎',lb:'Tareas & Talleres'},{id:'eexc',ic:'✉️',lb:'Excusas'},
     {id:'eprof',ic:'👩‍🏫',lb:'Mis Profesores'},{id:'evir',ic:'💻',lb:'Mis Clases Virtuales'},
@@ -1059,9 +1106,32 @@ function buildNav(){
     else{
       const b=document.createElement('button');b.className='sbi';b.id='ni_'+it.id;
       b.innerHTML=`<span class="ic">${it.ic}</span>${it.lb}`;
-      b.onclick=()=>goto(it.id);nav.appendChild(b);
+      b.onclick=()=>goto(it.id);b.dataset.id=it.id;nav.appendChild(b);
     }
   });
+
+  // Badge de comunicados en el menú para profe/est
+  if((CU.role==='profe'||CU.role==='est')){
+    const hoy=today();
+    const comKey=CU.role==='profe'?'pcom':'ecom';
+    const nComs=(DB.comunicados||[]).filter(c=>{
+      if(!c.activo) return false;
+      if(c.fechaFin<hoy||c.fechaInicio>hoy) return false;
+      return c.para==='todos'||c.para===CU.role;
+    }).length;
+    if(nComs>0){
+      const comBtn=document.querySelector(`[data-id="${comKey}"]`)||
+        Array.from(document.querySelectorAll('.nav-btn,button')).find(b=>b.onclick&&b.onclick.toString().includes(comKey));
+      if(comBtn&&!comBtn.querySelector('.com-badge')){
+        const badge=document.createElement('span');
+        badge.className='com-badge';
+        badge.style.cssText='display:inline-flex;align-items:center;justify-content:center;background:#e53e3e;color:#fff;border-radius:20px;padding:1px 7px;font-size:10px;font-weight:800;margin-left:6px;min-width:18px';
+        badge.textContent=nComs;
+        comBtn.appendChild(badge);
+      }
+    }
+  }
+
   /* Add notification dots after nav is built */
   if(CU.role==='profe'&&DB.ext.on){
     const pendRec=(DB.recs||[]).filter(r=>r.profId===CU.id&&!r.revisado).length;
@@ -1086,7 +1156,7 @@ function renderPg(pid){
   const map={
     dash:pgDash,asal:pgASal,apri:()=>pgAEst('primaria'),abac:()=>pgAEst('bachillerato'),
     aprf:pgAPrf,amat:pgAMat,anot:pgANot,areh:pgAReh,afec:pgAFec,
-    ablk:pgABlk,aaud:pgAAud,aexp:pgAExp,aexc:pgAExc,avcl:pgAVcl,ahist:pgAHist,
+    ablk:pgABlk,aaud:pgAAud,aexp:pgAExp,aexc:pgAExc,avcl:pgAVcl,ahist:pgAHist,acom:pgACom,pcom:pgComVer,ecom:pgComVer,
     ph:pgPH,pnot:pgPNot,past:pgPAst,pvir:pgPVir,ptar:pgPTar,prec:pgPRec,phist:pgPHist,
     eb:pgEB,east:pgEAst,etare:pgETare,eexc:pgEExc,eprof:pgEProf,
     evir:pgEVir,ereh:pgEReh,ehist:pgEHist,eicfes:pgEIcfes,
@@ -1100,7 +1170,7 @@ function renderPg(pid){
 function initPg(pid){
   const map={
     dash:initDash,asal:initASal,apri:()=>initAEst('primaria'),abac:()=>initAEst('bachillerato'),
-    aprf:initAPrf,amat:initAMat,anot:initANot,areh:initAReh,aexc:initAExc,avcl:initAVcl,
+    aprf:initAPrf,amat:initAMat,anot:initANot,areh:initAReh,aexc:initAExc,avcl:initAVcl,acom:initACom,pcom:initComVer,ecom:initComVer,
     pnot:initPNot,past:initPAst,eb:initEB,eicfes:initEIcfes,
     ph:()=>{ setTimeout(()=>{ renderPExcR(); notifNuevasExcusas(); },0); },
     sadash:initSADash,sacolegios:initSAColegios,saplan:initSAPlan,
@@ -2278,6 +2348,25 @@ const HELP={
   ablk:`<b>🔒 Usuarios Bloqueados</b><br>Lista de usuarios que han sido bloqueados por intentos fallidos de inicio de sesión.<br>Haz clic en <b>Desbloquear</b> para permitir que el usuario vuelva a ingresar al sistema.`,
   aexp:`<b>📤 Exportar Datos</b><br>Descarga información del sistema en formato <b>Excel</b> o genera <b>Boletines PDF</b>.<br>• <b>Excel:</b> exporta notas consolidadas, asistencia o datos de estudiantes por salón.<br>• <b>Boletín individual:</b> selecciona un estudiante y descarga su reporte académico.<br>• <b>Boletines por salón:</b> genera todos los boletines de un grupo en un solo clic.`,
   ahist:`<b>📚 Historial de Estudiantes</b><br>Registro de todos los estudiantes que alguna vez fueron dados de alta en el sistema, incluso los ya eliminados.<br>Puedes buscar por nombre o documento. El historial mantiene el año y salón en que estuvieron matriculados.`,
+  pcom:`<b>📢 Comunicados del Colegio</b><br>
+Aquí aparecen todos los avisos y anuncios activos publicados por el administrador.<br><br>
+Los comunicados se muestran automáticamente al iniciar sesión y también puedes consultarlos aquí en cualquier momento.<br><br>
+Cada comunicado indica su <b>fecha de vigencia</b> — al vencer desaparece automáticamente.`,
+  ecom:`<b>📢 Comunicados del Colegio</b><br>
+Aquí aparecen todos los avisos y anuncios activos que el colegio tiene para ti.<br><br>
+Los comunicados se muestran automáticamente al iniciar sesión y también puedes consultarlos aquí en cualquier momento.<br><br>
+Cada comunicado indica su <b>fecha de vigencia</b> — al vencer desaparece automáticamente.`,
+  acom:`<b>📢 Comunicados</b><br>
+Crea avisos o anuncios que profesores y/o estudiantes verán al iniciar sesión.<br><br>
+<b>Para crear un comunicado:</b><br>
+1. Escribe el <b>título</b> y el <b>mensaje</b>.<br>
+2. Selecciona a quién va dirigido: <b>Todos</b>, solo <b>Profesores</b> o solo <b>Estudiantes</b>.<br>
+3. Elige un <b>color</b> para destacar el tipo de aviso.<br>
+4. Define las fechas de <b>inicio</b> y <b>fin</b> — el comunicado solo se muestra en ese rango.<br>
+5. Haz clic en <b>Publicar</b>.<br><br>
+Los destinatarios verán el comunicado automáticamente en una pantalla de bienvenida al hacer login, y también podrán consultarlo en el menú.<br><br>
+Puedes <b>activar/desactivar</b> o <b>eliminar</b> cualquier comunicado en cualquier momento.`,
+
   aexc:`<b>✉️ Excusas Recibidas</b><br>Bandeja de excusas enviadas por los estudiantes (horario permitido: 18:00 – 07:00).<br>Haz clic en una excusa para leerla y escribir una <b>respuesta</b> al estudiante.<br>Las excusas respondidas quedan marcadas y el estudiante puede verlas en su módulo.`,
   avcl:`<b>💻 Clases Virtuales (Admin)</b><br>Vista general de todos los enlaces de clases virtuales publicados por los docentes.<br>Cada tarjeta muestra el salón, la fecha, el docente y el enlace de la reunión (Meet, Zoom, Teams).<br>Los estudiantes ven estos enlaces activos en su sección de Clases Virtuales.`,
   eprof:`<b>👩‍🏫 Mis Profesores</b><br>Lista de todos los docentes asignados a tu salón con sus materias y datos de contacto.<br>Consulta aquí el nombre y materias de cada profesor para saber a quién dirigirte.`,
@@ -2770,6 +2859,144 @@ function filtrarHist(){
 /* ============================================================
    ADMIN — EXCUSAS
 ============================================================ */
+
+/* ============================================================
+   ADMIN — COMUNICADOS
+============================================================ */
+function _comColorStyle(color){
+  const map={
+    azul:   {bg:'#ebf8ff',border:'#3182ce',icon:'🔵',badge:'#3182ce'},
+    verde:  {bg:'#f0fff4',border:'#38a169',icon:'🟢',badge:'#38a169'},
+    naranja:{bg:'#fffaf0',border:'#dd6b20',icon:'🟠',badge:'#dd6b20'},
+    rojo:   {bg:'#fff5f5',border:'#e53e3e',icon:'🔴',badge:'#e53e3e'},
+    morado: {bg:'#faf5ff',border:'#805ad5',icon:'🟣',badge:'#805ad5'},
+  };
+  return map[color]||map.azul;
+}
+
+function pgACom(){
+  return`<div class="ph"><h2>📢 Comunicados</h2><button class="btn xs bg" onclick="showHelp('acom')" style="margin-top:6px">❓ Ayuda</button></div>
+  <div class="g2">
+    <div class="card">
+      <div class="chd"><span class="cti">➕ Nuevo Comunicado</span></div>
+      <div class="fg">
+        <div class="fld" style="grid-column:1/-1"><label>Título</label>
+          <input id="comTit" placeholder="Ej: Reunión de padres de familia" style="width:100%">
+        </div>
+        <div class="fld" style="grid-column:1/-1"><label>Mensaje</label>
+          <textarea id="comMsg" rows="4" placeholder="Escribe el contenido del comunicado..." style="width:100%;resize:vertical;padding:8px;border:1.5px solid var(--bd);border-radius:var(--r);font-size:13px;font-family:inherit"></textarea>
+        </div>
+        <div class="fld"><label>Dirigido a</label>
+          <select id="comPara">
+            <option value="todos">👥 Todos (profesores y estudiantes)</option>
+            <option value="profe">👩‍🏫 Solo Profesores</option>
+            <option value="est">🎓 Solo Estudiantes</option>
+          </select>
+        </div>
+        <div class="fld"><label>Color / Tipo</label>
+          <select id="comColor">
+            <option value="azul">🔵 Azul — Informativo</option>
+            <option value="verde">🟢 Verde — Positivo / Éxito</option>
+            <option value="naranja">🟠 Naranja — Atención</option>
+            <option value="rojo">🔴 Rojo — Urgente</option>
+            <option value="morado">🟣 Morado — Evento especial</option>
+          </select>
+        </div>
+        <div class="fld"><label>Fecha inicio</label>
+          <input type="date" id="comFi" value="${today()}">
+        </div>
+        <div class="fld"><label>Fecha fin</label>
+          <input type="date" id="comFf">
+        </div>
+      </div>
+      <button class="btn bn" style="margin-top:12px" onclick="publicarComunicado()">📢 Publicar Comunicado</button>
+    </div>
+    <div class="card">
+      <div class="chd"><span class="cti">📋 Comunicados Creados</span></div>
+      <div id="comListW"><div class="mty"><div class="ei">📢</div><p>Cargando…</p></div></div>
+    </div>
+  </div>`;
+}
+
+async function initACom(){
+  // Set default end date to 7 days from now
+  const d=new Date();d.setDate(d.getDate()+7);
+  const ff=gi('comFf');if(ff)ff.value=d.toISOString().slice(0,10);
+  await renderComList();
+}
+
+async function renderComList(){
+  const el=gi('comListW');if(!el)return;
+  try{
+    const lista=await cargarTodosComunicados();
+    if(!lista.length){el.innerHTML='<div class="mty"><div class="ei">📢</div><p>Sin comunicados creados</p></div>';return;}
+    const hoy=today();
+    el.innerHTML=lista.map(c=>{
+      const cs=_comColorStyle(c.color);
+      const vigente=c.activo&&c.fechaInicio<=hoy&&c.fechaFin>=hoy;
+      const paraLabel={todos:'👥 Todos',profe:'👩‍🏫 Profesores',est:'🎓 Estudiantes'}[c.para]||c.para;
+      return`<div style="border:1.5px solid ${cs.border};border-radius:10px;background:${cs.bg};padding:14px;margin-bottom:10px">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;flex-wrap:wrap">
+          <div style="flex:1;min-width:0">
+            <div style="font-weight:800;font-size:14px;margin-bottom:4px">${cs.icon} ${esc(c.titulo)}</div>
+            <div style="font-size:12px;color:var(--sl2);white-space:pre-line;line-height:1.6">${esc(c.mensaje)}</div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:6px;align-items:flex-end;flex-shrink:0">
+            <span class="bdg" style="background:${cs.badge};color:#fff;font-size:10px">${paraLabel}</span>
+            <span class="bdg ${vigente?'bgr':'brd'}" style="font-size:10px">${vigente?'✅ Activo':'⭕ Inactivo'}</span>
+          </div>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px;flex-wrap:wrap;gap:8px">
+          <span style="font-size:11px;color:var(--sl3)">📅 ${c.fechaInicio} → ${c.fechaFin}</span>
+          <div style="display:flex;gap:8px">
+            <button class="btn xs ${c.activo?'brd':'bgr'} sm" onclick="toggleComunicado('${c.id}',${!c.activo})">${c.activo?'⏸ Desactivar':'▶ Activar'}</button>
+            <button class="btn xs br sm" onclick="borrarComunicado('${c.id}')">🗑️ Eliminar</button>
+          </div>
+        </div>
+      </div>`;
+    }).join('');
+  }catch(e){el.innerHTML='<div class="al aly">Error al cargar comunicados</div>';}
+}
+
+async function publicarComunicado(){
+  const tit=(gi('comTit')?.value||'').trim();
+  const msg=(gi('comMsg')?.value||'').trim();
+  const para=gi('comPara')?.value||'todos';
+  const color=gi('comColor')?.value||'azul';
+  const fi=gi('comFi')?.value||'';
+  const ff=gi('comFf')?.value||'';
+  if(!tit){sw('warning','Escribe un título para el comunicado');return;}
+  if(!msg){sw('warning','Escribe el mensaje del comunicado');return;}
+  if(!fi||!ff){sw('warning','Selecciona las fechas de inicio y fin');return;}
+  if(fi>ff){sw('warning','La fecha de fin debe ser igual o posterior al inicio');return;}
+  const com=await crearComunicado({titulo:tit,mensaje:msg,para,color,fechaInicio:fi,fechaFin:ff});
+  if(com){
+    sw('success','📢 Comunicado publicado');
+    gi('comTit').value='';gi('comMsg').value='';
+    await renderComList();
+  }
+}
+
+async function toggleComunicado(id,activo){
+  const com=(DB.comunicados||[]).find(c=>c.id===id);
+  if(!com)return;
+  await editarComunicado(id,{...com,activo});
+  await renderComList();
+}
+
+async function borrarComunicado(id){
+  const r=await Swal.fire({title:'¿Eliminar comunicado?',text:'Esta acción no se puede deshacer.',icon:'warning',showCancelButton:true,confirmButtonColor:'#e53e3e',confirmButtonText:'Sí, eliminar',cancelButtonText:'Cancelar'});
+  if(!r.isConfirmed)return;
+  await eliminarComunicado(id);
+  await renderComList();
+}
+
+/* ── SOBREESCRITA por api-layer.js ── */
+async function crearComunicado(d){ /* implementado en api-layer.js */ }
+async function editarComunicado(id,d){ /* implementado en api-layer.js */ }
+async function eliminarComunicado(id){ /* implementado en api-layer.js */ }
+async function cargarTodosComunicados(){ /* implementado en api-layer.js */ }
+
 function pgAExc(){return`<div class="ph"><h2>Excusas Recibidas</h2><p>Horario de envío: 18:00 – 07:00</p><button class="btn xs bg" onclick="showHelp('aexc')" style="margin-top:6px">❓ Ayuda</button></div><div id="aexcB"></div>`;}
 function initAExc(){
   const el=gi('aexcB');if(!el)return;
@@ -2917,6 +3144,48 @@ function initAVcl(){
     </tr>`).join('')}</tbody></table></div>`
     :'<div class="mty"><div class="ei">💻</div><p>Sin clases programadas</p></div>'}
   </div>`;
+}
+
+
+/* ============================================================
+   PROFE / ESTUDIANTE — VER COMUNICADOS (solo lectura)
+============================================================ */
+function pgComVer(){
+  return`<div class="ph"><h2>📢 Comunicados</h2><p>Avisos del colegio para ti</p></div>
+  <div id="comVerW"><div class="mty"><div class="ei">📢</div><p>Cargando…</p></div></div>`;
+}
+function initComVer(){
+  const el=gi('comVerW');if(!el)return;
+  const role=CU?.role;
+  const hoy=today();
+  const coms=(DB.comunicados||[]).filter(c=>{
+    if(!c.activo) return false;
+    if(c.fechaFin<hoy||c.fechaInicio>hoy) return false;
+    if(c.para==='todos') return true;
+    return c.para===role;
+  });
+  if(!coms.length){
+    el.innerHTML='<div class="card"><div class="mty"><div class="ei">📢</div><p>No hay comunicados activos en este momento</p></div></div>';
+    return;
+  }
+  const colorMap={
+    azul:  {hdr:'#2b6cb0',bg:'#ebf8ff',border:'#bee3f8',icon:'🔵'},
+    verde: {hdr:'#276749',bg:'#f0fff4',border:'#9ae6b4',icon:'🟢'},
+    naranja:{hdr:'#c05621',bg:'#fffaf0',border:'#fbd38d',icon:'🟠'},
+    rojo:  {hdr:'#c53030',bg:'#fff5f5',border:'#feb2b2',icon:'🔴'},
+    morado:{hdr:'#553c9a',bg:'#faf5ff',border:'#d6bcfa',icon:'🟣'},
+  };
+  el.innerHTML=coms.map(c=>{
+    const cs=colorMap[c.color]||colorMap.azul;
+    return`<div style="background:${cs.bg};border:1.5px solid ${cs.border};border-left:5px solid ${cs.hdr};border-radius:0 12px 12px 0;padding:18px 20px;margin-bottom:14px">
+      <div style="font-weight:800;font-size:16px;color:${cs.hdr};margin-bottom:8px">${cs.icon} ${esc(c.titulo)}</div>
+      <div style="font-size:14px;color:#2d3748;white-space:pre-line;line-height:1.8">${esc(c.mensaje)}</div>
+      <div style="font-size:11px;color:#718096;margin-top:10px;display:flex;gap:16px;flex-wrap:wrap">
+        <span>📅 Vigente hasta: <strong>${c.fechaFin}</strong></span>
+        ${c.creadoPor?`<span>👤 Publicado por: <strong>${esc(c.creadoPor)}</strong></span>`:''}
+      </div>
+    </div>`;
+  }).join('');
 }
 
 /* ============================================================

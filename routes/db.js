@@ -4,7 +4,7 @@ const router = require('express').Router();
 const { authMiddleware, requireRole } = require('../middleware/auth');
 const {
   Usuario, Salon, Config, Materia, Area, Nota, Asistencia, Excusa,
-  VClase, Upload, Plan, Recuperacion, Auditoria, EstHist, Bloqueo
+  VClase, Upload, Plan, Comunicado, Recuperacion, Auditoria, EstHist, Bloqueo
 } = require('../models');
 
 // ─── GET /api/db ─────────────────────────────────────────────────────────────
@@ -44,7 +44,7 @@ router.get('/', authMiddleware, async (req, res) => {
     const [
       usuarios, salones, configs, materiasDocs, areasDocs, notas, asistencias,
       excusas, vclases, uploads, planes, recuperaciones,
-      auditoria, estHist, bloqueos
+      auditoria, estHist, bloqueos, comunicados
     ] = await Promise.all([
       Usuario.find({ ...cf, role: { $in: ['admin','profe','est'] } }, '-__v').lean(),
       Salon.find(cf).lean(),
@@ -62,6 +62,7 @@ router.get('/', authMiddleware, async (req, res) => {
       Auditoria.find(cf).sort({ createdAt: -1 }).limit(500).lean(),
       EstHist.find(cf).lean(),
       Bloqueo.find({ $or: [{ colegioId: cid }, { colegioId: { $exists: false } }, { colegioId: '' }] }).lean(),
+      Comunicado.find({ colegioId: cid, activo: true }).sort({ createdAt: -1 }).lean(),
     ]);
 
     // ── Config map ──────────────────────────────────────────────────────────
@@ -158,6 +159,21 @@ router.get('/', authMiddleware, async (req, res) => {
       return o;
     };
 
+    // ── Filtrar comunicados vigentes para el usuario ────────────────────────
+    const hoy = new Date().toISOString().slice(0, 10);
+    const roleUser = req.user.role;
+    const comunicadosVigentes = (comunicados || []).filter(c => {
+      if (!c.activo) return false;
+      if (c.fechaFin < hoy || c.fechaInicio > hoy) return false;
+      if (c.para === 'todos') return true;
+      return c.para === roleUser;
+    }).map(c => ({
+      id: c.id, titulo: c.titulo, mensaje: c.mensaje,
+      para: c.para, color: c.color,
+      fechaInicio: c.fechaInicio, fechaFin: c.fechaFin,
+      creadoPor: c.creadoPor,
+    }));
+
     res.json({
       admin:        admin ? cleanUser(admin) : null,
       profs:        profs.map(cleanUser),
@@ -193,6 +209,7 @@ router.get('/', authMiddleware, async (req, res) => {
       audit:        auditoria,
       blk:          blkObj,
       estHist,
+      comunicados:  comunicadosVigentes,
       // Info del tenant — útil para el header del frontend
       colegioId:    cid,
       colegioNombre: req.user.colegioNombre || '',

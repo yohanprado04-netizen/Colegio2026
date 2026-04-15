@@ -112,6 +112,7 @@ async function dbLoad() {
       DB.areas      = DB.areas      || [];
       DB.materiasDocs = DB.materiasDocs || [];
       DB.salAreas   = DB.salAreas   || {};
+      DB.comunicados = DB.comunicados || [];
       DB.sals.forEach(s => { if (!Array.isArray(s.mats)) s.mats = []; });
       if(typeof sortSals==='function') sortSals();
     }
@@ -891,6 +892,54 @@ async function saveConducta(eid, v, periodo) {
 }
 
 // ═══════════════════════════════════════════════════════════════════
+
+// ═══════════════════════════════════════════════════════════════════
+// COMUNICADOS — gestión por el admin
+// ═══════════════════════════════════════════════════════════════════
+async function crearComunicado(datos) {
+  if (!validateSession() || CU.role !== 'admin') return;
+  try {
+    const com = await apiFetch('/api/comunicados', {
+      method: 'POST', body: JSON.stringify(datos)
+    });
+    if (!DB.comunicados) DB.comunicados = [];
+    DB.comunicados.unshift(com);
+    return com;
+  } catch (e) { sw('error', 'Error al guardar comunicado: ' + e.message); }
+}
+
+async function editarComunicado(id, datos) {
+  if (!validateSession() || CU.role !== 'admin') return;
+  try {
+    const com = await apiFetch(`/api/comunicados/${id}`, {
+      method: 'PUT', body: JSON.stringify(datos)
+    });
+    if (DB.comunicados) {
+      const idx = DB.comunicados.findIndex(c => c.id === id);
+      if (idx !== -1) DB.comunicados[idx] = com;
+    }
+    return com;
+  } catch (e) { sw('error', 'Error al editar comunicado: ' + e.message); }
+}
+
+async function eliminarComunicado(id) {
+  if (!validateSession() || CU.role !== 'admin') return;
+  try {
+    await apiFetch(`/api/comunicados/${id}`, { method: 'DELETE' });
+    if (DB.comunicados) DB.comunicados = DB.comunicados.filter(c => c.id !== id);
+    sw('success', 'Comunicado eliminado');
+  } catch (e) { sw('error', 'Error al eliminar: ' + e.message); }
+}
+
+// Cargar todos los comunicados del admin (incluyendo inactivos/vencidos)
+async function cargarTodosComunicados() {
+  try {
+    const lista = await apiFetch('/api/comunicados');
+    DB.comunicados = lista || [];
+    return lista;
+  } catch (e) { return []; }
+}
+
 // saveDR() / saveDRPer()
 // ═══════════════════════════════════════════════════════════════════
 async function saveDR() {
