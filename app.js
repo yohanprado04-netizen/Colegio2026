@@ -829,11 +829,19 @@ const PL={
 ============================================================ */
 function mostrarComunicadosLogin(){
   const role=CU?.role;
-  if(role!=='profe'&&role!=='est') return;
+  /* Mostrar a profe, est Y admin (admin recibe comunicados del superadmin) */
+  if(role!=='profe'&&role!=='est'&&role!=='admin') return;
   const hoy=today();
+  /* Para admin: solo mostrar los comunicados del superadmin (esSuperAdmin),
+     ya que los propios los gestiona él mismo y no necesita popup de aviso */
   const coms=(DB.comunicados||[]).filter(c=>{
     if(!c.activo) return false;
     if(c.fechaFin<hoy||c.fechaInicio>hoy) return false;
+    if(role==='admin'){
+      /* Al admin solo le mostramos los del superadmin */
+      if(!c.esSuperAdmin) return false;
+      return c.para==='todos'||c.para==='admin';
+    }
     if(c.para==='todos') return true;
     return c.para===role;
   });
@@ -850,14 +858,16 @@ function mostrarComunicadosLogin(){
   const htmlComs=coms.map(c=>{
     const cs=colorMap[c.color]||colorMap.azul;
     return`<div style="background:${cs.bg};border-left:4px solid ${cs.hdr};border-radius:0 10px 10px 0;padding:14px 16px;margin-bottom:12px;text-align:left">
-      <div style="font-weight:800;font-size:15px;color:${cs.hdr};margin-bottom:6px">${cs.icon} ${esc(c.titulo)}</div>
+      <div style="font-weight:800;font-size:15px;color:${cs.hdr};margin-bottom:6px">${cs.icon} ${esc(c.titulo)}${c.esSuperAdmin?` <span style="font-size:10px;background:#553c9a;color:#fff;border-radius:4px;padding:1px 6px;vertical-align:middle;font-weight:600">🌐 Plataforma</span>`:''}</div>
       <div style="font-size:13px;color:#2d3748;white-space:pre-line;line-height:1.7">${esc(c.mensaje)}</div>
       <div style="font-size:10px;color:#718096;margin-top:8px">Válido hasta: ${c.fechaFin}</div>
     </div>`;
   }).join('');
 
+  const titulo = role==='admin' ? '📢 Comunicado de la Plataforma' : '📢 Comunicados del Colegio';
+
   Swal.fire({
-    title:'📢 Comunicados del Colegio',
+    title: titulo,
     html:`<div style="max-height:65vh;overflow-y:auto;padding-right:4px;margin-top:8px">${htmlComs}</div>`,
     confirmButtonText:'Entendido ✓',
     confirmButtonColor:'#2b6cb0',
@@ -1112,13 +1122,18 @@ function buildNav(){
     }
   });
 
-  // Badge de comunicados en el menú para profe/est
-  if((CU.role==='profe'||CU.role==='est')){
+  // Badge de comunicados en el menú para profe/est/admin
+  if((CU.role==='profe'||CU.role==='est'||CU.role==='admin')){
     const hoy=today();
-    const comKey=CU.role==='profe'?'pcom':'ecom';
+    const comKey=CU.role==='profe'?'pcom':CU.role==='est'?'ecom':'acom';
     const nComs=(DB.comunicados||[]).filter(c=>{
       if(!c.activo) return false;
       if(c.fechaFin<hoy||c.fechaInicio>hoy) return false;
+      if(CU.role==='admin'){
+        /* Admin solo ve badge por comunicados del superadmin */
+        if(!c.esSuperAdmin) return false;
+        return c.para==='todos'||c.para==='admin';
+      }
       return c.para==='todos'||c.para===CU.role;
     }).length;
     if(nComs>0){
@@ -2946,7 +2961,7 @@ async function renderComList(){
       return`<div style="border:1.5px solid ${cs.border};border-radius:10px;background:${cs.bg};padding:14px;margin-bottom:10px">
         <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;flex-wrap:wrap">
           <div style="flex:1;min-width:0">
-            <div style="font-weight:800;font-size:14px;margin-bottom:4px">${cs.icon} ${esc(c.titulo)} ${esSA?'<span class="bdg" style="background:#553c9a;color:#fff;font-size:9px">🌐 Superadmin</span>':''}</div>
+            <div style="font-weight:800;font-size:14px;margin-bottom:4px">${cs.icon} ${esc(c.titulo)} ${esSA?'<span class="bdg" style="background:#553c9a;color:#fff;font-size:9px">🌐 Plataforma</span>':''}</div>
             <div style="font-size:12px;color:var(--sl2);white-space:pre-line;line-height:1.6">${esc(c.mensaje)}</div>
           </div>
           <div style="display:flex;flex-direction:column;gap:6px;align-items:flex-end;flex-shrink:0">
@@ -2956,10 +2971,13 @@ async function renderComList(){
         </div>
         <div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px;flex-wrap:wrap;gap:8px">
           <span style="font-size:11px;color:var(--sl3)">📅 ${c.fechaInicio} → ${c.fechaFin}</span>
-          <div style="display:flex;gap:8px">
-            <button class="btn xs ${c.activo?'brd':'bgr'} sm" onclick="toggleComunicado('${c.id}',${!c.activo})">${c.activo?'⏸ Desactivar':'▶ Activar'}</button>
-            <button class="btn xs br sm" onclick="borrarComunicado('${c.id}')">🗑️ Eliminar</button>
-          </div>
+          ${esSA
+            ? `<span style="font-size:11px;color:#805ad5;font-style:italic">Solo lectura — enviado por la plataforma</span>`
+            : `<div style="display:flex;gap:8px">
+                <button class="btn xs ${c.activo?'brd':'bgr'} sm" onclick="toggleComunicado('${c.id}',${!c.activo})">${c.activo?'⏸ Desactivar':'▶ Activar'}</button>
+                <button class="btn xs br sm" onclick="borrarComunicado('${c.id}')">🗑️ Eliminar</button>
+              </div>`
+          }
         </div>
       </div>`;
     }).join('');
