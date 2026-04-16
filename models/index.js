@@ -305,18 +305,23 @@ SugerenciaSchema.index({ uid: 1 });
 // El admin crea comunicados con título, mensaje, destinatarios y duración.
 // Los profesores y estudiantes los ven al hacer login hasta que expiren.
 const ComunicadoSchema = new Schema({
-  id:          { type: String, required: true, unique: true },
-  titulo:      { type: String, required: true, trim: true },
-  mensaje:     { type: String, required: true, trim: true },
-  para:        { type: String, enum: ['todos', 'profe', 'est'], default: 'todos' },
-  color:       { type: String, enum: ['azul', 'verde', 'naranja', 'rojo', 'morado'], default: 'azul' },
-  fechaInicio: { type: String, required: true }, // YYYY-MM-DD
-  fechaFin:    { type: String, required: true },  // YYYY-MM-DD
-  activo:      { type: Boolean, default: true },
-  colegioId:   { type: String, default: '', index: true },
-  creadoPor:   { type: String, default: '' },
+  id:               { type: String, required: true, unique: true },
+  titulo:           { type: String, required: true, trim: true },
+  mensaje:          { type: String, required: true, trim: true },
+  para:             { type: String, enum: ['todos', 'profe', 'est', 'admin'], default: 'todos' },
+  color:            { type: String, enum: ['azul', 'verde', 'naranja', 'rojo', 'morado'], default: 'azul' },
+  fechaInicio:      { type: String, required: true }, // YYYY-MM-DD
+  fechaFin:         { type: String, required: true },  // YYYY-MM-DD
+  activo:           { type: Boolean, default: true },
+  colegioId:        { type: String, default: '', index: true },
+  creadoPor:        { type: String, default: '' },
+  // Comunicados del superadmin: colegioId='' y esSuperAdmin=true
+  // colegiosDestino: [] = todos los colegios; ['cid1','cid2'] = colegios específicos
+  esSuperAdmin:     { type: Boolean, default: false },
+  colegiosDestino:  [{ type: String }],
 }, { timestamps: true, collection: 'comunicados' });
 ComunicadoSchema.index({ colegioId: 1, activo: 1 });
+ComunicadoSchema.index({ esSuperAdmin: 1, activo: 1 });
 
 module.exports = {
   Area:          mongoose.model('Area',          AreaSchema),

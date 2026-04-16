@@ -767,7 +767,7 @@ function resetSessionTimer(){
   document.addEventListener(ev,()=>{if(CU)resetSessionTimer();},{passive:true}));
 /* ── 1. AGREGAR EN ROLE_MAP (reemplaza la línea de ROLE_MAP completa) ── */
 const ROLE_MAP={
-  superadmin:new Set(['sadash','sacolegios','saestadisticas','saauditoria','samantenimiento','saplan','sasug']),
+  superadmin:new Set(['sadash','sacolegios','saestadisticas','saauditoria','samantenimiento','saplan','sasug','sacom']),
   admin:new Set(['dash','asal','apri','abac','aprf','amat','anot','areh','afec','ablk','aaud','aexp','aexc','avcl','ahist','asug','acom']),
   profe:new Set(['ph','pnot','past','pvir','ptar','prec','phist','psug','pcom']),
   est:new Set(['eb','east','etare','eexc','eprof','evir','ereh','ehist','esug','eicfes','ecom'])
@@ -810,6 +810,7 @@ function logAuditAnon(usuario,msg){ /* implementado en api-layer.js */ }
 ============================================================ */
 const PL={
   sadash:'Panel Global', sacolegios:'Colegios & Admins', saplan:'Plan de Estudios',
+  sacom:'Comunicados Globales',
   saestadisticas:'Estadísticas Globales', saauditoria:'Auditoría Global',
   samantenimiento:'Mantenimiento', sasug:'Sugerencias Recibidas',
   dash:'Panel General',asal:'Salones & Grados',apri:'Primaria (1°-5°)',abac:'Bachillerato (6°-11°)',
@@ -1058,6 +1059,7 @@ function navItems(){
     {s:'Académico'},{id:'saplan',ic:'📖',lb:'Plan de Estudios'},
     {s:'Supervisión'},{id:'saestadisticas',ic:'📊',lb:'Estadísticas'},
     {id:'saauditoria',ic:'🔍',lb:'Auditoría Global'},
+    {s:'Comunicación'},{id:'sacom',ic:'📢',lb:'Comunicados Globales'},
     {s:'Sistema'},{id:'samantenimiento',ic:'⚙️',lb:'Mantenimiento'},
     {id:'sasug',ic:'💡',lb:'Sugerencias Recibidas'},
   ];
@@ -1160,7 +1162,7 @@ function renderPg(pid){
     ph:pgPH,pnot:pgPNot,past:pgPAst,pvir:pgPVir,ptar:pgPTar,prec:pgPRec,phist:pgPHist,
     eb:pgEB,east:pgEAst,etare:pgETare,eexc:pgEExc,eprof:pgEProf,
     evir:pgEVir,ereh:pgEReh,ehist:pgEHist,eicfes:pgEIcfes,
-    sadash:pgSADash,sacolegios:pgSAColegios,saplan:pgSAPlan,
+    sadash:pgSADash,sacolegios:pgSAColegios,saplan:pgSAPlan,sacom:pgSACom,
     saestadisticas:pgSAEstadisticas,saauditoria:pgSAAuditoria,samantenimiento:pgSAMantenimiento,
     sasug:pgSASug,
     asug:pgSugerencias,psug:pgSugerencias,esug:pgSugerencias,
@@ -1173,7 +1175,7 @@ function initPg(pid){
     aprf:initAPrf,amat:initAMat,anot:initANot,areh:initAReh,aexc:initAExc,avcl:initAVcl,acom:initACom,pcom:initComVer,ecom:initComVer,
     pnot:initPNot,past:initPAst,eb:initEB,eicfes:initEIcfes,
     ph:()=>{ setTimeout(()=>{ renderPExcR(); notifNuevasExcusas(); },0); },
-    sadash:initSADash,sacolegios:initSAColegios,saplan:initSAPlan,
+    sadash:initSADash,sacolegios:initSAColegios,saplan:initSAPlan,sacom:initSACom,
     saestadisticas:initSAEstadisticas,saauditoria:initSAAuditoria,samantenimiento:initSAMantenimiento,
     sasug:initSASug,
     asug:initSugerencias,psug:initSugerencias,esug:initSugerencias,
@@ -2922,6 +2924,11 @@ async function initACom(){
   // Set default end date to 7 days from now
   const d=new Date();d.setDate(d.getDate()+7);
   const ff=gi('comFf');if(ff)ff.value=d.toISOString().slice(0,10);
+  // Refresh comunicados from server to show current state
+  try {
+    const fresh = await apiFetch('/api/comunicados');
+    if(Array.isArray(fresh)) DB.comunicados = fresh;
+  } catch(e){}
   await renderComList();
 }
 
@@ -2934,11 +2941,12 @@ async function renderComList(){
     el.innerHTML=lista.map(c=>{
       const cs=_comColorStyle(c.color);
       const vigente=c.activo&&c.fechaInicio<=hoy&&c.fechaFin>=hoy;
+      const esSA=!!(c.esSuperAdmin);
       const paraLabel={todos:'👥 Todos',profe:'👩‍🏫 Profesores',est:'🎓 Estudiantes'}[c.para]||c.para;
       return`<div style="border:1.5px solid ${cs.border};border-radius:10px;background:${cs.bg};padding:14px;margin-bottom:10px">
         <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;flex-wrap:wrap">
           <div style="flex:1;min-width:0">
-            <div style="font-weight:800;font-size:14px;margin-bottom:4px">${cs.icon} ${esc(c.titulo)}</div>
+            <div style="font-weight:800;font-size:14px;margin-bottom:4px">${cs.icon} ${esc(c.titulo)} ${esSA?'<span class="bdg" style="background:#553c9a;color:#fff;font-size:9px">🌐 Superadmin</span>':''}</div>
             <div style="font-size:12px;color:var(--sl2);white-space:pre-line;line-height:1.6">${esc(c.mensaje)}</div>
           </div>
           <div style="display:flex;flex-direction:column;gap:6px;align-items:flex-end;flex-shrink:0">
@@ -3155,12 +3163,20 @@ function pgComVer(){
 }
 function initComVer(){
   const el=gi('comVerW');if(!el)return;
+  // Fetch fresh so profe/est always see latest comunicados (including new SA ones)
+  apiFetch('/api/comunicados').then(fresh=>{
+    if(Array.isArray(fresh)) DB.comunicados=(DB.comunicados||[]).filter(c=>c.colegioId).concat(fresh.filter(c=>c.esSuperAdmin)).map(x=>x); // merge, then re-render
+    _renderComVer(el);
+  }).catch(()=>_renderComVer(el));
+}
+function _renderComVer(el){
   const role=CU?.role;
   const hoy=today();
   const coms=(DB.comunicados||[]).filter(c=>{
     if(!c.activo) return false;
     if(c.fechaFin<hoy||c.fechaInicio>hoy) return false;
     if(c.para==='todos') return true;
+    if(role==='admin' && c.para==='admin') return true;
     return c.para===role;
   });
   if(!coms.length){
@@ -6201,6 +6217,196 @@ function icfesReiniciarTodo(){
       if(el) icfesRenderMenu(el, null);
     }
   });
+}
+
+/* ============================================================
+   SUPERADMIN — COMUNICADOS GLOBALES
+============================================================ */
+
+function pgSACom() {
+  return `<div class="ph">
+    <h2>📢 Comunicados Globales</h2>
+    <p style="font-size:13px;color:var(--sl2)">Crea comunicados visibles para todos los colegios o para colegios específicos.</p>
+  </div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
+    <div class="card">
+      <div class="chd"><span class="cti">➕ Nuevo Comunicado Global</span></div>
+      <div class="fg">
+        <div class="fld" style="grid-column:1/-1">
+          <label>Título</label>
+          <input id="sacomTit" placeholder="Ej: Reunión de directivos" class="inp">
+        </div>
+        <div class="fld" style="grid-column:1/-1">
+          <label>Mensaje</label>
+          <textarea id="sacomMsg" rows="4" placeholder="Escribe el contenido del comunicado..." style="width:100%;resize:vertical;padding:8px;border:1.5px solid var(--bd);border-radius:var(--r);font-size:13px;font-family:inherit"></textarea>
+        </div>
+        <div class="fld">
+          <label>Dirigido a</label>
+          <select id="sacomPara" class="inp">
+            <option value="todos">👥 Todos (admins, profes y estudiantes)</option>
+            <option value="admin">🏫 Solo Administradores</option>
+            <option value="profe">👩‍🏫 Solo Profesores</option>
+            <option value="est">🎓 Solo Estudiantes</option>
+          </select>
+        </div>
+        <div class="fld">
+          <label>Color / Tipo</label>
+          <select id="sacomColor" class="inp">
+            <option value="azul">🔵 Azul — Informativo</option>
+            <option value="verde">🟢 Verde — Positivo</option>
+            <option value="naranja">🟠 Naranja — Precaución</option>
+            <option value="rojo">🔴 Rojo — Urgente</option>
+            <option value="morado">🟣 Morado — Especial</option>
+          </select>
+        </div>
+        <div class="fld">
+          <label>Fecha Inicio</label>
+          <input type="date" id="sacomFi" class="inp" value="${new Date().toISOString().slice(0,10)}">
+        </div>
+        <div class="fld">
+          <label>Fecha Fin</label>
+          <input type="date" id="sacomFf" class="inp">
+        </div>
+        <div class="fld" style="grid-column:1/-1">
+          <label>Colegios destinatarios</label>
+          <div style="font-size:11px;color:var(--sl2);margin-bottom:6px">Deja todos sin marcar para enviar a TODOS los colegios. Marca los específicos si quieres segmentar.</div>
+          <div id="sacomColegiosChk" style="display:flex;flex-wrap:wrap;gap:8px;padding:10px;background:var(--bg2);border-radius:8px;border:1px solid var(--bd)">
+            <span style="font-size:12px;color:var(--sl3)">Cargando colegios...</span>
+          </div>
+        </div>
+      </div>
+      <button class="btn bn" style="margin-top:12px" onclick="sacomPublicar()">📢 Publicar Comunicado Global</button>
+    </div>
+    <div class="card">
+      <div class="chd"><span class="cti">📋 Comunicados Creados</span></div>
+      <div id="sacomListW"><div class="mty"><div class="ei">📢</div><p>Cargando...</p></div></div>
+    </div>
+  </div>`;
+}
+
+async function initSACom() {
+  // Set default end date
+  const d = new Date(); d.setDate(d.getDate()+7);
+  const ff = gi('sacomFf'); if(ff) ff.value = d.toISOString().slice(0,10);
+  // Load colegios for checkboxes
+  try {
+    const colegios = await saApiFetch('/api/superadmin/colegios');
+    const chkEl = gi('sacomColegiosChk');
+    if(chkEl && Array.isArray(colegios)) {
+      if(!colegios.length) {
+        chkEl.innerHTML = '<span style="font-size:12px;color:var(--sl3)">No hay colegios registrados</span>';
+      } else {
+        chkEl.innerHTML = `<label style="font-size:12px;font-weight:700;color:var(--nv);width:100%">
+          <input type="checkbox" id="sacomTodos" checked onchange="sacomToggleTodos(this)"> 
+          🌐 Todos los colegios (${colegios.length})
+        </label>` +
+        colegios.map(c=>`<label style="font-size:12px;padding:4px 8px;background:#fff;border-radius:6px;border:1px solid var(--bd);cursor:pointer">
+          <input type="checkbox" class="sacomCh" value="${c.id}" disabled> ${esc(c.nombre)}
+        </label>`).join('');
+      }
+    }
+  } catch(e) {}
+  await sacomRenderList();
+}
+
+function sacomToggleTodos(chk) {
+  document.querySelectorAll('.sacomCh').forEach(c => {
+    c.disabled = chk.checked;
+    if(chk.checked) c.checked = false;
+  });
+}
+
+async function sacomPublicar() {
+  const tit = (gi('sacomTit')?.value||'').trim();
+  const msg = (gi('sacomMsg')?.value||'').trim();
+  const para = gi('sacomPara')?.value||'todos';
+  const color = gi('sacomColor')?.value||'azul';
+  const fi = gi('sacomFi')?.value||'';
+  const ff = gi('sacomFf')?.value||'';
+  if(!tit){ sw('warning','Escribe un título'); return; }
+  if(!msg){ sw('warning','Escribe el mensaje'); return; }
+  if(!fi||!ff){ sw('warning','Selecciona las fechas'); return; }
+  if(fi>ff){ sw('warning','La fecha fin debe ser mayor o igual al inicio'); return; }
+
+  // Get selected colegios
+  const todosChk = gi('sacomTodos');
+  let colegiosDestino = [];
+  if(!todosChk?.checked) {
+    document.querySelectorAll('.sacomCh:checked').forEach(c => colegiosDestino.push(c.value));
+  }
+
+  try {
+    await saApiFetch('/api/superadmin/comunicados', {
+      method: 'POST',
+      body: JSON.stringify({ titulo:tit, mensaje:msg, para, color, fechaInicio:fi, fechaFin:ff, colegiosDestino })
+    });
+    sw('success','📢 Comunicado global publicado');
+    gi('sacomTit').value=''; gi('sacomMsg').value='';
+    // Reset colegios to "todos"
+    const todosEl = gi('sacomTodos'); if(todosEl){ todosEl.checked=true; sacomToggleTodos(todosEl); }
+    await sacomRenderList();
+  } catch(e){ sw('error','Error: '+e.message); }
+}
+
+async function sacomRenderList() {
+  const el = gi('sacomListW'); if(!el) return;
+  try {
+    const lista = await saApiFetch('/api/superadmin/comunicados');
+    if(!lista.length){ el.innerHTML='<div class="mty"><div class="ei">📢</div><p>Sin comunicados creados</p></div>'; return; }
+    const hoy = new Date().toISOString().slice(0,10);
+    const colorMap = {
+      azul:{border:'#bee3f8',bg:'#ebf8ff',badge:'#2b6cb0',icon:'🔵'},
+      verde:{border:'#9ae6b4',bg:'#f0fff4',badge:'#276749',icon:'🟢'},
+      naranja:{border:'#fbd38d',bg:'#fffaf0',badge:'#c05621',icon:'🟠'},
+      rojo:{border:'#feb2b2',bg:'#fff5f5',badge:'#c53030',icon:'🔴'},
+      morado:{border:'#d6bcfa',bg:'#faf5ff',badge:'#553c9a',icon:'🟣'},
+    };
+    el.innerHTML = lista.map(c=>{
+      const cs = colorMap[c.color]||colorMap.azul;
+      const vigente = c.activo&&c.fechaInicio<=hoy&&c.fechaFin>=hoy;
+      const destLabel = (!c.colegiosDestino||!c.colegiosDestino.length)
+        ? '🌐 Todos los colegios'
+        : `${c.colegiosDestino.length} colegio(s) específico(s)`;
+      const paraLabel = {todos:'👥 Todos',admin:'🏫 Admins',profe:'👩‍🏫 Profes',est:'🎓 Estudiantes'}[c.para]||c.para;
+      return `<div style="border:1.5px solid ${cs.border};border-radius:10px;background:${cs.bg};padding:14px;margin-bottom:10px">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;flex-wrap:wrap">
+          <div style="flex:1">
+            <div style="font-weight:800;font-size:14px;margin-bottom:2px">${cs.icon} ${esc(c.titulo)}</div>
+            <div style="font-size:12px;color:var(--sl2);margin-bottom:6px">${esc(c.mensaje)}</div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:4px;align-items:flex-end;flex-shrink:0">
+            <span class="bdg" style="background:${cs.badge};color:#fff;font-size:10px">${paraLabel}</span>
+            <span class="bdg ${vigente?'bgr':'brd'}" style="font-size:10px">${vigente?'✅ Activo':'⭕ Inactivo'}</span>
+          </div>
+        </div>
+        <div style="font-size:11px;color:var(--sl3);margin-bottom:8px">
+          📅 ${c.fechaInicio} → ${c.fechaFin} &nbsp;·&nbsp; 🎯 ${destLabel}
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn xs ${c.activo?'brd':'bgr'} sm" onclick="sacomToggle('${c.id}',${!c.activo})">${c.activo?'⏸ Desactivar':'▶ Activar'}</button>
+          <button class="btn xs br sm" onclick="sacomBorrar('${c.id}')">🗑️ Eliminar</button>
+        </div>
+      </div>`;
+    }).join('');
+  } catch(e){ el.innerHTML='<div class="al aly">Error al cargar</div>'; }
+}
+
+async function sacomToggle(id, activo) {
+  try {
+    await saApiFetch(`/api/superadmin/comunicados/${id}`, { method:'PUT', body:JSON.stringify({activo}) });
+    sw('success', activo?'Comunicado activado':'Comunicado desactivado');
+    sacomRenderList();
+  } catch(e){ sw('error',e.message); }
+}
+
+async function sacomBorrar(id) {
+  const r = await Swal.fire({title:'¿Eliminar comunicado?',text:'Esta acción no se puede deshacer.',icon:'warning',showCancelButton:true,confirmButtonColor:'#e53e3e',confirmButtonText:'Sí, eliminar',cancelButtonText:'Cancelar'});
+  if(!r.isConfirmed) return;
+  try {
+    await saApiFetch(`/api/superadmin/comunicados/${id}`, { method:'DELETE' });
+    sw('success','Comunicado eliminado');
+    sacomRenderList();
+  } catch(e){ sw('error',e.message); }
 }
 
 /* ============================================================

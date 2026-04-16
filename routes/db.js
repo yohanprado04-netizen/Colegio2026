@@ -62,7 +62,11 @@ router.get('/', authMiddleware, async (req, res) => {
       Auditoria.find(cf).sort({ createdAt: -1 }).limit(500).lean(),
       EstHist.find(cf).lean(),
       Bloqueo.find({ $or: [{ colegioId: cid }, { colegioId: { $exists: false } }, { colegioId: '' }] }).lean(),
-      Comunicado.find({ colegioId: cid }).sort({ createdAt: -1 }).lean(), // FIX: admin ve todos; filtro de activo/fechas se aplica después según rol
+      // Load both colegio-specific AND superadmin-global comunicados
+      Promise.all([
+        Comunicado.find({ colegioId: cid }).sort({ createdAt: -1 }).lean(),
+        Comunicado.find({ esSuperAdmin: true, activo: true }).sort({ createdAt: -1 }).lean(),
+      ]).then(([propios, sa]) => [...propios, ...sa]),
     ]);
 
     // ── Config map ──────────────────────────────────────────────────────────
@@ -169,11 +173,25 @@ router.get('/', authMiddleware, async (req, res) => {
       para: c.para, color: c.color, activo: c.activo,
       fechaInicio: c.fechaInicio, fechaFin: c.fechaFin,
       creadoPor: c.creadoPor || '',
+      esSuperAdmin: c.esSuperAdmin || false,
       createdAt: c.createdAt,
     });
     const comunicadosVigentes = (comunicados || [])
       .filter(c => {
-        if (roleUser === 'admin') return true; // Admin ve todos para gestionarlos
+        // SA comunicados: check if this colegio is in colegiosDestino ([] = todos)
+        if (c.esSuperAdmin) {
+          if (!c.activo) return false;
+          if (c.fechaFin < hoy || c.fechaInicio > hoy) return false;
+          // Check destination: empty array = all colegios; specific array = only those
+          const dest = c.colegiosDestino || [];
+          if (dest.length > 0 && !dest.includes(cid)) return false;
+          // Role filter
+          if (c.para === 'todos') return true;
+          if (roleUser === 'admin' && (c.para === 'todos' || c.para === 'admin')) return true;
+          return c.para === roleUser;
+        }
+        // Admin sees all their own colegio comunicados for management
+        if (roleUser === 'admin') return !c.esSuperAdmin || c.esSuperAdmin === undefined;
         if (!c.activo) return false;
         if (c.fechaFin < hoy || c.fechaInicio > hoy) return false;
         if (c.para === 'todos') return true;

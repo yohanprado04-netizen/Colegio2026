@@ -1103,23 +1103,25 @@ router.get('/diag/salon', authMiddleware, requireRole('admin','profe','superadmi
 function cleanCom(doc) {
   const o = doc.toObject ? doc.toObject() : { ...doc };
   return {
-    id:          o.id,
-    titulo:      o.titulo,
-    mensaje:     o.mensaje,
-    para:        o.para,
-    color:       o.color,
-    fechaInicio: o.fechaInicio,
-    fechaFin:    o.fechaFin,
-    activo:      o.activo,
-    colegioId:   o.colegioId,
-    creadoPor:   o.creadoPor || '',
-    createdAt:   o.createdAt,
+    id:              o.id,
+    titulo:          o.titulo,
+    mensaje:         o.mensaje,
+    para:            o.para,
+    color:           o.color,
+    fechaInicio:     o.fechaInicio,
+    fechaFin:        o.fechaFin,
+    activo:          o.activo,
+    colegioId:       o.colegioId,
+    creadoPor:       o.creadoPor || '',
+    esSuperAdmin:    o.esSuperAdmin || false,
+    colegiosDestino: o.colegiosDestino || [],
+    createdAt:       o.createdAt,
   };
 }
 
 // GET /api/comunicados — devuelve comunicados del colegio del usuario
-//   • Admin → TODOS (activos e inactivos, sin filtro de fechas) para gestión
-//   • Profe / Est → solo los vigentes y dirigidos a ellos
+//   • Admin → TODOS los propios (activos e inactivos) + SA vigentes para admin
+//   • Profe / Est → solo los vigentes y dirigidos a ellos (propios + SA globales)
 router.get('/comunicados', authMiddleware, async (req, res) => {
   try {
     const cid  = tenantId(req) || req.user.colegioId || '';
@@ -1127,16 +1129,36 @@ router.get('/comunicados', authMiddleware, async (req, res) => {
     const hoy  = new Date().toISOString().slice(0, 10);
     const role = req.user.role;
 
+    // Query 1: comunicados del colegio propio
     let query = { colegioId: cid };
     if (role !== 'admin') {
-      // Profe y Est: solo comunicados activos, vigentes y dirigidos a ellos
       query.activo      = true;
       query.fechaFin    = { $gte: hoy };
       query.fechaInicio = { $lte: hoy };
       query.para        = { $in: [role === 'profe' ? 'profe' : 'est', 'todos'] };
     }
-    const lista = await Comunicado.find(query).sort({ createdAt: -1 }).lean();
-    res.json(lista.map(c => cleanCom(c)));
+
+    // Query 2: comunicados globales del superadmin dirigidos a este colegio
+    const paraRoles = role === 'admin' ? ['todos','admin'] : role === 'profe' ? ['todos','profe'] : ['todos','est'];
+    const saQuery = {
+      esSuperAdmin: true,
+      activo: true,
+      fechaFin: { $gte: hoy },
+      fechaInicio: { $lte: hoy },
+      para: { $in: paraRoles },
+      $or: [
+        { colegiosDestino: { $size: 0 } },   // destino vacío = todos los colegios
+        { colegiosDestino: cid },              // o específicamente este colegio
+      ],
+    };
+
+    const [propios, saGlobales] = await Promise.all([
+      Comunicado.find(query).sort({ createdAt: -1 }).lean(),
+      Comunicado.find(saQuery).sort({ createdAt: -1 }).lean(),
+    ]);
+
+    const todos = [...propios, ...saGlobales];
+    res.json(todos.map(c => cleanCom(c)));
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 

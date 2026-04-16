@@ -4,7 +4,7 @@ const router = require('express').Router();
 const bcrypt  = require('bcryptjs');
 const { verifyToken, requireRole } = require('../middleware/auth');
 const {
-  Usuario, Colegio, Config, PlanEstudios, Materia,
+  Usuario, Colegio, Config, PlanEstudios, Materia, Comunicado,
   Nota, Asistencia, Auditoria, Estadistica,
   Salon, EstHist, Upload, Plan, Recuperacion, Bloqueo, Excusa, VClase
 } = require('../models');
@@ -421,6 +421,89 @@ router.post('/reset-password-usuario/:userId', async (req, res) => {
       colegioId: result.colegioId || ''
     }).catch(() => {});
     res.json({ ok: true, usuario: result.nombre });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+
+// ═══════════════════════════════════════════════════════════════════
+// COMUNICADOS DEL SUPERADMIN — visibles en todos los colegios o en los elegidos
+// ═══════════════════════════════════════════════════════════════════
+
+function cleanComSA(doc) {
+  const o = doc.toObject ? doc.toObject() : { ...doc };
+  return {
+    id: o.id, titulo: o.titulo, mensaje: o.mensaje,
+    para: o.para, color: o.color, activo: o.activo,
+    fechaInicio: o.fechaInicio, fechaFin: o.fechaFin,
+    creadoPor: o.creadoPor || 'Superadmin',
+    esSuperAdmin: true,
+    colegiosDestino: o.colegiosDestino || [],
+    createdAt: o.createdAt,
+  };
+}
+
+// GET /api/superadmin/comunicados — lista todos los comunicados del SA
+router.get('/comunicados', async (req, res) => {
+  try {
+    const lista = await Comunicado.find({ esSuperAdmin: true }).sort({ createdAt: -1 }).lean();
+    res.json(lista.map(cleanComSA));
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// POST /api/superadmin/comunicados — crear comunicado global
+router.post('/comunicados', async (req, res) => {
+  try {
+    const { titulo, mensaje, para, color, fechaInicio, fechaFin, colegiosDestino } = req.body;
+    if (!titulo || !mensaje) return res.status(400).json({ error: 'Título y mensaje obligatorios' });
+    if (!fechaInicio || !fechaFin) return res.status(400).json({ error: 'Fechas obligatorias' });
+    if (fechaInicio > fechaFin) return res.status(400).json({ error: 'Fecha fin debe ser >= inicio' });
+
+    const com = await Comunicado.create({
+      id:              'sacom_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7),
+      titulo:          titulo.trim(),
+      mensaje:         mensaje.trim(),
+      para:            para || 'todos',
+      color:           color || 'azul',
+      fechaInicio:     fechaInicio.trim(),
+      fechaFin:        fechaFin.trim(),
+      activo:          true,
+      colegioId:       '',          // SA comunicados no tienen colegioId propio
+      esSuperAdmin:    true,
+      colegiosDestino: Array.isArray(colegiosDestino) ? colegiosDestino : [],
+      creadoPor:       'Superadmin',
+    });
+    res.json(cleanComSA(com));
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// PUT /api/superadmin/comunicados/:id — editar
+router.put('/comunicados/:id', async (req, res) => {
+  try {
+    const { titulo, mensaje, para, color, fechaInicio, fechaFin, activo, colegiosDestino } = req.body;
+    const upd = {};
+    if (titulo           !== undefined) upd.titulo           = titulo.trim();
+    if (mensaje          !== undefined) upd.mensaje          = mensaje.trim();
+    if (para             !== undefined) upd.para             = para;
+    if (color            !== undefined) upd.color            = color;
+    if (fechaInicio      !== undefined) upd.fechaInicio      = fechaInicio;
+    if (fechaFin         !== undefined) upd.fechaFin         = fechaFin;
+    if (activo           !== undefined) upd.activo           = activo;
+    if (colegiosDestino  !== undefined) upd.colegiosDestino  = colegiosDestino;
+    const com = await Comunicado.findOneAndUpdate(
+      { id: req.params.id, esSuperAdmin: true },
+      { $set: upd }, { new: true }
+    );
+    if (!com) return res.status(404).json({ error: 'Comunicado no encontrado' });
+    res.json(cleanComSA(com));
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// DELETE /api/superadmin/comunicados/:id
+router.delete('/comunicados/:id', async (req, res) => {
+  try {
+    const result = await Comunicado.deleteOne({ id: req.params.id, esSuperAdmin: true });
+    if (result.deletedCount === 0) return res.status(404).json({ error: 'No encontrado' });
+    res.json({ ok: true });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
