@@ -1097,22 +1097,46 @@ router.get('/diag/salon', authMiddleware, requireRole('admin','profe','superadmi
 // COMUNICADOS — creados por el admin, vistos por profes y estudiantes
 // ═══════════════════════════════════════════════════════════════════
 
-// GET /api/comunicados — lista comunicados vigentes para el rol del usuario
+// Helper: serializa un comunicado a objeto plano seguro para el frontend.
+// Garantiza que el campo 'id' (custom string) esté siempre presente y que
+// _id / __v de Mongoose no contaminen la respuesta.
+function cleanCom(doc) {
+  const o = doc.toObject ? doc.toObject() : { ...doc };
+  return {
+    id:          o.id,
+    titulo:      o.titulo,
+    mensaje:     o.mensaje,
+    para:        o.para,
+    color:       o.color,
+    fechaInicio: o.fechaInicio,
+    fechaFin:    o.fechaFin,
+    activo:      o.activo,
+    colegioId:   o.colegioId,
+    creadoPor:   o.creadoPor || '',
+    createdAt:   o.createdAt,
+  };
+}
+
+// GET /api/comunicados — devuelve comunicados del colegio del usuario
+//   • Admin → TODOS (activos e inactivos, sin filtro de fechas) para gestión
+//   • Profe / Est → solo los vigentes y dirigidos a ellos
 router.get('/comunicados', authMiddleware, async (req, res) => {
   try {
     const cid  = tenantId(req) || req.user.colegioId || '';
+    if (!cid) return res.json([]);
     const hoy  = new Date().toISOString().slice(0, 10);
     const role = req.user.role;
-    // Admin ve todos (activos e inactivos); profe/est solo los vigentes que les corresponden
+
     let query = { colegioId: cid };
     if (role !== 'admin') {
-      query.activo    = true;
-      query.fechaFin  = { $gte: hoy };
+      // Profe y Est: solo comunicados activos, vigentes y dirigidos a ellos
+      query.activo      = true;
+      query.fechaFin    = { $gte: hoy };
       query.fechaInicio = { $lte: hoy };
-      query.para      = { $in: [role === 'profe' ? 'profe' : 'est', 'todos'] };
+      query.para        = { $in: [role === 'profe' ? 'profe' : 'est', 'todos'] };
     }
     const lista = await Comunicado.find(query).sort({ createdAt: -1 }).lean();
-    res.json(lista);
+    res.json(lista.map(c => cleanCom(c)));
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
@@ -1120,47 +1144,76 @@ router.get('/comunicados', authMiddleware, async (req, res) => {
 router.post('/comunicados', authMiddleware, requireRole('admin'), async (req, res) => {
   try {
     const cid = tenantId(req) || req.user.colegioId || '';
+    if (!cid) return res.status(400).json({ error: 'El usuario no tiene colegio asignado' });
     const { titulo, mensaje, para, color, fechaInicio, fechaFin } = req.body;
-    if (!titulo || !mensaje || !fechaInicio || !fechaFin)
-      return res.status(400).json({ error: 'Faltan campos requeridos' });
+    if (!titulo || !mensaje)
+      return res.status(400).json({ error: 'Título y mensaje son obligatorios' });
+    if (!fechaInicio || !fechaFin)
+      return res.status(400).json({ error: 'Fechas de inicio y fin son obligatorias' });
+    if (fechaInicio > fechaFin)
+      return res.status(400).json({ error: 'La fecha fin debe ser igual o posterior al inicio' });
+
     const com = await Comunicado.create({
       id:          'com_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7),
       titulo:      titulo.trim(),
       mensaje:     mensaje.trim(),
       para:        para || 'todos',
       color:       color || 'azul',
-      fechaInicio,
-      fechaFin,
+      fechaInicio: fechaInicio.trim(),
+      fechaFin:    fechaFin.trim(),
       activo:      true,
       colegioId:   cid,
       creadoPor:   req.user.nombre || req.user.usuario || '',
     });
-    res.json(com);
-  } catch (err) { res.status(500).json({ error: err.message }); }
+    // FIX: devolver objeto limpio — evita colisión entre campo 'id' custom y _id de Mongoose
+    res.json(cleanCom(com));
+  } catch (err) {
+    console.error('[comunicados:POST]', err.message);
+    res.status(500).json({ error: err.message });
+  }
 });
 
-// PUT /api/comunicados/:id — editar comunicado (solo admin)
+// PUT /api/comunicados/:id — editar / activar / desactivar comunicado (solo admin)
 router.put('/comunicados/:id', authMiddleware, requireRole('admin'), async (req, res) => {
   try {
     const cid = tenantId(req) || req.user.colegioId || '';
+    if (!cid) return res.status(400).json({ error: 'Sin colegio asignado' });
     const { titulo, mensaje, para, color, fechaInicio, fechaFin, activo } = req.body;
+    const updateFields = {};
+    if (titulo      !== undefined) updateFields.titulo      = titulo.trim();
+    if (mensaje     !== undefined) updateFields.mensaje     = mensaje.trim();
+    if (para        !== undefined) updateFields.para        = para;
+    if (color       !== undefined) updateFields.color       = color;
+    if (fechaInicio !== undefined) updateFields.fechaInicio = fechaInicio;
+    if (fechaFin    !== undefined) updateFields.fechaFin    = fechaFin;
+    if (activo      !== undefined) updateFields.activo      = activo;
+
     const com = await Comunicado.findOneAndUpdate(
-      { id: req.params.id, colegioId: cid },
-      { $set: { titulo, mensaje, para, color, fechaInicio, fechaFin, activo } },
-      { new: true }
+      { id: req.params.id, colegioId: cid },   // FIX: filtrar por colegioId para aislamiento
+      { $set: updateFields },
+      { new: true, runValidators: true }
     );
     if (!com) return res.status(404).json({ error: 'Comunicado no encontrado' });
-    res.json(com);
-  } catch (err) { res.status(500).json({ error: err.message }); }
+    res.json(cleanCom(com));
+  } catch (err) {
+    console.error('[comunicados:PUT]', err.message);
+    res.status(500).json({ error: err.message });
+  }
 });
 
-// DELETE /api/comunicados/:id — eliminar comunicado (solo admin)
+// DELETE /api/comunicados/:id — eliminar comunicado (solo admin del mismo colegio)
 router.delete('/comunicados/:id', authMiddleware, requireRole('admin'), async (req, res) => {
   try {
     const cid = tenantId(req) || req.user.colegioId || '';
-    await Comunicado.deleteOne({ id: req.params.id, colegioId: cid });
+    if (!cid) return res.status(400).json({ error: 'Sin colegio asignado' });
+    const result = await Comunicado.deleteOne({ id: req.params.id, colegioId: cid });
+    if (result.deletedCount === 0)
+      return res.status(404).json({ error: 'Comunicado no encontrado o no pertenece a este colegio' });
     res.json({ ok: true });
-  } catch (err) { res.status(500).json({ error: err.message }); }
+  } catch (err) {
+    console.error('[comunicados:DELETE]', err.message);
+    res.status(500).json({ error: err.message });
+  }
 });
 
 module.exports = router;

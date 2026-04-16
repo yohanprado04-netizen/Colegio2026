@@ -2978,9 +2978,8 @@ async function publicarComunicado(){
 }
 
 async function toggleComunicado(id,activo){
-  const com=(DB.comunicados||[]).find(c=>c.id===id);
-  if(!com)return;
-  await editarComunicado(id,{...com,activo});
+  // FIX: solo mandar el campo que cambia para evitar enviar _id u otros campos internos
+  await editarComunicado(id,{activo});
   await renderComList();
 }
 

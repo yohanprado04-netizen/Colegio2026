@@ -62,7 +62,7 @@ router.get('/', authMiddleware, async (req, res) => {
       Auditoria.find(cf).sort({ createdAt: -1 }).limit(500).lean(),
       EstHist.find(cf).lean(),
       Bloqueo.find({ $or: [{ colegioId: cid }, { colegioId: { $exists: false } }, { colegioId: '' }] }).lean(),
-      Comunicado.find({ colegioId: cid, activo: true }).sort({ createdAt: -1 }).lean(),
+      Comunicado.find({ colegioId: cid }).sort({ createdAt: -1 }).lean(), // FIX: admin ve todos; filtro de activo/fechas se aplica después según rol
     ]);
 
     // ── Config map ──────────────────────────────────────────────────────────
@@ -159,20 +159,27 @@ router.get('/', authMiddleware, async (req, res) => {
       return o;
     };
 
-    // ── Filtrar comunicados vigentes para el usuario ────────────────────────
+    // ── Filtrar comunicados según rol ──────────────────────────────────────
+    // Admin: recibe TODOS sus comunicados (activos/inactivos/vencidos) para gestión.
+    // Profe/Est: solo los vigentes y dirigidos a ellos.
     const hoy = new Date().toISOString().slice(0, 10);
     const roleUser = req.user.role;
-    const comunicadosVigentes = (comunicados || []).filter(c => {
-      if (!c.activo) return false;
-      if (c.fechaFin < hoy || c.fechaInicio > hoy) return false;
-      if (c.para === 'todos') return true;
-      return c.para === roleUser;
-    }).map(c => ({
+    const cleanComDB = c => ({
       id: c.id, titulo: c.titulo, mensaje: c.mensaje,
-      para: c.para, color: c.color,
+      para: c.para, color: c.color, activo: c.activo,
       fechaInicio: c.fechaInicio, fechaFin: c.fechaFin,
-      creadoPor: c.creadoPor,
-    }));
+      creadoPor: c.creadoPor || '',
+      createdAt: c.createdAt,
+    });
+    const comunicadosVigentes = (comunicados || [])
+      .filter(c => {
+        if (roleUser === 'admin') return true; // Admin ve todos para gestionarlos
+        if (!c.activo) return false;
+        if (c.fechaFin < hoy || c.fechaInicio > hoy) return false;
+        if (c.para === 'todos') return true;
+        return c.para === roleUser;
+      })
+      .map(cleanComDB);
 
     res.json({
       admin:        admin ? cleanUser(admin) : null,
