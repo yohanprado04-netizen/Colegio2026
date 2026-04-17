@@ -6627,7 +6627,6 @@ function renderSADashKPIs(stats, sugCount) {
   const totalSal = stats.reduce((a, s) => a + (s.totalSalones || 0), 0);
   const promNotas = stats.length ? +(stats.reduce((a, s) => a + (s.promNotas || 0), 0) / stats.length).toFixed(2) : 0;
   const promAsist = stats.length ? +(stats.reduce((a, s) => a + (s.asistPct || 0), 0) / stats.length).toFixed(1) : 0;
-  const totalIng = stats.reduce((a, s) => a + (s.ingresosMes || 0), 0);
   const kpis = [
     { ic: '🏫', lb: 'Instituciones', val: stats.length, sub: `${activos} activas` },
     { ic: '👨‍🎓', lb: 'Estudiantes', val: totalEst.toLocaleString(), sub: 'total sistema' },
@@ -6635,7 +6634,6 @@ function renderSADashKPIs(stats, sugCount) {
     { ic: '🏛️', lb: 'Salones', val: totalSal.toLocaleString(), sub: 'en total' },
     { ic: '📊', lb: 'Prom. Notas', val: promNotas, sub: promNotas >= 4 ? '🟢 Excelente' : promNotas >= 3 ? '🟡 Aceptable' : '🔴 Bajo' },
     { ic: '✅', lb: 'Asistencia', val: promAsist + '%', sub: promAsist >= 85 ? '🟢 Buena' : '🟡 Regular' },
-    { ic: '💰', lb: 'Ingresos/Mes', val: '$' + totalIng.toLocaleString(), sub: 'total sedes' },
   ];
   grid.innerHTML = kpis.map(k => `
     <div style="background:rgba(255,255,255,.12);border-radius:10px;padding:.7rem .9rem;text-align:center">
@@ -6694,13 +6692,12 @@ function renderSADashTable(stats) {
   if (!list) return;
   if (!filtered.length) { list.innerHTML = '<p style="color:#999;text-align:center;padding:1.5rem">Sin resultados.</p>'; return; }
   list.innerHTML = `<table class="tbl"><thead><tr>
-    <th>Institución</th><th>Est.</th><th>Profs.</th><th>Salones</th><th>Prom.Notas</th><th>Asistencia</th><th>Ingresos/Mes</th><th>Estado</th>
+    <th>Institución</th><th>Est.</th><th>Profs.</th><th>Salones</th><th>Prom.Notas</th><th>Asistencia</th><th>Estado</th>
   </tr></thead><tbody>${filtered.map(s => `<tr>
     <td><strong>${s.colegioNombre}</strong></td>
     <td>${s.totalEst || 0}</td><td>${s.totalProfs || 0}</td><td>${s.totalSalones || 0}</td>
     <td><span style="font-weight:700;color:${(s.promNotas||0)>=3.5?'#276749':(s.promNotas||0)>=3?'#744210':'#9b2c2c'}">${s.promNotas || 0}</span></td>
     <td><span style="font-weight:600;color:${(s.asistPct||0)>=85?'#276749':'#c05621'}">${s.asistPct != null ? s.asistPct + '%' : '—'}</span></td>
-    <td>${s.ingresosMes != null ? '$' + Number(s.ingresosMes).toLocaleString() : '—'}</td>
     <td><span class="bdg ${s.activo ? 'bgr' : 'bred'}">${s.activo ? 'Activo' : 'Inactivo'}</span></td>
   </tr>`).join('')}</tbody></table>`;
 }
@@ -6739,8 +6736,8 @@ function renderSADashQuick(stats) {
 function exportarSADashCSV() {
   const stats = window._saStatsData || [];
   if (!stats.length) return sw('warning', 'No hay datos para exportar');
-  const header = 'Institución,Estudiantes,Profesores,Salones,Prom.Notas,Asistencia%,Ingresos/Mes,Estado';
-  const rows = stats.map(s => `"${s.colegioNombre}",${s.totalEst||0},${s.totalProfs||0},${s.totalSalones||0},${s.promNotas||0},${s.asistPct||0},${s.ingresosMes||0},${s.activo?'Activo':'Inactivo'}`);
+  const header = 'Institución,Estudiantes,Profesores,Salones,Prom.Notas,Asistencia%,Estado';
+  const rows = stats.map(s => `"${s.colegioNombre}",${s.totalEst||0},${s.totalProfs||0},${s.totalSalones||0},${s.promNotas||0},${s.asistPct||0},${s.activo?'Activo':'Inactivo'}`);
   const csv = [header, ...rows].join('\n');
   const a = document.createElement('a');
   a.href = 'data:text/csv;charset=utf-8,\uFEFF' + encodeURIComponent(csv);
@@ -7225,7 +7222,6 @@ function pgSAEstadisticas() {
           <option value="est_desc">↓ Más estudiantes</option>
           <option value="prom_desc">↓ Mejor promedio</option>
           <option value="asist_desc">↓ Mejor asistencia</option>
-          <option value="ing_desc">↓ Mayores ingresos</option>
         </select>
       </div>
     </div>
@@ -7255,7 +7251,6 @@ function renderEstKPIs(stats) {
   const totalSal = stats.reduce((a, s) => a + (s.totalSalones || 0), 0);
   const promNotas = stats.length ? +(stats.reduce((a, s) => a + (s.promNotas || 0), 0) / stats.length).toFixed(2) : 0;
   const promAsist = stats.length ? +(stats.reduce((a, s) => a + (s.asistPct || 0), 0) / stats.length).toFixed(1) : 0;
-  const totalIng = stats.reduce((a, s) => a + (s.ingresosMes || 0), 0);
   const kpis = [
     { ic: '🏫', lb: 'Instituciones', val: stats.length, sub: `${activos} activas · ${stats.length - activos} inactivas` },
     { ic: '👨‍🎓', lb: 'Estudiantes', val: totalEst.toLocaleString(), sub: `~${stats.length ? Math.round(totalEst / stats.length) : 0} por inst.` },
@@ -7263,7 +7258,6 @@ function renderEstKPIs(stats) {
     { ic: '🏛️', lb: 'Salones', val: totalSal.toLocaleString(), sub: `~${stats.length ? Math.round(totalSal / stats.length) : 0} por inst.` },
     { ic: '📊', lb: 'Prom. Notas Global', val: promNotas, sub: promNotas >= 4 ? '🟢 Excelente' : promNotas >= 3 ? '🟡 Aceptable' : '🔴 Bajo' },
     { ic: '✅', lb: 'Asistencia Global', val: promAsist + '%', sub: promAsist >= 90 ? '🟢 Excelente' : promAsist >= 75 ? '🟡 Regular' : '🔴 Baja' },
-    { ic: '💰', lb: 'Ingresos Tot./Mes', val: '$' + totalIng.toLocaleString(), sub: `Prom $${stats.length ? Math.round(totalIng / stats.length).toLocaleString() : 0}/inst.` },
   ];
   grid.innerHTML = kpis.map(k => `
     <div style="background:rgba(255,255,255,.12);border-radius:10px;padding:.7rem .9rem;text-align:center">
@@ -7304,16 +7298,14 @@ function renderEstDetalle(stats) {
   if (orden === 'est_desc') filtered.sort((a, b) => (b.totalEst || 0) - (a.totalEst || 0));
   else if (orden === 'prom_desc') filtered.sort((a, b) => (b.promNotas || 0) - (a.promNotas || 0));
   else if (orden === 'asist_desc') filtered.sort((a, b) => (b.asistPct || 0) - (a.asistPct || 0));
-  else if (orden === 'ing_desc') filtered.sort((a, b) => (b.ingresosMes || 0) - (a.ingresosMes || 0));
   else filtered.sort((a, b) => a.colegioNombre.localeCompare(b.colegioNombre));
   const det = gi('saEstDetalle');
   if (!det) return;
   if (!filtered.length) { det.innerHTML = '<p style="color:#999;text-align:center;padding:2rem">Sin resultados con los filtros aplicados.</p>'; return; }
   const hayAsist = filtered.some(s => s.asistPct != null && s.asistPct > 0);
-  const hayIng = filtered.some(s => s.ingresosMes != null && s.ingresosMes > 0);
   det.innerHTML = `<table class="tbl"><thead><tr>
     <th>#</th><th>Institución</th><th>Estudiantes</th><th>Profesores</th><th>Salones</th>
-    <th>Prom. Notas</th>${hayAsist ? '<th>Asistencia</th>' : ''}${hayIng ? '<th>Ingresos/Mes</th>' : ''}
+    <th>Prom. Notas</th>${hayAsist ? '<th>Asistencia</th>' : ''}
     <th>Estado</th>
   </tr></thead><tbody>${filtered.map((s, i) => {
     const nc = (s.promNotas || 0) >= 4 ? '#276749' : (s.promNotas || 0) >= 3 ? '#744210' : '#9b2c2c';
@@ -7327,7 +7319,6 @@ function renderEstDetalle(stats) {
         <span style="font-weight:700;color:${nc};font-size:.88rem">${s.promNotas || 0}</span>
       </div></td>
       ${hayAsist ? `<td>${s.asistPct != null ? `<div style="display:flex;align-items:center;gap:.4rem"><div style="flex:1;height:6px;background:#e2e8f0;border-radius:3px;min-width:36px"><div style="width:${Math.min(100,s.asistPct||0)}%;height:100%;background:${ac};border-radius:3px"></div></div><span style="font-weight:600;color:${ac};font-size:.88rem">${s.asistPct}%</span></div>` : '<span style="color:#a0aec0">—</span>'}</td>` : ''}
-      ${hayIng ? `<td>${s.ingresosMes != null ? '<span style="font-weight:600;color:#2c7a7b">$' + Number(s.ingresosMes).toLocaleString() + '</span>' : '<span style="color:#a0aec0">—</span>'}</td>` : ''}
       <td><span class="bdg ${s.activo ? 'bgr' : 'bred'}">${s.activo ? 'Activo' : 'Inactivo'}</span></td>
     </tr>`;
   }).join('')}</tbody></table>
@@ -7337,8 +7328,8 @@ function renderEstDetalle(stats) {
 function exportarEstCSV() {
   const stats = window._saEstData || [];
   if (!stats.length) return sw('warning', 'Sin datos para exportar');
-  const header = 'Institución,Estudiantes,Profesores,Salones,Prom.Notas,Asistencia%,IngresosMes,Estado';
-  const rows = stats.map(s => `"${s.colegioNombre}",${s.totalEst||0},${s.totalProfs||0},${s.totalSalones||0},${s.promNotas||0},${s.asistPct||0},${s.ingresosMes||0},${s.activo?'Activo':'Inactivo'}`);
+  const header = 'Institución,Estudiantes,Profesores,Salones,Prom.Notas,Asistencia%,Estado';
+  const rows = stats.map(s => `"${s.colegioNombre}",${s.totalEst||0},${s.totalProfs||0},${s.totalSalones||0},${s.promNotas||0},${s.asistPct||0},${s.activo?'Activo':'Inactivo'}`);
   const csv = [header, ...rows].join('\n');
   const a = document.createElement('a');
   a.href = 'data:text/csv;charset=utf-8,\uFEFF' + encodeURIComponent(csv);
