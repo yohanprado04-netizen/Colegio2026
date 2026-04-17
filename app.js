@@ -1336,7 +1336,7 @@ function renderSals(){
           </div>`
         :'';
 
-      return`<div style="background:var(--bg2);border-radius:10px;border:1px solid var(--bd);padding:12px 14px;margin-bottom:10px">
+      return`<div style="background:var(--bg2);border-radius:10px;border:1px solid var(--bd);padding:14px 16px;margin-bottom:12px;transition:box-shadow .15s" onmouseenter="this.style.boxShadow='var(--shm)'" onmouseleave="this.style.boxShadow=''">
         <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
           <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
             <strong style="font-size:15px">${s.nombre}</strong>
@@ -1352,7 +1352,7 @@ function renderSals(){
           </div>
         </div>
         <div style="margin-top:8px;display:flex;flex-wrap:wrap;gap:4px">
-          ${matsList.map(m=>`<span style="font-size:11px;padding:2px 7px;background:#fff;border:1px solid var(--bd);border-radius:5px">${m}</span>`).join('')}
+          ${matsList.map(m=>`<span style="font-size:12px;padding:4px 10px;background:#fff;border:1px solid var(--bd);border-radius:7px;font-weight:500">${m}</span>`).join('')}
         </div>
         ${areasHTML}
       </div>`;
@@ -2336,25 +2336,63 @@ function pgAFec(){
     </div>
     ${perRows||'<div class="mty"><p>Sin periodos configurados</p></div>'}
   </div>
-  <div class="g2">
-    <div class="card"><div class="chd"><span class="cti">🔄 Periodo Extraordinario</span></div>
-      <div class="al aly" style="margin-bottom:10px">Solo para estudiantes con 1 o 2 materias perdidas.</div>
-      <div class="fld"><label>Inicio</label>
+  <div class="card">
+    <div class="chd"><span class="cti">🔄 Periodo Extraordinario</span>
+      <div style="display:flex;align-items:center;gap:10px">
+        <span class="bdg ${DB.ext.on?'bgr':'bgy'}" style="font-size:12px;padding:5px 14px">
+          ${DB.ext.on?'🟢 Activo':'⚫ Inactivo'}
+        </span>
+      </div>
+    </div>
+    <div class="al aly" style="margin-bottom:20px;font-size:13px">
+      ⚠️ Solo para estudiantes con <strong>1 o 2 materias perdidas</strong>. Al cerrarse, los planes y recuperaciones activos se archivan automáticamente en el historial.
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:20px;align-items:end;margin-bottom:20px">
+      <div class="fld" style="margin:0">
+        <label>📅 Fecha de Inicio</label>
         <input type="date" id="exs" value="${DB.ext.s}"
           min="${DB.anoActual||new Date().getFullYear()}-01-01"
-          max="${DB.anoActual||new Date().getFullYear()}-12-31">
+          max="${DB.anoActual||new Date().getFullYear()}-12-31"
+          style="font-size:14px;padding:12px 15px">
       </div>
-      <div class="fld"><label>Fin</label>
+      <div class="fld" style="margin:0">
+        <label>📅 Fecha de Fin</label>
         <input type="date" id="exe" value="${DB.ext.e}"
           min="${DB.anoActual||new Date().getFullYear()}-01-01"
-          max="${DB.anoActual||new Date().getFullYear()}-12-31">
+          max="${DB.anoActual||new Date().getFullYear()}-12-31"
+          style="font-size:14px;padding:12px 15px">
       </div>
-      <label style="display:flex;align-items:center;gap:8px;font-size:13px;margin-bottom:14px;cursor:pointer">
-        <input type="checkbox" id="exon" ${DB.ext.on?'checked':''}> Activar Periodo Extraordinario
-      </label>
-      <button class="btn bw" onclick="saveExt()">Guardar</button>
-      <div class="al alb" style="margin-top:10px;font-size:11px">Al cerrarse, los planes y recuperaciones activos se archivan automáticamente en el historial.</div>
+      <div class="fld" style="margin:0">
+        <label>Estado</label>
+        <label style="display:flex;align-items:center;gap:10px;font-size:14px;cursor:pointer;
+          background:var(--bg2);border:1.5px solid var(--bd);border-radius:var(--r);
+          padding:12px 15px;height:48px;font-weight:600">
+          <input type="checkbox" id="exon" ${DB.ext.on?'checked':''}
+            style="width:18px;height:18px;accent-color:var(--grn);cursor:pointer">
+          Activar Periodo Extraordinario
+        </label>
+      </div>
+      <button class="btn bw" onclick="saveExt()"
+        style="height:48px;padding:0 28px;font-size:15px;font-weight:800;white-space:nowrap;
+        background:linear-gradient(135deg,#f08030,#d06018);box-shadow:0 4px 16px rgba(240,128,48,.3)">
+        💾 Guardar
+      </button>
     </div>
+    ${DB.ext.s&&DB.ext.e?`
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px;margin-top:4px">
+      <div style="background:var(--bg2);border-radius:10px;border:1px solid var(--bd);padding:16px;text-align:center">
+        <div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:var(--sl3);margin-bottom:6px">Inicio</div>
+        <div style="font-size:18px;font-weight:800;color:var(--nv);font-family:var(--mn)">${DB.ext.s}</div>
+      </div>
+      <div style="background:var(--bg2);border-radius:10px;border:1px solid var(--bd);padding:16px;text-align:center">
+        <div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:var(--sl3);margin-bottom:6px">Fin</div>
+        <div style="font-size:18px;font-weight:800;color:var(--nv);font-family:var(--mn)">${DB.ext.e}</div>
+      </div>
+      <div style="background:${DB.ext.on?'#ecfdf5':'#f8fafc'};border-radius:10px;border:1px solid ${DB.ext.on?'#a7f3d0':'var(--bd)'};padding:16px;text-align:center">
+        <div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:var(--sl3);margin-bottom:6px">Estado</div>
+        <div style="font-size:16px;font-weight:800;color:${DB.ext.on?'var(--grn)':'var(--sl2)'}">${DB.ext.on?'🟢 Activo':'⚫ Inactivo'}</div>
+      </div>
+    </div>`:''}
   </div>`;
 }
 /* ── SOBREESCRITA por api-layer.js ── */
@@ -6292,7 +6330,7 @@ function pgSACom() {
       <div class="fg">
         <div class="fld" style="grid-column:1/-1">
           <label>Título</label>
-          <input id="sacomTit" placeholder="Ej: Reunión de directivos" class="inp">
+          <input id="sacomTit" placeholder="Ej: Reunión de directivos" style="padding:9px 12px;border:1.5px solid var(--bd);border-radius:var(--r);font-size:13px;background:var(--bg2);color:var(--tx);outline:none;font-family:var(--fn)">
         </div>
         <div class="fld" style="grid-column:1/-1">
           <label>Mensaje</label>
@@ -6300,7 +6338,7 @@ function pgSACom() {
         </div>
         <div class="fld">
           <label>Dirigido a</label>
-          <select id="sacomPara" class="inp">
+          <select id="sacomPara" style="padding:9px 12px;border:1.5px solid var(--bd);border-radius:var(--r);font-size:13px;background:var(--bg2);color:var(--tx);outline:none;font-family:var(--fn)">
             <option value="todos">👥 Todos (admins, profes y estudiantes)</option>
             <option value="admin">🏫 Solo Administradores</option>
             <option value="profe">👩‍🏫 Solo Profesores</option>
@@ -6309,7 +6347,7 @@ function pgSACom() {
         </div>
         <div class="fld">
           <label>Color / Tipo</label>
-          <select id="sacomColor" class="inp">
+          <select id="sacomColor" style="padding:9px 12px;border:1.5px solid var(--bd);border-radius:var(--r);font-size:13px;background:var(--bg2);color:var(--tx);outline:none;font-family:var(--fn)">
             <option value="azul">🔵 Azul — Informativo</option>
             <option value="verde">🟢 Verde — Positivo</option>
             <option value="naranja">🟠 Naranja — Precaución</option>
@@ -6319,11 +6357,11 @@ function pgSACom() {
         </div>
         <div class="fld">
           <label>Fecha Inicio</label>
-          <input type="date" id="sacomFi" class="inp" value="${new Date().toISOString().slice(0,10)}">
+          <input type="date" id="sacomFi" style="padding:9px 12px;border:1.5px solid var(--bd);border-radius:var(--r);font-size:13px;background:var(--bg2);color:var(--tx);outline:none;font-family:var(--fn)" value="${new Date().toISOString().slice(0,10)}">
         </div>
         <div class="fld">
           <label>Fecha Fin</label>
-          <input type="date" id="sacomFf" class="inp">
+          <input type="date" id="sacomFf" style="padding:9px 12px;border:1.5px solid var(--bd);border-radius:var(--r);font-size:13px;background:var(--bg2);color:var(--tx);outline:none;font-family:var(--fn)">
         </div>
         <div class="fld" style="grid-column:1/-1">
           <label>Colegios destinatarios</label>
@@ -6530,7 +6568,7 @@ function pgSADash() {
         </div>
         <div style="display:flex;gap:.5rem;flex-wrap:wrap;align-items:center">
           <span id="saSugBadge" style="display:none;background:#e53e3e;color:#fff;border-radius:20px;padding:4px 12px;font-size:12px;font-weight:700;cursor:pointer" onclick="goto('sasug')">💡 Sugerencias</span>
-          <button class="btn" style="background:rgba(255,255,255,.15);color:#fff;border:1px solid rgba(255,255,255,.3);font-size:.8rem" onclick="initSADash()">🔄 Actualizar</button>
+          <button class="btn" style="background:rgba(255,255,255,.18);color:#fff;border:1.5px solid rgba(255,255,255,.35);font-size:13px;font-weight:700;padding:8px 18px;border-radius:9px" onclick="initSADash()">🔄 Actualizar</button>
         </div>
       </div>
       <div id="saStatsGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(155px,1fr));gap:.75rem;margin-top:1.25rem">
@@ -6571,7 +6609,7 @@ function pgSADash() {
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.75rem;flex-wrap:wrap;gap:.5rem">
         <h3 style="margin:0">🏫 Todas las instituciones</h3>
         <div style="display:flex;gap:.5rem;flex-wrap:wrap">
-          <input id="saDashSearch" class="inp" style="width:180px;font-size:.85rem" placeholder="🔍 Buscar…" oninput="renderSADashTable(window._saStatsData||[])">
+          <input id="saDashSearch" style="padding:9px 12px;border:1.5px solid var(--bd);border-radius:var(--r);font-size:13px;background:var(--bg2);color:var(--tx);outline:none;font-family:var(--fn)" style="width:180px;font-size:.85rem" placeholder="🔍 Buscar…" oninput="renderSADashTable(window._saStatsData||[])">
           <button class="btn bsec" style="font-size:.8rem" onclick="exportarSADashCSV()">📤 CSV</button>
         </div>
       </div>
@@ -6752,7 +6790,7 @@ function pgSAColegios() {
       <h2>🏫 Colegios & Admins</h2>
       <button class="btn" onclick="modalNuevoColegio()">＋ Nuevo Colegio</button>
     </div>
-    <input id="saColSearch" class="inp" style="max-width:300px;margin-bottom:1rem" placeholder="🔍 Buscar colegio…" oninput="filtrarColegios()">
+    <input id="saColSearch" style="padding:9px 12px;border:1.5px solid var(--bd);border-radius:var(--r);font-size:13px;background:var(--bg2);color:var(--tx);outline:none;font-family:var(--fn)" style="max-width:300px;margin-bottom:1rem" placeholder="🔍 Buscar colegio…" oninput="filtrarColegios()">
     <div id="saColegiosTable" style="overflow-x:auto">Cargando…</div>
   </div>`;
 }
@@ -7049,10 +7087,10 @@ function pgSAPlan() {
     <h2>📖 Plan de Estudios</h2>
     <p style="color:#888;margin-bottom:1rem">Define áreas, asignaturas e intensidades horarias por colegio.</p>
     <div style="display:flex;gap:.75rem;flex-wrap:wrap;margin-bottom:1rem">
-      <select id="saPlanCol" class="inp" style="min-width:200px" onchange="loadSAPlan()">
+      <select id="saPlanCol" style="padding:9px 12px;border:1.5px solid var(--bd);border-radius:var(--r);font-size:13px;background:var(--bg2);color:var(--tx);outline:none;font-family:var(--fn)" style="min-width:200px" onchange="loadSAPlan()">
         <option value="">— Selecciona colegio —</option>
       </select>
-      <select id="saPlanCiclo" class="inp" onchange="loadSAPlan()">
+      <select id="saPlanCiclo" style="padding:9px 12px;border:1.5px solid var(--bd);border-radius:var(--r);font-size:13px;background:var(--bg2);color:var(--tx);outline:none;font-family:var(--fn)" onchange="loadSAPlan()">
         <option value="">Todos los ciclos</option>
         <option value="primaria">Primaria</option>
         <option value="bachillerato">Bachillerato</option>
@@ -7166,8 +7204,8 @@ function pgSAEstadisticas() {
       <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:.5rem;margin-bottom:1rem">
         <h2 style="color:#fff;margin:0">📊 Estadísticas Globales del Sistema</h2>
         <div style="display:flex;gap:.5rem;flex-wrap:wrap">
-          <button class="btn" style="background:rgba(255,255,255,.15);color:#fff;border:1px solid rgba(255,255,255,.3);font-size:.8rem" onclick="initSAEstadisticas()">🔄 Actualizar</button>
-          <button class="btn" style="background:rgba(255,255,255,.15);color:#fff;border:1px solid rgba(255,255,255,.3);font-size:.8rem" onclick="exportarEstCSV()">📤 CSV</button>
+          <button class="btn" style="background:rgba(255,255,255,.18);color:#fff;border:1.5px solid rgba(255,255,255,.35);font-size:13px;font-weight:700;padding:8px 18px;border-radius:9px" onclick="initSAEstadisticas()">🔄 Actualizar</button>
+          <button class="btn" style="background:rgba(0,182,155,.25);color:#fff;border:1.5px solid rgba(0,182,155,.4);font-size:13px;font-weight:700;padding:8px 18px;border-radius:9px" onclick="exportarEstCSV()">📤 CSV</button>
         </div>
       </div>
       <div id="saEstGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(155px,1fr));gap:.75rem">
@@ -7176,13 +7214,13 @@ function pgSAEstadisticas() {
     </div>
     <div class="card" style="margin-bottom:1rem">
       <div style="display:flex;gap:.75rem;flex-wrap:wrap;align-items:center">
-        <input id="saEstSearch" class="inp" style="width:200px;font-size:.85rem" placeholder="🔍 Buscar institución…" oninput="renderEstDetalle(window._saEstData||[])">
-        <select id="saEstFiltroEstado" class="inp" style="width:auto;font-size:.85rem" onchange="renderEstDetalle(window._saEstData||[])">
+        <input id="saEstSearch" style="padding:9px 12px;border:1.5px solid var(--bd);border-radius:var(--r);font-size:13px;background:var(--bg2);color:var(--tx);outline:none;font-family:var(--fn)" style="width:200px;font-size:.85rem" placeholder="🔍 Buscar institución…" oninput="renderEstDetalle(window._saEstData||[])">
+        <select id="saEstFiltroEstado" style="padding:9px 12px;border:1.5px solid var(--bd);border-radius:var(--r);font-size:13px;background:var(--bg2);color:var(--tx);outline:none;font-family:var(--fn)" style="width:auto;font-size:.85rem" onchange="renderEstDetalle(window._saEstData||[])">
           <option value="">Todos los estados</option>
           <option value="activo">Solo activos</option>
           <option value="inactivo">Solo inactivos</option>
         </select>
-        <select id="saEstOrden" class="inp" style="width:auto;font-size:.85rem" onchange="renderEstDetalle(window._saEstData||[])">
+        <select id="saEstOrden" style="padding:9px 12px;border:1.5px solid var(--bd);border-radius:var(--r);font-size:13px;background:var(--bg2);color:var(--tx);outline:none;font-family:var(--fn)" style="width:auto;font-size:.85rem" onchange="renderEstDetalle(window._saEstData||[])">
           <option value="nombre">Por nombre</option>
           <option value="est_desc">↓ Más estudiantes</option>
           <option value="prom_desc">↓ Mejor promedio</option>
@@ -7335,22 +7373,39 @@ async function initSAEstadisticas() {
 
 /* ─── AUDITORÍA GLOBAL ──────────────────────────────────── */
 function pgSAAuditoria() {
-  return `<div class="card">
-    <h2>🔍 Auditoría Global</h2>
-    <div style="display:flex;gap:.75rem;margin-bottom:1rem;flex-wrap:wrap;align-items:center">
-      <select id="saAudCol" class="inp" style="min-width:200px" onchange="loadSAAuditoria()">
-        <option value="">Todos los colegios</option>
-      </select>
-      <select id="saAudRol" class="inp" style="min-width:140px" onchange="loadSAAuditoria()">
-        <option value="">Todos los roles</option>
-        <option value="admin">Admin</option>
-        <option value="profe">Profesor</option>
-        <option value="est">Estudiante</option>
-        <option value="superadmin">Superadmin</option>
-      </select>
-      <input id="saAudSearch" class="inp" placeholder="🔍 Buscar acción o usuario…" oninput="loadSAAuditoria()" style="min-width:200px">
+  return `<div class="ph"><h2>🔍 Auditoría Global</h2></div>
+  <div class="card">
+    <div class="chd"><span class="cti">Filtros</span>
+      <button class="btn bg sm" onclick="loadSAAuditoria()">🔄 Actualizar</button>
     </div>
-    <div id="saAudTable" style="overflow-x:auto">Cargando…</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 2fr;gap:14px;align-items:end">
+      <div class="fld" style="margin:0">
+        <label>Institución</label>
+        <select id="saAudCol" onchange="loadSAAuditoria()" style="font-size:13px;padding:10px 14px">
+          <option value="">Todos los colegios</option>
+        </select>
+      </div>
+      <div class="fld" style="margin:0">
+        <label>Rol</label>
+        <select id="saAudRol" onchange="loadSAAuditoria()" style="font-size:13px;padding:10px 14px">
+          <option value="">Todos los roles</option>
+          <option value="admin">👤 Admin</option>
+          <option value="profe">🧑‍🏫 Profesor</option>
+          <option value="est">🎓 Estudiante</option>
+          <option value="superadmin">🌐 Superadmin</option>
+        </select>
+      </div>
+      <div class="fld" style="margin:0">
+        <label>Buscar</label>
+        <div class="srch" style="margin:0">
+          <span style="color:var(--sl3)">🔍</span>
+          <input id="saAudSearch" placeholder="Buscar acción, usuario…" oninput="loadSAAuditoria()">
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="card">
+    <div id="saAudTable" style="overflow-x:auto"><div class="mty"><div class="ei">⏳</div><p>Cargando…</p></div></div>
   </div>`;
 }
 
@@ -7482,39 +7537,57 @@ async function loadSAAuditoria() {
 
 /* ─── MANTENIMIENTO TÉCNICO ─────────────────────────────── */
 function pgSAMantenimiento() {
-  return `<div class="card">
-    <h2>⚙️ Mantenimiento Técnico</h2>
-    <div style="display:grid;gap:1.5rem">
-      <div class="card">
-        <h3>💾 Copia de Seguridad</h3>
-        <p style="color:#888;margin-bottom:.75rem">Descarga un backup JSON completo de una institución.</p>
-        <div style="display:flex;gap:.75rem;flex-wrap:wrap">
-          <select id="saBackupCol" class="inp" style="min-width:200px"><option value="">— Selecciona colegio —</option></select>
-          <button class="btn" onclick="descargarBackup()">📥 Descargar Backup</button>
+  return `<div class="ph"><h2>⚙️ Mantenimiento Técnico</h2></div>
+  <div class="g2">
+    <div class="card">
+      <div class="chd"><span class="cti">💾 Copia de Seguridad</span></div>
+      <p style="font-size:13px;color:var(--sl2);margin-bottom:18px;line-height:1.6">
+        Descarga un backup JSON completo de una institución para guardarlo localmente.
+      </p>
+      <div class="fld">
+        <label>Seleccionar institución</label>
+        <select id="saBackupCol" style="font-size:14px;padding:12px 15px">
+          <option value="">— Selecciona colegio —</option>
+        </select>
+      </div>
+      <button class="btn bn" onclick="descargarBackup()"
+        style="width:100%;padding:13px;font-size:14px;font-weight:700;margin-top:4px">
+        📥 Descargar Backup JSON
+      </button>
+    </div>
+    <div class="card">
+      <div class="chd"><span class="cti">🔑 Reset de Contraseña</span></div>
+      <p style="font-size:13px;color:var(--sl2);margin-bottom:18px;line-height:1.6">
+        Cambia la contraseña de cualquier usuario de una institución.
+      </p>
+      <div class="fld">
+        <label>Institución</label>
+        <select id="saResetCol" onchange="loadSAResetUsuarios()" style="font-size:14px;padding:12px 15px">
+          <option value="">— Selecciona colegio —</option>
+        </select>
+      </div>
+      <div class="fld">
+        <label>Buscar usuario</label>
+        <div class="srch" style="margin:0">
+          <span style="color:var(--sl3)">🔍</span>
+          <input id="saResetSearch" placeholder="Nombre o ID de usuario…" oninput="filtrarSAResetUsuarios()">
         </div>
       </div>
-      <div class="card">
-        <h3>🔑 Reset de Contraseña por Usuario</h3>
-        <p style="color:#888;margin-bottom:.75rem">Selecciona un colegio y un usuario específico para cambiarle la contraseña.</p>
-        <div style="display:grid;gap:.75rem">
-          <div style="display:flex;gap:.75rem;flex-wrap:wrap;align-items:center">
-            <select id="saResetCol" class="inp" style="min-width:200px" onchange="loadSAResetUsuarios()">
-              <option value="">— Selecciona colegio —</option>
-            </select>
-            <input id="saResetSearch" class="inp" placeholder="🔍 Buscar usuario por nombre o ID…" oninput="filtrarSAResetUsuarios()" style="min-width:200px">
-          </div>
-          <div id="saResetUserList" style="display:none">
-            <select id="saResetUser" class="inp" size="6" style="width:100%;min-height:140px;font-size:.85rem">
-              <option value="">Cargando usuarios…</option>
-            </select>
-            <div id="saResetUserInfo" style="font-size:.78rem;color:#718096;margin-top:4px;padding:4px 0"></div>
-          </div>
-          <div style="display:flex;gap:.75rem;flex-wrap:wrap;align-items:center">
-            <input id="saResetPwd" class="inp" type="password" placeholder="Nueva contraseña (mín. 4 caracteres)" style="min-width:220px">
-            <button class="btn bdan" onclick="resetUsuario()">🔑 Cambiar contraseña</button>
-          </div>
-        </div>
+      <div id="saResetUserList" style="display:none;margin-bottom:14px">
+        <select id="saResetUser" size="5"
+          style="width:100%;min-height:130px;font-size:13px;border:1.5px solid var(--bd);border-radius:var(--r);padding:6px;background:var(--bg2)">
+          <option value="">Cargando usuarios…</option>
+        </select>
+        <div id="saResetUserInfo" style="font-size:11px;color:var(--sl3);margin-top:4px"></div>
       </div>
+      <div class="fld">
+        <label>Nueva contraseña</label>
+        <input id="saResetPwd" type="password" placeholder="Mínimo 4 caracteres" style="font-size:14px;padding:12px 15px">
+      </div>
+      <button class="btn bd" onclick="resetUsuario()"
+        style="width:100%;padding:13px;font-size:14px;font-weight:700">
+        🔑 Cambiar Contraseña
+      </button>
     </div>
   </div>`;
 }
@@ -7637,20 +7710,29 @@ async function descargarBackup() {
 
 /* ─── SUGERENCIAS — superadmin recibe ──────────────────── */
 function pgSASug() {
-  return `<div class="card">
-    <h2>💡 Sugerencias Recibidas</h2>
-    <div style="display:flex;gap:.75rem;margin-bottom:1rem;flex-wrap:wrap;align-items:center">
-      <select id="saSugFiltCol" class="inp" style="min-width:180px" onchange="loadSASug()">
-        <option value="">Todos los colegios</option>
-      </select>
-      <select id="saSugFiltLeida" class="inp" onchange="loadSASug()">
-        <option value="">Todas</option>
-        <option value="false">No leídas</option>
-        <option value="true">Leídas</option>
-      </select>
+  return `<div class="ph"><h2>💡 Sugerencias Recibidas</h2></div>
+  <div class="card">
+    <div class="chd"><span class="cti">Filtros</span>
+      <button class="btn bg sm" onclick="loadSASug()">🔄 Actualizar</button>
     </div>
-    <div id="saSugTable">Cargando…</div>
-  </div>`;
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+      <div class="fld" style="margin:0">
+        <label>Institución</label>
+        <select id="saSugFiltCol" onchange="loadSASug()" style="font-size:13px;padding:10px 14px">
+          <option value="">Todos los colegios</option>
+        </select>
+      </div>
+      <div class="fld" style="margin:0">
+        <label>Estado</label>
+        <select id="saSugFiltLeida" onchange="loadSASug()" style="font-size:13px;padding:10px 14px">
+          <option value="">Todas</option>
+          <option value="false">🔵 No leídas</option>
+          <option value="true">✅ Leídas</option>
+        </select>
+      </div>
+    </div>
+  </div>
+  <div id="saSugTable"><div class="mty"><div class="ei">⏳</div><p>Cargando…</p></div></div>`;
 }
 
 async function initSASug() {
@@ -7728,9 +7810,9 @@ function pgSugerencias() {
   <div class="card">
     <div class="chd"><span class="cti">Nueva Sugerencia</span></div>
     <div class="fg">
-      <div class="fld"><label>Título (opcional)</label><input id="sugTitulo" class="inp" placeholder="Resumen breve"></div>
+      <div class="fld"><label>Título (opcional)</label><input id="sugTitulo" style="padding:9px 12px;border:1.5px solid var(--bd);border-radius:var(--r);font-size:13px;background:var(--bg2);color:var(--tx);outline:none;font-family:var(--fn)" placeholder="Resumen breve"></div>
       <div class="fld"><label>Categoría</label>
-        <select id="sugCat" class="inp">
+        <select id="sugCat" style="padding:9px 12px;border:1.5px solid var(--bd);border-radius:var(--r);font-size:13px;background:var(--bg2);color:var(--tx);outline:none;font-family:var(--fn)">
           <option value="general">General</option><option value="academico">Académico</option>
           <option value="tecnico">Técnico</option><option value="sugerencia">Sugerencia</option>
           <option value="felicitacion">Felicitación</option><option value="queja">Queja</option>
