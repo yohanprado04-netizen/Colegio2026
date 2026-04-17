@@ -5446,11 +5446,25 @@ function mkBoletinUI(estId,ctx){
     mats.some(m=>{const t=notasParaAnno?.[per]?.[m];return t&&(t.a>0||t.c>0||t.r>0);}));
 
   const annoOpts=anosConDatos.map(y=>`<option value="${y}" ${y===defaultAnno?'selected':''}>${y}</option>`).join('');
-  const perBtns=persConDatos.map(p=>`<button class="btn bg sm" onclick="dlBoletin('${estId}','${encodeURIComponent(p)}',gi('yr_${uid}').value)">📄 ${p}</button>`).join('');
-  const todosBtn=persConDatos.length>1
-    ?`<button class="btn bb" onclick="dlBoletin('${estId}','TODOS',gi('yr_${uid}').value)">📋 Todos los Periodos</button>
-       <span style="font-size:12px;color:var(--sl3);font-weight:600">— o por periodo —</span>`
-    :'';
+
+  /* Helper: genera los botones de periodo según el año elegido */
+  window[`_mkPerBtns_${uid}`]=function(annoSel){
+    const anoActualNow=DB.anoActual||String(new Date().getFullYear());
+    const notasSel=annoSel===anoActualNow?DB.notas[estId]:(DB.notasPorAno?.[annoSel]?.[estId]||{});
+    const matsSel=getMats(estId);
+    const persSel=DB.pers.filter(per=>
+      matsSel.some(m=>{const t=notasSel?.[per]?.[m];return t&&(t.a>0||t.c>0||t.r>0);}));
+    const wrap=gi('perWrap_'+uid);if(!wrap)return;
+    if(!persSel.length){
+      wrap.innerHTML=`<span style="font-size:13px;color:var(--sl3)">📭 No hay notas registradas para ${annoSel}.</span>`;
+      return;
+    }
+    const tBtn=persSel.length>1
+      ?`<button class="btn bb" onclick="dlBoletin('${estId}','TODOS',gi('yr_${uid}').value)">📋 Todos los Periodos</button>
+         <span style="font-size:12px;color:var(--sl3);font-weight:600">— o por periodo —</span>`:'';
+    const pBtns=persSel.map(p=>`<button class="btn bg sm" onclick="dlBoletin('${estId}','${encodeURIComponent(p)}',gi('yr_${uid}').value)">📄 ${p}</button>`).join('');
+    wrap.innerHTML=tBtn+pBtns;
+  };
 
   return`<div class="card" style="border:2px solid var(--bl3)">
     <div class="chd"><span class="cti">📄 Descargar Boletín PDF</span></div>
@@ -5462,14 +5476,20 @@ function mkBoletinUI(estId,ctx){
     <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px;flex-wrap:wrap">
       <div class="fld" style="margin:0">
         <label style="font-size:11px;font-weight:800;text-transform:uppercase;color:var(--sl);display:block;margin-bottom:4px">Año Lectivo</label>
-        <select id="yr_${uid}" style="padding:8px 12px;border:1.5px solid var(--bd);border-radius:var(--r);font-size:13px;outline:none">
+        <select id="yr_${uid}" style="padding:8px 12px;border:1.5px solid var(--bd);border-radius:var(--r);font-size:13px;outline:none"
+          onchange="window['_mkPerBtns_${uid}'](this.value)">
           ${annoOpts}
         </select>
       </div>
     </div>
-    <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center">
-      ${todosBtn}
-      ${perBtns}
+    <div id="perWrap_${uid}" style="display:flex;flex-wrap:wrap;gap:10px;align-items:center">
+      ${(()=>{
+        const tBtn=persConDatos.length>1
+          ?`<button class="btn bb" onclick="dlBoletin('${estId}','TODOS',gi('yr_${uid}').value)">📋 Todos los Periodos</button>
+             <span style="font-size:12px;color:var(--sl3);font-weight:600">— o por periodo —</span>`:'';
+        const pBtns=persConDatos.map(p=>`<button class="btn bg sm" onclick="dlBoletin('${estId}','${encodeURIComponent(p)}',gi('yr_${uid}').value)">📄 ${p}</button>`).join('');
+        return tBtn+pBtns;
+      })()}
     </div>
   </div>`;
 }
