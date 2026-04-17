@@ -767,7 +767,7 @@ function resetSessionTimer(){
   document.addEventListener(ev,()=>{if(CU)resetSessionTimer();},{passive:true}));
 /* ── 1. AGREGAR EN ROLE_MAP (reemplaza la línea de ROLE_MAP completa) ── */
 const ROLE_MAP={
-  superadmin:new Set(['sadash','sacolegios','saestadisticas','saauditoria','samantenimiento','saplan','sasug','sacom']),
+  superadmin:new Set(['sadash','sacolegios','saestadisticas','saauditoria','samantenimiento','sasug','sacom']),
   admin:new Set(['dash','asal','apri','abac','aprf','amat','anot','areh','afec','ablk','aaud','aexp','aexc','avcl','ahist','asug','acom']),
   profe:new Set(['ph','pnot','past','pvir','ptar','prec','phist','psug','pcom']),
   est:new Set(['eb','east','etare','eexc','eprof','evir','ereh','ehist','esug','eicfes','ecom'])
@@ -1066,7 +1066,6 @@ function navItems(){
   if(CU.role==='superadmin') return[
     {s:'Super Admin'},{id:'sadash',ic:'🌐',lb:'Panel Global'},
     {id:'sacolegios',ic:'🏫',lb:'Colegios & Admins'},
-    {s:'Académico'},{id:'saplan',ic:'📖',lb:'Plan de Estudios'},
     {s:'Supervisión'},{id:'saestadisticas',ic:'📊',lb:'Estadísticas'},
     {id:'saauditoria',ic:'🔍',lb:'Auditoría Global'},
     {s:'Comunicación'},{id:'sacom',ic:'📢',lb:'Comunicados Globales'},
@@ -1251,22 +1250,32 @@ function initDash(){
 ============================================================ */
 function pgASal(){
   return`<div class="ph"><h2>Salones & Grados</h2><button class="btn xs bg" onclick="showHelp('asal')" style="margin-top:6px">❓ Ayuda</button></div>
-  <div class="card"><div class="chd"><span class="cti">➕ Nuevo Salón</span></div>
-    <div class="fg">
-      <div class="fld"><label>Nombre (ej: 6A)</label><input id="nsn" placeholder="6A"></div>
-      <div class="fld"><label>Ciclo</label><select id="nsc">
-        <option value="primaria">Primaria (1°–5°)</option>
-        <option value="bachillerato">Bachillerato (6°–11°)</option>
-      </select></div>
-      <div class="fld"><label>Jornada</label><select id="nsj">
-        <option value="">Sin especificar</option>
-        <option value="mañana">Mañana</option>
-        <option value="tarde">Tarde</option>
-        <option value="noche">Noche</option>
-      </select></div>
-      <div class="fld" style="display:flex;align-items:flex-end">
-        <button class="btn bn" onclick="addSal()">Agregar</button>
+  <div class="card">
+    <div class="chd"><span class="cti">➕ Nuevo Salón</span></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:16px;align-items:end">
+      <div class="fld" style="margin:0">
+        <label>Nombre del salón (ej: 6A)</label>
+        <input id="nsn" placeholder="6A" style="font-size:15px;padding:13px 16px;font-weight:700">
       </div>
+      <div class="fld" style="margin:0">
+        <label>Ciclo</label>
+        <select id="nsc" style="font-size:14px;padding:13px 16px">
+          <option value="primaria">Primaria (1°–5°)</option>
+          <option value="bachillerato">Bachillerato (6°–11°)</option>
+        </select>
+      </div>
+      <div class="fld" style="margin:0">
+        <label>Jornada</label>
+        <select id="nsj" style="font-size:14px;padding:13px 16px">
+          <option value="">Sin especificar</option>
+          <option value="mañana">Mañana</option>
+          <option value="tarde">Tarde</option>
+          <option value="noche">Noche</option>
+        </select>
+      </div>
+      <button class="btn bn" onclick="addSal()" style="padding:13px 28px;font-size:15px;font-weight:800;white-space:nowrap;height:48px">
+        ➕ Agregar Salón
+      </button>
     </div>
   </div>
   <div class="g2">
@@ -1511,23 +1520,50 @@ function pgAEst(ciclo){
   const tt=ciclo==='primaria'?'Primaria (1°-5°)':'Bachillerato (6°-11°)';
   const sOpts=DB.sals.filter(s=>s.ciclo===ciclo).map(s=>`<option value="${s.nombre}">${s.nombre}</option>`).join('');
   return`<div class="ph"><h2>Estudiantes — ${tt}</h2><button class="btn xs bg" onclick="showHelp('${ciclo==='primaria'?'apri':'abac'}')" style="margin-top:6px">❓ Ayuda</button></div>
-  <div class="card"><div class="chd"><span class="cti">➕ Agregar Estudiante</span>
-    <button class="btn bg sm" onclick="abrirCSVEst('${ciclo}')" title="Cargar múltiples estudiantes desde archivo CSV">📂 Carga Masiva CSV</button>
-  </div>
-    <div class="fg">
-      <div class="fld"><label>Nombre</label><input id="nen" placeholder="Nombre completo"></div>
-      <div class="fld"><label>${ciclo==='bachillerato'?'T.I./C.C.':'T.I.'}</label><input id="neti" placeholder="${ciclo==='bachillerato'?'Ej: 1234567890':'Ej: 1234567890'}" inputmode="numeric" pattern="[0-9]*" oninput="this.value=this.value.replace(/[^0-9]/g,'')"></div>
-      <div class="fld"><label>Salón</label><select id="nes"><option value="">Sin salón</option>${sOpts}</select></div>
-      <div class="fld"><label>Usuario</label><input id="neu" placeholder="usuario"></div>
-      <div class="fld"><label>Contraseña</label><input id="nep" type="password" placeholder="contraseña"></div>
-      <div class="fld" style="display:flex;align-items:flex-end">
-        <button class="btn bn" onclick="addEst('${ciclo}')">Agregar</button>
+  <div class="card">
+    <div class="chd">
+      <span class="cti">➕ Agregar Estudiante</span>
+      <button class="btn bg sm" onclick="abrirCSVEst('${ciclo}')" title="Cargar múltiples estudiantes desde archivo CSV">
+        📂 Carga Masiva CSV
+      </button>
+    </div>
+    <div style="display:grid;grid-template-columns:2fr 1fr 1fr 1fr 1fr;gap:14px;align-items:end;margin-bottom:16px">
+      <div class="fld" style="margin:0">
+        <label>Nombre completo</label>
+        <input id="nen" placeholder="Ej: Juan Pérez Gómez" style="font-size:14px;padding:12px 15px">
+      </div>
+      <div class="fld" style="margin:0">
+        <label>${ciclo==='bachillerato'?'T.I. / C.C.':'T.I.'}</label>
+        <input id="neti" placeholder="Número documento" inputmode="numeric" pattern="[0-9]*"
+          style="font-size:14px;padding:12px 15px"
+          oninput="this.value=this.value.replace(/[^0-9]/g,'')">
+      </div>
+      <div class="fld" style="margin:0">
+        <label>Salón</label>
+        <select id="nes" style="font-size:14px;padding:12px 15px">
+          <option value="">Sin salón</option>${sOpts}
+        </select>
+      </div>
+      <div class="fld" style="margin:0">
+        <label>Usuario</label>
+        <input id="neu" placeholder="nombre.usuario" style="font-size:14px;padding:12px 15px">
+      </div>
+      <div class="fld" style="margin:0">
+        <label>Contraseña</label>
+        <input id="nep" type="password" placeholder="••••••••" style="font-size:14px;padding:12px 15px">
       </div>
     </div>
+    <button class="btn bn" onclick="addEst('${ciclo}')"
+      style="width:100%;padding:14px;font-size:15px;font-weight:800;
+      background:linear-gradient(135deg,var(--nv2),var(--nv3));
+      box-shadow:0 4px 16px rgba(15,31,53,.2);border-radius:12px;
+      display:flex;align-items:center;justify-content:center;gap:10px">
+      <span style="font-size:18px">➕</span> Agregar Estudiante
+    </button>
   </div>
   <div class="card">
     <div class="chd"><span class="cti">📋 Lista</span>
-      <div style="display:flex;gap:6px;flex-wrap:wrap">
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
         <button class="btn bg sm" onclick="expEstXls('${ciclo}')">📤 Excel</button>
         <button class="btn bn sm" onclick="promoverEstudiantes('${ciclo}')" title="Promover/Repetir año a todos los estudiantes según resultados">🎓 Promover Año</button>
         <button class="btn bd sm" onclick="eliminarTodosEsts('${ciclo}')" title="Eliminar TODOS los estudiantes de este ciclo">🗑️ Eliminar Todo</button>
@@ -1592,15 +1628,19 @@ function pgAPrf(){
   return`<div class="ph"><h2>Profesores</h2><button class="btn xs bg" onclick="showHelp('aprf')" style="margin-top:6px">❓ Ayuda</button></div>
   <div class="g2">
     <div class="card"><div class="chd"><span class="cti">📚 Primaria</span>
-      <div style="display:flex;gap:6px">
-        <button class="btn bn sm" onclick="openAddPrf('primaria')">➕</button>
+      <div style="display:flex;gap:8px">
         <button class="btn bg sm" onclick="abrirCSVPrf('primaria')" title="Carga masiva CSV">📂 CSV</button>
+        <button class="btn bn" onclick="openAddPrf('primaria')" style="padding:8px 18px;font-size:13px;font-weight:700">
+          ➕ Agregar Profesor
+        </button>
       </div></div><div id="pfP"></div>
     </div>
     <div class="card"><div class="chd"><span class="cti">🎓 Bachillerato</span>
-      <div style="display:flex;gap:6px">
-        <button class="btn bn sm" onclick="openAddPrf('bachillerato')">➕</button>
+      <div style="display:flex;gap:8px">
         <button class="btn bg sm" onclick="abrirCSVPrf('bachillerato')" title="Carga masiva CSV">📂 CSV</button>
+        <button class="btn bn" onclick="openAddPrf('bachillerato')" style="padding:8px 18px;font-size:13px;font-weight:700">
+          ➕ Agregar Profesor
+        </button>
       </div></div><div id="pfB"></div>
     </div>
   </div>`;
@@ -6501,12 +6541,24 @@ function pgSADash() {
       <div class="card">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.75rem;flex-wrap:wrap;gap:.5rem">
           <h3 style="margin:0">📊 Comparativa por institución</h3>
-          <select id="saDashChartMode" class="inp" style="width:auto;font-size:.8rem;padding:4px 8px" onchange="renderSADashChart(window._saStatsData||[])">
-            <option value="est">Estudiantes</option>
-            <option value="profs">Profesores</option>
-            <option value="prom">Prom. Notas</option>
-            <option value="asist">Asistencia %</option>
-          </select>
+          <div id="saDashChartMode" style="display:flex;gap:6px;flex-wrap:wrap">
+            <button onclick="setSAMode(this,'est')" data-mode="est"
+              style="padding:6px 14px;border-radius:20px;border:2px solid #1d6fef;background:#1d6fef;color:#fff;font-size:11px;font-weight:700;cursor:pointer;transition:all .15s;font-family:inherit">
+              🎓 Estudiantes
+            </button>
+            <button onclick="setSAMode(this,'profs')" data-mode="profs"
+              style="padding:6px 14px;border-radius:20px;border:2px solid #e3eaf3;background:#f7fafd;color:#6b7f96;font-size:11px;font-weight:700;cursor:pointer;transition:all .15s;font-family:inherit">
+              👩‍🏫 Profesores
+            </button>
+            <button onclick="setSAMode(this,'prom')" data-mode="prom"
+              style="padding:6px 14px;border-radius:20px;border:2px solid #e3eaf3;background:#f7fafd;color:#6b7f96;font-size:11px;font-weight:700;cursor:pointer;transition:all .15s;font-family:inherit">
+              📊 Prom. Notas
+            </button>
+            <button onclick="setSAMode(this,'asist')" data-mode="asist"
+              style="padding:6px 14px;border-radius:20px;border:2px solid #e3eaf3;background:#f7fafd;color:#6b7f96;font-size:11px;font-weight:700;cursor:pointer;transition:all .15s;font-family:inherit">
+              ✅ Asistencia
+            </button>
+          </div>
         </div>
         <div id="saDashChart" style="overflow-x:auto;min-height:160px;display:flex;align-items:flex-end;padding-bottom:4px"></div>
       </div>
@@ -6556,11 +6608,30 @@ function renderSADashKPIs(stats, sugCount) {
     </div>`).join('');
 }
 
+/* Helper: botones pill del comparativa */
+function setSAMode(btn, mode){
+  const wrap = gi('saDashChartMode');
+  if(!wrap) return;
+  wrap.querySelectorAll('button').forEach(b=>{
+    const active = b.dataset.mode === mode;
+    b.dataset.active = active ? '1' : '0';
+    b.style.background = active ? '#1d6fef' : '#f7fafd';
+    b.style.color = active ? '#fff' : '#6b7f96';
+    b.style.borderColor = active ? '#1d6fef' : '#e3eaf3';
+    b.style.boxShadow = active ? '0 4px 14px rgba(29,111,239,.35)' : 'none';
+    b.style.transform = active ? 'translateY(-1px)' : 'none';
+  });
+  renderSADashChart(window._saStatsData||[]);
+}
+
 function renderSADashChart(stats) {
   const chart = gi('saDashChart');
   if (!chart) return;
   if (!stats.length) { chart.innerHTML = '<p style="color:#999;font-size:.85rem;padding:1rem">Sin datos</p>'; return; }
-  const mode = gi('saDashChartMode')?.value || 'est';
+  const wrap = gi('saDashChartMode');
+  // Find active button — either marked with data-active or by background style
+  const activeBtn = wrap ? (wrap.querySelector('[data-active="1"]') || wrap.querySelector('button')) : null;
+  const mode = activeBtn?.dataset.mode || 'est';
   const getData = s => ({ est: s.totalEst || 0, profs: s.totalProfs || 0, prom: s.promNotas || 0, asist: s.asistPct || 0 }[mode]);
   const maxVal = Math.max(...stats.map(getData), 1);
   const BAR_H = 140;
