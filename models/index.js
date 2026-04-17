@@ -99,6 +99,7 @@ const NotaPeriodoSchema = new Schema({
 const NotaSchema = new Schema({
   estId:      { type: String, required: true },
   anoLectivo: { type: String, required: true, default: () => String(new Date().getFullYear()) },
+  salon:      { type: String, default: '' },  // salón en que estaba el estudiante ese año lectivo
   periodos:   [NotaPeriodoSchema],
   disciplina: { type: Number, default: null }, // promedio calculado
   conducta:   { type: Number, default: null }, // promedio calculado de conducta

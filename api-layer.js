@@ -164,6 +164,7 @@ async function dbLoad() {
       DB.anoActual  = DB.anoActual  || String(new Date().getFullYear());
       DB.notaPct    = DB.notaPct    || { a: 60, c: 20, r: 20 };
       DB.notasPorAno = DB.notasPorAno || {};
+      DB.salonPorAno = DB.salonPorAno || {};
       DB.areas      = DB.areas      || [];
       DB.materiasDocs = DB.materiasDocs || [];
       DB.salAreas   = DB.salAreas   || {};
@@ -2196,6 +2197,7 @@ document.addEventListener('DOMContentLoaded', async () => {
           DB.estHist    = DB.estHist    || [];
           DB.anoActual   = DB.anoActual   || String(new Date().getFullYear());
           DB.notasPorAno = DB.notasPorAno || {};
+          DB.salonPorAno = DB.salonPorAno || {};
           DB.colegioLogo = DB.colegioLogo || '';  // logo del colegio para PDFs
           DB.sals.forEach(s => { if (!Array.isArray(s.mats)) s.mats = []; });
           if(typeof sortSals==='function') sortSals();

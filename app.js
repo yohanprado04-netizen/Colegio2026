@@ -115,6 +115,7 @@ function dbInit(){
     ups:{},asist:{},exc:[],vclases:[],recs:[],planes:[],histRecs:[],histPlanes:[],
     anoActual:String(new Date().getFullYear()),
     notasPorAno:{[String(new Date().getFullYear())]:JSON.parse(JSON.stringify(notas))},
+    salonPorAno:{},
     estHist:ests.map(e=>({id:e.id,nombre:e.nombre,ti:e.ti||'',salon:'',registrado:new Date().toLocaleDateString('es-CO'),activo:true}))
   };
   dbSave();
@@ -5520,7 +5521,11 @@ function dlBoletin(estId,perFilter,anno,snapData){
 
   const nombre=snap?.nombre||e?.nombre||estId;
   const ti=snap?.ti||e?.ti||'—';
-  const salon=snap?.salon||e?.salon||'—';
+  // Salón histórico: si es un año anterior, usar el salón que tenía ese año (guardado en salonPorAno)
+  const salonHistorico = anno !== anoActual
+    ? (DB.salonPorAno?.[anno]?.[estId] || null)
+    : null;
+  const salon=snap?.salon||salonHistorico||e?.salon||'—';
   const disciplina=snap?.disciplina||DB.notas[estId]?.disciplina||'—';
   const notas=notasDelAno;
   const mats=snap?.mats||(e?getMats(estId):DB.mP);

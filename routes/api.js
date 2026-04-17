@@ -526,6 +526,12 @@ router.put('/notas/:estId/:periodo/:materia', authMiddleware, async (req, res) =
 
           // Paso 2: el periodo no existe aún — agregar con $push
           // Si el documento tampoco existe, crearlo con upsert
+          // Obtener el salón actual del estudiante para guardarlo históricamente
+          const estData = await Usuario.findOne({ id: estId, role: 'est',
+            $or: [{ colegioId: cid }, { colegioId: '' }, { colegioId: null }]
+          }).lean().catch(() => null);
+          const salonActual = estData?.salon || '';
+
           const pushed = await Nota.findOneAndUpdate(
             { estId, anoLectivo: ano, ...cidFilter },
             {
@@ -533,9 +539,10 @@ router.put('/notas/:estId/:periodo/:materia', authMiddleware, async (req, res) =
                 periodos: {
                   periodo,
                   materias: { [materia]: { a, c, r } },
-                  ...(disciplina !== undefined ? { disciplina } : {})
+                  ...(disciplina !== undefined ? { disciplina } : {}),
                 }
               },
+              $set: { salon: salonActual },
               $setOnInsert: { estId, anoLectivo: ano, colegioId: cid }
             },
             { upsert: true, new: true, setDefaultsOnInsert: true }

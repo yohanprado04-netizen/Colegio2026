@@ -137,6 +137,16 @@ router.get('/', authMiddleware, async (req, res) => {
       notasPorAno[yr][n.estId] = estNotas;
     });
 
+    // ── salonPorAno { año: { estId: salon } } ────────────────────────────────
+    // Registra en qué salón estaba cada estudiante cada año lectivo.
+    // Se usa para mostrar el salón correcto en boletines de años anteriores.
+    const salonPorAno = {};
+    notas.forEach(n => {
+      if (!n.salon) return; // solo si se guardó el salón
+      if (!salonPorAno[n.anoLectivo]) salonPorAno[n.anoLectivo] = {};
+      salonPorAno[n.anoLectivo][n.estId] = n.salon;
+    });
+
     // ── Asistencia { 'salon__fecha': { estId: estado } } ─────────────────────
     const asistObj = {};
     asistencias.forEach(a => {
@@ -223,6 +233,7 @@ router.get('/', authMiddleware, async (req, res) => {
       salAreas:     cfg.salAreas  || {},
       notas:        notasObj,
       notasPorAno,
+      salonPorAno,
       asist:        asistObj,
       ups:          upsObj,
       exc:          excusas,
