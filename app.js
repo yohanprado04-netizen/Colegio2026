@@ -5415,12 +5415,21 @@ function mkBoletinUI(estId,ctx){
   syncN(estId);
 
   /* Build list of years that have real data for this student */
+  /* For historical years: check ANY materia in notasPorAno, not just current mats */
   const anosConDatos=(DB.notasPorAno?Object.entries(DB.notasPorAno):[])
-    .filter(([yr,notasAno])=>
-      DB.pers.some(per=>mats.some(m=>{
-        const t=notasAno?.[estId]?.[per]?.[m];
-        return t&&(t.a>0||t.c>0||t.r>0);
-      })))
+    .filter(([yr,notasAno])=>{
+      const estNotas=notasAno?.[estId];
+      if(!estNotas) return false;
+      // Check if any period has any subject data
+      return DB.pers.some(per=>{
+        const periodoData=estNotas[per];
+        if(!periodoData) return false;
+        return Object.entries(periodoData).some(([k,v])=>{
+          if(k.startsWith('_')||k==='disciplina'||k==='conducta') return false;
+          return v&&typeof v==='object'&&(v.a>0||v.c>0||v.r>0);
+        });
+      });
+    })
     .map(([yr])=>yr)
     .sort();
 
@@ -5452,7 +5461,21 @@ function mkBoletinUI(estId,ctx){
   window[`_mkPerBtns_${uid}`]=function(annoSel){
     const anoActualNow=DB.anoActual||String(new Date().getFullYear());
     const notasSel=annoSel===anoActualNow?DB.notas[estId]:(DB.notasPorAno?.[annoSel]?.[estId]||{});
-    const matsSel=getMats(estId);
+    // For prior years: detect subjects that actually had data that year
+    let matsSel;
+    if(annoSel !== anoActualNow && notasSel && Object.keys(notasSel).length){
+      const set=new Set();
+      Object.values(notasSel).forEach(pd=>{
+        if(!pd||typeof pd!=='object') return;
+        Object.entries(pd).forEach(([k,v])=>{
+          if(k.startsWith('_')||k==='disciplina'||k==='conducta') return;
+          if(v&&typeof v==='object'&&(v.a>0||v.c>0||v.r>0)) set.add(k);
+        });
+      });
+      matsSel = set.size>0 ? [...set] : getMats(estId);
+    } else {
+      matsSel = getMats(estId);
+    }
     const persSel=DB.pers.filter(per=>
       matsSel.some(m=>{const t=notasSel?.[per]?.[m];return t&&(t.a>0||t.c>0||t.r>0);}));
     const wrap=gi('perWrap_'+uid);if(!wrap)return;
@@ -5515,21 +5538,63 @@ function dlBoletin(estId,perFilter,anno,snapData){
   if(!e&&!snap){sw('error','Estudiante no encontrado');return;}
 
   const anoActual=DB.anoActual||String(new Date().getFullYear());
-  const notasDelAno=snap?.notas
-    ||(anno!==anoActual&&DB.notasPorAno?.[anno]?.[estId])
-    ||(e?DB.notas[estId]:null)||{};
+  const esAnioHistorico = anno !== anoActual;
 
-  const nombre=snap?.nombre||e?.nombre||estId;
-  const ti=snap?.ti||e?.ti||'—';
-  // Salón histórico: si es un año anterior, usar el salón que tenía ese año (guardado en salonPorAno)
-  const salonHistorico = anno !== anoActual
+  // ── Notas del año seleccionado ──────────────────────────────────────────────
+  const notasDelAno = snap?.notas
+    || (esAnioHistorico ? (DB.notasPorAno?.[anno]?.[estId] || {}) : null)
+    || (e ? DB.notas[estId] : null)
+    || {};
+
+  const nombre = snap?.nombre || e?.nombre || estId;
+  const ti     = snap?.ti     || e?.ti     || '—';
+
+  // ── Salón: para años anteriores derivar del primer periodo con datos ────────
+  // salonPorAno puede estar vacío — inferimos el salón actual si no hay histórico
+  const salonHistorico = esAnioHistorico
     ? (DB.salonPorAno?.[anno]?.[estId] || null)
     : null;
-  const salon=snap?.salon||salonHistorico||e?.salon||'—';
-  const disciplina=snap?.disciplina||DB.notas[estId]?.disciplina||'—';
-  const notas=notasDelAno;
-  const mats=snap?.mats||(e?getMats(estId):DB.mP);
-  const ciclo=cicloOf(salon);
+  const salon = snap?.salon || salonHistorico || e?.salon || '—';
+
+  // ── Materias del año seleccionado ──────────────────────────────────────────
+  // Para años anteriores: derivar las materias DE las notas históricas
+  // (las que tuvieron al menos un valor registrado en ese año)
+  // Esto asegura que el boletín muestre exactamente lo que se calificó ese año
+  let mats;
+  if(snap?.mats){
+    mats = snap.mats;
+  } else if(esAnioHistorico && notasDelAno && Object.keys(notasDelAno).length){
+    // Recoger todas las materias que tuvieron datos en ese año
+    const matsHistSet = new Set();
+    Object.values(notasDelAno).forEach(periodoData => {
+      if(!periodoData || typeof periodoData !== 'object') return;
+      Object.entries(periodoData).forEach(([k, v]) => {
+        // Ignorar claves especiales (disciplina, conducta, _disciplina, etc.)
+        if(k.startsWith('_') || k === 'disciplina' || k === 'conducta') return;
+        if(v && typeof v === 'object' && (v.a > 0 || v.c > 0 || v.r > 0)){
+          matsHistSet.add(k);
+        }
+      });
+    });
+    mats = matsHistSet.size > 0
+      ? [...matsHistSet].sort((a,b) => a.localeCompare(b, 'es'))
+      : (e ? getMats(estId) : DB.mP);
+  } else {
+    mats = e ? getMats(estId) : DB.mP;
+  }
+
+  // ── Disciplina / conducta: leer del año correcto ───────────────────────────
+  // Para años anteriores usar los valores dentro de las notas históricas del año
+  const notaRaizHist = esAnioHistorico
+    ? (DB.notasPorAno?.[anno]?.[estId] || {})
+    : (e ? (DB.notas[estId] || {}) : {});
+  const disciplinaHist = typeof notaRaizHist.disciplina === 'number'
+    ? notaRaizHist.disciplina
+    : (snap?.disciplina ?? (esAnioHistorico ? '—' : (DB.notas[estId]?.disciplina ?? '—')));
+  const disciplina = disciplinaHist;
+
+  const notas = notasDelAno;
+  const ciclo = cicloOf(salon);
 
   if(!e){} else syncN(estId);
 
@@ -5546,11 +5611,20 @@ function dlBoletin(estId,perFilter,anno,snapData){
     :allPers.filter(p=>p===decodeURIComponent(perFilter));
   if(!pers2render.length){sw('info','Sin datos',`No hay notas registradas${isTodos?' en ningún periodo':' en este periodo'}.`);return;}
 
-  const pg=e?gprom(estId):+(
-    DB.pers.map(per=>{const ds=mats.map(m=>def(notas[per]?.[m]||{a:0,c:0,r:0}));return+(ds.reduce((s,v)=>s+v,0)/ds.length).toFixed(2);})
-      .filter(v=>v>0).reduce((a,b,_,arr)=>a+b/arr.length,0)
-  ).toFixed(2);
-  const ps=e?puestoS(estId):'—';
+  // Promedio general: calcular desde las notas del año seleccionado
+  const _pgCalc = () => {
+    const allP = DB.pers.filter(per => mats.some(m => { const t=notas[per]?.[m]; return t&&(t.a>0||t.c>0||t.r>0); }));
+    if(!allP.length) return 0;
+    const vals = allP.map(per => {
+      const ds = mats.map(m => def(notas[per]?.[m]||{a:0,c:0,r:0})).filter(v=>v>0);
+      return ds.length ? +(ds.reduce((s,v)=>s+v,0)/ds.length).toFixed(2) : 0;
+    }).filter(v=>v>0);
+    return vals.length ? +(vals.reduce((a,b,_,arr)=>a+b/arr.length,0)).toFixed(2) : 0;
+  };
+  // For current year with active student use existing gprom; otherwise recalculate
+  const pg = (e && !esAnioHistorico) ? gprom(estId) : _pgCalc();
+  // Puesto solo aplica al año actual (no tenemos ranking histórico)
+  const ps = (e && !esAnioHistorico) ? puestoS(estId) : '—';
 
   // Materias perdidas (para seccion recuperación en vista por periodo)
   const mp=e?matPerd(estId):mats.filter(m=>{
@@ -5567,8 +5641,10 @@ function dlBoletin(estId,perFilter,anno,snapData){
   const salonObj = (DB.sals||[]).find(s => s.nombre === salon) || {};
   const jornadaLabel = salonObj.jornada ? salonObj.jornada.toUpperCase() : '';
 
-  // ─── Obtener mapa de áreas para este estudiante ───────────────────────────
-  const areaMap = e ? getAreaMatsMap(estId) : {};
+  // ─── Mapa de áreas: solo para el año actual; años anteriores usan lista plana ──
+  // El área de un salón puede cambiar entre años, así que no aplicamos el mapa
+  // de áreas actual cuando el estudiante ya está en otro salón o año distinto.
+  const areaMap = (e && !esAnioHistorico) ? getAreaMatsMap(estId) : {};
   const tieneAreas = Object.keys(areaMap).filter(k=>k!=='_sinArea').length > 0;
 
   // ─── Helpers locales de color para boletín (escala de grises) ─────────────
@@ -5848,15 +5924,17 @@ function dlBoletin(estId,perFilter,anno,snapData){
   const _dpp = (isTodos && typeof discPorPerPre !== 'undefined') ? discPorPerPre : [];
   const _cpp = (isTodos && typeof condPorPerPre !== 'undefined') ? condPorPerPre : [];
   const discPer = _dpp.filter(d=>d!==null);
-  const discProm = discPer.length ? +(discPer.reduce((s,d)=>s+d,0)/discPer.length).toFixed(2) : (notas?.disciplina??null);
+  // Para años históricos: no heredar disciplina/conducta del nodo raíz (puede ser del año actual)
+  const discProm = discPer.length ? +(discPer.reduce((s,d)=>s+d,0)/discPer.length).toFixed(2) : null;
   const condPer = _cpp.filter(c=>c!==null);
-  const condProm = condPer.length ? +(condPer.reduce((s,c)=>s+c,0)/condPer.length).toFixed(2) : (notas?.conducta??null);
+  const condProm = condPer.length ? +(condPer.reduce((s,c)=>s+c,0)/condPer.length).toFixed(2) : null;
 
   // ─── HTML DEL BOLETÍN ─────────────────────────────────────────────────────
   const _logo = DB.colegioLogo||'';
   const _nomColegio = CU.colegioNombre||'';
   const perPromVal=!isTodos?+(mats.reduce((s,m)=>s+def(notas[decodeURIComponent(perFilter)]?.[m]||{a:0,c:0,r:0}),0)/mats.length).toFixed(2):0;
-  const perPuestoVal=e&&!isTodos?puestoP(estId,decodeURIComponent(perFilter)):'—';
+  // Puesto por periodo solo aplica al año actual
+  const perPuestoVal=e&&!isTodos&&!esAnioHistorico?puestoP(estId,decodeURIComponent(perFilter)):'—';
 
   box.innerHTML=`<div style="font-family:'Arial',sans-serif;background:#fff;max-width:760px;color:#111">
     <!-- ENCABEZADO -->
