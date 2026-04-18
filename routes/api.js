@@ -512,12 +512,33 @@ router.put('/notas/:estId/:periodo/:materia', authMiddleware, async (req, res) =
       for (let i = 0; i < intentos; i++) {
         try {
           // Paso 1: intentar actualizar periodo existente en el documento
+          // Obtener salón del estudiante para guardarlo en el documento de notas
+          if (!estData) {
+            const estInfo = await Usuario.findOne({ id: estId, role: 'est',
+              $or: [{ colegioId: cid }, { colegioId: '' }, { colegioId: null }]
+            }).lean().catch(() => null);
+            if (estInfo?.salon) {
+              const updated2 = await Nota.findOneAndUpdate(
+                { estId, anoLectivo: ano, ...cidFilter, 'periodos.periodo': periodo },
+                {
+                  $set: {
+                    [`periodos.$.materias.${materia}`]: { a, c, r },
+                    ...(disciplina !== undefined ? { 'periodos.$.disciplina': disciplina } : {}),
+                    salon: estInfo.salon,
+                  }
+                },
+                { new: true }
+              );
+              if (updated2) return updated2;
+            }
+          }
           const updated = await Nota.findOneAndUpdate(
             { estId, anoLectivo: ano, ...cidFilter, 'periodos.periodo': periodo },
             {
               $set: {
                 [`periodos.$.materias.${materia}`]: { a, c, r },
-                ...(disciplina !== undefined ? { 'periodos.$.disciplina': disciplina } : {})
+                ...(disciplina !== undefined ? { 'periodos.$.disciplina': disciplina } : {}),
+                ...(estData?.salon ? { salon: estData.salon } : {}),
               }
             },
             { new: true }
