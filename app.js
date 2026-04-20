@@ -3701,111 +3701,145 @@ function loadPN(){
   const ep_global = encodeURIComponent(per);
 
   if (MODO_CARDS) {
-    // ── MODO TARJETAS: ideal para 10+ estudiantes ────────────────────────────
+    // ── MODO TARJETAS REDISEÑADO ────────────────────────────────────────────
     const pct = DB.notaPct || {};
     const pA = pct.a ?? 60, pC = pct.c ?? 20, pR = pct.r ?? 20;
+
     el.innerHTML = `
-      <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap">
-        <input id="pnFiltro" placeholder="🔍 Buscar estudiante..." style="flex:1;min-width:180px;padding:7px 12px;border:1px solid var(--bd);border-radius:8px;font-size:13px;font-family:var(--fn)"
-          oninput="filtrarPN()">
-        <span id="pnContador" style="font-size:12px;color:var(--sl2);white-space:nowrap">${ests.length} estudiantes</span>
-        <button class="btn bs sm" onclick="expandAllPN()" style="white-space:nowrap">📂 Expandir todos</button>
-        <button class="btn bs sm" onclick="collapseAllPN()" style="white-space:nowrap">📁 Colapsar todos</button>
+      <div class="pn-stats">
+        <div class="pn-stat">
+          <span class="pn-stat-ico">👥</span>
+          <div><div class="pn-stat-val" id="pnStatTotal">${ests.length}</div><div class="pn-stat-lbl">Estudiantes</div></div>
+        </div>
+        <div class="pn-stat">
+          <span class="pn-stat-ico">✅</span>
+          <div><div class="pn-stat-val" id="pnStatConNotas">0</div><div class="pn-stat-lbl">Con notas</div></div>
+        </div>
+        <div class="pn-stat">
+          <span class="pn-stat-ico">⏳</span>
+          <div><div class="pn-stat-val" id="pnStatSinNotas">${ests.length}</div><div class="pn-stat-lbl">Pendientes</div></div>
+        </div>
+        <div class="pn-stat">
+          <span class="pn-stat-ico">📐</span>
+          <div><div class="pn-stat-val" style="font-size:13px">${pA}%/${pC}%/${pR}%</div><div class="pn-stat-lbl">Apt/Act/Res</div></div>
+        </div>
       </div>
-      <div id="pnCards"></div>
-      <div style="margin-top:14px;display:flex;gap:10px;flex-wrap:wrap">
-        <button class="btn bg sm" onclick="selRptProf('${salon}','${per}','pdf')">📄 Reporte PDF</button>
-        <button class="btn bs sm" onclick="selRptProf('${salon}','${per}','xls')">📊 Descargar Excel</button>
-      </div>`;
+      <div class="pn-toolbar">
+        <input id="pnFiltro" class="pnSearch" placeholder="Buscar estudiante por nombre..." oninput="filtrarPN()">
+        <span id="pnContador" style="font-size:12px;color:var(--sl2);white-space:nowrap"></span>
+        <button class="btn bs sm" onclick="expandAllPN()" style="white-space:nowrap">📂 Expandir todos</button>
+        <button class="btn bs sm" onclick="collapseAllPN()" style="white-space:nowrap">📁 Colapsar</button>
+        <button class="btn bg sm" onclick="selRptProf('${salon}','${per}','pdf')">📄 PDF</button>
+        <button class="btn bs sm" onclick="selRptProf('${salon}','${per}','xls')">📊 Excel</button>
+      </div>
+      <div id="pnCards"></div>`;
 
     function renderCards(lista) {
       const container = gi('pnCards');
       if (!container) return;
-      const total = lista.length;
-      const conNotas = lista.filter(e => {
-        return mats.some(m => { const t = DB.notas[e.id]?.[per]?.[m]; return t && (t.a > 0 || t.c > 0 || t.r > 0); });
-      }).length;
-      if (gi('pnContador')) gi('pnContador').textContent = `${lista.length} estudiantes — ✅ ${conNotas} con notas`;
+      const conNotas = lista.filter(e =>
+        mats.some(m => { const t = DB.notas[e.id]?.[per]?.[m]; return t && (t.a > 0 || t.c > 0 || t.r > 0); })
+      ).length;
+      const sinNotas = lista.length - conNotas;
+      if (gi('pnStatTotal'))    gi('pnStatTotal').textContent    = lista.length;
+      if (gi('pnStatConNotas')) gi('pnStatConNotas').textContent = conNotas;
+      if (gi('pnStatSinNotas')) gi('pnStatSinNotas').textContent = sinNotas;
+      if (gi('pnContador'))     gi('pnContador').textContent     = `${lista.length} estudiante${lista.length!==1?'s':''}`;
+
       container.innerHTML = lista.map((e, idx) => {
         syncN(e.id);
         const pp = pprom(e.id, per);
-        const tieneNotas = mats.some(m => { const t = DB.notas[e.id]?.[per]?.[m]; return t && (t.a > 0 || t.c > 0 || t.r > 0); });
-        // Leer SOLO del periodo activo — sin mezclar con el promedio global
-        const discVal = typeof DB.notas[e.id]?.[per]?.disciplina === 'number'
-          ? DB.notas[e.id][per].disciplina
+        const matsConDatos = mats.filter(m => { const t = DB.notas[e.id]?.[per]?.[m]; return t && (t.a > 0 || t.c > 0 || t.r > 0); }).length;
+        const tieneNotas   = matsConDatos > 0;
+        const progPct      = mats.length > 0 ? Math.round((matsConDatos / mats.length) * 100) : 0;
+
+        const discVal   = typeof DB.notas[e.id]?.[per]?.disciplina === 'number' ? DB.notas[e.id][per].disciplina
           : (typeof DB.notas[e.id]?.[per]?._disciplina === 'number' ? DB.notas[e.id][per]._disciplina : 0);
-        const condValCard = typeof DB.notas[e.id]?.[per]?.conducta === 'number'
-          ? DB.notas[e.id][per].conducta
+        const condVal   = typeof DB.notas[e.id]?.[per]?.conducta === 'number' ? DB.notas[e.id][per].conducta
           : (typeof DB.notas[e.id]?.[per]?._conducta === 'number' ? DB.notas[e.id][per]._conducta : 0);
+
+        const ppColor   = pp >= 4 ? '#15803d' : pp >= 3 ? '#b45309' : pp > 0 ? '#dc2626' : 'var(--sl3)';
+        const ppLabel   = pp > 0 ? fmt(pp) : '—';
+
         const camposHTML = mats.map(m => {
-          const t = DB.notas[e.id][per][m] || {a:0,c:0,r:0};
+          const t = DB.notas[e.id][per][m] || {a:0, c:0, r:0};
           const d = def(t);
           const em = encodeURIComponent(m);
-          const tieneVal = t.a > 0 || t.c > 0 || t.r > 0;
-          const clsA = t.a > 0 ? 'niCard nota-ok' : 'niCard nota-vacia';
-          const clsC = t.c > 0 ? 'niCard nota-ok' : 'niCard nota-vacia';
-          const clsR = t.r > 0 ? 'niCard nota-ok' : 'niCard nota-vacia';
-          return `<div style="background:#fff;border-radius:10px;padding:10px 12px;border:1.5px solid ${tieneVal?'#c6f6d5':'#e2e8f0'}">
-            <div style="font-size:11px;font-weight:800;color:var(--nv);margin-bottom:8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;letter-spacing:-.01em" title="${m}">${m}</div>
-            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:6px">
-              <div>
-                <div style="font-size:9px;color:var(--sl3);margin-bottom:3px;text-align:center;font-weight:600">Apt.${pA}%</div>
-                <input type="number" class="${clsA} pnInp" min="0" max="5" step="0.1" value="${t.a > 0 ? t.a.toFixed(1) : ''}" placeholder="0.0"
+          const completa = t.a > 0 && t.c > 0 && t.r > 0;
+          const defCls   = d >= 4 ? 'def-buena' : d >= 3 ? 'def-media' : d > 0 ? 'def-baja' : '';
+          const defTxt   = d > 0 ? fmt(d) : '—';
+          const defColor = d >= 4 ? '#15803d' : d >= 3 ? '#b45309' : d > 0 ? '#dc2626' : '#94a3b8';
+
+          return `<div class="pnMat-card${completa ? ' mat-completa' : ''}">
+            <div class="pnMat-nombre" title="${m}">${m}</div>
+            <div class="pnMat-inputs">
+              <div class="pnMat-campo">
+                <span class="pnMat-lbl">Apt ${pA}%</span>
+                <input type="number" class="niV2 pnInp ${t.a>0?'con-valor':'sin-valor'}" min="0" max="5" step="0.1"
+                  value="${t.a > 0 ? t.a.toFixed(1) : ''}" placeholder="—"
                   data-eid="${e.id}" data-per="${ep_global}" data-mat="${em}" data-f="a"
-                  oninput="clampNota(this)" onchange="saveTri(this);this.className='niCard nota-ok pnInp'">
+                  oninput="clampNota(this)" onchange="saveTri(this);_pnMarkValor(this)">
               </div>
-              <div>
-                <div style="font-size:9px;color:var(--sl3);margin-bottom:3px;text-align:center;font-weight:600">Act.${pC}%</div>
-                <input type="number" class="${clsC} pnInp" min="0" max="5" step="0.1" value="${t.c > 0 ? t.c.toFixed(1) : ''}" placeholder="0.0"
+              <div class="pnMat-campo">
+                <span class="pnMat-lbl">Act ${pC}%</span>
+                <input type="number" class="niV2 pnInp ${t.c>0?'con-valor':'sin-valor'}" min="0" max="5" step="0.1"
+                  value="${t.c > 0 ? t.c.toFixed(1) : ''}" placeholder="—"
                   data-eid="${e.id}" data-per="${ep_global}" data-mat="${em}" data-f="c"
-                  oninput="clampNota(this)" onchange="saveTri(this);this.className='niCard nota-ok pnInp'">
+                  oninput="clampNota(this)" onchange="saveTri(this);_pnMarkValor(this)">
               </div>
-              <div>
-                <div style="font-size:9px;color:var(--sl3);margin-bottom:3px;text-align:center;font-weight:600">Res.${pR}%</div>
-                <input type="number" class="${clsR} pnInp" min="0" max="5" step="0.1" value="${t.r > 0 ? t.r.toFixed(1) : ''}" placeholder="0.0"
+              <div class="pnMat-campo">
+                <span class="pnMat-lbl">Res ${pR}%</span>
+                <input type="number" class="niV2 pnInp ${t.r>0?'con-valor':'sin-valor'}" min="0" max="5" step="0.1"
+                  value="${t.r > 0 ? t.r.toFixed(1) : ''}" placeholder="—"
                   data-eid="${e.id}" data-per="${ep_global}" data-mat="${em}" data-f="r"
-                  oninput="clampNota(this)" onchange="saveTri(this);this.className='niCard nota-ok pnInp'">
+                  oninput="clampNota(this)" onchange="saveTri(this);_pnMarkValor(this)">
               </div>
             </div>
-            <div id="dc_${e.id}_${em}_${ep_global}" style="text-align:center;padding:4px 6px;background:${tieneVal?'#ebf8ff':'#f7fafc'};border-radius:6px">
-              <span style="font-size:10px;color:var(--sl3);margin-right:4px">DEF.</span>
-              <span class="${scC(d)}" style="font-size:14px;font-weight:800">${tieneVal ? fmt(d) : '—'}</span>
+            <div id="dc_${e.id}_${em}_${ep_global}" class="pnMat-def ${defCls}">
+              <span style="font-size:10px;color:var(--sl3);font-weight:600">DEF</span>
+              <span style="font-size:15px;font-weight:800;color:${defColor}">${defTxt}</span>
             </div>
           </div>`;
         }).join('');
-        return `<div class="pnCard" data-nombre="${e.nombre.toLowerCase()}" style="border:1px solid ${tieneNotas ? '#c6f6d5' : 'var(--bd)'};border-radius:10px;margin-bottom:8px;overflow:hidden;background:${tieneNotas ? '#f0fff4' : '#fff'}">
-          <div style="display:flex;align-items:center;gap:12px;padding:12px 16px;cursor:pointer;user-select:none"
-            onclick="togglePN('${e.id}')">
-            <div style="width:32px;height:32px;border-radius:50%;background:${tieneNotas ? '#68d391' : '#e2e8f0'};display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;color:${tieneNotas ? '#276749' : '#718096'};flex-shrink:0">${idx+1}</div>
+
+        return `<div class="pnCard2${tieneNotas ? ' tiene-notas' : ''}" data-nombre="${e.nombre.toLowerCase()}" id="pnCard2_${e.id}">
+          <div class="pnCard2-hdr" onclick="togglePN2('${e.id}')">
+            <div class="pnCard2-av" id="pnAv_${e.id}">${idx+1}</div>
             <div style="flex:1;min-width:0">
               <div style="font-weight:700;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(e.nombre)}</div>
-              <div style="font-size:12px;color:var(--sl2);margin-top:2px">${tieneNotas ? `Prom. periodo: <strong class="${scC(pp)}" id="apr_hdr_${e.id}">${fmt(pp)}</strong>` : '<span style="color:#a0aec0">▶ Clic para ingresar notas</span>'}</div>
+              <div style="font-size:11px;color:var(--sl2);margin-top:2px;display:flex;align-items:center;gap:8px">
+                ${tieneNotas
+                  ? `<span>Prom: <strong id="apr_hdr_${e.id}" style="color:${ppColor}">${ppLabel}</strong></span>
+                     <span style="color:var(--sl3)">·</span>
+                     <span style="color:var(--sl3)">${matsConDatos}/${mats.length} mats</span>`
+                  : `<span style="color:#94a3b8">Clic para ingresar notas</span>`}
+              </div>
+              <div class="pnProgress" style="margin-top:5px">
+                <div class="pnProgress-bar" style="width:${progPct}%"></div>
+              </div>
             </div>
-            <div id="pnArr_${e.id}" style="color:var(--sl2);font-size:16px;transition:transform .2s">▼</div>
+            <div style="font-size:22px;color:var(--sl3);transition:transform .2s;flex-shrink:0" id="pnChev_${e.id}">›</div>
           </div>
-          <div id="pnDet_${e.id}" style="display:none;padding:12px 14px;border-top:1px solid #f0f0f0;background:#fafafa">
-            <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:8px;margin-bottom:10px">
-              ${camposHTML}
-            </div>
-            <div style="display:flex;align-items:center;gap:10px;padding:8px 10px;background:#f7fafc;border-radius:8px;font-size:12px">
-              <span style="color:var(--sl2)">Disciplina:</span>
-              <input type="number" class="ni" min="0" max="5" step="0.1" style="width:64px;text-align:center"
-                value="${discVal.toFixed(1)}" placeholder="0.0"
+          <div class="pnCard2-body" id="pnDet_${e.id}">
+            <div class="pnMat-grid">${camposHTML}</div>
+            <div class="pnCard2-footer">
+              <span class="pnFtr-lbl">Disciplina</span>
+              <input type="number" class="niSmall" min="0" max="5" step="0.1"
+                value="${discVal > 0 ? discVal.toFixed(1) : ''}" placeholder="—"
                 oninput="clampNota(this)" onchange="saveDisc('${e.id}',this.value,'${ep_global}')">
-              <span style="color:var(--sl3);font-size:11px">${discLabel(discVal)}</span>
-              <span style="color:var(--sl2);margin-left:12px">Conducta:</span>
-              <input type="number" class="ni" min="0" max="5" step="0.1" style="width:64px;text-align:center"
-                value="${condValCard.toFixed(1)}" placeholder="0.0"
+              <span style="font-size:10px;color:var(--sl3)">${discLabel(discVal)}</span>
+              <span class="pnFtr-lbl" style="margin-left:6px">Conducta</span>
+              <input type="number" class="niSmall" min="0" max="5" step="0.1"
+                value="${condVal > 0 ? condVal.toFixed(1) : ''}" placeholder="—"
                 oninput="clampNota(this)" onchange="saveConducta('${e.id}',this.value,'${ep_global}')">
-              <span style="color:var(--sl3);font-size:11px">${discLabel(condValCard)}</span>
-              <span style="margin-left:auto;font-size:12px">Prom. periodo: <strong id="apr_${e.id}" class="${scC(pp)}">${fmt(pp)}</strong></span>
+              <span style="font-size:10px;color:var(--sl3)">${discLabel(condVal)}</span>
+              <span style="margin-left:auto;font-size:13px;font-weight:700">
+                Prom: <strong id="apr_${e.id}" style="color:${ppColor}">${ppLabel}</strong>
+              </span>
             </div>
             ${(()=>{
-              // ── Proyección / Veredicto final ──────────────────────────
               const verd = veredictoAnual(e.id);
               if(!verd) return '';
-
-              // ── CASO A: Todos los periodos completos → veredicto final ──
               if(verd.completo){
                 const bgV = verd.resultado==='gana' ? '#f0fff4' : verd.resultado==='recupera' ? '#fffbeb' : '#fff5f5';
                 const borV = verd.resultado==='gana' ? '#9ae6b4' : verd.resultado==='recupera' ? '#fbd38d' : '#feb2b2';
@@ -3819,10 +3853,8 @@ function loadPN(){
                     <td style="padding:5px 8px;font-size:11px;color:${col};font-weight:700">${x.gana ? 'Aprobada' : 'Perdida'}</td>
                   </tr>`;
                 }).join('');
-                return `<div style="margin-top:10px;border-radius:8px;overflow:hidden;border:1.5px solid ${borV}">
-                  <div style="background:${bgV};padding:9px 12px;font-size:12px;font-weight:800;color:${colV}">
-                    ${verd.mensaje}
-                  </div>
+                return `<div style="margin-top:10px;border-radius:10px;overflow:hidden;border:1.5px solid ${borV}">
+                  <div style="background:${bgV};padding:9px 12px;font-size:12px;font-weight:800;color:${colV}">${verd.mensaje}</div>
                   <table style="width:100%;border-collapse:collapse;background:#fff">
                     <thead><tr style="background:#f7fafc">
                       <th style="padding:5px 10px;font-size:10px;color:#4a5568;text-align:left">Materia</th>
@@ -3831,12 +3863,8 @@ function loadPN(){
                     </tr></thead>
                     <tbody>${filasV}</tbody>
                   </table>
-                  ${verd.resultado==='recupera'?`<div style="background:#fffbeb;padding:5px 12px;font-size:9px;color:#92400e">⚠️ Puede recuperar: máximo 2 materias perdidas → va a recuperación de fin de año</div>`:''}
-                  ${verd.resultado==='pierde'?`<div style="background:#fff5f5;padding:5px 12px;font-size:9px;color:#742a2a">❌ Pierde el año: más de 2 materias perdidas → debe repetir el grado</div>`:''}
                 </div>`;
               }
-
-              // ── CASO B: Periodos pendientes → proyección secuencial ──
               const periodosProy = necesitaParaPeriodos(e.id);
               if (!periodosProy.length) return '';
               const filas = periodosProy.map(x => {
@@ -3844,42 +3872,32 @@ function loadPN(){
                 const color = imposible ? '#742a2a' : x.necesita <= 3 ? '#276749' : x.necesita <= 4 ? '#744210' : '#c53030';
                 const icono = imposible ? '🚨' : x.necesita <= 3 ? '🟢' : x.necesita <= 4 ? '🟡' : '🔴';
                 const msg = imposible
-                  ? `${x.matsImpCount} materia${x.matsImpCount>1?'s':''} ya no pueden recuperarse — requiere apoyo`
-                  : x.matsEnRiesgo === 0
-                    ? 'Va bien en todas las materias'
-                    : `Sacar ≥ ${x.necesita.toFixed(1)} en promedio (${x.matsEnRiesgo} materia${x.matsEnRiesgo>1?'s':''} en riesgo)`;
+                  ? `${x.matsImpCount} materia${x.matsImpCount>1?'s':''} ya no pueden recuperarse`
+                  : x.matsEnRiesgo === 0 ? 'Va bien en todas las materias'
+                    : `Sacar ≥ ${x.necesita.toFixed(1)} (${x.matsEnRiesgo} mat${x.matsEnRiesgo>1?'s':''} en riesgo)`;
                 return `<tr>
                   <td style="padding:5px 10px;font-size:12px;font-weight:700">${icono} ${x.per}</td>
                   <td style="padding:5px 8px;text-align:center;font-size:13px;font-weight:800;color:${color}">${imposible ? '✗' : x.necesita.toFixed(1)}</td>
-                  <td style="padding:5px 8px;font-size:10px;color:#555;font-style:italic">${msg}</td>
+                  <td style="padding:5px 8px;font-size:10px;color:#555">${msg}</td>
                 </tr>`;
               }).join('');
-              return `<div style="margin-top:10px;border-radius:8px;overflow:hidden;border:1.5px solid #fed7aa">
-                <div style="background:#fff7ed;padding:8px 12px;display:flex;align-items:center;gap:8px">
-                  <span style="font-size:15px">📊</span>
-                  <div>
-                    <div style="font-size:12px;font-weight:800;color:#c05621">¿Puede ganar el año?</div>
-                    <div style="font-size:10px;color:#b7791f">Nota mínima promedio requerida en cada periodo para aprobar</div>
-                  </div>
-                </div>
+              return `<div style="margin-top:10px;border-radius:10px;overflow:hidden;border:1.5px solid #fed7aa">
+                <div style="background:#fff7ed;padding:8px 12px;font-size:12px;font-weight:800;color:#c05621">📊 ¿Puede ganar el año?</div>
                 <table style="width:100%;border-collapse:collapse;background:#fff">
                   <thead><tr style="background:#fef3c7">
                     <th style="padding:5px 10px;font-size:10px;color:#92400e;text-align:left">Periodo pendiente</th>
-                    <th style="padding:5px 8px;font-size:10px;color:#92400e;text-align:center">Nota mínima prom.</th>
+                    <th style="padding:5px 8px;font-size:10px;color:#92400e;text-align:center">Nota mínima</th>
                     <th style="padding:5px 8px;font-size:10px;color:#92400e;text-align:left">¿Qué necesita?</th>
                   </tr></thead>
                   <tbody>${filas}</tbody>
                 </table>
-                <div style="background:#fffbeb;padding:5px 12px;font-size:9px;color:#a16207">
-                  🟢 Fácil (≤ 3.0) &nbsp;·&nbsp; 🟡 Con esfuerzo (3.1–4.0) &nbsp;·&nbsp; 🔴 Muy difícil (4.1–5.0) &nbsp;·&nbsp; 🚨 Ya no alcanza
-                </div>
               </div>`;
             })()}
           </div>
         </div>`;
       }).join('');
 
-      // Navegación con Tab entre inputs dentro de cada tarjeta abierta
+      // Tab navigation between inputs
       container.querySelectorAll('.pnInp').forEach((inp, i, all) => {
         inp.addEventListener('keydown', ev => {
           if (ev.key === 'Enter' || ev.key === 'Tab') {
@@ -3888,51 +3906,69 @@ function loadPN(){
             if (next) { next.focus(); next.select(); }
           }
         });
-        inp.addEventListener('focus', ev => ev.target.select());
+        inp.addEventListener('focus', ev => { ev.target.select(); });
       });
     }
 
-    window._pnEsts = ests;
-    window._pnMats = mats;
+    // Helper: marca visualmente un input después de guardar
+    window._pnMarkValor = function(inp) {
+      const v = parseFloat(inp.value);
+      inp.className = inp.className.replace(/con-valor|sin-valor/g, '').trim()
+        + (v > 0 ? ' con-valor' : ' sin-valor');
+      // Badge "guardado"
+      let badge = document.querySelector('.pn-saved-badge');
+      if (badge) badge.remove();
+      badge = document.createElement('div');
+      badge.className = 'pn-saved-badge';
+      badge.textContent = '✓ Guardado';
+      document.body.appendChild(badge);
+      setTimeout(() => { if (badge.parentNode) badge.parentNode.removeChild(badge); }, 1800);
+    };
+
+    window._pnEsts  = ests;
+    window._pnMats  = mats;
     window._pnSalon = salon;
-    window._pnPer = per;
+    window._pnPer   = per;
+
     window.filtrarPN = function() {
       const q = (gi('pnFiltro')?.value || '').toLowerCase().trim();
       const filtrados = q ? window._pnEsts.filter(e => e.nombre.toLowerCase().includes(q)) : window._pnEsts;
       renderCards(filtrados);
     };
-    window.togglePN = function(eid) {
-      const det = gi('pnDet_' + eid);
-      const arr = gi('pnArr_' + eid);
-      if (!det) return;
-      const open = det.style.display !== 'none';
-      det.style.display = open ? 'none' : 'block';
-      if (arr) arr.style.transform = open ? '' : 'rotate(180deg)';
+
+    window.togglePN2 = function(eid) {
+      const card  = gi('pnCard2_' + eid);
+      const body  = gi('pnDet_'   + eid);
+      const chev  = gi('pnChev_'  + eid);
+      const av    = gi('pnAv_'    + eid);
+      if (!card || !body) return;
+      const open  = card.classList.contains('pn-open');
+      card.classList.toggle('pn-open', !open);
+      if (chev) chev.style.transform = open ? '' : 'rotate(90deg)';
       if (!open) {
-        // Enfocar primer input al abrir
-        const firstInp = det.querySelector('input[type="number"]');
-        if (firstInp) { setTimeout(() => { firstInp.focus(); firstInp.select(); }, 50); }
+        const first = body.querySelector('input[type="number"]');
+        if (first) setTimeout(() => { first.focus(); first.select(); }, 80);
       }
     };
-    renderCards(ests);
+    // Alias for legacy code
+    window.togglePN = window.togglePN2;
 
-    // Expande / colapsa TODAS las tarjetas
-    window.expandAllPN = function(){
-      document.querySelectorAll('[id^="pnDet_"]').forEach(el=>{
-        if(el.style.display==='none'||el.style.display===''){
-          el.style.display='block';
-          const id=el.id.replace('pnDet_','');
-          const arr=gi('pnArr_'+id); if(arr) arr.style.transform='rotate(180deg)';
-        }
+    window.expandAllPN = function() {
+      document.querySelectorAll('.pnCard2').forEach(card => {
+        card.classList.add('pn-open');
+        const id = card.id.replace('pnCard2_','');
+        const chev = gi('pnChev_'+id); if(chev) chev.style.transform = 'rotate(90deg)';
       });
     };
-    window.collapseAllPN = function(){
-      document.querySelectorAll('[id^="pnDet_"]').forEach(el=>{
-        el.style.display='none';
-        const id=el.id.replace('pnDet_','');
-        const arr=gi('pnArr_'+id); if(arr) arr.style.transform='';
+    window.collapseAllPN = function() {
+      document.querySelectorAll('.pnCard2').forEach(card => {
+        card.classList.remove('pn-open');
+        const id = card.id.replace('pnCard2_','');
+        const chev = gi('pnChev_'+id); if(chev) chev.style.transform = '';
       });
     };
+
+    renderCards(ests);
 
   } else {
     // ── MODO TABLA: para grupos pequeños (<10 estudiantes) ──────────────────
