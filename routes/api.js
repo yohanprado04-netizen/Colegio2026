@@ -511,47 +511,27 @@ router.put('/notas/:estId/:periodo/:materia', authMiddleware, async (req, res) =
     const guardarNota = async (intentos = 3) => {
       for (let i = 0; i < intentos; i++) {
         try {
+          // Obtener salón del estudiante UNA VEZ por iteración para guardarlo históricamente
+          const estData = await Usuario.findOne({ id: estId, role: 'est',
+            $or: [{ colegioId: cid }, { colegioId: '' }, { colegioId: null }]
+          }).lean().catch(() => null);
+          const salonActual = estData?.salon || '';
+
           // Paso 1: intentar actualizar periodo existente en el documento
-          // Obtener salón del estudiante para guardarlo en el documento de notas
-          if (!estData) {
-            const estInfo = await Usuario.findOne({ id: estId, role: 'est',
-              $or: [{ colegioId: cid }, { colegioId: '' }, { colegioId: null }]
-            }).lean().catch(() => null);
-            if (estInfo?.salon) {
-              const updated2 = await Nota.findOneAndUpdate(
-                { estId, anoLectivo: ano, ...cidFilter, 'periodos.periodo': periodo },
-                {
-                  $set: {
-                    [`periodos.$.materias.${materia}`]: { a, c, r },
-                    ...(disciplina !== undefined ? { 'periodos.$.disciplina': disciplina } : {}),
-                    salon: estInfo.salon,
-                  }
-                },
-                { new: true }
-              );
-              if (updated2) return updated2;
-            }
-          }
           const updated = await Nota.findOneAndUpdate(
             { estId, anoLectivo: ano, ...cidFilter, 'periodos.periodo': periodo },
             {
               $set: {
                 [`periodos.$.materias.${materia}`]: { a, c, r },
                 ...(disciplina !== undefined ? { 'periodos.$.disciplina': disciplina } : {}),
-                ...(estData?.salon ? { salon: estData.salon } : {}),
+                ...(salonActual ? { salon: salonActual } : {}),
               }
             },
             { new: true }
           );
           if (updated) return updated;
 
-          // Paso 2: el periodo no existe aún — agregar con $push
-          // Si el documento tampoco existe, crearlo con upsert
-          // Obtener el salón actual del estudiante para guardarlo históricamente
-          const estData = await Usuario.findOne({ id: estId, role: 'est',
-            $or: [{ colegioId: cid }, { colegioId: '' }, { colegioId: null }]
-          }).lean().catch(() => null);
-          const salonActual = estData?.salon || '';
+          // Paso 2: el periodo no existe aún — agregar con $push (upsert)
 
           const pushed = await Nota.findOneAndUpdate(
             { estId, anoLectivo: ano, ...cidFilter },
