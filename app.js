@@ -3766,128 +3766,214 @@ function descargarMiHorario(){
   const horario=DB.horarioPorProf?.[CU.id]||null;
   const franjas=horario?.franjas||[];
   if(!franjas.length){sw('info','Sin horario asignado');return;}
-  const _logo=DB.colegioLogo||'';
-  const _nom=CU.colegioNombre||'';
 
-  const rowsHtml=franjas.map(f=>{
-    if(f.esDescanso){
-      return`<tr style="background:#fff8e1">
-        <td style="padding:7px 10px;border:1px solid #ddd;font-size:11px;font-weight:700;color:#b7791f;white-space:nowrap">${f.hora}</td>
-        <td colspan="5" style="padding:7px;border:1px solid #ddd;text-align:center;font-weight:700;font-size:12px;color:#b7791f">DESCANSO</td>
-      </tr>`;
-    }
-    return`<tr>${['hora',...DIAS].map((col,i)=>{
-      if(i===0) return`<td style="padding:7px 10px;border:1px solid #ddd;font-size:11px;white-space:nowrap;font-weight:600">${f.hora}</td>`;
-      const clase=f.clases?.[col];
-      return clase
-        ?`<td style="padding:6px 8px;border:1px solid #ddd;text-align:center;background:#eff6ff">
-            <div style="font-size:11px;font-weight:700;color:#1e40af">${clase.mat||'—'}</div>
-            <div style="font-size:10px;color:#64748b">${clase.salon}</div>
-          </td>`
-        :`<td style="padding:7px;border:1px solid #ddd;text-align:center;color:#aaa;font-size:11px">—</td>`;
-    }).join('')}</tr>`;
-  }).join('');
-
-  const html=`<div style="font-family:Arial,sans-serif;background:#fff;padding:16px;color:#111">
-    <div style="border-bottom:3px solid #111;padding-bottom:10px;margin-bottom:14px;display:flex;align-items:center;gap:16px">
-      ${_logo?`<img src="${_logo}" style="height:64px;width:auto;object-fit:contain">`:''}
-      <div>
-        ${_nom?`<div style="font-size:15px;font-weight:900;text-transform:uppercase;letter-spacing:.04em">${_nom}</div>`:''}
-        <div style="font-size:13px;font-weight:700;margin-top:3px">HORARIO DE CLASES</div>
-        <div style="font-size:11px;color:#555;margin-top:2px">Profesor/a: <strong>${esc(CU.nombre)}</strong></div>
-      </div>
-    </div>
-    <table style="width:100%;border-collapse:collapse;font-size:12px">
-      <thead><tr>
-        <th style="padding:8px 10px;background:#1e293b;color:#fff;font-size:11px;text-align:left;border:1px solid #555;min-width:90px">HORA</th>
-        ${DIAS.map(d=>`<th style="padding:8px 6px;background:#1e293b;color:#fff;font-size:11px;text-align:center;border:1px solid #555">${d.toUpperCase()}</th>`).join('')}
-      </tr></thead>
-      <tbody>${rowsHtml}</tbody>
-    </table>
-    <div style="margin-top:12px;font-size:10px;color:#888;text-align:right">Generado: ${new Date().toLocaleString('es-CO')}</div>
-  </div>`;
-
-  // Crear contenedor fuera de pantalla pero renderizable por html2canvas
-  const box = document.createElement('div');
-  box.id = '_horPdfBox';
-  box.style.cssText = [
-    'position:absolute',
-    'top:0',
-    'left:0',
-    'width:1050px',          // ancho fijo para A4 landscape
-    'background:#ffffff',
-    'z-index:-1',            // detrás de todo — html2canvas igual lo captura
-    'visibility:hidden',     // invisible al usuario
-    'pointer-events:none',
-    'padding:0',
-    'margin:0',
-    'overflow:visible',
-  ].join(';');
-  box.innerHTML = html;
-  document.body.appendChild(box);
-
-  sw('info', 'Generando PDF del horario...', '', 2000);
-
-  // Esperar a que el navegador pinte el DOM antes de capturar
-  requestAnimationFrame(() => {
-    setTimeout(() => {
-      // Hacer visible justo antes de capturar (html2canvas lo necesita)
-      box.style.visibility = 'visible';
-      box.style.zIndex = '99999';
-      box.style.position = 'fixed';
-      box.style.top = '0';
-      box.style.left = '-9999px'; // fuera del viewport visible
-
-      html2pdf()
-        .set({
-          margin: [8, 8, 8, 8],
-          filename: `horario_${CU.nombre.replace(/\s+/g,'_')}.pdf`,
-          image: { type: 'jpeg', quality: 0.98 },
-          html2canvas: {
-            scale: 2,
-            logging: false,
-            backgroundColor: '#ffffff',
-            useCORS: true,
-            allowTaint: true,
-            windowWidth: 1050,
-            scrollX: 0,
-            scrollY: 0,
-          },
-          jsPDF: { unit: 'mm', format: 'a4', orientation: 'landscape' }
-        })
-        .from(box)
-        .save()
-        .then(() => {
-          document.body.removeChild(box);
-          sw('success', 'Horario descargado correctamente', '', 1800);
-        })
-        .catch(err => {
-          if (document.body.contains(box)) document.body.removeChild(box);
-          console.error('html2pdf error:', err);
-          // Fallback: abrir en ventana nueva para imprimir manualmente
-          _horarioFallbackPrint(html, `horario_${CU.nombre.replace(/\s+/g,'_')}`);
-        });
-    }, 400);
-  });
+  // ── Generar PDF con jsPDF puro (sin html2canvas — evita página en blanco) ──
+  // jsPDF está disponible globalmente a través de la librería html2pdf incluida
+  try{
+    const { jsPDF } = window.jspdf || {};
+    if(!jsPDF) throw new Error('jsPDF no disponible');
+    _generarHorarioPDF_jspdf(franjas, DIAS);
+  } catch(e){
+    // Fallback: ventana de impresión
+    console.warn('jsPDF no disponible, usando ventana de impresión:', e.message);
+    _horarioFallbackPrint(franjas, DIAS);
+  }
 }
 
-/* Fallback: abre el horario en ventana nueva para imprimir con Ctrl+P */
-function _horarioFallbackPrint(htmlContent, filename){
-  const win = window.open('', '_blank', 'width=1100,height=700');
-  if(!win){ sw('error','El navegador bloqueó la ventana emergente. Habilita las ventanas emergentes para este sitio.'); return; }
-  win.document.write(`<!DOCTYPE html><html><head>
-    <title>${filename}</title>
-    <style>
-      body{margin:0;padding:16px;font-family:Arial,sans-serif;background:#fff;color:#111}
-      @media print{body{margin:0;padding:0}}
-    </style>
-  </head><body>${htmlContent}
-    <script>
-      setTimeout(()=>{ window.print(); }, 500);
-    </script>
-  </body></html>`);
+/* Genera el PDF del horario usando jsPDF directamente — sin html2canvas */
+function _generarHorarioPDF_jspdf(franjas, DIAS){
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ orientation:'landscape', unit:'mm', format:'a4' });
+
+  // A4 landscape: 297 x 210 mm — márgenes 10 mm
+  const ML=10, MT=10, PW=297, PH=210;
+  const contentW = PW - ML*2;   // 277 mm
+
+  // ── Paleta ──
+  const NAVY  = [15, 31, 53];
+  const TEAL  = [0, 182, 155];
+  const LBLUE = [239, 246, 255];
+  const NAVY2 = [29, 58, 95];
+  const AMBER = [255, 248, 225];
+  const AMBER_TXT = [183, 121, 31];
+  const GRAY  = [100, 116, 139];
+  const LGRAY = [241, 245, 249];
+
+  // ── Encabezado ──────────────────────────────────────────
+  // Rectángulo de fondo navy
+  doc.setFillColor(...NAVY);
+  doc.rect(ML, MT, contentW, 22, 'F');
+
+  // Barra teal inferior del header
+  doc.setFillColor(...TEAL);
+  doc.rect(ML, MT+22, contentW, 1.5, 'F');
+
+  // Texto del colegio
+  const _nom = CU.colegioNombre || DB.colegioNombre || '';
+  doc.setTextColor(255,255,255);
+  doc.setFont('helvetica','bold');
+  doc.setFontSize(13);
+  if(_nom) doc.text(_nom.toUpperCase(), ML+6, MT+9);
+
+  doc.setFontSize(10);
+  doc.setFont('helvetica','normal');
+  doc.text('HORARIO DE CLASES', ML+6, MT+15);
+
+  doc.setFontSize(9);
+  doc.setTextColor(180,200,220);
+  doc.text(`Profesor/a: ${CU.nombre}`, ML+6, MT+20);
+
+  // Fecha generación (derecha)
+  doc.setFontSize(8);
+  doc.setTextColor(180,200,220);
+  const fechaGen = new Date().toLocaleString('es-CO',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'});
+  doc.text(`Generado: ${fechaGen}`, PW - ML - 2, MT+20, {align:'right'});
+
+  // ── Tabla ────────────────────────────────────────────────
+  const tableTop = MT + 26;
+  const rowH = 10;   // altura de cada fila en mm
+  const horaColW = 36;
+  const diaColW  = (contentW - horaColW) / 5;
+
+  // Cabecera de tabla
+  doc.setFillColor(...NAVY2);
+  doc.rect(ML, tableTop, contentW, rowH, 'F');
+
+  doc.setTextColor(255,255,255);
+  doc.setFont('helvetica','bold');
+  doc.setFontSize(8);
+  doc.text('HORA', ML + horaColW/2, tableTop + 6.5, {align:'center'});
+  DIAS.forEach((d,i)=>{
+    const x = ML + horaColW + diaColW*i + diaColW/2;
+    doc.text(d.toUpperCase(), x, tableTop + 6.5, {align:'center'});
+  });
+
+  // Filas de datos
+  let y = tableTop + rowH;
+  franjas.forEach((f, fi)=>{
+    const fillColor = f.esDescanso ? AMBER : (fi%2===0 ? [255,255,255] : LGRAY);
+    doc.setFillColor(...fillColor);
+    doc.rect(ML, y, contentW, rowH, 'F');
+
+    // Borde de fila
+    doc.setDrawColor(220,228,236);
+    doc.setLineWidth(0.2);
+    doc.rect(ML, y, contentW, rowH, 'S');
+
+    // Hora
+    if(f.esDescanso){
+      doc.setTextColor(...AMBER_TXT);
+      doc.setFont('helvetica','bold');
+      doc.setFontSize(7.5);
+      doc.text(f.hora||'', ML + horaColW/2, y+4, {align:'center'});
+      doc.setFontSize(7);
+      doc.text('☕ DESCANSO', ML + horaColW + (contentW-horaColW)/2, y+6.5, {align:'center'});
+    } else {
+      // Hora normal
+      doc.setTextColor(...NAVY);
+      doc.setFont('helvetica','bold');
+      doc.setFontSize(7.5);
+      doc.text(f.hora||'', ML + horaColW/2, y+6.5, {align:'center'});
+
+      // Separador columna hora
+      doc.setDrawColor(200,210,225);
+      doc.setLineWidth(0.4);
+      doc.line(ML+horaColW, y, ML+horaColW, y+rowH);
+
+      // Celdas de días
+      DIAS.forEach((dia,i)=>{
+        const cx = ML + horaColW + diaColW*i;
+        const clase = f.clases?.[dia];
+
+        if(clase && (clase.mat||clase.salon)){
+          // Fondo azul claro para celdas con clase
+          doc.setFillColor(...LBLUE);
+          doc.rect(cx+0.2, y+0.2, diaColW-0.4, rowH-0.4, 'F');
+
+          doc.setTextColor(30,64,175);
+          doc.setFont('helvetica','bold');
+          doc.setFontSize(7.5);
+          const mat = clase.mat||'';
+          // Truncar si es muy largo
+          const maxW = diaColW - 4;
+          const matTxt = doc.getTextWidth(mat) > maxW
+            ? mat.substring(0, Math.floor(mat.length * maxW / doc.getTextWidth(mat))) + '…'
+            : mat;
+          doc.text(matTxt, cx + diaColW/2, y+4.5, {align:'center'});
+
+          doc.setTextColor(...GRAY);
+          doc.setFont('helvetica','normal');
+          doc.setFontSize(6.5);
+          doc.text(clase.salon||'', cx + diaColW/2, y+7.8, {align:'center'});
+        } else {
+          doc.setTextColor(180,190,200);
+          doc.setFont('helvetica','normal');
+          doc.setFontSize(8);
+          doc.text('—', cx + diaColW/2, y+6.5, {align:'center'});
+        }
+
+        // Separador vertical
+        doc.setDrawColor(220,228,236);
+        doc.setLineWidth(0.2);
+        doc.line(cx+diaColW, y, cx+diaColW, y+rowH);
+      });
+    }
+    y += rowH;
+  });
+
+  // Borde exterior de la tabla completo
+  doc.setDrawColor(...NAVY);
+  doc.setLineWidth(0.5);
+  doc.rect(ML, tableTop, contentW, rowH + franjas.length*rowH, 'S');
+
+  // ── Pie de página ────────────────────────────────────────
+  doc.setTextColor(...GRAY);
+  doc.setFont('helvetica','normal');
+  doc.setFontSize(7);
+  doc.text('EduSistema Pro — Sistema de Gestión Académica', ML, PH-4);
+  doc.text(`Página 1`, PW-ML, PH-4, {align:'right'});
+
+  // ── Descargar ────────────────────────────────────────────
+  const filename = `horario_${(CU.nombre||'profesor').replace(/\s+/g,'_')}.pdf`;
+  doc.save(filename);
+  sw('success','✅ Horario descargado correctamente','',2000);
+}
+
+/* Fallback: ventana de impresión si jsPDF no está disponible */
+function _horarioFallbackPrint(franjas, DIAS){
+  const rows = franjas.map(f=>{
+    if(f.esDescanso) return`<tr style="background:#fff8e1">
+      <td style="padding:7px 10px;border:1px solid #ddd;font-size:11px;font-weight:700;color:#b7791f">${f.hora||''}</td>
+      <td colspan="5" style="border:1px solid #ddd;text-align:center;font-weight:700;font-size:12px;color:#b7791f">☕ DESCANSO</td></tr>`;
+    return`<tr><td style="padding:7px 10px;border:1px solid #ddd;font-size:11px;font-weight:600">${f.hora||''}</td>`+
+      DIAS.map(d=>{const c=f.clases?.[d];return c
+        ?`<td style="padding:6px;border:1px solid #ddd;text-align:center;background:#eff6ff"><div style="font-size:11px;font-weight:700;color:#1e40af">${c.mat||''}</div><div style="font-size:10px;color:#666">${c.salon||''}</div></td>`
+        :`<td style="border:1px solid #ddd;text-align:center;color:#aaa;font-size:11px">—</td>`;}).join('')+`</tr>`;
+  }).join('');
+
+  const html=`<!DOCTYPE html><html><head><meta charset="utf-8"><title>Horario</title>
+  <style>body{font-family:Arial,sans-serif;margin:0;padding:12px;background:#fff}
+  table{width:100%;border-collapse:collapse}th{background:#1e293b;color:#fff;padding:8px;font-size:11px}
+  @media print{@page{size:A4 landscape;margin:10mm}body{padding:0}}</style></head>
+  <body>
+    <div style="border-bottom:3px solid #0f1f35;padding-bottom:8px;margin-bottom:12px">
+      <div style="font-size:15px;font-weight:900;color:#0f1f35">${esc(CU.colegioNombre||'')}</div>
+      <div style="font-size:13px;font-weight:700">HORARIO DE CLASES</div>
+      <div style="font-size:11px;color:#666">Profesor/a: ${esc(CU.nombre)}</div>
+    </div>
+    <table><thead><tr>
+      <th style="text-align:left;min-width:90px">HORA</th>
+      ${DIAS.map(d=>`<th>${d.toUpperCase()}</th>`).join('')}
+    </tr></thead><tbody>${rows}</tbody></table>
+    <p style="font-size:10px;color:#999;text-align:right;margin-top:10px">Generado: ${new Date().toLocaleString('es-CO')}</p>
+    <script>window.onload=()=>setTimeout(()=>window.print(),600);</script>
+  </body></html>`;
+
+  const win=window.open('','_blank','width=1100,height=750');
+  if(!win){sw('error','Activa las ventanas emergentes para este sitio y vuelve a intentarlo.');return;}
+  win.document.write(html);
   win.document.close();
-  sw('info','Si el PDF no se descargó, usa Ctrl+P en la ventana que se abrió para guardar como PDF.','',4000);
+  sw('info','Se abrió una ventana — usa Ctrl+P para guardar como PDF.','',4000);
 }
 
 /* Filtrar estudiantes en la lista del salón */
