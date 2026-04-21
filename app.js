@@ -3720,7 +3720,7 @@ function phTab(key){
   else tabContent.innerHTML=renderPhSalonTab(key);
 }
 
-/* Renderiza el tab de horario */
+/* Renderiza el tab de horario del profesor — con descansos y descarga PDF */
 function renderPhHorarioTab(){
   const DIAS=['Lunes','Martes','Miércoles','Jueves','Viernes'];
   const horario=DB.horarioPorProf?.[CU.id]||null;
@@ -3733,9 +3733,15 @@ function renderPhHorarioTab(){
     </div>`;
   }
   const rowsHtml=franjas.map(f=>{
+    if(f.esDescanso){
+      return`<tr style="background:#fff8e1">
+        <td style="font-family:var(--mn);font-size:11px;color:#b7791f;white-space:nowrap;padding:9px 10px;font-weight:700">${f.hora}</td>
+        <td colspan="5" style="text-align:center;padding:9px;font-size:12px;font-weight:700;color:#b7791f;letter-spacing:.04em">☕ DESCANSO</td>
+      </tr>`;
+    }
     const celdas=DIAS.map(dia=>{
       const clase=f.clases?.[dia];
-      if(!clase) return`<td style="text-align:center;color:var(--sl3);font-size:12px">—</td>`;
+      if(!clase) return`<td style="text-align:center;color:var(--sl3);font-size:12px;padding:6px">—</td>`;
       return`<td><button class="phHoraCell" onclick="irANotasSalonMat('${clase.salon}','${clase.mat||''}')">
         <span class="hc-mat">${clase.mat||clase.salon}</span>
         <span class="hc-sal">${clase.salon}</span>
@@ -3743,10 +3749,71 @@ function renderPhHorarioTab(){
     }).join('');
     return`<tr><td style="font-family:var(--mn);font-size:11px;color:var(--sl2);white-space:nowrap;padding:9px 10px">${f.hora}</td>${celdas}</tr>`;
   }).join('');
-  return`<div style="overflow-x:auto"><table class="phHorarioTable">
-    <thead><tr><th>Hora</th>${DIAS.map(d=>`<th>${d}</th>`).join('')}</tr></thead>
-    <tbody>${rowsHtml}</tbody>
-  </table></div>`;
+  return`<div>
+    <div style="display:flex;justify-content:flex-end;padding:10px 14px;background:#f0f7ff;border-bottom:1px solid var(--bd)">
+      <button class="btn bn sm" onclick="descargarMiHorario()">📥 Descargar mi horario</button>
+    </div>
+    <div style="overflow-x:auto"><table class="phHorarioTable">
+      <thead><tr><th>Hora</th>${DIAS.map(d=>`<th>${d}</th>`).join('')}</tr></thead>
+      <tbody>${rowsHtml}</tbody>
+    </table></div>
+  </div>`;
+}
+
+/* Descarga el horario del profesor como PDF */
+function descargarMiHorario(){
+  const DIAS=['Lunes','Martes','Miércoles','Jueves','Viernes'];
+  const horario=DB.horarioPorProf?.[CU.id]||null;
+  const franjas=horario?.franjas||[];
+  if(!franjas.length){sw('info','Sin horario asignado');return;}
+  const _logo=DB.colegioLogo||'';
+  const _nom=CU.colegioNombre||'';
+  const rowsHtml=franjas.map(f=>{
+    if(f.esDescanso){
+      return`<tr style="background:#fff8e1">
+        <td style="padding:7px 10px;border:1px solid #ddd;font-size:11px;font-weight:700;color:#b7791f;white-space:nowrap">${f.hora}</td>
+        <td colspan="5" style="padding:7px;border:1px solid #ddd;text-align:center;font-weight:700;font-size:12px;color:#b7791f">☕ DESCANSO</td>
+      </tr>`;
+    }
+    return`<tr>${['hora',...DIAS].map((col,i)=>{
+      if(i===0) return`<td style="padding:7px 10px;border:1px solid #ddd;font-size:11px;white-space:nowrap;font-weight:600">${f.hora}</td>`;
+      const clase=f.clases?.[col];
+      return clase
+        ?`<td style="padding:6px 8px;border:1px solid #ddd;text-align:center;background:#eff6ff">
+            <div style="font-size:11px;font-weight:700;color:#1e40af">${clase.mat||'—'}</div>
+            <div style="font-size:10px;color:#64748b">${clase.salon}</div>
+          </td>`
+        :`<td style="padding:7px;border:1px solid #ddd;text-align:center;color:#aaa;font-size:11px">—</td>`;
+    }).join('')}</tr>`;
+  }).join('');
+  const html=`<div style="font-family:Arial,sans-serif;background:#fff;max-width:750px;color:#111">
+    <div style="border-bottom:3px solid #111;padding:12px 20px 10px;display:flex;align-items:center;gap:16px">
+      ${_logo?`<img src="${_logo}" style="height:70px;width:auto;object-fit:contain">`:''}
+      <div>
+        ${_nom?`<div style="font-size:14px;font-weight:900;text-transform:uppercase">${_nom}</div>`:''}
+        <div style="font-size:13px;font-weight:700;margin-top:4px">HORARIO DE CLASES</div>
+        <div style="font-size:11px;color:#555">Profesor: <strong>${esc(CU.nombre)}</strong></div>
+      </div>
+    </div>
+    <table style="width:100%;border-collapse:collapse;margin-top:12px;font-size:12px">
+      <thead><tr>
+        <th style="padding:8px 10px;background:#1e293b;color:#fff;font-size:11px;text-align:left;border:1px solid #999">HORA</th>
+        ${DIAS.map(d=>`<th style="padding:8px 6px;background:#1e293b;color:#fff;font-size:11px;text-align:center;border:1px solid #999">${d.toUpperCase()}</th>`).join('')}
+      </tr></thead>
+      <tbody>${rowsHtml}</tbody>
+    </table>
+    <div style="margin-top:14px;font-size:10px;color:#888;text-align:right">Generado: ${new Date().toLocaleString('es-CO')}</div>
+  </div>`;
+  const box=document.createElement('div');
+  box.style.cssText='position:fixed;left:-9999px;top:0;z-index:-1';
+  box.innerHTML=html;
+  document.body.appendChild(box);
+  html2pdf().set({
+    margin:[6,6,6,6],
+    filename:`horario_${CU.nombre.replace(/\s+/g,'_')}.pdf`,
+    html2canvas:{scale:2,useCORS:true,logging:false},
+    jsPDF:{unit:'mm',format:'a4',orientation:'landscape'}
+  }).from(box).save().then(()=>document.body.removeChild(box));
 }
 
 /* Filtrar estudiantes en la lista del salón */
@@ -6753,34 +6820,32 @@ async function sacomBorrar(id) {
 
 const DIAS_SEM = ['Lunes','Martes','Miércoles','Jueves','Viernes'];
 
-// Franjas horarias predeterminadas (el admin puede añadir/quitar)
 const FRANJAS_DEFAULT = [
   '07:00 - 07:55','07:55 - 08:50','08:50 - 09:45',
   '10:00 - 10:55','10:55 - 11:50','11:50 - 12:45',
   '13:30 - 14:25','14:25 - 15:20','15:20 - 16:15',
 ];
 
+// ─── pgAHor ───────────────────────────────────────────────────────────────────
 function pgAHor(){
   return`<div class="ph">
     <h2>🕐 Horarios de Profesores</h2>
-    <p style="font-size:13px;color:var(--sl2)">Asigna el horario semanal a cada profesor de bachillerato.</p>
-    <button class="btn xs bg" onclick="showHelp('aprf')" style="margin-top:6px">❓ Ayuda</button>
+    <p style="font-size:13px;color:var(--sl2)">Asigna el horario semanal a cada profesor. Puedes agregar franjas, descansos y personalizar por docente. 🟢 Primaria · 🔵 Bachillerato</p>
   </div>
   <div id="ahorContent"></div>`;
 }
 
 function initAHor(){
   const el = gi('ahorContent'); if(!el) return;
-  const profsBach = (DB.profs||[]).filter(p => p.ciclo === 'bachillerato');
+  const todosProfs = (DB.profs||[]);
 
-  if(!profsBach.length){
+  if(!todosProfs.length){
     el.innerHTML = `<div class="card"><div class="mty"><div class="ei">👩‍🏫</div>
-      <p>No hay profesores de bachillerato.<br><button class="btn bg" onclick="goto('aprf')">Ir a Profesores</button></p>
+      <p>No hay profesores registrados.<br><button class="btn bg" onclick="goto('aprf')">Ir a Profesores</button></p>
     </div></div>`;
     return;
   }
 
-  // Get saved horarios
   const horarios = DB.horarioPorProf || {};
 
   el.innerHTML = `
@@ -6789,15 +6854,17 @@ function initAHor(){
         <div style="flex:1;min-width:200px">
           <label style="font-size:11px;font-weight:700;color:var(--sl);text-transform:uppercase;display:block;margin-bottom:6px">Profesor</label>
           <select id="horProfSel" onchange="renderHorarioGrid()" style="width:100%;padding:10px 12px;border:1.5px solid var(--bd);border-radius:var(--r);font-size:14px;font-weight:600">
-            ${profsBach.map(p => {
+            ${todosProfs.map(p => {
               const tiene = !!(horarios[p.id]?.franjas?.length);
-              return `<option value="${p.id}">${esc(p.nombre)}${tiene?' ✓':''}`;
+              const cicloLabel = p.ciclo==='primaria'?'🟢':'🔵';
+              return `<option value="${p.id}">${cicloLabel} ${esc(p.nombre)}${tiene?' ✓':''}`;
             }).join('')}
           </select>
         </div>
-        <div style="display:flex;gap:8px;align-items:flex-end;padding-bottom:2px">
+        <div style="display:flex;gap:8px;align-items:flex-end;padding-bottom:2px;flex-wrap:wrap">
           <button class="btn bn" onclick="guardarHorario()" style="padding:10px 20px">💾 Guardar horario</button>
           <button class="btn bg" onclick="limpiarHorario()" style="padding:10px 14px">🗑 Limpiar</button>
+          <button class="btn bs" onclick="copiarHorarioDesde()" style="padding:10px 14px">📋 Copiar de otro prof</button>
         </div>
       </div>
     </div>
@@ -6815,25 +6882,38 @@ function renderHorarioGrid(){
   const wrap = gi('horGridWrap'); if(!wrap) return;
 
   const horario = (DB.horarioPorProf || {})[profId] || {};
-  const franjas = horario.franjas || FRANJAS_DEFAULT.map(h => ({ hora: h, clases: {} }));
+  const franjas = horario.franjas || FRANJAS_DEFAULT.map(h => ({ hora: h, clases: {}, esDescanso: false }));
 
-  // Build all salon-materia options for this prof
   const salMats = [];
   (prof.salones || []).forEach(sal => {
     const mats = getProfMatsSalon(prof.id, sal);
     mats.forEach(m => salMats.push({ sal, mat: m, label: `${sal} — ${m}` }));
   });
+  if(!salMats.length){
+    (prof.salones||[]).forEach(sal => salMats.push({ sal, mat:'', label: sal }));
+  }
 
   const optsHtml = `<option value="">— Libre —</option>` +
     salMats.map(sm => `<option value="${sm.sal}|||${sm.mat}">${esc(sm.label)}</option>`).join('');
 
-  // Build header
   const thDias = DIAS_SEM.map(d =>
-    `<th style="padding:10px 8px;background:var(--nv);color:#fff;text-align:center;font-size:12px;font-weight:700;min-width:160px">${d}</th>`
+    `<th style="padding:10px 8px;background:var(--nv);color:#fff;text-align:center;font-size:12px;font-weight:700;min-width:155px">${d}</th>`
   ).join('');
 
-  // Build rows
   const rows = franjas.map((f, fi) => {
+    if(f.esDescanso){
+      return `<tr style="background:#fff8e1">
+        <td style="padding:8px 12px;border-bottom:1px solid var(--bd);border-right:2px solid var(--bd2);white-space:nowrap">
+          <div style="font-family:var(--mn);font-size:12px;font-weight:700;color:#b7791f">${f.hora}</div>
+          <div style="font-size:10px;color:#b7791f;margin-top:2px">☕ DESCANSO</div>
+        </td>
+        <td colspan="5" style="text-align:center;padding:8px;border-bottom:1px solid var(--bd)">
+          <span style="font-size:12px;font-weight:700;color:#b7791f;letter-spacing:.05em">☕ DESCANSO</span>
+          <button onclick="editarFranja(${fi})" style="margin-left:12px;background:none;border:1px solid #d69e2e;color:#b7791f;border-radius:6px;padding:3px 8px;font-size:11px;cursor:pointer">✏️ Editar hora</button>
+          <button onclick="eliminarFranja(${fi})" style="margin-left:6px;background:none;border:1px solid #fc8181;color:#e53e3e;border-radius:6px;padding:3px 8px;font-size:11px;cursor:pointer">🗑</button>
+        </td>
+      </tr>`;
+    }
     const celdas = DIAS_SEM.map(dia => {
       const clase = f.clases?.[dia];
       const selVal = clase ? `${clase.salon}|||${clase.mat}` : '';
@@ -6849,6 +6929,10 @@ function renderHorarioGrid(){
     return `<tr>
       <td style="padding:8px 12px;border-bottom:1px solid var(--bd);border-right:2px solid var(--bd2);white-space:nowrap">
         <div style="font-family:var(--mn);font-size:12px;font-weight:700;color:var(--nv)">${f.hora}</div>
+        <div style="display:flex;gap:4px;margin-top:4px">
+          <button onclick="editarFranja(${fi})" style="background:none;border:1px solid var(--bd);color:var(--sl2);border-radius:5px;padding:2px 6px;font-size:10px;cursor:pointer">✏️</button>
+          <button onclick="eliminarFranja(${fi})" style="background:none;border:1px solid #fc8181;color:#e53e3e;border-radius:5px;padding:2px 6px;font-size:10px;cursor:pointer">🗑</button>
+        </div>
       </td>
       ${celdas}
     </tr>`;
@@ -6857,7 +6941,7 @@ function renderHorarioGrid(){
   wrap.innerHTML = `
     <div style="display:flex;align-items:center;gap:10px;padding:12px 16px;background:var(--bg2);border-bottom:1.5px solid var(--bd);flex-wrap:wrap">
       <span style="font-size:13px;font-weight:700;color:var(--nv)">👩‍🏫 ${esc(prof.nombre)}</span>
-      <span class="bdg bbl" style="font-size:11px">${prof.ciclo}</span>
+      <span class="bdg ${prof.ciclo==='primaria'?'bbl':'bte'}" style="font-size:11px">${prof.ciclo}</span>
       ${(prof.salones||[]).map(s => `<span class="bdg bgy" style="font-size:11px">🏫 ${s}</span>`).join('')}
       <span style="margin-left:auto;font-size:11px;color:var(--sl2)">${salMats.length} combinaciones salón-materia</span>
     </div>
@@ -6873,57 +6957,127 @@ function renderHorarioGrid(){
       </table>
     </div>
     <div style="padding:10px 16px;background:#f0f7ff;border-top:1px solid var(--bl3);display:flex;align-items:center;gap:8px;flex-wrap:wrap">
-      <button class="btn bg sm" onclick="agregarFranja()">➕ Agregar franja horaria</button>
-      <button class="btn bs sm" onclick="quitarUltimaFranja()">➖ Quitar última</button>
+      <button class="btn bg sm" onclick="agregarFranja()">➕ Franja de clase</button>
+      <button class="btn sm" style="background:#fff8e1;border:1.5px solid #d69e2e;color:#b7791f" onclick="agregarDescanso()">☕ Agregar descanso</button>
       <span style="font-size:11px;color:var(--sl2);margin-left:auto">${franjas.length} franjas · Selecciona salón-materia en cada celda</span>
     </div>`;
 
-  // Set select values after render
   setTimeout(() => {
     document.querySelectorAll('.horSelect').forEach(sel2 => {
       const fi = parseInt(sel2.dataset.fi);
       const dia = sel2.dataset.dia;
       const clase = franjas[fi]?.clases?.[dia];
       if(clase) {
-        const val = `${clase.salon}|||${clase.mat}`;
-        sel2.value = val;
+        sel2.value = `${clase.salon}|||${clase.mat}`;
         sel2.style.background = '#eff6ff';
         sel2.style.color = 'var(--nv)';
       }
     });
   }, 20);
 
-  // Store current franjas for add/remove
-  window._horFranjas = franjas.map(f => ({ hora: f.hora, clases: { ...f.clases } }));
+  window._horFranjas = franjas.map(f => ({ hora: f.hora, clases: { ...(f.clases||{}) }, esDescanso: !!f.esDescanso }));
   window._horProfId = profId;
 }
 
 function agregarFranja(){
-  const wrap = gi('horTableBody'); if(!wrap) return;
-  const hora = prompt('Ingresa la franja horaria (Ej: 16:15 - 17:10):', '');
-  if(!hora?.trim()) return;
-  window._horFranjas = window._horFranjas || [];
-  window._horFranjas.push({ hora: hora.trim(), clases: {} });
-  // Update DB temp and re-render
-  const profId = gi('horProfSel')?.value;
+  Swal.fire({
+    title:'➕ Nueva franja horaria',
+    html:`<input id="swalHora" class="swal2-input" placeholder="Ej: 16:15 - 17:10">`,
+    focusConfirm:false,
+    preConfirm:()=>{ const v=gi('swalHora')?.value?.trim(); if(!v){Swal.showValidationMessage('Ingresa la hora');return false;} return v; },
+    confirmButtonText:'Agregar', showCancelButton:true
+  }).then(r=>{
+    if(!r.isConfirmed||!r.value) return;
+    window._horFranjas = window._horFranjas || [];
+    window._horFranjas.push({ hora: r.value, clases: {}, esDescanso: false });
+    _syncHorFranjasToDb();
+    renderHorarioGrid();
+  });
+}
+
+function agregarDescanso(){
+  Swal.fire({
+    title:'☕ Agregar descanso',
+    html:`<input id="swalHora" class="swal2-input" placeholder="Ej: 09:45 - 10:00">`,
+    focusConfirm:false,
+    preConfirm:()=>{ const v=gi('swalHora')?.value?.trim(); if(!v){Swal.showValidationMessage('Ingresa la hora');return false;} return v; },
+    confirmButtonText:'Agregar', showCancelButton:true, confirmButtonColor:'#d69e2e'
+  }).then(r=>{
+    if(!r.isConfirmed||!r.value) return;
+    window._horFranjas = window._horFranjas || [];
+    window._horFranjas.push({ hora: r.value, clases: {}, esDescanso: true });
+    _syncHorFranjasToDb();
+    renderHorarioGrid();
+  });
+}
+
+function editarFranja(fi){
+  const f = window._horFranjas?.[fi]; if(!f) return;
+  Swal.fire({
+    title:'✏️ Editar franja',
+    html:`<input id="swalHora" class="swal2-input" value="${f.hora}" placeholder="Ej: 07:00 - 07:55">`,
+    focusConfirm:false,
+    preConfirm:()=>{ const v=gi('swalHora')?.value?.trim(); if(!v){Swal.showValidationMessage('Ingresa la hora');return false;} return v; },
+    confirmButtonText:'Guardar', showCancelButton:true
+  }).then(r=>{
+    if(!r.isConfirmed||!r.value) return;
+    window._horFranjas[fi].hora = r.value;
+    _syncHorFranjasToDb();
+    renderHorarioGrid();
+  });
+}
+
+function eliminarFranja(fi){
+  Swal.fire({
+    title:'¿Eliminar esta franja?', icon:'warning',
+    showCancelButton:true, confirmButtonColor:'#e53e3e',
+    confirmButtonText:'Eliminar', cancelButtonText:'Cancelar'
+  }).then(r=>{
+    if(!r.isConfirmed) return;
+    window._horFranjas?.splice(fi,1);
+    _syncHorFranjasToDb();
+    renderHorarioGrid();
+  });
+}
+
+function _syncHorFranjasToDb(){
+  const profId = gi('horProfSel')?.value; if(!profId) return;
   if(!DB.horarioPorProf) DB.horarioPorProf = {};
   if(!DB.horarioPorProf[profId]) DB.horarioPorProf[profId] = {};
   DB.horarioPorProf[profId].franjas = window._horFranjas;
-  renderHorarioGrid();
 }
 
 function quitarUltimaFranja(){
   if(!(window._horFranjas?.length)) return;
   window._horFranjas.pop();
-  const profId = gi('horProfSel')?.value;
-  if(DB.horarioPorProf?.[profId]) DB.horarioPorProf[profId].franjas = window._horFranjas;
+  _syncHorFranjasToDb();
   renderHorarioGrid();
+}
+
+async function copiarHorarioDesde(){
+  const profs = (DB.profs||[]).filter(p=>p.id !== gi('horProfSel')?.value);
+  if(!profs.length){sw('info','No hay otros profesores');return;}
+  const opts = profs.map(p=>`<option value="${p.id}">${esc(p.nombre)}</option>`).join('');
+  const r = await Swal.fire({
+    title:'📋 Copiar horario de otro profesor',
+    html:`<select id="swalCopyProf" class="swal2-input" style="margin:0;width:100%">${opts}</select>`,
+    confirmButtonText:'Copiar', showCancelButton:true
+  });
+  if(!r.isConfirmed) return;
+  const srcId = gi('swalCopyProf')?.value;
+  const srcHor = DB.horarioPorProf?.[srcId];
+  if(!srcHor?.franjas?.length){sw('info','Ese profesor no tiene horario asignado');return;}
+  const profId = gi('horProfSel')?.value;
+  if(!DB.horarioPorProf) DB.horarioPorProf={};
+  DB.horarioPorProf[profId] = { franjas: srcHor.franjas.map(f=>({ hora:f.hora, esDescanso:!!f.esDescanso, clases:{} })) };
+  window._horFranjas = DB.horarioPorProf[profId].franjas;
+  renderHorarioGrid();
+  sw('info','Franjas copiadas — asigna las clases y guarda','',2000);
 }
 
 async function guardarHorario(){
   const profId = gi('horProfSel')?.value; if(!profId) return;
 
-  // Read current state of selects
   const franjasMap = {};
   document.querySelectorAll('.horSelect').forEach(sel => {
     const fi = parseInt(sel.dataset.fi);
@@ -6936,23 +7090,21 @@ async function guardarHorario(){
     }
   });
 
-  const franjas = (window._horFranjas || FRANJAS_DEFAULT.map(h=>({hora:h,clases:{}}))).map((f, fi) => ({
+  const franjas = (window._horFranjas || FRANJAS_DEFAULT.map(h=>({hora:h,clases:{},esDescanso:false}))).map((f, fi) => ({
     hora: f.hora,
-    clases: franjasMap[fi] || {}
+    esDescanso: !!f.esDescanso,
+    clases: f.esDescanso ? {} : (franjasMap[fi] || {})
   }));
 
-  // Save to DB local
   if(!DB.horarioPorProf) DB.horarioPorProf = {};
   DB.horarioPorProf[profId] = { franjas };
 
-  // Persist to server
   try {
     await apiFetch('/api/config/horarioPorProf', {
       method: 'PUT',
       body: JSON.stringify({ value: DB.horarioPorProf })
     });
     sw('success', '✓ Horario guardado', '', 1600);
-    // Refresh dropdown to show ✓
     initAHor();
   } catch(e) {
     sw('error', 'Error al guardar: ' + e.message);
@@ -6968,9 +7120,10 @@ function limpiarHorario(){
     confirmButtonColor:'#e53e3e', confirmButtonText:'Sí, limpiar', cancelButtonText:'Cancelar'
   }).then(async r => {
     if(!r.isConfirmed) return;
-    if(DB.horarioPorProf?.[profId]) {
-      DB.horarioPorProf[profId] = { franjas: FRANJAS_DEFAULT.map(h=>({hora:h,clases:{}})) };
-    }
+    const franjas = FRANJAS_DEFAULT.map(h=>({hora:h,clases:{},esDescanso:false}));
+    if(!DB.horarioPorProf) DB.horarioPorProf={};
+    DB.horarioPorProf[profId] = { franjas };
+    window._horFranjas = franjas;
     try {
       await apiFetch('/api/config/horarioPorProf', {
         method: 'PUT',
