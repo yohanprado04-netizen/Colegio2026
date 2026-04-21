@@ -3768,11 +3768,12 @@ function descargarMiHorario(){
   if(!franjas.length){sw('info','Sin horario asignado');return;}
   const _logo=DB.colegioLogo||'';
   const _nom=CU.colegioNombre||'';
+
   const rowsHtml=franjas.map(f=>{
     if(f.esDescanso){
       return`<tr style="background:#fff8e1">
         <td style="padding:7px 10px;border:1px solid #ddd;font-size:11px;font-weight:700;color:#b7791f;white-space:nowrap">${f.hora}</td>
-        <td colspan="5" style="padding:7px;border:1px solid #ddd;text-align:center;font-weight:700;font-size:12px;color:#b7791f">☕ DESCANSO</td>
+        <td colspan="5" style="padding:7px;border:1px solid #ddd;text-align:center;font-weight:700;font-size:12px;color:#b7791f">DESCANSO</td>
       </tr>`;
     }
     return`<tr>${['hora',...DIAS].map((col,i)=>{
@@ -3786,34 +3787,48 @@ function descargarMiHorario(){
         :`<td style="padding:7px;border:1px solid #ddd;text-align:center;color:#aaa;font-size:11px">—</td>`;
     }).join('')}</tr>`;
   }).join('');
-  const html=`<div style="font-family:Arial,sans-serif;background:#fff;max-width:750px;color:#111">
-    <div style="border-bottom:3px solid #111;padding:12px 20px 10px;display:flex;align-items:center;gap:16px">
-      ${_logo?`<img src="${_logo}" style="height:70px;width:auto;object-fit:contain">`:''}
+
+  const html=`<div style="font-family:Arial,sans-serif;background:#fff;padding:16px;color:#111">
+    <div style="border-bottom:3px solid #111;padding-bottom:10px;margin-bottom:14px;display:flex;align-items:center;gap:16px">
+      ${_logo?`<img src="${_logo}" style="height:64px;width:auto;object-fit:contain">`:''}
       <div>
-        ${_nom?`<div style="font-size:14px;font-weight:900;text-transform:uppercase">${_nom}</div>`:''}
-        <div style="font-size:13px;font-weight:700;margin-top:4px">HORARIO DE CLASES</div>
-        <div style="font-size:11px;color:#555">Profesor: <strong>${esc(CU.nombre)}</strong></div>
+        ${_nom?`<div style="font-size:15px;font-weight:900;text-transform:uppercase;letter-spacing:.04em">${_nom}</div>`:''}
+        <div style="font-size:13px;font-weight:700;margin-top:3px">HORARIO DE CLASES</div>
+        <div style="font-size:11px;color:#555;margin-top:2px">Profesor/a: <strong>${esc(CU.nombre)}</strong></div>
       </div>
     </div>
-    <table style="width:100%;border-collapse:collapse;margin-top:12px;font-size:12px">
+    <table style="width:100%;border-collapse:collapse;font-size:12px">
       <thead><tr>
-        <th style="padding:8px 10px;background:#1e293b;color:#fff;font-size:11px;text-align:left;border:1px solid #999">HORA</th>
-        ${DIAS.map(d=>`<th style="padding:8px 6px;background:#1e293b;color:#fff;font-size:11px;text-align:center;border:1px solid #999">${d.toUpperCase()}</th>`).join('')}
+        <th style="padding:8px 10px;background:#1e293b;color:#fff;font-size:11px;text-align:left;border:1px solid #555;min-width:90px">HORA</th>
+        ${DIAS.map(d=>`<th style="padding:8px 6px;background:#1e293b;color:#fff;font-size:11px;text-align:center;border:1px solid #555">${d.toUpperCase()}</th>`).join('')}
       </tr></thead>
       <tbody>${rowsHtml}</tbody>
     </table>
-    <div style="margin-top:14px;font-size:10px;color:#888;text-align:right">Generado: ${new Date().toLocaleString('es-CO')}</div>
+    <div style="margin-top:12px;font-size:10px;color:#888;text-align:right">Generado: ${new Date().toLocaleString('es-CO')}</div>
   </div>`;
-  const box=document.createElement('div');
-  box.style.cssText='position:fixed;left:-9999px;top:0;z-index:-1';
-  box.innerHTML=html;
+
+  // El elemento DEBE estar visible en el viewport para que html2canvas lo capture
+  const box = document.createElement('div');
+  box.style.cssText = 'position:fixed;top:0;left:0;width:100vw;min-height:100vh;background:#fff;z-index:99999;overflow:auto;padding:0;margin:0;';
+  box.innerHTML = html;
   document.body.appendChild(box);
-  html2pdf().set({
-    margin:[6,6,6,6],
-    filename:`horario_${CU.nombre.replace(/\s+/g,'_')}.pdf`,
-    html2canvas:{scale:2,useCORS:true,logging:false},
-    jsPDF:{unit:'mm',format:'a4',orientation:'landscape'}
-  }).from(box).save().then(()=>document.body.removeChild(box));
+
+  sw('info', 'Generando PDF...', '', 1500);
+
+  setTimeout(() => {
+    html2pdf().set({
+      margin: [8, 8, 8, 8],
+      filename: `horario_${CU.nombre.replace(/\s+/g,'_')}.pdf`,
+      image: { type: 'jpeg', quality: 0.98 },
+      html2canvas: { scale: 2, logging: false, backgroundColor: '#ffffff', windowWidth: 1100 },
+      jsPDF: { unit: 'mm', format: 'a4', orientation: 'landscape' }
+    }).from(box).save().then(() => {
+      document.body.removeChild(box);
+    }).catch(err => {
+      document.body.removeChild(box);
+      sw('error', 'Error al generar PDF: ' + err.message);
+    });
+  }, 300);
 }
 
 /* Filtrar estudiantes en la lista del salón */
