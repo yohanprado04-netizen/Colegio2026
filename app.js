@@ -3807,28 +3807,87 @@ function descargarMiHorario(){
     <div style="margin-top:12px;font-size:10px;color:#888;text-align:right">Generado: ${new Date().toLocaleString('es-CO')}</div>
   </div>`;
 
-  // El elemento DEBE estar visible en el viewport para que html2canvas lo capture
+  // Crear contenedor fuera de pantalla pero renderizable por html2canvas
   const box = document.createElement('div');
-  box.style.cssText = 'position:fixed;top:0;left:0;width:100vw;min-height:100vh;background:#fff;z-index:99999;overflow:auto;padding:0;margin:0;';
+  box.id = '_horPdfBox';
+  box.style.cssText = [
+    'position:absolute',
+    'top:0',
+    'left:0',
+    'width:1050px',          // ancho fijo para A4 landscape
+    'background:#ffffff',
+    'z-index:-1',            // detrás de todo — html2canvas igual lo captura
+    'visibility:hidden',     // invisible al usuario
+    'pointer-events:none',
+    'padding:0',
+    'margin:0',
+    'overflow:visible',
+  ].join(';');
   box.innerHTML = html;
   document.body.appendChild(box);
 
-  sw('info', 'Generando PDF...', '', 1500);
+  sw('info', 'Generando PDF del horario...', '', 2000);
 
-  setTimeout(() => {
-    html2pdf().set({
-      margin: [8, 8, 8, 8],
-      filename: `horario_${CU.nombre.replace(/\s+/g,'_')}.pdf`,
-      image: { type: 'jpeg', quality: 0.98 },
-      html2canvas: { scale: 2, logging: false, backgroundColor: '#ffffff', windowWidth: 1100 },
-      jsPDF: { unit: 'mm', format: 'a4', orientation: 'landscape' }
-    }).from(box).save().then(() => {
-      document.body.removeChild(box);
-    }).catch(err => {
-      document.body.removeChild(box);
-      sw('error', 'Error al generar PDF: ' + err.message);
-    });
-  }, 300);
+  // Esperar a que el navegador pinte el DOM antes de capturar
+  requestAnimationFrame(() => {
+    setTimeout(() => {
+      // Hacer visible justo antes de capturar (html2canvas lo necesita)
+      box.style.visibility = 'visible';
+      box.style.zIndex = '99999';
+      box.style.position = 'fixed';
+      box.style.top = '0';
+      box.style.left = '-9999px'; // fuera del viewport visible
+
+      html2pdf()
+        .set({
+          margin: [8, 8, 8, 8],
+          filename: `horario_${CU.nombre.replace(/\s+/g,'_')}.pdf`,
+          image: { type: 'jpeg', quality: 0.98 },
+          html2canvas: {
+            scale: 2,
+            logging: false,
+            backgroundColor: '#ffffff',
+            useCORS: true,
+            allowTaint: true,
+            windowWidth: 1050,
+            scrollX: 0,
+            scrollY: 0,
+          },
+          jsPDF: { unit: 'mm', format: 'a4', orientation: 'landscape' }
+        })
+        .from(box)
+        .save()
+        .then(() => {
+          document.body.removeChild(box);
+          sw('success', 'Horario descargado correctamente', '', 1800);
+        })
+        .catch(err => {
+          if (document.body.contains(box)) document.body.removeChild(box);
+          console.error('html2pdf error:', err);
+          // Fallback: abrir en ventana nueva para imprimir manualmente
+          _horarioFallbackPrint(html, `horario_${CU.nombre.replace(/\s+/g,'_')}`);
+        });
+    }, 400);
+  });
+}
+
+/* Fallback: abre el horario en ventana nueva para imprimir con Ctrl+P */
+function _horarioFallbackPrint(htmlContent, filename){
+  const win = window.open('', '_blank', 'width=1100,height=700');
+  if(!win){ sw('error','El navegador bloqueó la ventana emergente. Habilita las ventanas emergentes para este sitio.'); return; }
+  win.document.write(`<!DOCTYPE html><html><head>
+    <title>${filename}</title>
+    <style>
+      body{margin:0;padding:16px;font-family:Arial,sans-serif;background:#fff;color:#111}
+      @media print{body{margin:0;padding:0}}
+    </style>
+  </head><body>${htmlContent}
+    <script>
+      setTimeout(()=>{ window.print(); }, 500);
+    </script>
+  </body></html>`);
+  win.document.close();
+  sw('info','Si el PDF no se descargó, usa Ctrl+P en la ventana que se abrió para guardar como PDF.','',4000);
 }
 
 /* Filtrar estudiantes en la lista del salón */
