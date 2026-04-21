@@ -3485,6 +3485,10 @@ function renderPhMatsGrid(matCards,perActivo){
   `).join('');
 }
 
+
+/* Helper para el botón de notas en la tabla de estudiantes del panel primaria */
+function _phGoNotes(btn){ irANotasSalon(btn.dataset.sal); }
+
 /* Navega a Ingresar Notas preseleccionando salón Y materia */
 function irANotasSalonMat(salon,mat){
   goto('pnot');
@@ -3526,25 +3530,63 @@ function renderPhSalonTab(sal){
     ${sinNotas?`<span style="font-size:12px;color:var(--sl3)">· ${sinNotas} sin ingresar</span>`:''}
   </div>`:''}
 
-  <!-- Buscador + lista estudiantes -->
+  <!-- Buscador + tabla de estudiantes -->
   <div style="display:flex;gap:8px;margin-bottom:10px;align-items:center">
     <input id="phBusq_${sal}" placeholder="🔍 Buscar estudiante en ${sal}…"
       style="flex:1;padding:8px 12px;border:1px solid var(--bd);border-radius:8px;font-size:13px;font-family:var(--fn)"
       oninput="filtrarPhEsts('${sal}')">
     <span id="phCount_${sal}" style="font-size:12px;color:var(--sl2);white-space:nowrap">${ests.length} est.</span>
   </div>
-  <div id="phEstList_${sal}" style="display:flex;flex-wrap:wrap;gap:6px">
-    ${ests.map(e=>{
-      const tieneN=getMats(e.id).some(m=>{const t=DB.notas[e.id]?.[perActivo]?.[m];return t&&(t.a>0||t.c>0||t.r>0);});
-      const excEst=DB.exc.filter(x=>x.eid===e.id&&!x.respProf).length;
-      return`<span data-nombre="${e.nombre.toLowerCase()}"
-        style="font-size:12px;padding:5px 11px;background:${tieneN?'#f0fff4':'var(--bg2)'};border-radius:7px;
-        border:1px solid ${tieneN?'#9ae6b4':'var(--bd)'};display:inline-flex;align-items:center;gap:4px">
-        ${esc(e.nombre)}
-        ${excEst?`<span style="background:var(--red);color:#fff;border-radius:10px;padding:0 5px;font-size:9px;font-weight:800">${excEst}</span>`:''}
-      </span>`;
-    }).join('')}
-  </div>`;
+  <div id="phEstList_${sal}" style="overflow-x:auto">
+    <table style="width:100%;border-collapse:collapse;font-size:13px">
+      <thead>
+        <tr style="background:var(--bg2);border-bottom:2px solid var(--bd)">
+          <th style="padding:7px 10px;text-align:center;width:32px;font-size:11px;font-weight:700;color:var(--sl2)">#</th>
+          <th style="padding:7px 10px;text-align:left;font-size:11px;font-weight:700;color:var(--sl2)">ESTUDIANTE</th>
+          <th style="padding:7px 10px;text-align:center;font-size:11px;font-weight:700;color:var(--sl2)">NOTAS</th>
+          <th style="padding:7px 10px;text-align:center;font-size:11px;font-weight:700;color:var(--sl2)">PROMEDIO</th>
+          <th style="padding:7px 10px;text-align:center;font-size:11px;font-weight:700;color:var(--sl2)">EXCUSAS</th>
+          <th style="padding:7px 10px;text-align:center;font-size:11px;font-weight:700;color:var(--sl2)">ACCIÓN</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${(()=>{ return ests.map((e,idx)=>{
+          const mts=getMats(e.id);
+          const tieneN=mts.some(m=>{const t=DB.notas[e.id]?.[perActivo]?.[m];return t&&(t.a>0||t.c>0||t.r>0);});
+          const matsConNota=mts.filter(m=>{const t=DB.notas[e.id]?.[perActivo]?.[m];return t&&(t.a>0||t.c>0||t.r>0);}).length;
+          const excEst=DB.exc.filter(x=>x.eid===e.id&&!x.respProf).length;
+          const prom=perActivo?pprom(e.id,perActivo):0;
+          const promColor=prom>=4?'var(--grn)':prom>=3?'#d97706':prom>0?'var(--red)':'var(--sl3)';
+          const rowBg=idx%2===0?'#fff':'var(--bg2)';
+          const pctW=mts.length?Math.round(matsConNota/mts.length*100):0;
+          const notasTxt=tieneN
+            ?'<span style="font-size:11px;font-weight:700;color:var(--grn)">'+matsConNota+'/'+mts.length+'</span>'
+             +'<div style="height:4px;background:#e2e8f0;border-radius:2px;margin:3px auto 0;width:48px">'
+             +'<div style="height:100%;width:'+pctW+'%;background:var(--grn);border-radius:2px"></div></div>'
+            :'<span style="font-size:11px;color:var(--sl3)">Sin notas</span>';
+          const promTxt=prom>0
+            ?'<span style="font-weight:800;font-size:14px;color:'+promColor+'">'+prom.toFixed(2)+'</span>'
+            :'<span style="color:var(--sl3);font-size:12px">—</span>';
+          const excTxt=excEst
+            ?'<span style="background:var(--red);color:#fff;border-radius:10px;padding:2px 8px;font-size:11px;font-weight:800">'+excEst+'</span>'
+            :'<span style="color:#68d391;font-size:13px">✓</span>';
+          return '<tr data-nombre="'+e.nombre.toLowerCase()+'" style="border-bottom:1px solid var(--bd);background:'+rowBg+'">'
+            +'<td style="padding:8px 10px;text-align:center;font-size:11px;color:var(--sl3);font-weight:600">'+(idx+1)+'</td>'
+            +'<td style="padding:8px 10px">'
+              +'<div style="font-weight:600;font-size:13px;color:var(--nv)">'+esc(e.nombre)+'</div>'
+              +'<div style="font-size:10px;color:var(--sl3);font-family:var(--mn)">'+(e.ti||'—')+'</div>'
+            +'</td>'
+            +'<td style="padding:8px 10px;text-align:center">'+notasTxt+'</td>'
+            +'<td style="padding:8px 10px;text-align:center">'+promTxt+'</td>'
+            +'<td style="padding:8px 10px;text-align:center">'+excTxt+'</td>'
+            +'<td style="padding:8px 10px;text-align:center">'
+              +'<button class="btn xs bg" data-sal="'+sal+'" onclick="_phGoNotes(this)" style="font-size:11px;padding:4px 10px">✏️ Notas</button>'
+            +'</td>'
+            +'</tr>';
+        }).join(''); })()}
+      </tbody>
+    </table>
+  </div>`
 }
 
 /* Renderiza tab de excusas con filtros */
@@ -3962,17 +4004,49 @@ function loadPN(){
       </table>
     </div>`;
 
-  // Tab & Enter navigation across table inputs
-  const allInps = el.querySelectorAll('.pnInpTbl');
-  allInps.forEach((inp,i)=>{
-    inp.addEventListener('keydown', ev=>{
-      if(ev.key==='Enter'||ev.key==='Tab'){
+  // ── Navegación con teclado en la tabla de notas ────────────────────────────
+  // Enter / Tab       → siguiente campo de la misma persona (a→c→r→disc→cond)
+  // Shift+Enter/Tab   → campo anterior
+  // ArrowRight        → siguiente campo (igual que Enter)
+  // ArrowLeft         → campo anterior
+  // ArrowDown         → mismo campo, siguiente estudiante
+  // ArrowUp           → mismo campo, estudiante anterior
+  const allInps = Array.from(el.querySelectorAll('.pnInpTbl'));
+  // Dar índice secuencial a cada input para navegación
+  allInps.forEach((inp, i) => { inp.dataset.pnIdx = i; });
+
+  function _focusPN(inp){ if(inp){ inp.focus(); inp.select(); inp.scrollIntoView({block:'nearest',inline:'nearest'}); } }
+
+  allInps.forEach((inp, i) => {
+    inp.addEventListener('keydown', ev => {
+      let target = null;
+
+      if (ev.key === 'Enter' || ev.key === 'Tab' || ev.key === 'ArrowRight') {
         ev.preventDefault();
-        const next=allInps[i+1];
-        if(next){next.focus();next.select();}
+        // Si hay un valor escrito, guardar antes de moverse
+        if (inp.value !== '' && ev.key === 'Enter') inp.dispatchEvent(new Event('change', {bubbles:true}));
+        target = allInps[ev.shiftKey ? i - 1 : i + 1] || null;
+
+      } else if (ev.key === 'ArrowLeft') {
+        ev.preventDefault();
+        target = allInps[i - 1] || null;
+
+      } else if (ev.key === 'ArrowDown' || ev.key === 'ArrowUp') {
+        ev.preventDefault();
+        // Contar cuántos inputs por fila buscando el cambio de data-eid
+        const currEid = inp.dataset.eid;
+        // Encontrar cuántos inputs tiene esta fila
+        let rowStart = i;
+        while (rowStart > 0 && allInps[rowStart - 1].dataset.eid === currEid) rowStart--;
+        const rowSize = allInps.filter(x => x.dataset.eid === currEid).length;
+        const posInRow = i - rowStart;
+        const step = ev.key === 'ArrowDown' ? rowSize : -rowSize;
+        target = allInps[i + step] || null;
       }
+
+      if (target) _focusPN(target);
     });
-    inp.addEventListener('focus', ev=>ev.target.select());
+    inp.addEventListener('focus', ev => ev.target.select());
   });
 
   // Saved badge helper
@@ -4013,8 +4087,11 @@ function loadPN(){
     if(cnt) cnt.textContent=q?`${visible} de ${ests.length} estudiantes`:`${ests.length} estudiantes`;
   };
 
+  if(false){ // legacy MODO_CARDS placeholder — never runs
 
-  el.innerHTML=`<div class="tw"><table>
+  }
+
+    el.innerHTML=`<div class="tw"><table>
       <thead>
         <tr><th>Estudiante</th>
           ${mats.map(m=>`<th colspan="4" style="text-align:center;border-left:2px solid var(--bd)">${m}</th>`).join('')}
