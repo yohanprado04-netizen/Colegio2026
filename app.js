@@ -769,7 +769,7 @@ function resetSessionTimer(){
 /* ── 1. AGREGAR EN ROLE_MAP (reemplaza la línea de ROLE_MAP completa) ── */
 const ROLE_MAP={
   superadmin:new Set(['sadash','sacolegios','saestadisticas','saauditoria','samantenimiento','sasug','sacom']),
-  admin:new Set(['dash','asal','apri','abac','aprf','amat','anot','areh','afec','ablk','aaud','aexp','aexc','avcl','ahist','asug','acom']),
+  admin:new Set(['dash','asal','apri','abac','aprf','amat','anot','areh','afec','ablk','aaud','aexp','aexc','avcl','ahist','asug','acom','ahor']),
   profe:new Set(['ph','pnot','past','pvir','ptar','prec','phist','psug','pcom']),
   est:new Set(['eb','east','etare','eexc','eprof','evir','ereh','ehist','esug','eicfes','ecom'])
 };
@@ -815,7 +815,7 @@ const PL={
   saestadisticas:'Estadísticas Globales', saauditoria:'Auditoría Global',
   samantenimiento:'Mantenimiento', sasug:'Sugerencias Recibidas',
   dash:'Panel General',asal:'Salones & Grados',apri:'Primaria (1°-5°)',abac:'Bachillerato (6°-11°)',
-  aprf:'Profesores',amat:'Materias & Periodos',anot:'Gestión de Notas',areh:'Recuperaciones',
+  aprf:'Profesores',ahor:'Horarios',amat:'Materias & Periodos',anot:'Gestión de Notas',areh:'Recuperaciones',
   afec:'Control de Fechas',ablk:'Usuarios Bloqueados',aaud:'Auditoría',aexp:'Exportar',ahist:'Historial Estudiantes',
   aexc:'Excusas (Admin)',avcl:'Clases Virtuales (Admin)',acom:'Comunicados',pcom:'Comunicados',ecom:'Comunicados',asug:'Sugerencias',
   ph:'Mi Panel',pnot:'Ingresar Notas',past:'Asistencias',pvir:'Clases Virtuales',ptar:'Tareas Recibidas',prec:'Recuperaciones',phist:'Historial Recuperaciones',psug:'Sugerencias',
@@ -1078,7 +1078,7 @@ function navItems(){
     {s:'Principal'},{id:'dash',ic:'📊',lb:'Panel General'},
     {s:'Académico'},{id:'asal',ic:'🏫',lb:'Salones & Grados'},
     {id:'apri',ic:'📚',lb:'Primaria (1°-5°)'},{id:'abac',ic:'🎓',lb:'Bachillerato (6°-11°)'},
-    {id:'aprf',ic:'👩‍🏫',lb:'Profesores'},{id:'amat',ic:'📖',lb:'Materias & Periodos'},
+    {id:'aprf',ic:'👩‍🏫',lb:'Profesores'},{id:'ahor',ic:'🕐',lb:'Horarios'},{id:'amat',ic:'📖',lb:'Materias & Periodos'},
     {s:'Notas'},{id:'anot',ic:'📝',lb:'Gestión de Notas'},{id:'areh',ic:'🔄',lb:'Recuperaciones'},
     {s:'Comunicación'},{id:'acom',ic:'📢',lb:'Comunicados'},{id:'aexc',ic:'✉️',lb:'Excusas'},{id:'avcl',ic:'💻',lb:'Clases Virtuales'},
     {s:'Sistema'},{id:'afec',ic:'📅',lb:'Control de Fechas'},
@@ -1172,7 +1172,7 @@ function goto(pid){
 function renderPg(pid){
   const map={
     dash:pgDash,asal:pgASal,apri:()=>pgAEst('primaria'),abac:()=>pgAEst('bachillerato'),
-    aprf:pgAPrf,amat:pgAMat,anot:pgANot,areh:pgAReh,afec:pgAFec,
+    aprf:pgAPrf,ahor:pgAHor,amat:pgAMat,anot:pgANot,areh:pgAReh,afec:pgAFec,
     ablk:pgABlk,aaud:pgAAud,aexp:pgAExp,aexc:pgAExc,avcl:pgAVcl,ahist:pgAHist,acom:pgACom,pcom:pgComVer,ecom:pgComVer,
     ph:pgPH,pnot:pgPNot,past:pgPAst,pvir:pgPVir,ptar:pgPTar,prec:pgPRec,phist:pgPHist,
     eb:pgEB,east:pgEAst,etare:pgETare,eexc:pgEExc,eprof:pgEProf,
@@ -1187,7 +1187,7 @@ function renderPg(pid){
 function initPg(pid){
   const map={
     dash:initDash,asal:initASal,apri:()=>initAEst('primaria'),abac:()=>initAEst('bachillerato'),
-    aprf:initAPrf,amat:initAMat,anot:initANot,areh:initAReh,aexc:initAExc,avcl:initAVcl,acom:initACom,pcom:initComVer,ecom:initComVer,
+    aprf:initAPrf,ahor:initAHor,amat:initAMat,anot:initANot,areh:initAReh,aexc:initAExc,avcl:initAVcl,acom:initACom,pcom:initComVer,ecom:initComVer,
     pnot:initPNot,past:initPAst,eb:initEB,eicfes:initEIcfes,
     ph:()=>{ setTimeout(()=>{ renderPExcR(); notifNuevasExcusas(); },0); },
     sadash:initSADash,sacolegios:initSAColegios,saplan:initSAPlan,sacom:initSACom,
@@ -3308,68 +3308,134 @@ function pgPH(){
   const _logoP=DB.colegioLogo||'';
   const _nomP=CU.colegioNombre||'';
   const sals=p.salones||[];
-  const totalEst=sals.reduce((t,s)=>t+ebySalon(s).length,0);
   const excTotal=DB.exc.filter(x=>x.dest===CU.nombre||sals.includes(x.salon));
   const excPend=excTotal.filter(x=>!x.respProf).length;
   const pendRec=DB.ext.on?(DB.recs||[]).filter(r=>r.profId===CU.id&&!r.revisado).length:0;
+  const perActivo=DB.pers[DB.pers.length-1]||DB.pers[0]||'';
+  const isBach=p.ciclo==='bachillerato';
+
+  // Build subject-salon cards for bachillerato
+  const matCards=[];
+  if(isBach){
+    sals.forEach(sal=>{
+      const mats=getProfMatsSalon(p.id,sal);
+      const ests=ebySalon(sal);
+      mats.forEach(mat=>{
+        const conNotas=perActivo?ests.filter(e=>{
+          const t=DB.notas[e.id]?.[perActivo]?.[mat];
+          return t&&(t.a>0||t.c>0||t.r>0);
+        }).length:0;
+        const pct=ests.length?Math.round(conNotas/ests.length*100):0;
+        const excSal=excTotal.filter(x=>x.salon===sal&&!x.respProf).length;
+        matCards.push({sal,mat,ests:ests.length,conNotas,pct,excSal});
+      });
+    });
+  }
+
+  // Horario del profesor (DB.horarioPorProf si existe, si no mostrar placeholder)
+  const horario=DB.horarioPorProf?.[p.id]||null;
+  const DIAS=['Lunes','Martes','Miércoles','Jueves','Viernes'];
+  const franjas=horario?.franjas||[];
+
+  const renderHorario=()=>{
+    if(!horario||!franjas.length){
+      // Placeholder elegante cuando no hay horario asignado
+      return`<div style="text-align:center;padding:32px 20px;color:var(--sl3)">
+        <div style="font-size:36px;margin-bottom:10px">📅</div>
+        <div style="font-size:14px;font-weight:600;color:var(--sl2);margin-bottom:4px">Horario no configurado</div>
+        <div style="font-size:12px">El administrador debe asignar tu horario desde la configuración del colegio.</div>
+      </div>`;
+    }
+    const rowsHtml=franjas.map(f=>{
+      const celdas=DIAS.map(dia=>{
+        const clase=f.clases?.[dia];
+        if(!clase) return`<td><span class="phHoraCell libre">—</span></td>`;
+        return`<td><button class="phHoraCell" onclick="irANotasSalonMat('${clase.salon}','${clase.mat}')">
+          <span class="hc-mat">${clase.mat}</span>
+          <span class="hc-sal">${clase.salon}</span>
+        </button></td>`;
+      }).join('');
+      return`<tr>
+        <td style="font-family:var(--mn);font-size:11px;color:var(--sl2);white-space:nowrap">${f.hora}</td>
+        ${celdas}
+      </tr>`;
+    }).join('');
+    return`<div style="overflow-x:auto"><table class="phHorarioTable">
+      <thead><tr>
+        <th>Hora</th>
+        ${DIAS.map(d=>`<th>${d}</th>`).join('')}
+      </tr></thead>
+      <tbody>${rowsHtml}</tbody>
+    </table></div>`;
+  };
 
   return`
   <!-- HEADER -->
   <div class="ph" style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:12px">
     <div>
-      <h2 style="margin-bottom:2px">Bienvenido, ${esc(p.nombre)}</h2>
-      <span class="bdg ${p.ciclo==='bachillerato'?'bte':'bbl'}" style="font-size:11px">${p.ciclo==='bachillerato'?'Bachillerato':'Primaria'}</span>
+      <h2 style="margin-bottom:4px">Bienvenido, ${esc(p.nombre)}</h2>
+      <span class="bdg ${isBach?'bte':'bbl'}" style="font-size:11px">${isBach?'Bachillerato':'Primaria'}</span>
       <button class="btn xs bg" onclick="showHelp('ph')" style="margin-left:8px">❓ Ayuda</button>
     </div>
-    ${_logoP?`<div style="display:flex;flex-direction:column;align-items:center;gap:4px">
-      <img src="${_logoP}" alt="Logo" style="height:64px;width:auto;max-width:110px;object-fit:contain;border-radius:10px;background:var(--bg2);padding:5px">
-      ${_nomP?`<span style="font-size:10px;font-weight:700;color:var(--sl2);max-width:110px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${_nomP}</span>`:''}
-    </div>`:''}
+    ${_logoP?`<img src="${_logoP}" alt="Logo" style="height:56px;width:auto;max-width:100px;object-fit:contain;border-radius:10px;background:var(--bg2);padding:4px">`:
+    `<div style="font-size:22px;font-weight:800;color:var(--nv)">${_nomP||''}</div>`}
   </div>
 
-  <!-- RESUMEN RÁPIDO -->
-  <div class="sr" style="margin-bottom:16px">
+  <!-- STATS ROW -->
+  <div class="sr" style="margin-bottom:18px">
     <div class="scc" data-i="🏫"><div class="sv">${sals.length}</div><div class="sl">Salones</div><div class="bar"></div></div>
-    <div class="scc" data-i="🎓"><div class="sv">${totalEst}</div><div class="sl">Estudiantes</div><div class="bar"></div></div>
-    <div class="scc" data-i="✉️" style="cursor:pointer" onclick="document.getElementById('phTabExc').click()">
+    <div class="scc" data-i="📚"><div class="sv">${matCards.length||sals.reduce((t,s)=>t+getProfMatsSalon(p.id,s).length,0)||'—'}</div><div class="sl">Materias</div><div class="bar"></div></div>
+    <div class="scc" data-i="✉️" style="cursor:pointer" onclick="goto('ph');setTimeout(()=>{const t=gi('phTabExc');if(t)t.click();},100)">
       <div class="sv" style="color:${excPend>0?'var(--red)':'var(--grn)'}">${excPend>0?excPend:'✓'}</div>
       <div class="sl">${excPend>0?'Excusas pend.':'Sin pendientes'}</div><div class="bar"></div>
     </div>
     ${pendRec?`<div class="scc" data-i="🔄" style="cursor:pointer" onclick="goto('prec')">
-      <div class="sv" style="color:var(--ora)">${pendRec}</div>
-      <div class="sl">Recup. pend.</div><div class="bar"></div>
+      <div class="sv" style="color:var(--ora)">${pendRec}</div><div class="sl">Recup. pend.</div><div class="bar"></div>
     </div>`:''}
   </div>
 
-  ${pendRec?`<div class="al aly" style="cursor:pointer;margin-bottom:12px" onclick="goto('prec')">
-    🔄 Tienes <strong>${pendRec}</strong> recuperación(es) pendiente(s) de revisión. <span style="text-decoration:underline">Ver ahora →</span>
+  ${pendRec?`<div class="al aly" style="cursor:pointer;margin-bottom:14px" onclick="goto('prec')">
+    🔄 Tienes <strong>${pendRec}</strong> recuperación(es) pendiente(s). <span style="text-decoration:underline">Ver ahora →</span>
   </div>`:''}
 
-  <!-- TABS PRINCIPALES -->
+  <!-- TABS -->
   <div class="card" style="padding:0;overflow:hidden">
-    <!-- Tab bar -->
     <div id="phTabBar" style="display:flex;border-bottom:2px solid var(--bd);background:var(--bg2);overflow-x:auto">
-      ${sals.map((sal,i)=>{
+      ${isBach?`<button id="phTabMats" onclick="phTab('__mats')"
+        style="padding:11px 20px;border:none;background:var(--bg);border-bottom:2px solid var(--nv);margin-bottom:-2px;
+        font-size:13px;font-weight:800;color:var(--nv);cursor:pointer;white-space:nowrap;display:flex;align-items:center;gap:6px">
+        📚 Mis Materias
+        <span style="background:var(--nv);color:#fff;border-radius:20px;padding:1px 8px;font-size:10px;font-weight:700">${matCards.length}</span>
+      </button>`:
+      sals.map((sal,i)=>{
         const n=ebySalon(sal).length;
         const excSal=excTotal.filter(x=>x.salon===sal&&!x.respProf).length;
         return`<button id="phTab_${sal}" onclick="phTab('${sal}')"
-          style="padding:12px 20px;border:none;background:${i===0?'var(--bg)':'transparent'};border-bottom:${i===0?'2px solid var(--nv)':'2px solid transparent'};
-          margin-bottom:-2px;font-size:13px;font-weight:${i===0?'800':'600'};color:${i===0?'var(--nv)':'var(--sl2)'};
-          cursor:pointer;white-space:nowrap;transition:all .15s;display:flex;align-items:center;gap:6px">
+          style="padding:11px 20px;border:none;background:${i===0&&!isBach?'var(--bg)':'transparent'};
+          border-bottom:${i===0&&!isBach?'2px solid var(--nv)':'2px solid transparent'};
+          margin-bottom:-2px;font-size:13px;font-weight:${i===0&&!isBach?'800':'600'};
+          color:${i===0&&!isBach?'var(--nv)':'var(--sl2)'};cursor:pointer;white-space:nowrap;
+          display:flex;align-items:center;gap:6px">
           🏫 ${sal}
           <span style="background:#e2e8f0;border-radius:20px;padding:1px 7px;font-size:10px;font-weight:700">${n}</span>
           ${excSal?`<span style="background:var(--red);color:#fff;border-radius:20px;padding:1px 6px;font-size:10px;font-weight:800">✉${excSal}</span>`:''}
         </button>`;
       }).join('')}
+      <button id="phTabHor" onclick="phTab('__hor')"
+        style="padding:11px 20px;border:none;background:transparent;border-bottom:2px solid transparent;
+        margin-bottom:-2px;font-size:13px;font-weight:600;color:var(--sl2);cursor:pointer;white-space:nowrap">
+        📅 Mi Horario
+      </button>
       <button id="phTabExc" onclick="phTab('__exc')"
-        style="padding:12px 20px;border:none;background:transparent;border-bottom:2px solid transparent;
+        style="padding:11px 20px;border:none;background:transparent;border-bottom:2px solid transparent;
         margin-bottom:-2px;font-size:13px;font-weight:600;color:${excPend>0?'var(--red)':'var(--sl2)'};
         cursor:pointer;white-space:nowrap;display:flex;align-items:center;gap:6px">
         ✉️ Excusas
-        ${excPend?`<span style="background:var(--red);color:#fff;border-radius:20px;padding:1px 7px;font-size:10px;font-weight:800">${excPend}</span>`:`<span style="background:#c6f6d5;color:#276749;border-radius:20px;padding:1px 7px;font-size:10px;font-weight:800">✓</span>`}
+        ${excPend?`<span style="background:var(--red);color:#fff;border-radius:20px;padding:1px 7px;font-size:10px;font-weight:800">${excPend}</span>`:
+        `<span style="background:#c6f6d5;color:#276749;border-radius:20px;padding:1px 7px;font-size:10px;font-weight:800">✓</span>`}
       </button>
       <button id="phTabRpt" onclick="phTab('__rpt')"
-        style="padding:12px 20px;border:none;background:transparent;border-bottom:2px solid transparent;
+        style="padding:11px 20px;border:none;background:transparent;border-bottom:2px solid transparent;
         margin-bottom:-2px;font-size:13px;font-weight:600;color:var(--sl2);cursor:pointer;white-space:nowrap">
         📥 Informes
       </button>
@@ -3377,9 +3443,56 @@ function pgPH(){
 
     <!-- Tab content -->
     <div id="phTabContent" style="padding:16px">
-      ${sals.length?renderPhSalonTab(sals[0]):'<div class="mty"><p>Sin salones asignados</p></div>'}
+      ${isBach?renderPhMatsGrid(matCards,perActivo):
+       (sals.length?renderPhSalonTab(sals[0]):'<div class="mty"><p>Sin salones asignados</p></div>')}
     </div>
   </div>`;
+}
+
+/* Renderiza grid de materias para bachillerato */
+function renderPhMatsGrid(matCards,perActivo){
+  if(!matCards.length) return`<div class="mty"><div class="ei">📚</div><p>Sin materias asignadas todavía</p></div>`;
+
+  // Group by salon
+  const bySalon={};
+  matCards.forEach(c=>{
+    if(!bySalon[c.sal]) bySalon[c.sal]=[];
+    bySalon[c.sal].push(c);
+  });
+
+  const colorPct=p=>p>=80?'var(--grn)':p>=40?'var(--ora)':'var(--red)';
+
+  return Object.entries(bySalon).map(([sal,cards])=>`
+    <div style="margin-bottom:20px">
+      <div style="font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--sl2);margin-bottom:10px">
+        🏫 Salón ${sal} · ${ebySalon(sal).length} estudiantes
+      </div>
+      <div class="phMatsGrid">
+        ${cards.map(c=>`<div class="phMatCard" onclick="irANotasSalonMat('${c.sal}','${c.mat}')">
+          <div class="phMatCard-salon">📚 ${c.sal}</div>
+          <div class="phMatCard-nombre">${c.mat}</div>
+          <div class="phMatCard-stats">
+            <span>✅ ${c.conNotas}/${c.ests}</span>
+            <span style="margin-left:auto;font-weight:700;color:${colorPct(c.pct)}">${c.pct}%</span>
+          </div>
+          <div class="phMatCard-progress">
+            <div class="phMatCard-progress-bar" style="width:${c.pct}%"></div>
+          </div>
+          ${c.excSal?`<div style="font-size:10px;color:var(--red);font-weight:700">⚠️ ${c.excSal} excusa${c.excSal>1?'s':''} pendiente${c.excSal>1?'s':''}</div>`:''}
+        </div>`).join('')}
+      </div>
+    </div>
+  `).join('');
+}
+
+/* Navega a Ingresar Notas preseleccionando salón Y materia */
+function irANotasSalonMat(salon,mat){
+  goto('pnot');
+  setTimeout(()=>{
+    const selS=gi('pns'),selM=gi('pnm');
+    if(selS){ selS.value=salon; if(typeof updatePNMats==='function') updatePNMats(); }
+    if(selM){ setTimeout(()=>{ selM.value=mat; },80); }
+  },200);
 }
 
 /* Renderiza el contenido de un tab de salón */
@@ -3518,20 +3631,23 @@ function renderPhRptTab(){
 /* Cambia entre tabs del panel profesor */
 function phTab(key){
   const sals=CU.salones||[];
-  const content=gi('phTabContent');
-  if(!content) return;
+  const tabContent=gi('phTabContent');
+  if(!tabContent) return;
+  const isBach=CU.ciclo==='bachillerato';
 
   // Reset all tab styles
-  [...(sals.map(s=>'phTab_'+s)),['phTabExc'],['phTabRpt']].flat().forEach(id=>{
+  const allTabIds=[...sals.map(s=>'phTab_'+s),'phTabExc','phTabRpt','phTabHor','phTabMats'];
+  allTabIds.forEach(id=>{
     const b=gi(id); if(!b) return;
     b.style.background='transparent';
     b.style.borderBottom='2px solid transparent';
     b.style.fontWeight='600';
-    b.style.color=id==='phTabExc'&&(DB.exc.filter(x=>x.dest===CU.nombre||(CU.salones||[]).includes(x.salon)&&!x.respProf).length)?'var(--red)':'var(--sl2)';
+    const isExc=id==='phTabExc';
+    b.style.color=isExc&&(DB.exc.filter(x=>x.dest===CU.nombre||(CU.salones||[]).includes(x.salon)&&!x.respProf).length)?'var(--red)':'var(--sl2)';
   });
 
   // Activate selected tab
-  const activeId=key==='__exc'?'phTabExc':key==='__rpt'?'phTabRpt':'phTab_'+key;
+  const activeId=key==='__exc'?'phTabExc':key==='__rpt'?'phTabRpt':key==='__hor'?'phTabHor':key==='__mats'?'phTabMats':'phTab_'+key;
   const activeBtn=gi(activeId);
   if(activeBtn){
     activeBtn.style.background='var(--bg)';
@@ -3541,9 +3657,54 @@ function phTab(key){
   }
 
   // Render content
-  if(key==='__exc') content.innerHTML=renderPhExcTab();
-  else if(key==='__rpt') content.innerHTML=renderPhRptTab();
-  else content.innerHTML=renderPhSalonTab(key);
+  if(key==='__exc') tabContent.innerHTML=renderPhExcTab();
+  else if(key==='__rpt') tabContent.innerHTML=renderPhRptTab();
+  else if(key==='__hor') tabContent.innerHTML=renderPhHorarioTab();
+  else if(key==='__mats'){
+    const perActivo=DB.pers[DB.pers.length-1]||DB.pers[0]||'';
+    const matCards=[];
+    sals.forEach(sal=>{
+      const mats=getProfMatsSalon(CU.id,sal);
+      const ests=ebySalon(sal);
+      mats.forEach(mat=>{
+        const conNotas=perActivo?ests.filter(e=>{const t=DB.notas[e.id]?.[perActivo]?.[mat];return t&&(t.a>0||t.c>0||t.r>0);}).length:0;
+        const pct=ests.length?Math.round(conNotas/ests.length*100):0;
+        const excSal=(DB.exc||[]).filter(x=>x.salon===sal&&!x.respProf).length;
+        matCards.push({sal,mat,ests:ests.length,conNotas,pct,excSal});
+      });
+    });
+    tabContent.innerHTML=renderPhMatsGrid(matCards,perActivo);
+  }
+  else tabContent.innerHTML=renderPhSalonTab(key);
+}
+
+/* Renderiza el tab de horario */
+function renderPhHorarioTab(){
+  const DIAS=['Lunes','Martes','Miércoles','Jueves','Viernes'];
+  const horario=DB.horarioPorProf?.[CU.id]||null;
+  const franjas=horario?.franjas||[];
+  if(!horario||!franjas.length){
+    return`<div style="text-align:center;padding:40px 20px;color:var(--sl3)">
+      <div style="font-size:40px;margin-bottom:12px">📅</div>
+      <div style="font-size:15px;font-weight:700;color:var(--sl2);margin-bottom:6px">Horario no configurado</div>
+      <div style="font-size:13px">El administrador debe asignar tu horario desde la configuración del colegio.</div>
+    </div>`;
+  }
+  const rowsHtml=franjas.map(f=>{
+    const celdas=DIAS.map(dia=>{
+      const clase=f.clases?.[dia];
+      if(!clase) return`<td style="text-align:center;color:var(--sl3);font-size:12px">—</td>`;
+      return`<td><button class="phHoraCell" onclick="irANotasSalonMat('${clase.salon}','${clase.mat||''}')">
+        <span class="hc-mat">${clase.mat||clase.salon}</span>
+        <span class="hc-sal">${clase.salon}</span>
+      </button></td>`;
+    }).join('');
+    return`<tr><td style="font-family:var(--mn);font-size:11px;color:var(--sl2);white-space:nowrap;padding:9px 10px">${f.hora}</td>${celdas}</tr>`;
+  }).join('');
+  return`<div style="overflow-x:auto"><table class="phHorarioTable">
+    <thead><tr><th>Hora</th>${DIAS.map(d=>`<th>${d}</th>`).join('')}</tr></thead>
+    <tbody>${rowsHtml}</tbody>
+  </table></div>`;
 }
 
 /* Filtrar estudiantes en la lista del salón */
@@ -3580,36 +3741,34 @@ function pgPNot(){
       ${ok?'✓':'🔒'} ${per}${!ok?' (cerrado)':''}
     </option>`;
   }).join('');
-  /* Banner describing current state */
   const extTarget=DB.ext?.on
-    ?Object.entries(DB.drPer||{}).find(([,dp])=>dp.extPer)?.[1]?.extPer||null
-    :null;
+    ?Object.entries(DB.drPer||{}).find(([,dp])=>dp.extPer)?.[1]?.extPer||null:null;
   const banner=DB.ext?.on
-    ?`<div class="al aly" style="margin-bottom:14px">
-        🔄 Periodo Extraordinario activo.
-        ${extTarget
-          ?`Solo <strong>${extTarget}</strong> está abierto para ingreso de notas de recuperación. Los demás periodos están cerrados.`
-          :'Configura el campo "Periodo Ext." en Control de Fechas para habilitar el periodo de recuperación.'}
-      </div>`
-    :'';
+    ?`<div class="al aly" style="margin-bottom:14px">🔄 Periodo Extraordinario activo.
+        ${extTarget?`Solo <strong>${extTarget}</strong> está abierto.`:'Configura el Periodo Ext. en Control de Fechas.'}</div>`:'';
+  const isBach=p.ciclo==='bachillerato';
   return`<div class="ph"><h2>Ingresar Notas</h2><button class="btn xs bg" onclick="showHelp('pnot')">❓ Ayuda</button></div>
   <div id="pnLockBanner"></div>
   ${banner}
   <div class="card">
-    <div class="al alb" style="margin-bottom:14px">
-      <div>ℹ️ <strong>Sistema tripartita:</strong> Aptitud ${DB.notaPct?.a??60}% + Actitud ${DB.notaPct?.c??20}% + Responsabilidad ${DB.notaPct?.r??20}% = Definitiva.<br>
-      Solo el periodo seleccionado se modifica; los demás quedan en 0 hasta que se ingresen.</div>
+    <div style="display:flex;align-items:flex-end;gap:12px;flex-wrap:wrap;margin-bottom:6px">
+      <div class="fld" style="margin:0;min-width:130px">
+        <label>Salón</label>
+        <select id="pns" onchange="updatePNMats()" style="font-size:14px;padding:9px 12px">${sO?'<option value="">Seleccionar</option>'+sO:'<option>Sin salones</option>'}</select>
+      </div>
+      <div class="fld" style="margin:0;min-width:150px">
+        <label>Periodo</label>
+        <select id="pnp" style="font-size:14px;padding:9px 12px"><option value="">Seleccionar</option>${pO}</select>
+      </div>
+      ${isBach?`<div class="fld" style="margin:0;min-width:180px">
+        <label>Asignatura</label>
+        <select id="pnm" style="font-size:14px;padding:9px 12px">
+          <option value="">— Selecciona salón primero —</option>
+        </select>
+      </div>`:''}
+      <button class="btn bn" onclick="loadPN()" style="height:42px;padding:0 20px;font-size:14px;align-self:flex-end">Cargar ▶</button>
     </div>
-    <div class="fg">
-      <div class="fld"><label>Salón</label>
-        <select id="pns" onchange="updatePNMats()">${sO?'<option value="">Seleccionar</option>'+sO:'<option>Sin salones</option>'}</select></div>
-      <div class="fld"><label>Periodo</label><select id="pnp"><option value="">Seleccionar</option>${pO}</select></div>
-      ${p.ciclo==='bachillerato'?`<div class="fld"><label>Materia del Salón</label><select id="pnm">
-        <option value="">— Selecciona salón primero —</option>
-      </select></div>`:''}
-      <div class="fld" style="display:flex;align-items:flex-end"><button class="btn bn" onclick="loadPN()">Cargar</button></div>
-    </div>
-    <div id="pnW"></div>
+    <div id="pnW" style="margin-top:14px"></div>
   </div>`;
 }
 function updatePNMats(){
@@ -3697,282 +3856,165 @@ function loadPN(){
     return;
   }
   // ── Modo compacto vs. tabla según cantidad de estudiantes ──────────────────
-  const MODO_CARDS = ests.length >= 10;
+  // ── TABLA DE REGISTRO DE CALIFICACIONES (estilo académico) ──────────────
   const ep_global = encodeURIComponent(per);
+  const pct = DB.notaPct || {};
+  const pA = pct.a ?? 60, pC = pct.c ?? 20, pR = pct.r ?? 20;
 
-  if (MODO_CARDS) {
-    // ── MODO TARJETAS REDISEÑADO ────────────────────────────────────────────
-    const pct = DB.notaPct || {};
-    const pA = pct.a ?? 60, pC = pct.c ?? 20, pR = pct.r ?? 20;
+  // Info bar: asignatura, docente, periodo, escala
+  const _salonObj = (DB.sals||[]).find(s=>s.nombre===salon)||{};
+  const _jornadaLabel = _salonObj.jornada ? _salonObj.jornada.toUpperCase() : '';
 
-    el.innerHTML = `
-      <div class="pn-stats">
-        <div class="pn-stat">
-          <span class="pn-stat-ico">👥</span>
-          <div><div class="pn-stat-val" id="pnStatTotal">${ests.length}</div><div class="pn-stat-lbl">Estudiantes</div></div>
-        </div>
-        <div class="pn-stat">
-          <span class="pn-stat-ico">✅</span>
-          <div><div class="pn-stat-val" id="pnStatConNotas">0</div><div class="pn-stat-lbl">Con notas</div></div>
-        </div>
-        <div class="pn-stat">
-          <span class="pn-stat-ico">⏳</span>
-          <div><div class="pn-stat-val" id="pnStatSinNotas">${ests.length}</div><div class="pn-stat-lbl">Pendientes</div></div>
-        </div>
-        <div class="pn-stat">
-          <span class="pn-stat-ico">📐</span>
-          <div><div class="pn-stat-val" style="font-size:13px">${pA}%/${pC}%/${pR}%</div><div class="pn-stat-lbl">Apt/Act/Res</div></div>
-        </div>
-      </div>
-      <div class="pn-toolbar">
-        <input id="pnFiltro" class="pnSearch" placeholder="Buscar estudiante por nombre..." oninput="filtrarPN()">
-        <span id="pnContador" style="font-size:12px;color:var(--sl2);white-space:nowrap"></span>
-        <button class="btn bs sm" onclick="expandAllPN()" style="white-space:nowrap">📂 Expandir todos</button>
-        <button class="btn bs sm" onclick="collapseAllPN()" style="white-space:nowrap">📁 Colapsar</button>
-        <button class="btn bg sm" onclick="selRptProf('${salon}','${per}','pdf')">📄 PDF</button>
-        <button class="btn bs sm" onclick="selRptProf('${salon}','${per}','xls')">📊 Excel</button>
-      </div>
-      <div id="pnCards"></div>`;
+  el.innerHTML = `
+    <div class="pnInfoBar">
+      <span>📚 <strong>${matSel||'Todas las materias'}</strong></span>
+      <span style="color:var(--bd2)">|</span>
+      <span>👩‍🏫 <strong>${esc(CU.nombre)}</strong></span>
+      <span style="color:var(--bd2)">|</span>
+      <span>📅 Periodo: <strong>${per}</strong>${_jornadaLabel?' · '+_jornadaLabel:''}</span>
+      <span style="margin-left:auto;font-size:11px">
+        Min: <strong>1.0</strong> &nbsp; Max: <strong>5.0</strong> &nbsp;
+        Aprueba: <strong style="color:var(--grn)">3.0</strong>
+      </span>
+    </div>
+    <div class="pnTblToolbar">
+      <input class="pnSearch2" id="pnFiltro" placeholder="Buscar estudiante..." oninput="filtrarPNTable()">
+      <span id="pnContador" style="font-size:12px;color:var(--sl2);white-space:nowrap">${ests.length} estudiantes</span>
+      <button class="btn bg sm" onclick="selRptProf('${salon}','${per}','pdf')">📄 PDF</button>
+      <button class="btn bs sm" onclick="selRptProf('${salon}','${per}','xls')">📊 Excel</button>
+    </div>
+    <div style="overflow-x:auto;border:1.5px solid var(--bd);border-top:none;border-radius:0 0 12px 12px">
+      <table class="pnTableV2" id="pnMainTable">
+        <thead>
+          <tr>
+            <th style="width:34px;text-align:center">#</th>
+            <th style="text-align:left;min-width:220px">Estudiante</th>
+            <th>
+              Aptitud
+              <span class="th-pct">${pA}%</span>
+            </th>
+            <th>
+              Actitud
+              <span class="th-pct">${pC}%</span>
+            </th>
+            <th>
+              Responsabilidad
+              <span class="th-pct">${pR}%</span>
+            </th>
+            <th style="min-width:80px">Definitiva</th>
+            <th>Disciplina</th>
+            <th>Conducta</th>
+          </tr>
+        </thead>
+        <tbody id="pnTableBody">
+          ${ests.map((e,idx)=>{
+            syncN(e.id);
+            const t = DB.notas[e.id][per][mats[0]||'']||{a:0,c:0,r:0};
+            // Para bachillerato con materia seleccionada usar esa; para primaria usar primera
+            const mat0 = matSel||mats[0]||'';
+            const t0 = mat0?DB.notas[e.id][per][mat0]||{a:0,c:0,r:0}:{a:0,c:0,r:0};
+            const d0 = def(t0);
+            const defCls = d0>=4?'pn-def-a':d0>=3?'pn-def-b':d0>0?'pn-def-c':'pn-def-n';
+            const defTxt = d0>0?fmt(d0):'—';
+            const em0 = encodeURIComponent(mat0);
+            const discV = typeof DB.notas[e.id]?.[per]?.disciplina==='number'?DB.notas[e.id][per].disciplina:0;
+            const condV = typeof DB.notas[e.id]?.[per]?.conducta==='number'?DB.notas[e.id][per].conducta:0;
+            return`<tr data-nombre="${e.nombre.toLowerCase()}">
+              <td style="text-align:center;font-size:12px;color:var(--sl3);font-weight:600">${idx+1}</td>
+              <td>
+                <div class="pn-est-nombre">${esc(e.nombre)}</div>
+                <div class="pn-est-doc">${e.ti||'—'}</div>
+              </td>
+              <td>
+                <input type="number" class="niTbl pnInpTbl ${t0.a>0?'con-valor':''}" min="0" max="5" step="0.1"
+                  value="${t0.a>0?t0.a.toFixed(1):''}" placeholder="—"
+                  data-eid="${e.id}" data-per="${ep_global}" data-mat="${em0}" data-f="a"
+                  oninput="clampNota(this)" onchange="saveTri(this);_pnTblMark(this)">
+              </td>
+              <td>
+                <input type="number" class="niTbl pnInpTbl ${t0.c>0?'con-valor':''}" min="0" max="5" step="0.1"
+                  value="${t0.c>0?t0.c.toFixed(1):''}" placeholder="—"
+                  data-eid="${e.id}" data-per="${ep_global}" data-mat="${em0}" data-f="c"
+                  oninput="clampNota(this)" onchange="saveTri(this);_pnTblMark(this)">
+              </td>
+              <td>
+                <input type="number" class="niTbl pnInpTbl ${t0.r>0?'con-valor':''}" min="0" max="5" step="0.1"
+                  value="${t0.r>0?t0.r.toFixed(1):''}" placeholder="—"
+                  data-eid="${e.id}" data-per="${ep_global}" data-mat="${em0}" data-f="r"
+                  oninput="clampNota(this)" onchange="saveTri(this);_pnTblMark(this)">
+              </td>
+              <td style="text-align:center">
+                <span id="dc_${e.id}_${em0}_${ep_global}" class="pn-def-badge ${defCls}">${defTxt}</span>
+              </td>
+              <td>
+                <input type="number" class="niTbl ${discV>0?'con-valor':''}" min="0" max="5" step="0.1"
+                  value="${discV>0?discV.toFixed(1):''}" placeholder="—"
+                  oninput="clampNota(this)" onchange="saveDisc('${e.id}',this.value,'${ep_global}');_pnTblMark(this)">
+              </td>
+              <td>
+                <input type="number" class="niTbl ${condV>0?'con-valor':''}" min="0" max="5" step="0.1"
+                  value="${condV>0?condV.toFixed(1):''}" placeholder="—"
+                  oninput="clampNota(this)" onchange="saveConducta('${e.id}',this.value,'${ep_global}');_pnTblMark(this)">
+              </td>
+            </tr>`;
+          }).join('')}
+        </tbody>
+      </table>
+    </div>`;
 
-    function renderCards(lista) {
-      const container = gi('pnCards');
-      if (!container) return;
-      const conNotas = lista.filter(e =>
-        mats.some(m => { const t = DB.notas[e.id]?.[per]?.[m]; return t && (t.a > 0 || t.c > 0 || t.r > 0); })
-      ).length;
-      const sinNotas = lista.length - conNotas;
-      if (gi('pnStatTotal'))    gi('pnStatTotal').textContent    = lista.length;
-      if (gi('pnStatConNotas')) gi('pnStatConNotas').textContent = conNotas;
-      if (gi('pnStatSinNotas')) gi('pnStatSinNotas').textContent = sinNotas;
-      if (gi('pnContador'))     gi('pnContador').textContent     = `${lista.length} estudiante${lista.length!==1?'s':''}`;
-
-      container.innerHTML = lista.map((e, idx) => {
-        syncN(e.id);
-        const pp = pprom(e.id, per);
-        const matsConDatos = mats.filter(m => { const t = DB.notas[e.id]?.[per]?.[m]; return t && (t.a > 0 || t.c > 0 || t.r > 0); }).length;
-        const tieneNotas   = matsConDatos > 0;
-        const progPct      = mats.length > 0 ? Math.round((matsConDatos / mats.length) * 100) : 0;
-
-        const discVal   = typeof DB.notas[e.id]?.[per]?.disciplina === 'number' ? DB.notas[e.id][per].disciplina
-          : (typeof DB.notas[e.id]?.[per]?._disciplina === 'number' ? DB.notas[e.id][per]._disciplina : 0);
-        const condVal   = typeof DB.notas[e.id]?.[per]?.conducta === 'number' ? DB.notas[e.id][per].conducta
-          : (typeof DB.notas[e.id]?.[per]?._conducta === 'number' ? DB.notas[e.id][per]._conducta : 0);
-
-        const ppColor   = pp >= 4 ? '#15803d' : pp >= 3 ? '#b45309' : pp > 0 ? '#dc2626' : 'var(--sl3)';
-        const ppLabel   = pp > 0 ? fmt(pp) : '—';
-
-        const camposHTML = mats.map(m => {
-          const t = DB.notas[e.id][per][m] || {a:0, c:0, r:0};
-          const d = def(t);
-          const em = encodeURIComponent(m);
-          const completa = t.a > 0 && t.c > 0 && t.r > 0;
-          const defCls   = d >= 4 ? 'def-buena' : d >= 3 ? 'def-media' : d > 0 ? 'def-baja' : '';
-          const defTxt   = d > 0 ? fmt(d) : '—';
-          const defColor = d >= 4 ? '#15803d' : d >= 3 ? '#b45309' : d > 0 ? '#dc2626' : '#94a3b8';
-
-          return `<div class="pnMat-card${completa ? ' mat-completa' : ''}">
-            <div class="pnMat-nombre" title="${m}">${m}</div>
-            <div class="pnMat-inputs">
-              <div class="pnMat-campo">
-                <span class="pnMat-lbl">Apt ${pA}%</span>
-                <input type="number" class="niV2 pnInp ${t.a>0?'con-valor':'sin-valor'}" min="0" max="5" step="0.1"
-                  value="${t.a > 0 ? t.a.toFixed(1) : ''}" placeholder="—"
-                  data-eid="${e.id}" data-per="${ep_global}" data-mat="${em}" data-f="a"
-                  oninput="clampNota(this)" onchange="saveTri(this);_pnMarkValor(this)">
-              </div>
-              <div class="pnMat-campo">
-                <span class="pnMat-lbl">Act ${pC}%</span>
-                <input type="number" class="niV2 pnInp ${t.c>0?'con-valor':'sin-valor'}" min="0" max="5" step="0.1"
-                  value="${t.c > 0 ? t.c.toFixed(1) : ''}" placeholder="—"
-                  data-eid="${e.id}" data-per="${ep_global}" data-mat="${em}" data-f="c"
-                  oninput="clampNota(this)" onchange="saveTri(this);_pnMarkValor(this)">
-              </div>
-              <div class="pnMat-campo">
-                <span class="pnMat-lbl">Res ${pR}%</span>
-                <input type="number" class="niV2 pnInp ${t.r>0?'con-valor':'sin-valor'}" min="0" max="5" step="0.1"
-                  value="${t.r > 0 ? t.r.toFixed(1) : ''}" placeholder="—"
-                  data-eid="${e.id}" data-per="${ep_global}" data-mat="${em}" data-f="r"
-                  oninput="clampNota(this)" onchange="saveTri(this);_pnMarkValor(this)">
-              </div>
-            </div>
-            <div id="dc_${e.id}_${em}_${ep_global}" class="pnMat-def ${defCls}">
-              <span style="font-size:10px;color:var(--sl3);font-weight:600">DEF</span>
-              <span style="font-size:15px;font-weight:800;color:${defColor}">${defTxt}</span>
-            </div>
-          </div>`;
-        }).join('');
-
-        return `<div class="pnCard2${tieneNotas ? ' tiene-notas' : ''}" data-nombre="${e.nombre.toLowerCase()}" id="pnCard2_${e.id}">
-          <div class="pnCard2-hdr" onclick="togglePN2('${e.id}')">
-            <div class="pnCard2-av" id="pnAv_${e.id}">${idx+1}</div>
-            <div style="flex:1;min-width:0">
-              <div style="font-weight:700;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(e.nombre)}</div>
-              <div style="font-size:11px;color:var(--sl2);margin-top:2px;display:flex;align-items:center;gap:8px">
-                ${tieneNotas
-                  ? `<span>Prom: <strong id="apr_hdr_${e.id}" style="color:${ppColor}">${ppLabel}</strong></span>
-                     <span style="color:var(--sl3)">·</span>
-                     <span style="color:var(--sl3)">${matsConDatos}/${mats.length} mats</span>`
-                  : `<span style="color:#94a3b8">Clic para ingresar notas</span>`}
-              </div>
-              <div class="pnProgress" style="margin-top:5px">
-                <div class="pnProgress-bar" style="width:${progPct}%"></div>
-              </div>
-            </div>
-            <div style="font-size:22px;color:var(--sl3);transition:transform .2s;flex-shrink:0" id="pnChev_${e.id}">›</div>
-          </div>
-          <div class="pnCard2-body" id="pnDet_${e.id}">
-            <div class="pnMat-grid">${camposHTML}</div>
-            <div class="pnCard2-footer">
-              <span class="pnFtr-lbl">Disciplina</span>
-              <input type="number" class="niSmall" min="0" max="5" step="0.1"
-                value="${discVal > 0 ? discVal.toFixed(1) : ''}" placeholder="—"
-                oninput="clampNota(this)" onchange="saveDisc('${e.id}',this.value,'${ep_global}')">
-              <span style="font-size:10px;color:var(--sl3)">${discLabel(discVal)}</span>
-              <span class="pnFtr-lbl" style="margin-left:6px">Conducta</span>
-              <input type="number" class="niSmall" min="0" max="5" step="0.1"
-                value="${condVal > 0 ? condVal.toFixed(1) : ''}" placeholder="—"
-                oninput="clampNota(this)" onchange="saveConducta('${e.id}',this.value,'${ep_global}')">
-              <span style="font-size:10px;color:var(--sl3)">${discLabel(condVal)}</span>
-              <span style="margin-left:auto;font-size:13px;font-weight:700">
-                Prom: <strong id="apr_${e.id}" style="color:${ppColor}">${ppLabel}</strong>
-              </span>
-            </div>
-            ${(()=>{
-              const verd = veredictoAnual(e.id);
-              if(!verd) return '';
-              if(verd.completo){
-                const bgV = verd.resultado==='gana' ? '#f0fff4' : verd.resultado==='recupera' ? '#fffbeb' : '#fff5f5';
-                const borV = verd.resultado==='gana' ? '#9ae6b4' : verd.resultado==='recupera' ? '#fbd38d' : '#feb2b2';
-                const colV = verd.resultado==='gana' ? '#276749' : verd.resultado==='recupera' ? '#92400e' : '#742a2a';
-                const filasV = verd.resMateria.map(x => {
-                  const col = x.gana ? '#276749' : '#c53030';
-                  const ic  = x.gana ? '✅' : '❌';
-                  return `<tr>
-                    <td style="padding:5px 10px;font-size:12px;font-weight:600">${ic} ${x.mat}</td>
-                    <td style="padding:5px 8px;text-align:center;font-size:13px;font-weight:800;color:${col}">${fmt(x.prom)}</td>
-                    <td style="padding:5px 8px;font-size:11px;color:${col};font-weight:700">${x.gana ? 'Aprobada' : 'Perdida'}</td>
-                  </tr>`;
-                }).join('');
-                return `<div style="margin-top:10px;border-radius:10px;overflow:hidden;border:1.5px solid ${borV}">
-                  <div style="background:${bgV};padding:9px 12px;font-size:12px;font-weight:800;color:${colV}">${verd.mensaje}</div>
-                  <table style="width:100%;border-collapse:collapse;background:#fff">
-                    <thead><tr style="background:#f7fafc">
-                      <th style="padding:5px 10px;font-size:10px;color:#4a5568;text-align:left">Materia</th>
-                      <th style="padding:5px 8px;font-size:10px;color:#4a5568;text-align:center">Definitiva año</th>
-                      <th style="padding:5px 8px;font-size:10px;color:#4a5568;text-align:left">Resultado</th>
-                    </tr></thead>
-                    <tbody>${filasV}</tbody>
-                  </table>
-                </div>`;
-              }
-              const periodosProy = necesitaParaPeriodos(e.id);
-              if (!periodosProy.length) return '';
-              const filas = periodosProy.map(x => {
-                const imposible = !x.posible;
-                const color = imposible ? '#742a2a' : x.necesita <= 3 ? '#276749' : x.necesita <= 4 ? '#744210' : '#c53030';
-                const icono = imposible ? '🚨' : x.necesita <= 3 ? '🟢' : x.necesita <= 4 ? '🟡' : '🔴';
-                const msg = imposible
-                  ? `${x.matsImpCount} materia${x.matsImpCount>1?'s':''} ya no pueden recuperarse`
-                  : x.matsEnRiesgo === 0 ? 'Va bien en todas las materias'
-                    : `Sacar ≥ ${x.necesita.toFixed(1)} (${x.matsEnRiesgo} mat${x.matsEnRiesgo>1?'s':''} en riesgo)`;
-                return `<tr>
-                  <td style="padding:5px 10px;font-size:12px;font-weight:700">${icono} ${x.per}</td>
-                  <td style="padding:5px 8px;text-align:center;font-size:13px;font-weight:800;color:${color}">${imposible ? '✗' : x.necesita.toFixed(1)}</td>
-                  <td style="padding:5px 8px;font-size:10px;color:#555">${msg}</td>
-                </tr>`;
-              }).join('');
-              return `<div style="margin-top:10px;border-radius:10px;overflow:hidden;border:1.5px solid #fed7aa">
-                <div style="background:#fff7ed;padding:8px 12px;font-size:12px;font-weight:800;color:#c05621">📊 ¿Puede ganar el año?</div>
-                <table style="width:100%;border-collapse:collapse;background:#fff">
-                  <thead><tr style="background:#fef3c7">
-                    <th style="padding:5px 10px;font-size:10px;color:#92400e;text-align:left">Periodo pendiente</th>
-                    <th style="padding:5px 8px;font-size:10px;color:#92400e;text-align:center">Nota mínima</th>
-                    <th style="padding:5px 8px;font-size:10px;color:#92400e;text-align:left">¿Qué necesita?</th>
-                  </tr></thead>
-                  <tbody>${filas}</tbody>
-                </table>
-              </div>`;
-            })()}
-          </div>
-        </div>`;
-      }).join('');
-
-      // Tab navigation between inputs
-      container.querySelectorAll('.pnInp').forEach((inp, i, all) => {
-        inp.addEventListener('keydown', ev => {
-          if (ev.key === 'Enter' || ev.key === 'Tab') {
-            ev.preventDefault();
-            const next = all[i + 1];
-            if (next) { next.focus(); next.select(); }
-          }
-        });
-        inp.addEventListener('focus', ev => { ev.target.select(); });
-      });
-    }
-
-    // Helper: marca visualmente un input después de guardar
-    window._pnMarkValor = function(inp) {
-      const v = parseFloat(inp.value);
-      inp.className = inp.className.replace(/con-valor|sin-valor/g, '').trim()
-        + (v > 0 ? ' con-valor' : ' sin-valor');
-      // Badge "guardado"
-      let badge = document.querySelector('.pn-saved-badge');
-      if (badge) badge.remove();
-      badge = document.createElement('div');
-      badge.className = 'pn-saved-badge';
-      badge.textContent = '✓ Guardado';
-      document.body.appendChild(badge);
-      setTimeout(() => { if (badge.parentNode) badge.parentNode.removeChild(badge); }, 1800);
-    };
-
-    window._pnEsts  = ests;
-    window._pnMats  = mats;
-    window._pnSalon = salon;
-    window._pnPer   = per;
-
-    window.filtrarPN = function() {
-      const q = (gi('pnFiltro')?.value || '').toLowerCase().trim();
-      const filtrados = q ? window._pnEsts.filter(e => e.nombre.toLowerCase().includes(q)) : window._pnEsts;
-      renderCards(filtrados);
-    };
-
-    window.togglePN2 = function(eid) {
-      const card  = gi('pnCard2_' + eid);
-      const body  = gi('pnDet_'   + eid);
-      const chev  = gi('pnChev_'  + eid);
-      const av    = gi('pnAv_'    + eid);
-      if (!card || !body) return;
-      const open  = card.classList.contains('pn-open');
-      card.classList.toggle('pn-open', !open);
-      if (chev) chev.style.transform = open ? '' : 'rotate(90deg)';
-      if (!open) {
-        const first = body.querySelector('input[type="number"]');
-        if (first) setTimeout(() => { first.focus(); first.select(); }, 80);
+  // Tab & Enter navigation across table inputs
+  const allInps = el.querySelectorAll('.pnInpTbl');
+  allInps.forEach((inp,i)=>{
+    inp.addEventListener('keydown', ev=>{
+      if(ev.key==='Enter'||ev.key==='Tab'){
+        ev.preventDefault();
+        const next=allInps[i+1];
+        if(next){next.focus();next.select();}
       }
-    };
-    // Alias for legacy code
-    window.togglePN = window.togglePN2;
+    });
+    inp.addEventListener('focus', ev=>ev.target.select());
+  });
 
-    window.expandAllPN = function() {
-      document.querySelectorAll('.pnCard2').forEach(card => {
-        card.classList.add('pn-open');
-        const id = card.id.replace('pnCard2_','');
-        const chev = gi('pnChev_'+id); if(chev) chev.style.transform = 'rotate(90deg)';
-      });
-    };
-    window.collapseAllPN = function() {
-      document.querySelectorAll('.pnCard2').forEach(card => {
-        card.classList.remove('pn-open');
-        const id = card.id.replace('pnCard2_','');
-        const chev = gi('pnChev_'+id); if(chev) chev.style.transform = '';
-      });
-    };
+  // Saved badge helper
+  window._pnTblMark = function(inp){
+    const v=parseFloat(inp.value);
+    inp.classList.toggle('con-valor', v>0);
+    inp.classList.toggle('', v<=0);
+    // Update def badge if this is an Apt/Act/Res input
+    const eid=inp.dataset.eid, mat=inp.dataset.mat, ep=inp.dataset.per;
+    if(eid&&mat&&ep){
+      const dc=gi('dc_'+eid+'_'+mat+'_'+ep);
+      if(dc){
+        const t=DB.notas[eid]?.[decodeURIComponent(ep)]?.[decodeURIComponent(mat)]||{a:0,c:0,r:0};
+        const d=def(t);
+        dc.textContent=d>0?fmt(d):'—';
+        dc.className='pn-def-badge '+(d>=4?'pn-def-a':d>=3?'pn-def-b':d>0?'pn-def-c':'pn-def-n');
+      }
+    }
+    // Saved toast
+    let badge=document.querySelector('.pn-saved2');
+    if(badge)badge.remove();
+    badge=document.createElement('div');
+    badge.className='pn-saved2';
+    badge.textContent='✓ Guardado';
+    document.body.appendChild(badge);
+    setTimeout(()=>{if(badge.parentNode)badge.parentNode.removeChild(badge);},2000);
+  };
 
-    renderCards(ests);
+  window.filtrarPNTable = function(){
+    const q=(gi('pnFiltro')?.value||'').toLowerCase().trim();
+    let visible=0;
+    document.querySelectorAll('#pnTableBody tr[data-nombre]').forEach(tr=>{
+      const match=!q||tr.dataset.nombre.includes(q);
+      tr.style.display=match?'':'none';
+      if(match) visible++;
+    });
+    const cnt=gi('pnContador');
+    if(cnt) cnt.textContent=q?`${visible} de ${ests.length} estudiantes`:`${ests.length} estudiantes`;
+  };
 
-  } else {
-    // ── MODO TABLA: para grupos pequeños (<10 estudiantes) ──────────────────
-    el.innerHTML=`<div class="tw"><table>
+
+  el.innerHTML=`<div class="tw"><table>
       <thead>
         <tr><th>Estudiante</th>
           ${mats.map(m=>`<th colspan="4" style="text-align:center;border-left:2px solid var(--bd)">${m}</th>`).join('')}
@@ -4033,7 +4075,6 @@ function loadPN(){
       body.appendChild(tr);
     });
   }
-}
 /* ============================================================
    SELECTOR DE SALÓN + MATERIA PARA REPORTES (bachillerato)
 ============================================================ */
@@ -6627,6 +6668,241 @@ async function sacomBorrar(id) {
     sw('success','Comunicado eliminado');
     sacomRenderList();
   } catch(e){ sw('error',e.message); }
+}
+
+/* ============================================================
+   ADMIN — HORARIOS DE PROFESORES
+============================================================ */
+
+const DIAS_SEM = ['Lunes','Martes','Miércoles','Jueves','Viernes'];
+
+// Franjas horarias predeterminadas (el admin puede añadir/quitar)
+const FRANJAS_DEFAULT = [
+  '07:00 - 07:55','07:55 - 08:50','08:50 - 09:45',
+  '10:00 - 10:55','10:55 - 11:50','11:50 - 12:45',
+  '13:30 - 14:25','14:25 - 15:20','15:20 - 16:15',
+];
+
+function pgAHor(){
+  return`<div class="ph">
+    <h2>🕐 Horarios de Profesores</h2>
+    <p style="font-size:13px;color:var(--sl2)">Asigna el horario semanal a cada profesor de bachillerato.</p>
+    <button class="btn xs bg" onclick="showHelp('aprf')" style="margin-top:6px">❓ Ayuda</button>
+  </div>
+  <div id="ahorContent"></div>`;
+}
+
+function initAHor(){
+  const el = gi('ahorContent'); if(!el) return;
+  const profsBach = (DB.profs||[]).filter(p => p.ciclo === 'bachillerato');
+
+  if(!profsBach.length){
+    el.innerHTML = `<div class="card"><div class="mty"><div class="ei">👩‍🏫</div>
+      <p>No hay profesores de bachillerato.<br><button class="btn bg" onclick="goto('aprf')">Ir a Profesores</button></p>
+    </div></div>`;
+    return;
+  }
+
+  // Get saved horarios
+  const horarios = DB.horarioPorProf || {};
+
+  el.innerHTML = `
+    <div class="card" style="margin-bottom:16px;padding:14px 18px">
+      <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+        <div style="flex:1;min-width:200px">
+          <label style="font-size:11px;font-weight:700;color:var(--sl);text-transform:uppercase;display:block;margin-bottom:6px">Profesor</label>
+          <select id="horProfSel" onchange="renderHorarioGrid()" style="width:100%;padding:10px 12px;border:1.5px solid var(--bd);border-radius:var(--r);font-size:14px;font-weight:600">
+            ${profsBach.map(p => {
+              const tiene = !!(horarios[p.id]?.franjas?.length);
+              return `<option value="${p.id}">${esc(p.nombre)}${tiene?' ✓':''}`;
+            }).join('')}
+          </select>
+        </div>
+        <div style="display:flex;gap:8px;align-items:flex-end;padding-bottom:2px">
+          <button class="btn bn" onclick="guardarHorario()" style="padding:10px 20px">💾 Guardar horario</button>
+          <button class="btn bg" onclick="limpiarHorario()" style="padding:10px 14px">🗑 Limpiar</button>
+        </div>
+      </div>
+    </div>
+    <div class="card" style="padding:0;overflow:hidden">
+      <div id="horGridWrap"></div>
+    </div>`;
+
+  renderHorarioGrid();
+}
+
+function renderHorarioGrid(){
+  const sel = gi('horProfSel'); if(!sel) return;
+  const profId = sel.value;
+  const prof = (DB.profs||[]).find(p => p.id === profId); if(!prof) return;
+  const wrap = gi('horGridWrap'); if(!wrap) return;
+
+  const horario = (DB.horarioPorProf || {})[profId] || {};
+  const franjas = horario.franjas || FRANJAS_DEFAULT.map(h => ({ hora: h, clases: {} }));
+
+  // Build all salon-materia options for this prof
+  const salMats = [];
+  (prof.salones || []).forEach(sal => {
+    const mats = getProfMatsSalon(prof.id, sal);
+    mats.forEach(m => salMats.push({ sal, mat: m, label: `${sal} — ${m}` }));
+  });
+
+  const optsHtml = `<option value="">— Libre —</option>` +
+    salMats.map(sm => `<option value="${sm.sal}|||${sm.mat}">${esc(sm.label)}</option>`).join('');
+
+  // Build header
+  const thDias = DIAS_SEM.map(d =>
+    `<th style="padding:10px 8px;background:var(--nv);color:#fff;text-align:center;font-size:12px;font-weight:700;min-width:160px">${d}</th>`
+  ).join('');
+
+  // Build rows
+  const rows = franjas.map((f, fi) => {
+    const celdas = DIAS_SEM.map(dia => {
+      const clase = f.clases?.[dia];
+      const selVal = clase ? `${clase.salon}|||${clase.mat}` : '';
+      return `<td style="padding:6px;border-bottom:1px solid var(--bd);border-right:1px solid var(--bd)">
+        <select class="horSelect" data-fi="${fi}" data-dia="${dia}"
+          style="width:100%;padding:7px 8px;border:1.5px solid var(--bd);border-radius:8px;font-size:12px;background:${selVal?'#eff6ff':'var(--bg2)'};color:${selVal?'var(--nv)':'var(--sl3)'};"
+          onchange="this.style.background=this.value?'#eff6ff':'var(--bg2)';this.style.color=this.value?'var(--nv)':'var(--sl3)'">
+          ${optsHtml}
+        </select>
+      </td>`;
+    }).join('');
+
+    return `<tr>
+      <td style="padding:8px 12px;border-bottom:1px solid var(--bd);border-right:2px solid var(--bd2);white-space:nowrap">
+        <div style="font-family:var(--mn);font-size:12px;font-weight:700;color:var(--nv)">${f.hora}</div>
+      </td>
+      ${celdas}
+    </tr>`;
+  }).join('');
+
+  wrap.innerHTML = `
+    <div style="display:flex;align-items:center;gap:10px;padding:12px 16px;background:var(--bg2);border-bottom:1.5px solid var(--bd);flex-wrap:wrap">
+      <span style="font-size:13px;font-weight:700;color:var(--nv)">👩‍🏫 ${esc(prof.nombre)}</span>
+      <span class="bdg bbl" style="font-size:11px">${prof.ciclo}</span>
+      ${(prof.salones||[]).map(s => `<span class="bdg bgy" style="font-size:11px">🏫 ${s}</span>`).join('')}
+      <span style="margin-left:auto;font-size:11px;color:var(--sl2)">${salMats.length} combinaciones salón-materia</span>
+    </div>
+    <div style="overflow-x:auto">
+      <table style="width:100%;border-collapse:collapse">
+        <thead>
+          <tr>
+            <th style="padding:10px 12px;background:var(--nv);color:#fff;text-align:left;font-size:12px;font-weight:700;min-width:130px;border-right:2px solid rgba(255,255,255,.2)">Hora</th>
+            ${thDias}
+          </tr>
+        </thead>
+        <tbody id="horTableBody">${rows}</tbody>
+      </table>
+    </div>
+    <div style="padding:10px 16px;background:#f0f7ff;border-top:1px solid var(--bl3);display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+      <button class="btn bg sm" onclick="agregarFranja()">➕ Agregar franja horaria</button>
+      <button class="btn bs sm" onclick="quitarUltimaFranja()">➖ Quitar última</button>
+      <span style="font-size:11px;color:var(--sl2);margin-left:auto">${franjas.length} franjas · Selecciona salón-materia en cada celda</span>
+    </div>`;
+
+  // Set select values after render
+  setTimeout(() => {
+    document.querySelectorAll('.horSelect').forEach(sel2 => {
+      const fi = parseInt(sel2.dataset.fi);
+      const dia = sel2.dataset.dia;
+      const clase = franjas[fi]?.clases?.[dia];
+      if(clase) {
+        const val = `${clase.salon}|||${clase.mat}`;
+        sel2.value = val;
+        sel2.style.background = '#eff6ff';
+        sel2.style.color = 'var(--nv)';
+      }
+    });
+  }, 20);
+
+  // Store current franjas for add/remove
+  window._horFranjas = franjas.map(f => ({ hora: f.hora, clases: { ...f.clases } }));
+  window._horProfId = profId;
+}
+
+function agregarFranja(){
+  const wrap = gi('horTableBody'); if(!wrap) return;
+  const hora = prompt('Ingresa la franja horaria (Ej: 16:15 - 17:10):', '');
+  if(!hora?.trim()) return;
+  window._horFranjas = window._horFranjas || [];
+  window._horFranjas.push({ hora: hora.trim(), clases: {} });
+  // Update DB temp and re-render
+  const profId = gi('horProfSel')?.value;
+  if(!DB.horarioPorProf) DB.horarioPorProf = {};
+  if(!DB.horarioPorProf[profId]) DB.horarioPorProf[profId] = {};
+  DB.horarioPorProf[profId].franjas = window._horFranjas;
+  renderHorarioGrid();
+}
+
+function quitarUltimaFranja(){
+  if(!(window._horFranjas?.length)) return;
+  window._horFranjas.pop();
+  const profId = gi('horProfSel')?.value;
+  if(DB.horarioPorProf?.[profId]) DB.horarioPorProf[profId].franjas = window._horFranjas;
+  renderHorarioGrid();
+}
+
+async function guardarHorario(){
+  const profId = gi('horProfSel')?.value; if(!profId) return;
+
+  // Read current state of selects
+  const franjasMap = {};
+  document.querySelectorAll('.horSelect').forEach(sel => {
+    const fi = parseInt(sel.dataset.fi);
+    const dia = sel.dataset.dia;
+    const val = sel.value;
+    if(!franjasMap[fi]) franjasMap[fi] = {};
+    if(val) {
+      const [salon, mat] = val.split('|||');
+      franjasMap[fi][dia] = { salon, mat };
+    }
+  });
+
+  const franjas = (window._horFranjas || FRANJAS_DEFAULT.map(h=>({hora:h,clases:{}}))).map((f, fi) => ({
+    hora: f.hora,
+    clases: franjasMap[fi] || {}
+  }));
+
+  // Save to DB local
+  if(!DB.horarioPorProf) DB.horarioPorProf = {};
+  DB.horarioPorProf[profId] = { franjas };
+
+  // Persist to server
+  try {
+    await apiFetch('/api/config/horarioPorProf', {
+      method: 'PUT',
+      body: JSON.stringify({ value: DB.horarioPorProf })
+    });
+    sw('success', '✓ Horario guardado', '', 1600);
+    // Refresh dropdown to show ✓
+    initAHor();
+  } catch(e) {
+    sw('error', 'Error al guardar: ' + e.message);
+  }
+}
+
+function limpiarHorario(){
+  const profId = gi('horProfSel')?.value; if(!profId) return;
+  Swal.fire({
+    title:'¿Limpiar horario?',
+    text:'Se borrarán todas las asignaciones del horario de este profesor.',
+    icon:'warning', showCancelButton:true,
+    confirmButtonColor:'#e53e3e', confirmButtonText:'Sí, limpiar', cancelButtonText:'Cancelar'
+  }).then(async r => {
+    if(!r.isConfirmed) return;
+    if(DB.horarioPorProf?.[profId]) {
+      DB.horarioPorProf[profId] = { franjas: FRANJAS_DEFAULT.map(h=>({hora:h,clases:{}})) };
+    }
+    try {
+      await apiFetch('/api/config/horarioPorProf', {
+        method: 'PUT',
+        body: JSON.stringify({ value: DB.horarioPorProf })
+      });
+      sw('success', 'Horario limpiado', '', 1400);
+      renderHorarioGrid();
+    } catch(e) { sw('error', e.message); }
+  });
 }
 
 /* ============================================================

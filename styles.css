@@ -796,3 +796,153 @@ hr{border:none;border-top:1px solid var(--bd);margin:20px 0}
   .topbar{padding:0 16px}
   .sr{grid-template-columns:repeat(2,1fr)}
 }
+/* ════════════════════════════════════════════════════════════════
+   PANEL PROFESOR — REDISEÑO 2026
+════════════════════════════════════════════════════════════════ */
+
+/* Grid de materias (home profesor) */
+.phMatsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 12px;
+  margin-bottom: 20px;
+}
+.phMatCard {
+  border-radius: 14px; padding: 16px 18px;
+  border: 1.5px solid var(--bd); background: var(--wh);
+  cursor: pointer; transition: all .18s; position: relative; overflow: hidden;
+  display: flex; flex-direction: column; gap: 8px;
+}
+.phMatCard::before {
+  content: ''; position: absolute; left: 0; top: 0; bottom: 0;
+  width: 4px; background: var(--bl); border-radius: 4px 0 0 4px;
+  transition: width .18s;
+}
+.phMatCard:hover { border-color: var(--bl2); box-shadow: 0 6px 20px rgba(29,111,239,.12); transform: translateY(-2px); }
+.phMatCard:hover::before { width: 6px; }
+.phMatCard:active { transform: translateY(0); }
+.phMatCard-salon {
+  font-size: 11px; font-weight: 700; color: var(--bl2); text-transform: uppercase;
+  letter-spacing: .06em; display: flex; align-items: center; gap: 5px;
+}
+.phMatCard-nombre {
+  font-size: 15px; font-weight: 800; color: var(--nv); line-height: 1.3;
+}
+.phMatCard-stats {
+  display: flex; gap: 8px; align-items: center; font-size: 11px; color: var(--sl2);
+}
+.phMatCard-progress {
+  height: 4px; background: #e2e8f0; border-radius: 99px; overflow: hidden;
+}
+.phMatCard-progress-bar {
+  height: 100%; background: linear-gradient(90deg, var(--bl), #34d399);
+  border-radius: 99px; transition: width .4s;
+}
+
+/* Tabla de horario */
+.phHorarioTable {
+  width: 100%; border-collapse: collapse; font-size: 12px;
+}
+.phHorarioTable th {
+  padding: 8px 10px; background: var(--nv); color: #fff; text-align: center;
+  font-weight: 700; font-size: 11px; letter-spacing: .04em; text-transform: uppercase;
+}
+.phHorarioTable th:first-child { text-align: left; border-radius: 8px 0 0 0; }
+.phHorarioTable th:last-child  { border-radius: 0 8px 0 0; }
+.phHorarioTable td {
+  padding: 9px 10px; border-bottom: 1px solid var(--bd); text-align: center;
+  color: var(--sl); font-size: 12px; vertical-align: middle;
+}
+.phHorarioTable td:first-child { font-family: var(--mn); font-size: 11px; color: var(--sl2); text-align: left; }
+.phHorarioTable tr:hover td { background: #f0f7ff; }
+.phHoraCell {
+  display: flex; flex-direction: column; align-items: center; gap: 2px;
+  padding: 6px 8px; border-radius: 8px; background: var(--bl); color: #fff;
+  font-size: 11px; font-weight: 700; cursor: pointer; transition: all .15s;
+  border: none; width: 100%; min-width: 80px;
+}
+.phHoraCell:hover { background: var(--nv); transform: scale(1.03); }
+.phHoraCell .hc-mat { font-size: 10px; font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 90px; }
+.phHoraCell .hc-sal { font-size: 9px; opacity: .8; }
+.phHoraCell.libre { background: transparent; color: var(--sl3); font-size: 11px; cursor: default; }
+.phHoraCell.libre:hover { transform: none; }
+
+/* ── INGRESO DE NOTAS — tabla estilo IE Puerto Salazar ── */
+.pnTableV2 {
+  width: 100%; border-collapse: collapse; font-size: 12px;
+}
+.pnTableV2 thead th {
+  padding: 10px 8px; background: var(--nv); color: #fff;
+  text-align: center; font-weight: 700; font-size: 11px;
+  border-right: 1px solid rgba(255,255,255,.15);
+  white-space: nowrap;
+}
+.pnTableV2 thead th:first-child { text-align: left; min-width: 220px; }
+.pnTableV2 thead .th-pct { font-size: 9px; font-weight: 500; opacity: .75; display: block; margin-top: 2px; }
+.pnTableV2 tbody tr { border-bottom: 1px solid var(--bd); transition: background .1s; }
+.pnTableV2 tbody tr:hover { background: #f0f7ff; }
+.pnTableV2 tbody tr:nth-child(even) { background: #fafbff; }
+.pnTableV2 tbody tr:nth-child(even):hover { background: #ecf3ff; }
+.pnTableV2 td { padding: 8px; vertical-align: middle; border-right: 1px solid var(--bd); }
+.pnTableV2 td:first-child { padding-left: 14px; }
+.pnTableV2 td:last-child { border-right: none; }
+
+/* Nombre + doc del estudiante en tabla */
+.pn-est-nombre { font-weight: 700; font-size: 13px; color: var(--nv); }
+.pn-est-doc    { font-size: 10px; color: var(--sl3); font-family: var(--mn); }
+
+/* Input de nota en tabla */
+.niTbl {
+  width: 62px; padding: 7px 4px; border: 1.5px solid #e2e8f0; border-radius: 8px;
+  text-align: center; font-size: 14px; font-family: var(--mn); font-weight: 700;
+  background: #f8fafc; color: var(--tx); outline: none; box-sizing: border-box;
+  -moz-appearance: textfield; transition: all .15s; display: block; margin: 0 auto;
+}
+.niTbl::-webkit-outer-spin-button,.niTbl::-webkit-inner-spin-button { -webkit-appearance: none; }
+.niTbl::placeholder { color: #cbd5e1; font-weight: 400; font-size: 12px; }
+.niTbl:focus { border-color: var(--bl); background: #eff6ff; box-shadow: 0 0 0 3px rgba(29,111,239,.13); }
+.niTbl.con-valor { border-color: #6ee7b7; background: #f0fdf4; color: #15803d; }
+
+/* Definitiva badge en tabla */
+.pn-def-badge {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-width: 52px; padding: 4px 8px; border-radius: 7px;
+  font-size: 15px; font-weight: 800; font-family: var(--mn);
+}
+.pn-def-a { background: #dcfce7; color: #15803d; }
+.pn-def-b { background: #fef9c3; color: #854d0e; }
+.pn-def-c { background: #fee2e2; color: #b91c1c; }
+.pn-def-n { background: #f1f5f9; color: #94a3b8; }
+
+/* Toolbar de la tabla de notas */
+.pnTblToolbar {
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  padding: 12px 16px; background: var(--wh);
+  border: 1.5px solid var(--bd); border-radius: 12px 12px 0 0; border-bottom: none;
+}
+.pnTblToolbar .pnSearch2 {
+  flex: 1; min-width: 180px; padding: 8px 12px 8px 34px;
+  border: 1.5px solid var(--bd); border-radius: 8px; font-size: 13px;
+  background: var(--bg2) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='13' height='13' viewBox='0 0 24 24' fill='none' stroke='%239baabb' stroke-width='2.5'%3E%3Ccircle cx='11' cy='11' r='8'/%3E%3Cpath d='m21 21-4.35-4.35'/%3E%3C/svg%3E") no-repeat 10px center;
+  outline: none; transition: border-color .15s;
+}
+.pnTblToolbar .pnSearch2:focus { border-color: var(--bl2); background-color: var(--wh); }
+
+/* Info header tabla */
+.pnInfoBar {
+  display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
+  padding: 10px 16px; background: #f0f7ff;
+  border: 1.5px solid var(--bl3); border-bottom: none;
+  font-size: 12px; color: var(--sl);
+}
+.pnInfoBar strong { color: var(--nv); }
+
+/* Guardado badge */
+@keyframes pnSaved2 { 0%,100%{opacity:0;transform:translateY(8px)} 15%,85%{opacity:1;transform:translateY(0)} }
+.pn-saved2 {
+  position: fixed; bottom: 22px; right: 22px; z-index: 9999; pointer-events: none;
+  background: #15803d; color: #fff; padding: 9px 18px;
+  border-radius: 99px; font-size: 12px; font-weight: 700;
+  box-shadow: 0 4px 18px rgba(21,128,61,.35);
+  animation: pnSaved2 2s ease forwards;
+}
