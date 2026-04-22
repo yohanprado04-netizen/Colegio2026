@@ -1518,93 +1518,244 @@ async function editSalAreas(sname){
    ESTUDIANTES (Admin)
 ============================================================ */
 function pgAEst(ciclo){
-  const tt=ciclo==='primaria'?'Primaria (1°-5°)':'Bachillerato (6°-11°)';
-  const sOpts=DB.sals.filter(s=>s.ciclo===ciclo).map(s=>`<option value="${s.nombre}">${s.nombre}</option>`).join('');
-  return`<div class="ph"><h2>Estudiantes — ${tt}</h2><button class="btn xs bg" onclick="showHelp('${ciclo==='primaria'?'apri':'abac'}')" style="margin-top:6px">❓ Ayuda</button></div>
-  <div class="card">
-    <div class="chd">
-      <span class="cti">➕ Agregar Estudiante</span>
-      <button class="btn bg sm" onclick="abrirCSVEst('${ciclo}')" title="Cargar múltiples estudiantes desde archivo CSV">
-        📂 Carga Masiva CSV
-      </button>
-    </div>
-    <div style="display:grid;grid-template-columns:2fr 1fr 1fr 1fr 1fr;gap:14px;align-items:end;margin-bottom:16px">
-      <div class="fld" style="margin:0">
-        <label>Nombre completo</label>
-        <input id="nen" placeholder="Ej: Juan Pérez Gómez" style="font-size:14px;padding:12px 15px">
-      </div>
-      <div class="fld" style="margin:0">
-        <label>${ciclo==='bachillerato'?'T.I. / C.C.':'T.I.'}</label>
-        <input id="neti" placeholder="Número documento" inputmode="numeric" pattern="[0-9]*"
-          style="font-size:14px;padding:12px 15px"
-          oninput="this.value=this.value.replace(/[^0-9]/g,'')">
-      </div>
-      <div class="fld" style="margin:0">
-        <label>Salón</label>
-        <select id="nes" style="font-size:14px;padding:12px 15px">
-          <option value="">Sin salón</option>${sOpts}
-        </select>
-      </div>
-      <div class="fld" style="margin:0">
-        <label>Usuario</label>
-        <input id="neu" placeholder="nombre.usuario" style="font-size:14px;padding:12px 15px">
-      </div>
-      <div class="fld" style="margin:0">
-        <label>Contraseña</label>
-        <input id="nep" type="password" placeholder="••••••••" style="font-size:14px;padding:12px 15px">
-      </div>
-    </div>
-    <button class="btn bn" onclick="addEst('${ciclo}')"
-      style="width:100%;padding:14px;font-size:15px;font-weight:800;
-      background:linear-gradient(135deg,var(--nv2),var(--nv3));
-      box-shadow:0 4px 16px rgba(15,31,53,.2);border-radius:12px;
-      display:flex;align-items:center;justify-content:center;gap:10px">
-      <span style="font-size:18px">➕</span> Agregar Estudiante
-    </button>
+  const tt = ciclo === 'primaria' ? 'Primaria (1°-5°)' : 'Bachillerato (6°-11°)';
+  // Get salones sorted (already sorted by sortSals)
+  const sals = DB.sals.filter(s => s.ciclo === ciclo);
+  return `<div class="ph">
+    <h2>Estudiantes — ${tt}</h2>
+    <button class="btn xs bg" onclick="showHelp('${ciclo==='primaria'?'apri':'abac'}')" style="margin-top:6px">❓ Ayuda</button>
   </div>
-  <div class="card">
-    <div class="chd"><span class="cti">📋 Lista</span>
-      <div style="display:flex;gap:8px;flex-wrap:wrap">
-        <button class="btn bg sm" onclick="expEstXls('${ciclo}')">📤 Excel</button>
-        <button class="btn bn sm" onclick="promoverEstudiantes('${ciclo}')" title="Promover/Repetir año a todos los estudiantes según resultados">🎓 Promover Año</button>
-        <button class="btn bd sm" onclick="eliminarTodosEsts('${ciclo}')" title="Eliminar TODOS los estudiantes de este ciclo">🗑️ Eliminar Todo</button>
-      </div>
-    </div>
-    <div class="srch"><span style="color:var(--sl3);font-size:15px">🔍</span>
-      <input id="se${ciclo}" placeholder="Buscar por nombre, T.I., salón..."
-        oninput="filterEst('${ciclo}')">
-    </div>
-    <div id="et${ciclo}"></div>
+  <div id="aestContent">
+    ${sals.length ? renderSalonGrid(ciclo, sals) : renderSalonVacio(ciclo)}
   </div>`;
 }
+
+/* Render the salon selection grid */
+function renderSalonGrid(ciclo, sals){
+  return `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:14px">
+    ${sals.map(s => {
+      const ests = ebySalon(s.nombre);
+      const conNotas = ests.filter(e => {
+        const pg = gprom(e.id); return pg > 0;
+      }).length;
+      const pct = ests.length ? Math.round(conNotas/ests.length*100) : 0;
+      const color = pct >= 70 ? 'var(--grn)' : pct >= 40 ? 'var(--ora)' : 'var(--sl3)';
+      return `<div onclick="abrirSalon('${s.nombre}','${ciclo}')"
+        style="background:var(--wh);border:1.5px solid var(--bd);border-radius:14px;
+        padding:20px 18px;cursor:pointer;transition:all .18s;position:relative;overflow:hidden"
+        onmouseover="this.style.borderColor='var(--bl2)';this.style.boxShadow='0 6px 20px rgba(29,111,239,.13)';this.style.transform='translateY(-2px)'"
+        onmouseout="this.style.borderColor='var(--bd)';this.style.boxShadow='';this.style.transform=''">
+        <div style="position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--bl);border-radius:4px 0 0 4px"></div>
+        <div style="font-size:26px;font-weight:900;color:var(--nv);margin-bottom:6px">${esc(s.nombre)}</div>
+        <div style="font-size:13px;color:var(--sl2);margin-bottom:10px">
+          <span style="font-weight:700;color:var(--nv)">${ests.length}</span> estudiantes
+        </div>
+        <div style="height:4px;background:#e2e8f0;border-radius:99px;overflow:hidden">
+          <div style="height:100%;width:${pct}%;background:linear-gradient(90deg,var(--bl),#34d399);border-radius:99px;transition:width .4s"></div>
+        </div>
+        <div style="font-size:10px;color:${color};margin-top:4px;font-weight:600">${pct}% con promedio</div>
+      </div>`;
+    }).join('')}
+  </div>`;
+}
+
+function renderSalonVacio(ciclo){
+  return `<div class="card"><div class="mty"><div class="ei">🏫</div>
+    <p>No hay salones de ${ciclo==='primaria'?'Primaria':'Bachillerato'} creados.<br>
+    <button class="btn bg" onclick="goto('asal')">Ir a Salones & Grados</button></p>
+  </div></div>`;
+}
+
+/* Open a salon and show its students */
+function abrirSalon(salon, ciclo){
+  const el = gi('aestContent'); if(!el) return;
+  const sOpts = DB.sals.filter(s=>s.ciclo===ciclo).map(s=>`<option value="${s.nombre}"${s.nombre===salon?' selected':''}>${s.nombre}</option>`).join('');
+  const ests = ebySalon(salon).slice().sort((a,b) => a.nombre.localeCompare(b.nombre,'es'));
+  const pg_global = ests.length ? (ests.reduce((s,e)=>s+gprom(e.id),0)/ests.length).toFixed(2) : '0.00';
+
+  el.innerHTML = `
+    <!-- HEADER DEL SALÓN -->
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:18px;flex-wrap:wrap">
+      <button onclick="initAEst('${ciclo}')"
+        style="background:var(--bg2);border:1.5px solid var(--bd);border-radius:9px;padding:8px 14px;
+        cursor:pointer;font-size:13px;font-weight:700;color:var(--sl2);display:flex;align-items:center;gap:6px;transition:all .15s"
+        onmouseover="this.style.borderColor='var(--bl2)'" onmouseout="this.style.borderColor='var(--bd)'">
+        ← Salones
+      </button>
+      <div style="flex:1;min-width:140px">
+        <select onchange="abrirSalon(this.value,'${ciclo}')"
+          style="padding:9px 14px;border:1.5px solid var(--bd);border-radius:9px;font-size:15px;font-weight:800;color:var(--nv);background:var(--wh);outline:none;cursor:pointer">
+          ${sOpts}
+        </select>
+      </div>
+      <span style="background:#eff6ff;color:var(--nv);border-radius:99px;padding:6px 14px;font-size:13px;font-weight:700">
+        ${ests.length} estudiantes
+      </span>
+      <span class="${scC(parseFloat(pg_global))}" style="font-size:13px;font-weight:800">Prom: ${pg_global}</span>
+    </div>
+
+    <!-- ACCIONES DEL SALÓN -->
+    <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px">
+      <button class="btn bn sm" onclick="openAddEstSalon('${salon}','${ciclo}')" style="display:flex;align-items:center;gap:5px">
+        ➕ Agregar Estudiante
+      </button>
+      <button class="btn bg sm" onclick="abrirCSVEstSalon('${salon}','${ciclo}')" style="display:flex;align-items:center;gap:5px">
+        📂 Carga Masiva CSV
+      </button>
+      <button class="btn bs sm" onclick="descargarPlantillaCSV('est','${ciclo}')" style="display:flex;align-items:center;gap:5px">
+        ⬇️ Plantilla CSV
+      </button>
+      <button class="btn bg sm" onclick="expEstXlsSalon('${salon}')" style="display:flex;align-items:center;gap:5px">
+        📤 Excel
+      </button>
+      <button class="btn bn sm" onclick="promoverEstudiantes('${ciclo}')" style="display:flex;align-items:center;gap:5px">
+        🎓 Promover Año
+      </button>
+      <button class="btn bd sm" onclick="eliminarTodosSalon('${salon}','${ciclo}')" style="display:flex;align-items:center;gap:5px">
+        🗑️ Eliminar Todos
+      </button>
+    </div>
+
+    <!-- BUSCADOR -->
+    <div class="srch" style="margin-bottom:14px">
+      <span style="color:var(--sl3);font-size:15px">🔍</span>
+      <input id="seBusqSalon" placeholder="Buscar por nombre o T.I.…"
+        oninput="filtrarSalonTable('${salon}','${ciclo}')">
+    </div>
+
+    <!-- TABLA DE ESTUDIANTES -->
+    <div class="tw"><table id="salonTable">
+      <thead><tr>
+        <th>#</th>
+        <th>Nombre</th>
+        <th>${ciclo==='bachillerato'?'T.I./C.C.':'T.I.'}</th>
+        <th>Usuario</th>
+        <th>Prom.</th>
+        <th>Acciones</th>
+      </tr></thead>
+      <tbody>
+        ${ests.map((e,i) => {
+          const pg = gprom(e.id);
+          return `<tr data-nombre="${e.nombre.toLowerCase()}" data-ti="${(e.ti||'').toLowerCase()}">
+            <td style="color:var(--sl3);font-family:var(--mn);font-size:11px">${i+1}</td>
+            <td><strong>${esc(e.nombre)}</strong></td>
+            <td style="font-family:var(--mn);font-size:12px">${e.ti||'—'}</td>
+            <td style="font-family:var(--mn);font-size:12px">${esc(e.usuario||'')}</td>
+            <td><span class="${scC(pg)}" style="font-size:13px;font-weight:800">${pg.toFixed(2)}</span></td>
+            <td><div style="display:flex;gap:5px">
+              <button class="btn xs bg" onclick="editEst('${e.id}','${ciclo}')">✏️</button>
+              <button class="btn xs bd" onclick="delEst('${e.id}','${ciclo}')">🗑</button>
+              <button class="btn xs bb" onclick="dlBoletinUI('${e.id}')">📄</button>
+            </div></td>
+          </tr>`;
+        }).join('')}
+      </tbody>
+    </table></div>`;
+}
+
+function filtrarSalonTable(salon, ciclo){
+  const q = (gi('seBusqSalon')?.value||'').toLowerCase().trim();
+  document.querySelectorAll('#salonTable tbody tr').forEach(tr => {
+    const nombre = tr.dataset.nombre||'';
+    const ti     = tr.dataset.ti||'';
+    tr.style.display = (!q || nombre.includes(q) || ti.includes(q)) ? '' : 'none';
+  });
+}
+
+/* Opens addEst dialog pre-filling the salon */
+function openAddEstSalon(salon, ciclo){
+  // Call the standard addEst form but preselect the salon
+  // We temporarily set a global to pick up in addEst
+  window._preselSalon = salon;
+  // Re-use existing addEst flow from api-layer which reads gi('nes')
+  // We show a compact Swal matching pgAEst add form
+  const sOpts = DB.sals.filter(s=>s.ciclo===ciclo).map(s=>`<option value="${s.nombre}"${s.nombre===salon?' selected':''}>${s.nombre}</option>`).join('');
+  Swal.fire({
+    title:`➕ Agregar Estudiante — ${salon}`, width:520,
+    html:`<div style="text-align:left;font-family:var(--fn)">
+      <div style="display:flex;flex-direction:column;gap:10px">
+        <div class="fld" style="margin:0"><label>Nombre completo *</label><input id="nen" placeholder="Juan Pérez Gómez" class="inp"></div>
+        <div class="fld" style="margin:0"><label>${ciclo==='bachillerato'?'T.I. / C.C.':'T.I.'}</label>
+          <input id="neti" placeholder="Número documento" inputmode="numeric" pattern="[0-9]*" class="inp"
+            oninput="this.value=this.value.replace(/[^0-9]/g,'')"></div>
+        <div class="fld" style="margin:0"><label>Salón</label>
+          <select id="nes" class="inp">${sOpts}</select></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+          <div class="fld" style="margin:0"><label>Usuario *</label><input id="neu" placeholder="nombre.usuario" class="inp"></div>
+          <div class="fld" style="margin:0"><label>Contraseña *</label><input id="nep" type="password" placeholder="••••••••" class="inp"></div>
+        </div>
+      </div>
+    </div>`,
+    showCancelButton:true, confirmButtonText:'➕ Agregar', confirmButtonColor:'var(--nv)', cancelButtonText:'Cancelar',
+    preConfirm:()=>{ return {}; } // handled by addEst()
+  }).then(r=>{
+    if(r.isConfirmed) addEst(ciclo).then(()=>abrirSalon(salon,ciclo));
+  });
+}
+
+/* CSV carga masiva preseleccionando el salón */
+function abrirCSVEstSalon(salon, ciclo){
+  window._preselSalon = salon;
+  abrirCSVEst(ciclo);
+}
+
+/* Excel export only for this salon */
+function expEstXlsSalon(salon){
+  const list = ebySalon(salon);
+  if(!list.length){ sw('info','Sin estudiantes en este salón'); return; }
+  const ws = XLSX.utils.json_to_sheet(list.map(e=>({
+    Nombre:e.nombre, TI:e.ti||'', Salon:e.salon||'', Usuario:e.usuario, Promedio:gprom(e.id).toFixed(2)
+  })));
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, salon);
+  XLSX.writeFile(wb, `estudiantes_${salon}.xlsx`);
+}
+
+/* Delete all students in this specific salon */
+async function eliminarTodosSalon(salon, ciclo){
+  const ests = ebySalon(salon);
+  if(!ests.length){ sw('info','No hay estudiantes en este salón'); return; }
+  const r = await Swal.fire({
+    title:`¿Eliminar todos los estudiantes de ${salon}?`,
+    text:`Esta acción eliminará ${ests.length} estudiante(s) permanentemente.`,
+    icon:'warning', showCancelButton:true,
+    confirmButtonColor:'#e53e3e', confirmButtonText:`Sí, eliminar ${ests.length}`, cancelButtonText:'Cancelar'
+  });
+  if(!r.isConfirmed) return;
+  sw('info','Eliminando estudiantes...','',0);
+  let ok=0, fail=0;
+  for(const e of ests){
+    try{
+      await apiFetch(`/api/usuarios/${e.id}`,{method:'DELETE'});
+      DB.ests = DB.ests.filter(x=>x.id!==e.id);
+      ok++;
+    }catch{ fail++; }
+  }
+  Swal.close();
+  if(fail) sw('warning',`${ok} eliminados, ${fail} fallaron`);
+  else sw('success',`${ok} estudiantes eliminados`,'',1600);
+  abrirSalon(salon,ciclo);
+}
+
 function initAEst(c){
-  // Reload DB fresh para asegurar aislamiento de salones/materias por colegio
-  if(typeof dbLoad==='function') dbLoad().catch(()=>{}).finally(()=>renderEstTabla(c));
-  else renderEstTabla(c);
+  if(typeof dbLoad==='function') dbLoad().catch(()=>{}).finally(()=>{
+    const el = gi('aestContent');
+    const sals = DB.sals.filter(s=>s.ciclo===c);
+    if(el) el.innerHTML = sals.length ? renderSalonGrid(c, sals) : renderSalonVacio(c);
+  });
+  else {
+    const el = gi('aestContent');
+    const sals = DB.sals.filter(s=>s.ciclo===c);
+    if(el) el.innerHTML = sals.length ? renderSalonGrid(c, sals) : renderSalonVacio(c);
+  }
 }
-function filterEst(c){renderEstTabla(c,gi('se'+c)?.value||'');}
+
+function filterEst(c){ initAEst(c); }
 function renderEstTabla(ciclo,filter=''){
-  const el=gi('et'+ciclo);if(!el) return;
-  let list=estsByCiclo(ciclo);
-  if(filter){const f=filter.toLowerCase();list=list.filter(e=>
-    e.nombre.toLowerCase().includes(f)||(e.ti||'').toLowerCase().includes(f)||(e.salon||'').toLowerCase().includes(f));}
-  if(!list.length){el.innerHTML='<div class="mty"><div class="ei">🎓</div><p>Sin estudiantes</p></div>';return;}
-  el.innerHTML=`<div class="tw"><table>
-    <thead><tr><th>#</th><th>Nombre</th><th>${ciclo==='bachillerato'?'T.I./C.C.':'T.I.'}</th><th>Salón</th><th>Usuario</th><th>Prom.</th><th>Acciones</th></tr></thead>
-    <tbody>${list.map((e,i)=>{const pg=gprom(e.id);return`<tr>
-      <td style="color:var(--sl3);font-family:var(--mn);font-size:11px">${i+1}</td>
-      <td><strong>${esc(e.nombre)}</strong></td>
-      <td style="font-family:var(--mn);font-size:12px">${e.ti||'—'}</td>
-      <td>${e.salon?`<span class="bdg bbl">${esc(e.salon||"")}</span>`:'<span class="bdg bgy">Sin salón</span>'}</td>
-      <td style="font-family:var(--mn);font-size:12px">${esc(e.usuario||"")}</td>
-      <td><span class="${scC(pg)}">${pg.toFixed(2)}</span></td>
-      <td><div style="display:flex;gap:5px">
-        <button class="btn xs bg" onclick="editEst('${e.id}','${ciclo}')">✏️</button>
-        <button class="btn xs bd" onclick="delEst('${e.id}','${ciclo}')">🗑</button>
-        <button class="btn xs bb" onclick="dlBoletinUI('${e.id}')">📄</button>
-      </div></td>
-    </tr>`;}).join('')}</tbody></table></div>`;
+  // Legacy compat — redirect to new flow
+  initAEst(ciclo);
 }
+
 /* ── SOBREESCRITA por api-layer.js ── */
 async function addEst(ciclo){ /* implementado en api-layer.js */ }
 /* ── SOBREESCRITA por api-layer.js ── */
