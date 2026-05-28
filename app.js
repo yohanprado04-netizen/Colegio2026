@@ -1600,12 +1600,15 @@ async function editAreaMatsInSalon(sname, areaNombre, ciclo){
   if(!r2.isConfirmed) return;
   const chosen=r2.value;
 
-  // Guardar override en DB (no persiste hasta que se cierre el modal de editSalAreas)
+  // Actualizar DB.salAreas y persistir INMEDIATAMENTE al servidor
   const salData2=DB.salAreas[sname];
-  const areas2=Array.isArray(salData2)?salData2:(salData2?.areas||[]);
+  const areas2=Array.isArray(salData2)?[...salData2]:(salData2?.areas||[]);
   const over2=Array.isArray(salData2)?{}:{...(salData2?.matsOverride||{})};
   over2[areaNombre]=chosen;
   DB.salAreas[sname]={areas:areas2, matsOverride:over2};
+  try{
+    await apiFetch('/api/config/salAreas',{method:'PUT',body:JSON.stringify({value:DB.salAreas})});
+  }catch(e){ console.warn('Error guardando salAreas (matsOverride):',e); }
 
   // Actualizar el preview en el modal padre si está abierto
   try{
