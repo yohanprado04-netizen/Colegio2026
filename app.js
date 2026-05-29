@@ -1342,14 +1342,13 @@ function renderSals(){
           <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
             <strong style="font-size:15px">${s.nombre}</strong>
             <span class="bdg bgy">${ebySalon(s.nombre).length} est.</span>
-            ${s.jornada?`<span class="bdg" style="font-size:10px;background:#e0f2fe;color:#0369a1;border:1px solid #7dd3fc;text-transform:capitalize">🕐 ${s.jornada}</span>`:`<span class="bdg" style="font-size:10px;background:#fef9c3;color:#854d0e;border:1px solid #fde047">🕐 Jornada no asignada</span>`}
+            ${s.jornada?`<span class="bdg" style="font-size:10px;background:#e0f2fe;color:#0369a1;border:1px solid #7dd3fc;text-transform:capitalize">🕐 ${s.jornada}</span>`:''}
             ${matsLabel}
             ${areasLabel}
           </div>
           <div style="display:flex;gap:6px;flex-wrap:wrap">
             ${hayAreas?`<button class="btn xs" style="background:#e0e7ff;color:#3730a3;border:1px solid #a5b4fc" onclick="editSalAreas('${s.nombre}')">📂 Áreas</button>`:''}
             <button class="btn xs bg" onclick="editSalMats('${s.nombre}')">🎯 Materias</button>
-            <button class="btn xs" style="background:#f0fdf4;color:#166534;border:1px solid #86efac" onclick="editSal('${s.nombre}')">✏️ Editar</button>
             <button class="btn xs bd" onclick="delSal('${s.nombre}')">🗑</button>
           </div>
         </div>
@@ -4292,7 +4291,7 @@ function loadPN(){
       <span style="color:var(--bd2)">|</span>
       <span>👩‍🏫 <strong>${esc(CU.nombre)}</strong></span>
       <span style="color:var(--bd2)">|</span>
-      <span>📅 Periodo: <strong>${per}</strong> · ${_jornadaLabel||'Jornada no asignada'}</span>
+      <span>📅 Periodo: <strong>${per}</strong>${_jornadaLabel?' · '+_jornadaLabel:''}</span>
       <span style="margin-left:auto;font-size:11px">
         Min: <strong>1.0</strong> &nbsp; Max: <strong>5.0</strong> &nbsp;
         Aprueba: <strong style="color:var(--grn)">3.0</strong>
@@ -6060,7 +6059,344 @@ function dlBoletinUI(estId){
  * anno: year string
  * snapData: optional {notas, mats, salon, disciplina, nombre, ti} for deleted students
  */
+// ═══════════════════════════════════════════════════════════════════
+// dlBoletinCepa() — Boletín exclusivo para COLEGIO CEPA
+// Formato fiel al Excel oficial: áreas > sub-materias, escala CEPA
+// ═══════════════════════════════════════════════════════════════════
+function dlBoletinCepa(estId,perFilter,anno,snapData){
+  perFilter=perFilter||'TODOS'; anno=anno||String(new Date().getFullYear());
+
+  const e=DB.ests.find(x=>x.id===estId);
+  if(!e&&!snapData){sw('error','Estudiante no encontrado');return;}
+  const anoActual=DB.anoActual||String(new Date().getFullYear());
+  const esAnioHistorico = anno !== anoActual;
+
+  const notasDelAno = snapData?.notas
+    || (esAnioHistorico ? (DB.notasPorAno?.[anno]?.[estId]||{}) : null)
+    || (e ? DB.notas[estId] : null) || {};
+
+  const nombre  = snapData?.nombre || e?.nombre || estId;
+  const ti      = snapData?.ti     || e?.ti     || '—';
+  const salonHist = esAnioHistorico ? (DB.salonPorAno?.[anno]?.[estId]||null) : null;
+  const salon   = snapData?.salon || salonHist || e?.salon || '—';
+  const ciclo   = cicloOf(salon);
+  const isTodos = perFilter==='TODOS';
+  const allPers = DB.pers||[];
+
+  // Materias
+  let mats;
+  if(snapData?.mats){ mats=snapData.mats; }
+  else if(esAnioHistorico && notasDelAno && Object.keys(notasDelAno).length){
+    const s=new Set();
+    Object.values(notasDelAno).forEach(pd=>{
+      if(!pd||typeof pd!=='object') return;
+      Object.entries(pd).forEach(([k,v])=>{
+        if(k==='disciplina'||k==='conducta'||k.startsWith('_')) return;
+        if(v&&typeof v==='object'&&(v.a>0||v.c>0||v.r>0)) s.add(k);
+      });
+    });
+    mats = s.size>0 ? [...s].sort((a,b)=>a.localeCompare(b,'es')) : (e?getMats(estId):DB.mP);
+  } else { mats = e?getMats(estId):DB.mP; }
+
+  if(e) syncN(estId);
+
+  // Periodos a renderizar
+  const pers2render = isTodos
+    ? allPers.filter(per=>{
+        const tn=mats.some(m=>{const t=notasDelAno[per]?.[m];return t&&(t.a>0||t.c>0||t.r>0);});
+        const tc=typeof notasDelAno[per]?.conducta==='number'||typeof notasDelAno[per]?._conducta==='number';
+        const td=typeof notasDelAno[per]?.disciplina==='number'||typeof notasDelAno[per]?._disciplina==='number';
+        return tn||tc||td;
+      })
+    : allPers.filter(p=>p===decodeURIComponent(perFilter));
+  if(!pers2render.length){sw('info','Sin datos','No hay notas registradas en este periodo.');return;}
+
+  // Jornada
+  const salonObj=(DB.sals||[]).find(s=>s.nombre===salon)||{};
+  const jornadaLabel=salonObj.jornada||'No asignada';
+
+  // Mapa de áreas
+  const areaMap = (e&&!esAnioHistorico) ? getAreaMatsMap(estId) : {'_sinArea':mats};
+  const areas = Object.keys(areaMap).filter(k=>k!=='_sinArea');
+  const sinArea = areaMap['_sinArea']||[];
+
+  // Escala CEPA
+  const bDesCepa = n => {
+    n=+n;
+    if(n===0) return '—';
+    if(n>=4.6) return 'DS';
+    if(n>=4.0) return 'DA';
+    if(n>=3.5) return 'DB';
+    return 'DI';
+  };
+  const bDesFullCepa = n => {
+    n=+n;
+    if(n===0) return '—';
+    if(n>=4.6) return 'Superior';
+    if(n>=4.0) return 'Alto';
+    if(n>=3.5) return 'Básica';
+    return 'Bajo';
+  };
+  const fmt=n=>n===0?'—':(+n).toFixed(1);
+  const def2=m=>{
+    const act=pers2render.filter(per=>{const t=notasDelAno[per]?.[m];return t&&(t.a>0||t.c>0||t.r>0);});
+    if(!act.length) return 0;
+    return+(act.reduce((s,p)=>s+def(notasDelAno[p]?.[m]||{a:0,c:0,r:0}),0)/act.length).toFixed(2);
+  };
+  const fallas=m=>{
+    // Columna Fallas del periodo activo (si es un solo periodo) o suma de todos
+    if(!isTodos){
+      const per=pers2render[0];
+      return notasDelAno[per]?.[m+'_fallas']??'';
+    }
+    return '';
+  };
+
+  // Conteo de fallas por periodo (del campo disciplina o conducta como placeholder)
+  const fallasPorPer = pers2render.map(per=>{
+    const n=notasDelAno[per];
+    if(!n) return 0;
+    // Intentar leer fallas guardadas; si no hay, 0
+    return n._fallas??n.fallas??0;
+  });
+
+  // Promedio general
+  const pgCalc=()=>{
+    const vals=pers2render.map(per=>{
+      const ds=mats.map(m=>def(notasDelAno[per]?.[m]||{a:0,c:0,r:0})).filter(v=>v>0);
+      return ds.length?+(ds.reduce((s,v)=>s+v,0)/ds.length).toFixed(2):0;
+    }).filter(v=>v>0);
+    return vals.length?+(vals.reduce((a,b,_,arr)=>a+b/arr.length,0)).toFixed(2):0;
+  };
+  const pg=(e&&!esAnioHistorico)?gprom(estId):pgCalc();
+
+  // Disciplina
+  const discVal = notasDelAno?.disciplina ?? null;
+
+  const _logo=DB.colegioLogo||'';
+  const _nomColegio=CU.colegioNombre||'COLEGIO CEPA';
+  const fechaGen=new Date().toLocaleDateString('es-CO',{year:'numeric',month:'long',day:'numeric'});
+  const suffix=isTodos?'todos_periodos':decodeURIComponent(perFilter).replace(/\s+/g,'_');
+
+  // Header colores CEPA
+  const C_HEADER='#333399'; // azul oscuro
+  const C_AREA='#D8D8D8';   // gris área
+  const C_WHITE='#ffffff';
+  const C_TXT_HDR='#ffffff';
+
+  // Columnas periodo
+  const perCols = isTodos
+    ? ['1p','2p','3p','4p'].map((lbl,i)=>({lbl, per:pers2render[i]||null}))
+    : [{lbl:pers2render[0]?.split(' ')[0]||'1p', per:pers2render[0]}];
+  const nPers = perCols.length;
+
+  // Generar filas de materias agrupadas por área
+  const buildRows = ()=>{
+    let rows='';
+    let counter=1;
+
+    const renderArea=(areaNombre, matsArr, aIdx)=>{
+      if(!matsArr.length) return '';
+      let r='';
+      // Fila de área
+      r+=`<tr>
+        <td style="background:${C_AREA};padding:4px 6px;font-size:11px;font-weight:700;border:1px solid #bbb">${aIdx}</td>
+        <td colspan="2" style="background:${C_AREA};padding:4px 8px;font-size:11px;font-weight:700;border:1px solid #bbb;text-transform:uppercase">${areaNombre}</td>
+        <td style="background:${C_AREA};border:1px solid #bbb"></td>
+        ${perCols.map(()=>`<td style="background:${C_AREA};border:1px solid #bbb"></td>`).join('')}
+        <td style="background:${C_AREA};border:1px solid #bbb"></td>
+        <td style="background:${C_AREA};border:1px solid #bbb"></td>
+        <td style="background:${C_AREA};border:1px solid #bbb"></td>
+      </tr>`;
+      matsArr.forEach((m,mi)=>{
+        const subIdx=`${aIdx}.${mi+1}`;
+        const df=def2(m);
+        const perVals=perCols.map(({per})=>{
+          if(!per) return 0;
+          const t=notasDelAno[per]?.[m]||{a:0,c:0,r:0};
+          return def(t);
+        });
+        const fa=fallas(m);
+        r+=`<tr>
+          <td style="padding:3px 6px;font-size:10px;border:1px solid #ddd;color:#555">${subIdx}</td>
+          <td colspan="2" style="padding:3px 8px;font-size:11px;border:1px solid #ddd">${esc(m)}</td>
+          <td style="padding:3px 6px;text-align:center;font-size:10px;border:1px solid #ddd;color:#666"></td>
+          ${perVals.map(v=>`<td style="padding:3px 6px;text-align:center;font-size:11px;font-weight:700;border:1px solid #ddd;color:${v===0?'#bbb':'#111'}">${v===0?'—':fmt(v)}</td>`).join('')}
+          <td style="padding:3px 6px;text-align:center;font-size:11px;font-weight:800;border:1px solid #ddd;color:${df===0?'#bbb':'#111'}">${df===0?'—':fmt(df)}</td>
+          <td style="padding:3px 6px;text-align:center;font-size:10px;border:1px solid #ddd;color:#555">${bDesCepa(df)}</td>
+          <td style="padding:3px 6px;text-align:center;font-size:10px;border:1px solid #ddd;color:#777">${fa||''}</td>
+        </tr>`;
+        counter++;
+      });
+      return r;
+    };
+
+    if(areas.length){
+      areas.forEach((areaNombre,i)=>{
+        rows+=renderArea(areaNombre, areaMap[areaNombre]||[], i+1);
+      });
+      if(sinArea.length) rows+=renderArea('SIN ÁREA', sinArea, areas.length+1);
+    } else {
+      // Sin áreas: mostrar materias planas con numeración 1.1, 1.2...
+      rows+=renderArea('ASIGNATURAS', mats, 1);
+    }
+
+    // Fila disciplina
+    const discPeriods=pers2render.map(per=>{
+      const dv=notasDelAno[per]?.disciplina??notasDelAno[per]?._disciplina??null;
+      return typeof dv==='number'?dv:null;
+    });
+    const discProm=discPeriods.filter(v=>v!==null).length
+      ? +(discPeriods.filter(v=>v!==null).reduce((s,v)=>s+v,0)/discPeriods.filter(v=>v!==null).length).toFixed(2)
+      : (typeof discVal==='number'?discVal:null);
+    if(discProm!==null){
+      rows+=`<tr style="background:#f5f5f5">
+        <td style="padding:3px 6px;font-size:10px;border:1px solid #ddd"></td>
+        <td colspan="2" style="padding:3px 8px;font-size:11px;font-weight:700;border:1px solid #ddd">COMPORTAMIENTO SOCIAL · Disciplina</td>
+        <td style="border:1px solid #ddd"></td>
+        ${discPeriods.map(v=>`<td style="padding:3px 6px;text-align:center;font-size:11px;font-weight:700;border:1px solid #ddd">${v!==null?fmt(v):'—'}</td>`).join('')}
+        <td style="padding:3px 6px;text-align:center;font-size:11px;font-weight:800;border:1px solid #ddd">${discProm!==null?fmt(discProm):'—'}</td>
+        <td style="padding:3px 6px;text-align:center;font-size:10px;border:1px solid #ddd">${bDesCepa(discProm??0)}</td>
+        <td style="border:1px solid #ddd"></td>
+      </tr>`;
+    }
+    return rows;
+  };
+
+  // Observación / materias perdidas
+  const mpList = mats.filter(m=>{
+    const df=def2(m);
+    return df>0&&df<3;
+  });
+  const obsText = mpList.length
+    ? mpList.map(m=>`Recupera la asignatura de ${m} ${fmt(def2(m))}`).join(', ')+'.'
+    : '';
+
+  // Fallas por periodo
+  const fallasRow=`<tr>
+    <td></td><td colspan="2" style="font-size:10px;padding:3px 6px;border:1px solid #ddd">Fallas</td>
+    <td style="border:1px solid #ddd"></td>
+    ${perCols.map(({per})=>{
+      const f=per?(notasDelAno[per]?._fallas??notasDelAno[per]?.fallas??0):0;
+      return`<td style="text-align:center;font-size:10px;padding:3px;border:1px solid #ddd">${f}</td>`;
+    }).join('')}
+    <td colspan="3" style="border:1px solid #ddd"></td>
+  </tr>`;
+
+  const theadCols=`
+    <th style="background:${C_HEADER};color:${C_TXT_HDR};padding:5px 6px;font-size:10px;border:1px solid #555;text-align:center">NRO</th>
+    <th colspan="2" style="background:${C_HEADER};color:${C_TXT_HDR};padding:5px 8px;font-size:10px;border:1px solid #555;text-align:left">Asignaturas</th>
+    <th style="background:${C_HEADER};color:${C_TXT_HDR};padding:5px 4px;font-size:9px;border:1px solid #555;text-align:center">I.H</th>
+    ${perCols.map(({lbl})=>`<th style="background:${C_HEADER};color:${C_TXT_HDR};padding:5px 4px;font-size:10px;border:1px solid #555;text-align:center">${lbl}</th>`).join('')}
+    <th style="background:${C_HEADER};color:${C_TXT_HDR};padding:5px 4px;font-size:10px;border:1px solid #555;text-align:center">Def</th>
+    <th style="background:${C_HEADER};color:${C_TXT_HDR};padding:5px 4px;font-size:10px;border:1px solid #555;text-align:center">Desemp.</th>
+    <th style="background:${C_HEADER};color:${C_TXT_HDR};padding:5px 4px;font-size:10px;border:1px solid #555;text-align:center">Fallas</th>`;
+
+  const box=gi('pdfBox');
+  box.innerHTML=`<div style="font-family:'Arial',sans-serif;background:#fff;max-width:740px;color:#111;font-size:12px">
+
+    <!-- ENCABEZADO CEPA -->
+    <div style="display:flex;align-items:center;gap:16px;padding:10px 16px 8px;border-bottom:3px solid ${C_HEADER}">
+      ${_logo?`<img src="${_logo}" style="height:80px;width:auto;object-fit:contain;flex-shrink:0" alt="Logo">`:''}
+      <div style="flex:1;text-align:center">
+        <div style="font-size:16px;font-weight:900;text-transform:uppercase;letter-spacing:.05em;color:${C_HEADER}">${_nomColegio}</div>
+        <div style="font-size:11px;color:#555;font-weight:600;margin-top:2px">BOLETÍN DE CALIFICACIONES</div>
+        <div style="font-size:10px;color:#777;margin-top:1px">Generado: ${fechaGen}</div>
+      </div>
+    </div>
+
+    <!-- DATOS DEL ESTUDIANTE -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:0;border-bottom:2px solid ${C_HEADER};padding:6px 16px">
+      <div style="display:flex;flex-direction:column;gap:2px">
+        <div style="font-size:11px"><span style="font-weight:700;color:#444">Año:</span> ${anno}</div>
+        <div style="font-size:11px"><span style="font-weight:700;color:#444">Grado:</span> ${esc(salon)}</div>
+        <div style="font-size:11px"><span style="font-weight:700;color:#444">Jornada:</span> ${jornadaLabel}</div>
+        <div style="font-size:11px"><span style="font-weight:700;color:#444">Periodo:</span> ${isTodos?'Todos los periodos':decodeURIComponent(perFilter)}</div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:2px">
+        <div style="font-size:11px"><span style="font-weight:700;color:#444">Estudiante:</span> <strong>${esc(nombre)}</strong></div>
+        <div style="font-size:11px"><span style="font-weight:700;color:#444">Identificación:</span> ${esc(ti)||'No registrado'}</div>
+        <div style="font-size:11px"><span style="font-weight:700;color:#444">Ciclo:</span> ${ciclo==='primaria'?'Básica Primaria':'Bachillerato'}</div>
+        <div style="font-size:11px"><span style="font-weight:700;color:#444">Promedio General:</span> <strong>${pg>0?fmt(pg):'—'}</strong></div>
+      </div>
+    </div>
+
+    <!-- TABLA DE CALIFICACIONES -->
+    <div style="padding:8px 16px">
+      <table style="width:100%;border-collapse:collapse">
+        <thead><tr>${theadCols}</tr></thead>
+        <tbody>${buildRows()}</tbody>
+      </table>
+    </div>
+
+    <!-- OBSERVACIÓN -->
+    <div style="padding:4px 16px 6px">
+      <div style="font-size:10px;font-weight:700">Observación:</div>
+      <div style="font-size:10px;min-height:20px;border:1px solid #ccc;padding:4px 6px;border-radius:4px;color:#333">
+        ${obsText||'&nbsp;'}
+      </div>
+    </div>
+
+    <!-- FALLAS / PROMEDIO -->
+    <div style="padding:2px 16px 6px">
+      <table style="border-collapse:collapse;font-size:10px">
+        <tr>
+          <td style="padding:2px 6px;font-weight:700">PROMEDIO GENERAL:</td>
+          <td style="padding:2px 10px;font-weight:900;font-size:13px">${pg>0?fmt(pg):'—'}</td>
+          <td style="padding:2px 6px;color:#555">${bDesFullCepa(pg)}</td>
+        </tr>
+        <tr>
+          <td colspan="4" style="padding:4px 0">
+            <table style="border-collapse:collapse">
+              <tr>
+                <td style="padding:2px 6px;font-weight:700;font-size:10px">Fallas por periodo:</td>
+                ${perCols.map(({lbl,per})=>{
+                  const f=per?(notasDelAno[per]?._fallas??notasDelAno[per]?.fallas??0):0;
+                  return`<td style="padding:2px 8px;font-size:10px;text-align:center">${lbl}: <strong>${f}</strong></td>`;
+                }).join('')}
+              </tr>
+            </table>
+          </td>
+        </tr>
+      </table>
+    </div>
+
+    <!-- TABLA DE EQUIVALENCIA -->
+    <div style="padding:4px 16px 10px">
+      <table style="border-collapse:collapse;width:100%;font-size:9px">
+        <thead>
+          <tr>
+            <th style="background:${C_HEADER};color:#fff;padding:3px 8px;border:1px solid #555;text-align:left">CLASIFICACIÓN</th>
+            <th style="background:${C_HEADER};color:#fff;padding:3px 6px;border:1px solid #555;text-align:center">ABREV.</th>
+            <th style="background:${C_HEADER};color:#fff;padding:3px 8px;border:1px solid #555;text-align:left">DESEMPEÑO</th>
+            <th style="background:${C_HEADER};color:#fff;padding:3px 8px;border:1px solid #555;text-align:center">ESCALA</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td style="padding:2px 8px;border:1px solid #ddd">Superior</td><td style="padding:2px 6px;border:1px solid #ddd;text-align:center">DS</td><td style="padding:2px 8px;border:1px solid #ddd">Creativo, innovador y puntual, en la presentación de los trabajos</td><td style="padding:2px 8px;border:1px solid #ddd;text-align:center">4.6 – 5.0</td></tr>
+          <tr style="background:#f9f9f9"><td style="padding:2px 8px;border:1px solid #ddd">Alto</td><td style="padding:2px 6px;border:1px solid #ddd;text-align:center">DA</td><td style="padding:2px 8px;border:1px solid #ddd">Alcanza los logros propuestos en las asignaturas</td><td style="padding:2px 8px;border:1px solid #ddd;text-align:center">4.0 – 4.5</td></tr>
+          <tr><td style="padding:2px 8px;border:1px solid #ddd">Básica</td><td style="padding:2px 6px;border:1px solid #ddd;text-align:center">DB</td><td style="padding:2px 8px;border:1px solid #ddd">Solo alcanzó los niveles necesarios de logros propuestos</td><td style="padding:2px 8px;border:1px solid #ddd;text-align:center">3.5 – 3.9</td></tr>
+          <tr style="background:#f9f9f9"><td style="padding:2px 8px;border:1px solid #ddd">Bajo</td><td style="padding:2px 6px;border:1px solid #ddd;text-align:center">DI</td><td style="padding:2px 8px;border:1px solid #ddd">No desarrolló el mínimo de las actividades curriculares requeridas</td><td style="padding:2px 8px;border:1px solid #ddd;text-align:center">0.0 – 3.4</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+  </div>`;
+
+  box.classList.remove('hidden');
+  html2pdf().set({
+    margin:[4,4,4,4],
+    filename:`boletin_cepa_${nombre.replace(/\s+/g,'_')}_${suffix}_${anno}.pdf`,
+    html2canvas:{scale:2.5,useCORS:true,logging:false,letterRendering:true},
+    jsPDF:{unit:'mm',format:'a4',orientation:'portrait'}
+  }).from(box).save().then(()=>box.classList.add('hidden'));
+}
+
 function dlBoletin(estId,perFilter,anno,snapData){
+  // ── Detectar colegio y delegar al boletín específico ─────────────
+  const _nomCol=(CU.colegioNombre||'').toUpperCase();
+  if(_nomCol.includes('CEPA')){ dlBoletinCepa(estId,perFilter,anno,snapData); return; }
+
   perFilter=perFilter||'TODOS';anno=anno||String(new Date().getFullYear());
 
   const e=DB.ests.find(x=>x.id===estId);
@@ -6466,7 +6802,7 @@ function dlBoletin(estId,perFilter,anno,snapData){
         </div>
       </div>
       <div style="font-size:12px;font-weight:700;margin-top:6px;letter-spacing:.03em">
-        AÑO: ${anno} &nbsp; JORNADA: ${jornadaLabel||'No asignada'} &nbsp; CURSO: <strong>${esc(salon)||'—'}</strong> &nbsp; ${isTodos?'TODOS LOS PERIODOS':'PERIODO: <strong>'+decodeURIComponent(perFilter)+'</strong>'}
+        AÑO: ${anno}${jornadaLabel?' &nbsp; JORNADA: '+jornadaLabel:''} &nbsp; CURSO: <strong>${esc(salon)||'—'}</strong> &nbsp; ${isTodos?'TODOS LOS PERIODOS':'PERIODO: <strong>'+decodeURIComponent(perFilter)+'</strong>'}
       </div>
       <div style="font-size:10px;color:#666;margin-top:3px">Generado: ${fechaGen}</div>
     </div>
