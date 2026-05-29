@@ -1458,16 +1458,24 @@ async function editSalAreas(sname){
 
   // Materias del salón para mostrar preview
   const matDocs=(DB.materiasDocs||[]).filter(d=>d.ciclo===ciclo);
-  // Usar TODAS las materias del ciclo (no solo las del salón) para que las recién
-  // editadas en el área aparezcan correctamente en el preview
-  const allCicloMats=ciclo==='primaria'?DB.mP:DB.mB;
-  const matsList=sal.mats&&sal.mats.length
-    ?[...new Set([...sal.mats,...allCicloMats])]
-    :allCicloMats;
+  // Para salones con materias propias usamos esa lista; si no, todas las del ciclo.
+  // Añadimos también cualquier materia que haya sido asignada a un área recientemente
+  // pero que todavía no esté en sal.mats.
+  const globalMats=ciclo==='primaria'?DB.mP:DB.mB;
+  const baseMats=sal.mats&&sal.mats.length?sal.mats:globalMats;
+  const areasNames=areasDelCiclo.map(a=>a.nombre);
+  const extraMats=globalMats.filter(m=>{
+    const d=matDocs.find(x=>x.nombre===m);
+    return d&&areasNames.includes(d.areaNombre)&&!baseMats.includes(m);
+  });
+  const matsList=[...baseMats,...extraMats];
 
   const rows=areasDelCiclo.map(area=>{
-    // Materias de esta área
-    const matsDeArea=matDocs.filter(d=>d.areaNombre===area.nombre).map(d=>d.nombre);
+    // Materias de esta área que están en matsList
+    const matsDeArea=matsList.filter(m=>{
+      const d=matDocs.find(x=>x.nombre===m);
+      return d&&d.areaNombre===area.nombre;
+    });
     const preview=matsDeArea.length
       ?matsDeArea.map(m=>`<span style="font-size:10px;padding:1px 6px;background:#ede9fe;border:1px solid #c4b5fd;border-radius:4px;margin:1px">${m}</span>`).join('')
       :'<span style="font-size:10px;color:#aaa">Sin materias asignadas a esta área</span>';
