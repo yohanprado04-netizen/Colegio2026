@@ -422,7 +422,7 @@ function logAuditAnon(usuario, msg) {
 // ═══════════════════════════════════════════════════════════════════
 async function addEst(ciclo) {
   const n  = gi('nen').value.trim();
-  const tipoDoc = (gi('netipoDoc')?.value || (ciclo==='primaria' ? 'RC' : 'TI'));
+  const ti = gi('neti').value.trim().replace(/[^0-9]/g,'');
   const s  = gi('nes').value;
   const u  = gi('neu').value.trim();
   const p  = gi('nep').value.trim();
@@ -436,13 +436,13 @@ async function addEst(ciclo) {
   try {
     await apiFetch('/api/usuarios', {
       method: 'POST',
-      body: JSON.stringify({ id, nombre: n, ti, tipoDoc, usuario: u, password: p, role: 'est', salon: s, blocked: false, registrado: fecha })
+      body: JSON.stringify({ id, nombre: n, ti, usuario: u, password: p, role: 'est', salon: s, blocked: false, registrado: fecha })
     });
-    DB.ests.push({ id, nombre: n, ti, tipoDoc, usuario: u, role: 'est', salon: s, blocked: false, registrado: fecha });
+    DB.ests.push({ id, nombre: n, ti, usuario: u, role: 'est', salon: s, blocked: false, registrado: fecha });
     DB.notas[id] = {};
     DB.pers.forEach(per => { DB.notas[id][per] = {}; getMats(id).forEach(m => { DB.notas[id][per][m] = { a: 0, c: 0, r: 0 }; }); });
-    DB.estHist.push({ id, nombre: n, ti, tipoDoc, salon: s, registrado: fecha, activo: true });
-    ['nen', 'neti', 'netipoDoc', 'neu', 'nep'].forEach(x => gi(x).value = '');
+    DB.estHist.push({ id, nombre: n, ti, salon: s, registrado: fecha, activo: true });
+    ['nen', 'neti', 'neu', 'nep'].forEach(x => gi(x).value = '');
     gi('nes').value = '';
     renderEstTabla(ciclo);
     sw('success', 'Estudiante agregado', '', 1400);
@@ -451,7 +451,7 @@ async function addEst(ciclo) {
 
 // ═══════════════════════════════════════════════════════════════════
 // delEst() — elimina estudiante en MongoDB
-// ════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════════
 function delEst(eid, ciclo) {
   const e = DB.ests.find(x => x.id === eid);
   Swal.fire({ title: '¿Eliminar?', text: e.nombre, icon: 'warning', showCancelButton: true, confirmButtonColor: '#e53e3e' })
@@ -525,6 +525,54 @@ function delSal(n) {
         renderSals();
       } catch (e) { sw('error', 'Error: ' + e.message); }
     });
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// editSal() — edita jornada (y nombre futuro) de un salón existente
+// ═══════════════════════════════════════════════════════════════════
+async function editSal(sname) {
+  const sal = DB.sals.find(s => s.nombre === sname);
+  if (!sal) { sw('error', 'Salón no encontrado'); return; }
+
+  const jornadaOpts = ['', 'mañana', 'tarde', 'noche'];
+  const jornadaSelect = jornadaOpts.map(j =>
+    `<option value="${j}" ${sal.jornada === j ? 'selected' : ''}>${j || '— Sin asignar —'}</option>`
+  ).join('');
+
+  const { value: formVals, isConfirmed } = await Swal.fire({
+    title: `✏️ Editar Salón: ${sname}`,
+    width: 440,
+    html: `<div style="text-align:left;font-family:var(--fn);display:flex;flex-direction:column;gap:14px;padding:4px 0">
+      <div>
+        <label style="font-size:11px;font-weight:800;text-transform:uppercase;color:var(--sl);display:block;margin-bottom:4px">Jornada</label>
+        <select id="esj" style="width:100%;padding:9px 12px;border:1.5px solid var(--bd);border-radius:8px;font-size:13px;background:#fff">
+          ${jornadaSelect}
+        </select>
+      </div>
+    </div>`,
+    showCancelButton: true,
+    confirmButtonText: '💾 Guardar',
+    cancelButtonText: 'Cancelar',
+    preConfirm: () => ({ jornada: gi('esj').value })
+  });
+
+  if (!isConfirmed) return;
+
+  const nuevaJornada = formVals.jornada;
+
+  try {
+    await apiFetch(`/api/salones/${encodeURIComponent(sname)}`, {
+      method: 'PUT',
+      body: JSON.stringify({ jornada: nuevaJornada })
+    });
+    sal.jornada = nuevaJornada;
+    renderSals();
+    sw('success',
+      `Salón ${sname} actualizado`,
+      nuevaJornada ? `Jornada: ${nuevaJornada}` : 'Jornada no asignada',
+      2000
+    );
+  } catch (e) { sw('error', 'Error al guardar: ' + e.message); }
 }
 
 // ═══════════════════════════════════════════════════════════════════
