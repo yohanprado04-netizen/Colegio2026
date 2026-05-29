@@ -266,50 +266,28 @@ function getAreasDelColegio(ciclo){
 // Solo incluye las áreas asignadas al salón (DB.salAreas[salon]).
 // Si el salón no tiene áreas asignadas, usa todas las áreas del ciclo.
 // Las materias sin área quedan en '_sinArea'.
-// Soporta override de materias por área por salón (matsOverride en salAreas).
 function getAreaMatsMap(eid){
   const mats = getMats(eid);
   const e = DB.ests.find(x=>x.id===eid);
   const ciclo = cicloOf(e?.salon||'');
   const matDocs = DB.materiasDocs||[];
-  const salonNombre = e?.salon||'';
 
-  // salData puede ser un array (legado) o un objeto {areas:[...], matsOverride:{...}}
-  const salData = (DB.salAreas||{})[salonNombre];
-  const areasEnSalon = Array.isArray(salData) ? salData : (salData?.areas || []);
-  const matsOverride = Array.isArray(salData) ? {} : (salData?.matsOverride || {});
-  const hayOverrides = areasEnSalon.some(a => matsOverride[a] && matsOverride[a].length > 0);
+  // Áreas asignadas al salón; si el salón no tiene áreas propias, no heredar globales
+  const areasEnSalon = (DB.salAreas||{})[e?.salon||''] || [];
+  const areasAplicables = areasEnSalon; // solo las del salón, nunca las globales
 
-  if(!areasEnSalon.length) return { '_sinArea': mats };
+  if(!areasAplicables.length) return { '_sinArea': mats };
   const map = {};
-  areasEnSalon.forEach(nombre=>{ map[nombre]=[]; });
+  areasAplicables.forEach(nombre=>{ map[nombre]=[]; });
 
   mats.forEach(m=>{
-    let asignada = false;
-    // Primero buscar en overrides por salón
-    for(const areaNombre of areasEnSalon){
-      if(matsOverride[areaNombre] && matsOverride[areaNombre].includes(m)){
-        map[areaNombre].push(m);
-        asignada = true;
-        break;
-      }
-    }
-    if(!asignada){
-      if(hayOverrides){
-        // Con overrides parciales: materias no cubiertas van a _sinArea
-        if(!map['_sinArea']) map['_sinArea']=[];
-        map['_sinArea'].push(m);
-      } else {
-        // Sin overrides: usar areaNombre global de la materia
-        const doc = matDocs.find(d=>d.nombre===m && d.ciclo===ciclo);
-        const areaNombre = doc?.areaNombre||'';
-        if(areaNombre && map[areaNombre]!==undefined){
-          map[areaNombre].push(m);
-        } else {
-          if(!map['_sinArea']) map['_sinArea']=[];
-          map['_sinArea'].push(m);
-        }
-      }
+    const doc = matDocs.find(d=>d.nombre===m && d.ciclo===ciclo);
+    const areaNombre = doc?.areaNombre||'';
+    if(areaNombre && map[areaNombre]!==undefined){
+      map[areaNombre].push(m);
+    } else {
+      if(!map['_sinArea']) map['_sinArea']=[];
+      map['_sinArea'].push(m);
     }
   });
   return map;
@@ -1328,8 +1306,7 @@ function renderSals(){
       const matsList=nMats?s.mats:dfMats;
 
       // Áreas asignadas a este salón (las que tienen al menos una materia del salón)
-      const _salData=(DB.salAreas||{})[s.nombre];
-      const areasDelSalon=Array.isArray(_salData)?_salData:(_salData?.areas||[]);
+      const areasDelSalon=(DB.salAreas||{})[s.nombre]||[];
       const hayAreas=areasDelCiclo.length>0;
       const areasLabel=hayAreas
         ?(areasDelSalon.length>0
@@ -1446,8 +1423,6 @@ function editSalMats(sname){
         });
       });
     });
-    /* Persistir sal.mats en MongoDB (colección salones) */
-    if(typeof _saveSalMats==='function') _saveSalMats(sname, chosen);
     dbSave();renderSals();
     sw('success',`Materias de ${sname} actualizadas`,
       chosen.length?`${chosen.length} materias asignadas`:'Se usarán las materias globales del ciclo.',2000);
@@ -1477,75 +1452,56 @@ async function editSalAreas(sname){
     return;
   }
 
-  // Leer salData — puede ser array (legado) u objeto {areas, matsOverride}
+  // Áreas actualmente asignadas a este salón
   if(!DB.salAreas) DB.salAreas={};
-  const salData=DB.salAreas[sname];
-  const current=Array.isArray(salData)?[...salData]:[...(salData?.areas||[])];
-  // matsOverride: {areaNombre: [mat1,mat2,...]} — solo para este salón, no afecta otros
-  const matsOverride=Array.isArray(salData)?{}:{...(salData?.matsOverride||{})};
+  const current=[...(DB.salAreas[sname]||[])];
 
-  // Materias del salón para mostrar preview y permitir edición por área
+  // Materias del salón para mostrar preview
   const matDocs=(DB.materiasDocs||[]).filter(d=>d.ciclo===ciclo);
-  const matsList=sal.mats&&sal.mats.length?sal.mats:(ciclo==='primaria'?DB.mP:DB.mB);
+  // Usar TODAS las materias del ciclo (no solo las del salón) para que las recién
+  // editadas en el área aparezcan correctamente en el preview
+  const allCicloMats=ciclo==='primaria'?DB.mP:DB.mB;
+  const matsList=sal.mats&&sal.mats.length
+    ?[...new Set([...sal.mats,...allCicloMats])]
+    :allCicloMats;
 
-  function buildRows(seleccionadas, overrides){
-    return areasDelCiclo.map(area=>{
-      // Materias del área: primero override del salón, si no usa el global
-      const overrideMats=overrides[area.nombre];
-      const matsDeArea=overrideMats!=null
-        ?overrideMats
-        :matsList.filter(m=>{ const d=matDocs.find(x=>x.nombre===m); return d&&d.areaNombre===area.nombre; });
-      const preview=matsDeArea.length
-        ?matsDeArea.map(m=>`<span style="font-size:10px;padding:1px 6px;background:#ede9fe;border:1px solid #c4b5fd;border-radius:4px;margin:1px">${m}</span>`).join('')
-        :'<span style="font-size:10px;color:#aaa;font-style:italic">Sin materias</span>';
-      const isChecked=seleccionadas.includes(area.nombre);
-      return`<div style="background:var(--bg2);border-radius:8px;border:1px solid var(--bd);padding:9px 12px;margin-bottom:7px">
-        <div style="display:flex;align-items:center;gap:10px">
-          <input type="checkbox" class="sack" value="${area.nombre}" ${isChecked?'checked':''} style="width:16px;height:16px;flex-shrink:0">
-          <div style="flex:1;min-width:0">
-            <div style="font-size:13px;font-weight:700">📂 ${area.nombre}
-              ${overrideMats!=null?'<span style="font-size:10px;color:#7c3aed;margin-left:6px">✎ personalizado</span>':''}
-            </div>
-            <div style="display:flex;flex-wrap:wrap;gap:3px;margin-top:4px">${preview}</div>
-          </div>
-          <button type="button" onclick="editAreaMatsInSalon('${sname.replace(/'/g,"\'")}','${area.nombre.replace(/'/g,"\'")}','${ciclo}')"
-            style="padding:3px 8px;font-size:11px;background:#e0e7ff;color:#3730a3;border:1px solid #a5b4fc;border-radius:6px;cursor:pointer;flex-shrink:0">
-            ✎ Materias
-          </button>
-        </div>
-      </div>`;
-    }).join('');
-  }
+  const rows=areasDelCiclo.map(area=>{
+    // Materias de esta área
+    const matsDeArea=matDocs.filter(d=>d.areaNombre===area.nombre).map(d=>d.nombre);
+    const preview=matsDeArea.length
+      ?matsDeArea.map(m=>`<span style="font-size:10px;padding:1px 6px;background:#ede9fe;border:1px solid #c4b5fd;border-radius:4px;margin:1px">${m}</span>`).join('')
+      :'<span style="font-size:10px;color:#aaa">Sin materias asignadas a esta área</span>';
+    return`<label style="display:flex;align-items:flex-start;gap:10px;padding:9px 12px;background:var(--bg2);
+      border-radius:8px;border:1px solid var(--bd);cursor:pointer;margin-bottom:7px">
+      <input type="checkbox" class="sack" value="${area.nombre}" ${current.includes(area.nombre)?'checked':''} style="margin-top:3px;width:16px;height:16px">
+      <div style="flex:1">
+        <div style="font-size:13px;font-weight:700">📂 ${area.nombre}</div>
+        <div style="display:flex;flex-wrap:wrap;gap:3px;margin-top:4px">${preview}</div>
+      </div>
+    </label>`;
+  }).join('');
 
   const r=await Swal.fire({
     title:`📂 Áreas del Salón ${sname}`,
-    width:600,
+    width:560,
     html:`<div style="text-align:left;font-family:var(--fn)">
       <div class="al alb" style="margin-bottom:12px;font-size:12px">
-        Selecciona las áreas del salón. Usa <strong>✎ Materias</strong> para personalizar qué materias de este salón pertenecen a cada área, sin afectar otros salones.
+        Selecciona las áreas que aplican a este salón. Las áreas agrupan materias y determinan si el estudiante aprueba, recupera o pierde el año.
       </div>
-      <div id="salAreasRows" style="max-height:400px;overflow-y:auto">${buildRows(current,matsOverride)}</div>
+      <div style="max-height:380px;overflow-y:auto">${rows}</div>
     </div>`,
     showCancelButton:true,
     confirmButtonText:'Guardar Áreas',
     cancelButtonText:'Cancelar',
-    didOpen:()=>{
-      // Exponer función para editar materias de un área en este salón desde dentro del modal
-      window._editAreaMatsModal=(sn,an,ci)=>editAreaMatsInSalon(sn,an,ci);
-    },
     preConfirm:()=>[...document.querySelectorAll('.sack:checked')].map(c=>c.value)
   });
 
   if(!r.isConfirmed) return;
   const elegidas=r.value;
 
-  // Guardar en DB.salAreas con estructura extendida {areas, matsOverride}
-  // matsOverride ya fue actualizado por editAreaMatsInSalon durante la sesión del modal
-  const currentOverride=Array.isArray(DB.salAreas[sname])?{}:(DB.salAreas[sname]?.matsOverride||{});
-  // Limpiar overrides de áreas que ya no están seleccionadas
-  const cleanOverride={};
-  elegidas.forEach(a=>{ if(currentOverride[a]) cleanOverride[a]=currentOverride[a]; });
-  DB.salAreas[sname]={areas:elegidas, matsOverride:cleanOverride};
+  // Guardar en DB.salAreas (mapa salón → array de áreas)
+  if(!DB.salAreas) DB.salAreas={};
+  DB.salAreas[sname]=elegidas;
 
   // Persistir en config para que sobreviva recargas
   try{
@@ -1558,98 +1514,6 @@ async function editSalAreas(sname){
     elegidas.length?`${elegidas.length} área${elegidas.length>1?'s':''} asignadas`:'Sin áreas asignadas.',
     2000
   );
-}
-
-/* Editar qué materias del salón pertenecen a un área específica (solo para ese salón) */
-async function editAreaMatsInSalon(sname, areaNombre, ciclo){
-  const sal=DB.sals.find(s=>s.nombre===sname);if(!sal)return;
-  const matDocs=(DB.materiasDocs||[]).filter(d=>d.ciclo===ciclo);
-  const matsList=sal.mats&&sal.mats.length?sal.mats:(ciclo==='primaria'?DB.mP:DB.mB);
-
-  if(!DB.salAreas) DB.salAreas={};
-  const salData=DB.salAreas[sname];
-  const matsOverride=Array.isArray(salData)?{}:{...(salData?.matsOverride||{})};
-  // Materias actualmente asignadas a este área en este salón (override o global)
-  const currentMats=matsOverride[areaNombre]!=null
-    ?[...matsOverride[areaNombre]]
-    :matsList.filter(m=>{ const d=matDocs.find(x=>x.nombre===m); return d&&d.areaNombre===areaNombre; });
-
-  const rows=matsList.map(m=>`
-    <label style="display:flex;align-items:center;gap:8px;padding:6px 10px;background:var(--bg2);
-      border-radius:7px;border:1px solid var(--bd);cursor:pointer;font-size:13px;margin-bottom:4px">
-      <input type="checkbox" class="amck" value="${m}" ${currentMats.includes(m)?'checked':''}>
-      <span>${m}</span>
-    </label>`).join('');
-
-  const r2=await Swal.fire({
-    title:`✎ Materias de "${areaNombre}" en ${sname}`,
-    width:520,
-    html:`<div style="text-align:left;font-family:var(--fn)">
-      <div class="al alb" style="margin-bottom:12px;font-size:12px">
-        Selecciona las materias de <strong>${sname}</strong> que pertenecen al área <strong>${areaNombre}</strong>.
-        Este cambio solo aplica a este salón y no afecta otros salones.
-      </div>
-      <div style="max-height:350px;overflow-y:auto">${rows}</div>
-    </div>`,
-    showCancelButton:true,
-    confirmButtonText:'Guardar',
-    cancelButtonText:'Cancelar',
-    preConfirm:()=>[...document.querySelectorAll('.amck:checked')].map(c=>c.value)
-  });
-
-  if(!r2.isConfirmed) return;
-  const chosen=r2.value;
-
-  // Actualizar DB.salAreas y persistir INMEDIATAMENTE al servidor
-  const salData2=DB.salAreas[sname];
-  const areas2=Array.isArray(salData2)?[...salData2]:(salData2?.areas||[]);
-  const over2=Array.isArray(salData2)?{}:{...(salData2?.matsOverride||{})};
-  over2[areaNombre]=chosen;
-  DB.salAreas[sname]={areas:areas2, matsOverride:over2};
-  try{
-    await apiFetch('/api/config/salAreas',{method:'PUT',body:JSON.stringify({value:DB.salAreas})});
-  }catch(e){ console.warn('Error guardando salAreas (matsOverride):',e); }
-
-  // Actualizar el preview en el modal padre si está abierto
-  try{
-    const container=document.getElementById('salAreasRows');
-    if(container){
-      const matDocs2=(DB.materiasDocs||[]).filter(d=>d.ciclo===ciclo);
-      const matsList2=sal.mats&&sal.mats.length?sal.mats:(ciclo==='primaria'?DB.mP:DB.mB);
-      // Rebuild rows with updated overrides
-      const salData3=DB.salAreas[sname];
-      const current3=Array.isArray(salData3)?[...salData3]:[...(salData3?.areas||[])];
-      const over3=Array.isArray(salData3)?{}:{...(salData3?.matsOverride||{})};
-      const areasDelCiclo=(DB.areas||[]).filter(a=>a.ciclo===ciclo);
-      container.innerHTML=areasDelCiclo.map(area=>{
-        const overrideMats3=over3[area.nombre];
-        const matsDeArea3=overrideMats3!=null
-          ?overrideMats3
-          :matsList2.filter(m=>{ const d=matDocs2.find(x=>x.nombre===m); return d&&d.areaNombre===area.nombre; });
-        const preview3=matsDeArea3.length
-          ?matsDeArea3.map(m=>`<span style="font-size:10px;padding:1px 6px;background:#ede9fe;border:1px solid #c4b5fd;border-radius:4px;margin:1px">${m}</span>`).join('')
-          :'<span style="font-size:10px;color:#aaa;font-style:italic">Sin materias</span>';
-        const isChecked3=current3.includes(area.nombre);
-        return`<div style="background:var(--bg2);border-radius:8px;border:1px solid var(--bd);padding:9px 12px;margin-bottom:7px">
-          <div style="display:flex;align-items:center;gap:10px">
-            <input type="checkbox" class="sack" value="${area.nombre}" ${isChecked3?'checked':''} style="width:16px;height:16px;flex-shrink:0">
-            <div style="flex:1;min-width:0">
-              <div style="font-size:13px;font-weight:700">📂 ${area.nombre}
-                ${overrideMats3!=null?'<span style="font-size:10px;color:#7c3aed;margin-left:6px">✎ personalizado</span>':''}
-              </div>
-              <div style="display:flex;flex-wrap:wrap;gap:3px;margin-top:4px">${preview3}</div>
-            </div>
-            <button type="button" onclick="editAreaMatsInSalon('${sname.replace(/'/g,"\'")}','${area.nombre.replace(/'/g,"\'")}','${ciclo}')"
-              style="padding:3px 8px;font-size:11px;background:#e0e7ff;color:#3730a3;border:1px solid #a5b4fc;border-radius:6px;cursor:pointer;flex-shrink:0">
-              ✎ Materias
-            </button>
-          </div>
-        </div>`;
-      }).join('');
-    }
-  }catch(e){ console.warn('Error actualizando preview:',e); }
-
-  sw('success',`Materias de "${areaNombre}" en ${sname} actualizadas`,'',1500);
 }
 
 /* ============================================================
