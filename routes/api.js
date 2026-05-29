@@ -264,26 +264,6 @@ router.delete('/salones/:nombre', authMiddleware, requireRole('admin', 'superadm
   res.json({ ok: true });
 });
 
-// ─── ÁREAS DEL SALÓN ──────────────────────────────────────────────────────────
-// PUT /api/salones/:nombre/areas — guarda qué áreas están activas y sus materias personalizadas
-// Body: { areasActivas: ['MATEMATICAS','...'], areasMaterias: { 'MATEMATICAS': ['GEOMETRIA','...'], ... } }
-router.put('/salones/:nombre/areas', authMiddleware, requireRole('admin', 'superadmin'), async (req, res) => {
-  try {
-    const cid = tenantId(req) || req.user.colegioId || '';
-    const { areasActivas, areasMaterias } = req.body;
-    const update = {};
-    if (Array.isArray(areasActivas))          update.areasActivas  = areasActivas;
-    if (areasMaterias && typeof areasMaterias === 'object') update.areasMaterias = areasMaterias;
-    const s = await Salon.findOneAndUpdate(
-      { nombre: req.params.nombre, colegioId: cid },
-      { $set: update },
-      { new: true }
-    );
-    if (!s) return res.status(404).json({ error: 'Salón no encontrado' });
-    res.json(s);
-  } catch (err) { res.status(500).json({ error: err.message }); }
-});
-
 // ═══════════════════════════════════════════════════════════════════
 // ÁREAS POR COLEGIO — agrupan materias; la definitiva de área = promedio de sus materias
 // ═══════════════════════════════════════════════════════════════════

@@ -43,11 +43,6 @@ const SalonSchema = new Schema({
   mats:          [{ type: String }],
   colegioId:     { type: String, required: true, index: true },
   colegioNombre: { type: String, default: '' },   // nombre del colegio al que pertenece
-  // Áreas activas para este salón (subset de las áreas del colegio)
-  areasActivas:  [{ type: String }],
-  // Materias personalizadas por área para este salón
-  // Objeto: { "MATEMÁTICAS": ["GEOMETRIA","ESTADÍSTICA"], "HUMANIDADES": ["INGLÉS"] }
-  areasMaterias: { type: Schema.Types.Mixed, default: {} },
 }, { timestamps: true, collection: 'salones' });
 SalonSchema.index({ nombre: 1, colegioId: 1 }, { unique: true });
 
