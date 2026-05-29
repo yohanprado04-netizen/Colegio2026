@@ -528,7 +528,7 @@ function delSal(n) {
 }
 
 // ═══════════════════════════════════════════════════════════════════
-// editSal() — edita jornada (y nombre futuro) de un salón existente
+// editSal() — edita jornada de un salón existente
 // ═══════════════════════════════════════════════════════════════════
 async function editSal(sname) {
   const sal = DB.sals.find(s => s.nombre === sname);
