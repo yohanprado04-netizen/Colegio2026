@@ -1419,19 +1419,23 @@ async function editSalAreas(sname){
   const sal=DB.sals.find(s=>s.nombre===sname);if(!sal)return;
   const ciclo=sal.ciclo;
 
-  // FIX BUG 1: Recargar áreas y salAreas frescos del servidor antes de abrir el modal.
-  // Antes, si DB.areas estaba vacío (por navegar entre secciones sin recargar),
-  // mostraba "Sin áreas configuradas" aunque sí existieran áreas creadas.
+  // FIX BUG 1: Recargar áreas frescos del servidor antes de abrir el modal.
+  // FIX BUG 2: Cargar salAreas completo del servidor (evita borrar otros salones al guardar).
+  // FIX BUG 3: Sanitizar salAreas para garantizar que cada entrada sea un array.
   try{
-    const [areasP, areasB, cfgFresh] = await Promise.all([
+    const [areasP, areasB, dbFresh] = await Promise.all([
       apiFetch('/api/areas?ciclo=primaria').catch(()=>null),
       apiFetch('/api/areas?ciclo=bachillerato').catch(()=>null),
-      apiFetch('/api/config').catch(()=>null),
+      apiFetch('/api/db').catch(()=>null),
     ]);
     if(areasP) DB.areas=(DB.areas||[]).filter(a=>a.ciclo!=='primaria').concat(areasP.map(a=>({nombre:a.nombre,ciclo:'primaria',orden:a.orden||0})));
     if(areasB) DB.areas=(DB.areas||[]).filter(a=>a.ciclo!=='bachillerato').concat(areasB.map(a=>({nombre:a.nombre,ciclo:'bachillerato',orden:a.orden||0})));
-    // FIX BUG 2: Cargar salAreas completo del servidor para no perder otros salones al guardar.
-    if(cfgFresh && cfgFresh.salAreas) DB.salAreas=cfgFresh.salAreas;
+    if(dbFresh && dbFresh.salAreas && typeof dbFresh.salAreas==='object'){
+      const raw=dbFresh.salAreas;
+      const sanitized={};
+      Object.keys(raw).forEach(k=>{ sanitized[k]=Array.isArray(raw[k])?raw[k]:[]; });
+      DB.salAreas=sanitized;
+    }
   }catch(e){ console.warn('editSalAreas: error recargando datos:',e); }
 
   const areasDelCiclo=(DB.areas||[]).filter(a=>a.ciclo===ciclo);
@@ -1441,9 +1445,10 @@ async function editSalAreas(sname){
     return;
   }
 
-  // Áreas actualmente asignadas a este salón (ya recargadas del servidor)
+  // Áreas actualmente asignadas a este salón (ya recargadas y sanitizadas del servidor)
   if(!DB.salAreas) DB.salAreas={};
-  const current=[...(DB.salAreas[sname]||[])];
+  const rawCurrent=DB.salAreas[sname];
+  const current=Array.isArray(rawCurrent)?[...rawCurrent]:[];
 
   // Materias del salón para mostrar preview
   const matDocs=(DB.materiasDocs||[]).filter(d=>d.ciclo===ciclo);
