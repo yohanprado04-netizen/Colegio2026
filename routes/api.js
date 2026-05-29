@@ -76,7 +76,7 @@ router.post('/usuarios', authMiddleware, requireRole('admin', 'superadmin'), asy
     if (d.role === 'est') {
       await EstHist.findOneAndUpdate(
         { id: d.id },
-        { id: d.id, nombre: d.nombre, ti: d.ti || '', salon: d.salon || '',
+{ id: d.id, nombre: d.nombre, ti: d.ti || '', tipoDoc: d.tipoDoc || '', salon: d.salon || '',
           registrado: new Date().toLocaleDateString('es-CO'), activo: true, colegioId: cid },
         { upsert: true }
       );
@@ -121,7 +121,7 @@ router.put('/usuarios/:id', authMiddleware, async (req, res) => {
       update = { ...d };
     } else if (role === 'admin') {
       // Admin puede cambiar datos de usuarios de su colegio pero NO el role ni colegioId
-      const ADMIN_ALLOWED = ['nombre', 'ti', 'usuario', 'password', 'salon', 'salones',
+      const ADMIN_ALLOWED = ['nombre', 'ti', 'tipoDoc', 'usuario', 'password', 'salon', 'salones',
         'ciclo', 'materia', 'materias', 'salonMaterias', 'blocked', 'activo'];
       ADMIN_ALLOWED.forEach(f => { if (d[f] !== undefined) update[f] = d[f]; });
     } else {

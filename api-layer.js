@@ -422,7 +422,7 @@ function logAuditAnon(usuario, msg) {
 // ═══════════════════════════════════════════════════════════════════
 async function addEst(ciclo) {
   const n  = gi('nen').value.trim();
-  const ti = gi('neti').value.trim().replace(/[^0-9]/g,'');
+  const tipoDoc = (gi('netipoDoc')?.value || (ciclo==='primaria' ? 'RC' : 'TI'));
   const s  = gi('nes').value;
   const u  = gi('neu').value.trim();
   const p  = gi('nep').value.trim();
@@ -436,13 +436,13 @@ async function addEst(ciclo) {
   try {
     await apiFetch('/api/usuarios', {
       method: 'POST',
-      body: JSON.stringify({ id, nombre: n, ti, usuario: u, password: p, role: 'est', salon: s, blocked: false, registrado: fecha })
+      body: JSON.stringify({ id, nombre: n, ti, tipoDoc, usuario: u, password: p, role: 'est', salon: s, blocked: false, registrado: fecha })
     });
-    DB.ests.push({ id, nombre: n, ti, usuario: u, role: 'est', salon: s, blocked: false, registrado: fecha });
+    DB.ests.push({ id, nombre: n, ti, tipoDoc, usuario: u, role: 'est', salon: s, blocked: false, registrado: fecha });
     DB.notas[id] = {};
     DB.pers.forEach(per => { DB.notas[id][per] = {}; getMats(id).forEach(m => { DB.notas[id][per][m] = { a: 0, c: 0, r: 0 }; }); });
-    DB.estHist.push({ id, nombre: n, ti, salon: s, registrado: fecha, activo: true });
-    ['nen', 'neti', 'neu', 'nep'].forEach(x => gi(x).value = '');
+    DB.estHist.push({ id, nombre: n, ti, tipoDoc, salon: s, registrado: fecha, activo: true });
+    ['nen', 'neti', 'netipoDoc', 'neu', 'nep'].forEach(x => gi(x).value = '');
     gi('nes').value = '';
     renderEstTabla(ciclo);
     sw('success', 'Estudiante agregado', '', 1400);
@@ -451,7 +451,7 @@ async function addEst(ciclo) {
 
 // ═══════════════════════════════════════════════════════════════════
 // delEst() — elimina estudiante en MongoDB
-// ═══════════════════════════════════════════════════════════════════
+// ════════════════════════════════════════
 function delEst(eid, ciclo) {
   const e = DB.ests.find(x => x.id === eid);
   Swal.fire({ title: '¿Eliminar?', text: e.nombre, icon: 'warning', showCancelButton: true, confirmButtonColor: '#e53e3e' })

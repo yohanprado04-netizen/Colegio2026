@@ -1816,6 +1816,12 @@ function openAddEstSalon(salon, ciclo){
         <div class="fld" style="margin:0"><label>${ciclo==='bachillerato'?'T.I. / C.C.':'T.I.'}</label>
           <input id="neti" placeholder="Número documento" inputmode="numeric" pattern="[0-9]*" class="inp"
             oninput="this.value=this.value.replace(/[^0-9]/g,'')"></div>
+        <div class="fld" style="margin:0"><label>Tipo de Documento</label>
+          <select id="netd" class="inp">
+            <option value="RC">Registro Civil</option>
+            <option value="TI">Tarjeta de Identidad</option>
+            <option value="CC">Cédula de Ciudadanía</option>
+          </select></div>
         <div class="fld" style="margin:0"><label>Salón</label>
           <select id="nes" class="inp">${sOpts}</select></div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
@@ -6611,7 +6617,7 @@ function dlBoletin(estId,perFilter,anno,snapData){
     <div style="border-bottom:1.5px solid #ccc;padding:8px 24px;display:grid;grid-template-columns:1fr 1fr;gap:6px">
       <div>
         <div style="font-size:12px;line-height:1.9"><strong>Estudiante:</strong> ${esc(nombre)}</div>
-        <div style="font-size:12px;line-height:1.9"><strong>Código / T.I.:</strong> ${esc(ti)||'No registrado'}</div>
+        <div style="font-size:12px;line-height:1.9"><strong>${e.tipoDoc||'Código'} / Doc.:</strong> ${esc(ti)||'No registrado'}</div>
         <div style="font-size:12px;line-height:1.9"><strong>Ciclo:</strong> ${ciclo==='primaria'?'Primaria':'Bachillerato'}</div>
       </div>
       <div>
