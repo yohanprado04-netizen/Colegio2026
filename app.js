@@ -280,16 +280,35 @@ function getAreaMatsMap(eid){
   const map = {};
   areasAplicables.forEach(nombre=>{ map[nombre]=[]; });
 
-  mats.forEach(m=>{
-    const doc = matDocs.find(d=>d.nombre===m && d.ciclo===ciclo);
-    const areaNombre = doc?.areaNombre||'';
-    if(areaNombre && map[areaNombre]!==undefined){
-      map[areaNombre].push(m);
-    } else {
-      if(!map['_sinArea']) map['_sinArea']=[];
-      map['_sinArea'].push(m);
-    }
-  });
+  // Si el salón tiene materias por área definidas específicamente (salAreaMats), usarlas
+  const salAreaMatsDelSalon = (DB.salAreaMats||{})[e?.salon||''];
+  if(salAreaMatsDelSalon){
+    mats.forEach(m=>{
+      let asignada = false;
+      for(const areaNombre of areasAplicables){
+        if((salAreaMatsDelSalon[areaNombre]||[]).includes(m)){
+          map[areaNombre].push(m);
+          asignada = true;
+          break;
+        }
+      }
+      if(!asignada){
+        if(!map['_sinArea']) map['_sinArea']=[];
+        map['_sinArea'].push(m);
+      }
+    });
+  } else {
+    mats.forEach(m=>{
+      const doc = matDocs.find(d=>d.nombre===m && d.ciclo===ciclo);
+      const areaNombre = doc?.areaNombre||'';
+      if(areaNombre && map[areaNombre]!==undefined){
+        map[areaNombre].push(m);
+      } else {
+        if(!map['_sinArea']) map['_sinArea']=[];
+        map['_sinArea'].push(m);
+      }
+    });
+  }
   return map;
 }
 
@@ -1314,16 +1333,22 @@ function renderSals(){
           :`<span class="bdg bgy" style="font-size:10px">Sin áreas asignadas</span>`)
         :'';
 
-      // Mostrar áreas con sus materias del salón
+      // salAreaMats propias del salón (Paso 2 de editSalAreas)
+      const salAreaMatsDelSalon=(DB.salAreaMats||{})[s.nombre]||null;
+
+      // Mostrar áreas con sus materias del salón (usa salAreaMats si existen, si no matDocs)
       const areasHTML=areasDelSalon.length>0
         ?`<div style="margin-top:10px;border-top:1px solid var(--bd);padding-top:8px">
             <div style="font-size:10px;font-weight:700;color:var(--sl);text-transform:uppercase;margin-bottom:6px">Áreas del salón</div>
             <div style="display:flex;flex-direction:column;gap:5px">
               ${areasDelSalon.map(areaNombre=>{
-                const matsDelArea=matsList.filter(m=>{
-                  const d=matDocs.find(x=>x.nombre===m);
-                  return d&&d.areaNombre===areaNombre;
-                });
+                // Prioridad: salAreaMats específicas del salón → fallback a matDocs globales
+                const matsDelArea=salAreaMatsDelSalon
+                  ?(salAreaMatsDelSalon[areaNombre]||[])
+                  :matsList.filter(m=>{
+                    const d=matDocs.find(x=>x.nombre===m);
+                    return d&&d.areaNombre===areaNombre;
+                  });
                 return`<div style="display:flex;align-items:flex-start;gap:8px;padding:5px 8px;background:#f5f3ff;border-radius:7px;border:1px solid #ddd6fe">
                   <span style="font-size:11px;font-weight:700;color:#5b21b6;min-width:80px">▸ ${areaNombre}</span>
                   <div style="display:flex;flex-wrap:wrap;gap:3px">${
@@ -1347,7 +1372,7 @@ function renderSals(){
             ${areasLabel}
           </div>
           <div style="display:flex;gap:6px;flex-wrap:wrap">
-            ${hayAreas?`<button class="btn xs" style="background:#e0e7ff;color:#3730a3;border:1px solid #a5b4fc" onclick="editSalAreas('${s.nombre}')">📂 Áreas</button>`:''}
+            <button class="btn xs" style="background:#e0e7ff;color:#3730a3;border:1px solid #a5b4fc" onclick="editSalAreas('${s.nombre}')">📂 Áreas</button>
             <button class="btn xs bg" onclick="editSalMats('${s.nombre}')">🎯 Materias</button>
             <button class="btn xs bd" onclick="delSal('${s.nombre}')">🗑</button>
           </div>
@@ -1452,20 +1477,26 @@ async function editSalAreas(sname){
     return;
   }
 
-  // Áreas actualmente asignadas a este salón
+  // Áreas y materias actuales de este salón
   if(!DB.salAreas) DB.salAreas={};
+  if(!DB.salAreaMats) DB.salAreaMats={};
   const current=[...(DB.salAreas[sname]||[])];
+  const currentSalAreaMats=(DB.salAreaMats[sname]||{});
 
-  // Materias del salón para mostrar preview
+  // Materias del salón
   const matDocs=(DB.materiasDocs||[]).filter(d=>d.ciclo===ciclo);
   const matsList=sal.mats&&sal.mats.length?sal.mats:(ciclo==='primaria'?DB.mP:DB.mB);
 
+  // ── PASO 1: Seleccionar áreas del salón ──────────────────────────────────
   const rows=areasDelCiclo.map(area=>{
-    // Materias de esta área que están en el salón
-    const matsDeArea=matsList.filter(m=>{
-      const d=matDocs.find(x=>x.nombre===m);
-      return d&&d.areaNombre===area.nombre;
-    });
+    // Preview: usar salAreaMats si existe, si no fallback a matDocs globales
+    const matsEspecificas=currentSalAreaMats[area.nombre];
+    const matsDeArea=matsEspecificas
+      ?matsEspecificas
+      :matsList.filter(m=>{
+          const d=matDocs.find(x=>x.nombre===m);
+          return d&&d.areaNombre===area.nombre;
+        });
     const preview=matsDeArea.length
       ?matsDeArea.map(m=>`<span style="font-size:10px;padding:1px 6px;background:#ede9fe;border:1px solid #c4b5fd;border-radius:4px;margin:1px">${m}</span>`).join('')
       :'<span style="font-size:10px;color:#aaa">Sin materias asignadas a esta área</span>';
@@ -1489,7 +1520,7 @@ async function editSalAreas(sname){
       <div style="max-height:380px;overflow-y:auto">${rows}</div>
     </div>`,
     showCancelButton:true,
-    confirmButtonText:'Guardar Áreas',
+    confirmButtonText:'Siguiente: Asignar Materias →',
     cancelButtonText:'Cancelar',
     preConfirm:()=>[...document.querySelectorAll('.sack:checked')].map(c=>c.value)
   });
@@ -1497,11 +1528,62 @@ async function editSalAreas(sname){
   if(!r.isConfirmed) return;
   const elegidas=r.value;
 
-  // Guardar en DB.salAreas (mapa salón → array de áreas)
-  if(!DB.salAreas) DB.salAreas={};
+  // Guardar en DB.salAreas
   DB.salAreas[sname]=elegidas;
 
-  // Persistir en config para que sobreviva recargas
+  // ── PASO 2: Asignar materias de este salón a cada área elegida ───────────
+  if(elegidas.length>0){
+    const paso2rows=elegidas.map(areaNombre=>{
+      const curMats=currentSalAreaMats[areaNombre]||[];
+      const matsChk=matsList.map(m=>{
+        // Marcar si: ya estaba en salAreaMats, o si no hay asignación previa y matDocs lo asigna
+        const checked=curMats.length
+          ?curMats.includes(m)
+          :(()=>{ const d=matDocs.find(x=>x.nombre===m); return d&&d.areaNombre===areaNombre; })();
+        return`<label style="display:flex;align-items:center;gap:6px;padding:4px 8px;background:var(--bg2);
+          border-radius:6px;border:1px solid var(--bd);cursor:pointer;font-size:12px">
+          <input type="checkbox" class="samck" data-area="${areaNombre}" value="${m}" ${checked?'checked':''}>
+          <span>${m}</span>
+        </label>`;
+      }).join('');
+      return`<div style="margin-bottom:14px">
+        <div style="font-size:13px;font-weight:700;color:#3730a3;margin-bottom:6px">📂 ${areaNombre}</div>
+        <div style="display:flex;flex-wrap:wrap;gap:5px;padding:8px;background:#f5f3ff;border-radius:8px;border:1px solid #ddd6fe">
+          ${matsChk||'<span style="font-size:12px;color:var(--sl3)">Sin materias disponibles</span>'}
+        </div>
+      </div>`;
+    }).join('');
+
+    const r2=await Swal.fire({
+      title:`🎯 Materias por Área — Salón ${sname}`,
+      width:620,
+      html:`<div style="text-align:left;font-family:var(--fn)">
+        <div class="al alb" style="margin-bottom:14px;font-size:12px">
+          Asigna las materias de este salón a cada área. Estas asignaciones son <strong>independientes de las globales</strong> y se usarán en el boletín y en la promoción.
+        </div>
+        <div style="max-height:420px;overflow-y:auto">${paso2rows}</div>
+      </div>`,
+      showCancelButton:true,
+      confirmButtonText:'Guardar Todo',
+      cancelButtonText:'Omitir',
+      preConfirm:()=>{
+        const asignacion={};
+        elegidas.forEach(areaNombre=>{
+          asignacion[areaNombre]=[...document.querySelectorAll(`.samck[data-area="${areaNombre}"]:checked`)].map(c=>c.value);
+        });
+        return asignacion;
+      }
+    });
+
+    if(r2.isConfirmed){
+      DB.salAreaMats[sname]=r2.value;
+      try{
+        await apiFetch('/api/config/salAreaMats',{method:'PUT',body:JSON.stringify({value:DB.salAreaMats})});
+      }catch(e){ console.warn('Error guardando salAreaMats:',e); }
+    }
+  }
+
+  // Persistir salAreas
   try{
     await apiFetch('/api/config/salAreas',{method:'PUT',body:JSON.stringify({value:DB.salAreas})});
   }catch(e){ console.warn('Error guardando salAreas:',e); }
