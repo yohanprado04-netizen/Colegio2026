@@ -269,27 +269,44 @@ function getAreasDelColegio(ciclo){
 function getAreaMatsMap(eid){
   const mats = getMats(eid);
   const e = DB.ests.find(x=>x.id===eid);
-  const ciclo = cicloOf(e?.salon||'');
+  const salon = e?.salon||'';
+  const ciclo = cicloOf(salon);
   const matDocs = DB.materiasDocs||[];
 
   // Áreas asignadas al salón; si el salón no tiene áreas propias, no heredar globales
-  const areasEnSalon = (DB.salAreas||{})[e?.salon||''] || [];
+  const areasEnSalon = (DB.salAreas||{})[salon] || [];
   const areasAplicables = areasEnSalon; // solo las del salón, nunca las globales
 
   if(!areasAplicables.length) return { '_sinArea': mats };
   const map = {};
   areasAplicables.forEach(nombre=>{ map[nombre]=[]; });
 
-  mats.forEach(m=>{
-    const doc = matDocs.find(d=>d.nombre===m && d.ciclo===ciclo);
-    const areaNombre = doc?.areaNombre||'';
-    if(areaNombre && map[areaNombre]!==undefined){
-      map[areaNombre].push(m);
-    } else {
-      if(!map['_sinArea']) map['_sinArea']=[];
-      map['_sinArea'].push(m);
-    }
-  });
+  // Si el salón tiene asignación propia de materias por área (CEPA), usarla
+  const salAreaMatsDelSalon = (DB.salAreaMats||{})[salon];
+  if(salAreaMatsDelSalon){
+    mats.forEach(m=>{
+      let asignada=false;
+      for(const areaNombre of areasAplicables){
+        if((salAreaMatsDelSalon[areaNombre]||[]).includes(m)){
+          map[areaNombre].push(m);
+          asignada=true;
+          break;
+        }
+      }
+      if(!asignada){ if(!map['_sinArea']) map['_sinArea']=[]; map['_sinArea'].push(m); }
+    });
+  } else {
+    mats.forEach(m=>{
+      const doc = matDocs.find(d=>d.nombre===m && d.ciclo===ciclo);
+      const areaNombre = doc?.areaNombre||'';
+      if(areaNombre && map[areaNombre]!==undefined){
+        map[areaNombre].push(m);
+      } else {
+        if(!map['_sinArea']) map['_sinArea']=[];
+        map['_sinArea'].push(m);
+      }
+    });
+  }
   return map;
 }
 
@@ -1314,13 +1331,16 @@ function renderSals(){
           :`<span class="bdg bgy" style="font-size:10px">Sin áreas asignadas</span>`)
         :'';
 
-      // Mostrar áreas con sus materias del salón
+      // Mostrar áreas con sus materias del salón (usa salAreaMats si existe)
       const areasHTML=areasDelSalon.length>0
         ?`<div style="margin-top:10px;border-top:1px solid var(--bd);padding-top:8px">
             <div style="font-size:10px;font-weight:700;color:var(--sl);text-transform:uppercase;margin-bottom:6px">Áreas del salón</div>
             <div style="display:flex;flex-direction:column;gap:5px">
               ${areasDelSalon.map(areaNombre=>{
-                const matsDelArea=matsList.filter(m=>{
+                const _salAreaMatsDelSalon=(DB.salAreaMats||{})[s.nombre];
+                const matsDelArea=_salAreaMatsDelSalon&&_salAreaMatsDelSalon[areaNombre]
+                  ?_salAreaMatsDelSalon[areaNombre]
+                  :matsList.filter(m=>{
                   const d=matDocs.find(x=>x.nombre===m);
                   return d&&d.areaNombre===areaNombre;
                 });
@@ -1347,7 +1367,7 @@ function renderSals(){
             ${areasLabel}
           </div>
           <div style="display:flex;gap:6px;flex-wrap:wrap">
-            ${hayAreas?`<button class="btn xs" style="background:#e0e7ff;color:#3730a3;border:1px solid #a5b4fc" onclick="editSalAreas('${s.nombre}')">📂 Áreas</button>`:''}
+            <button class="btn xs" style="background:#e0e7ff;color:#3730a3;border:1px solid #a5b4fc" onclick="editSalAreas('${s.nombre}')">📂 Áreas</button>
             <button class="btn xs bg" onclick="editSalMats('${s.nombre}')">🎯 Materias</button>
             <button class="btn xs bd" onclick="delSal('${s.nombre}')">🗑</button>
           </div>
@@ -1479,6 +1499,10 @@ async function editSalAreas(sname){
     </label>`;
   }).join('');
 
+  // Materias por área del salón ya guardadas
+  if(!DB.salAreaMats) DB.salAreaMats={};
+  const currentSalAreaMats=(DB.salAreaMats[sname]||{});
+
   const r=await Swal.fire({
     title:`📂 Áreas del Salón ${sname}`,
     width:560,
@@ -1489,7 +1513,7 @@ async function editSalAreas(sname){
       <div style="max-height:380px;overflow-y:auto">${rows}</div>
     </div>`,
     showCancelButton:true,
-    confirmButtonText:'Guardar Áreas',
+    confirmButtonText:'Siguiente: Asignar Materias →',
     cancelButtonText:'Cancelar',
     preConfirm:()=>[...document.querySelectorAll('.sack:checked')].map(c=>c.value)
   });
@@ -1501,7 +1525,57 @@ async function editSalAreas(sname){
   if(!DB.salAreas) DB.salAreas={};
   DB.salAreas[sname]=elegidas;
 
-  // Persistir en config para que sobreviva recargas
+  // ── Paso 2: asignar materias del salón a cada área elegida ──────────────
+  if(elegidas.length>0){
+    const paso2rows=elegidas.map(areaNombre=>{
+      const curMats=currentSalAreaMats[areaNombre]||[];
+      const matsChk=matsList.map(m=>{
+        const checked=curMats.length?curMats.includes(m):(()=>{
+          const d=matDocs.find(x=>x.nombre===m);
+          return d&&d.areaNombre===areaNombre;
+        })();
+        return`<label style="display:flex;align-items:center;gap:6px;padding:4px 8px;background:var(--bg2);border-radius:6px;border:1px solid var(--bd);cursor:pointer;font-size:12px">
+          <input type="checkbox" class="samck" data-area="${areaNombre}" value="${m}" ${checked?'checked':''}>
+          <span>${m}</span>
+        </label>`;
+      }).join('');
+      return`<div style="margin-bottom:14px">
+        <div style="font-size:13px;font-weight:700;color:#3730a3;margin-bottom:6px">📂 ${areaNombre}</div>
+        <div style="display:flex;flex-wrap:wrap;gap:5px;padding:8px;background:#f5f3ff;border-radius:8px;border:1px solid #ddd6fe">${matsChk}</div>
+      </div>`;
+    }).join('');
+
+    const r2=await Swal.fire({
+      title:`🎯 Materias por Área — Salón ${sname}`,
+      width:620,
+      html:`<div style="text-align:left;font-family:var(--fn)">
+        <div class="al alb" style="margin-bottom:14px;font-size:12px">
+          Asigna las materias de este salón a cada área. Independiente de las globales, se usarán en el boletín.
+        </div>
+        <div style="max-height:420px;overflow-y:auto">${paso2rows}</div>
+      </div>`,
+      showCancelButton:true,
+      confirmButtonText:'Guardar Todo',
+      cancelButtonText:'Omitir',
+      preConfirm:()=>{
+        const asig={};
+        elegidas.forEach(areaNombre=>{
+          asig[areaNombre]=[...document.querySelectorAll(`.samck[data-area="${areaNombre}"]:checked`)].map(c=>c.value);
+        });
+        return asig;
+      }
+    });
+
+    if(r2.isConfirmed){
+      if(!DB.salAreaMats) DB.salAreaMats={};
+      DB.salAreaMats[sname]=r2.value;
+      try{
+        await apiFetch('/api/config/salAreaMats',{method:'PUT',body:JSON.stringify({value:DB.salAreaMats})});
+      }catch(e){ console.warn('Error guardando salAreaMats:',e); }
+    }
+  }
+
+  // Persistir salAreas en config para que sobreviva recargas
   try{
     await apiFetch('/api/config/salAreas',{method:'PUT',body:JSON.stringify({value:DB.salAreas})});
   }catch(e){ console.warn('Error guardando salAreas:',e); }
