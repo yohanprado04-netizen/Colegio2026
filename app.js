@@ -6062,9 +6062,8 @@ function dlBoletinUI(estId){
 // ═══════════════════════════════════════════════════════════════════
 // dlBoletinCepa() — Boletín exclusivo COLEGIO CEPA, fiel al Excel
 // Columnas: NRO | Asignaturas | I.H | 1p 2p 3p 4p | Def | Desemp. | Fallas
-// Áreas: fila gris #D8D8D8 con nombre en negrita
-// Sub-materias: numeración decimal (1.1, 1.2…)
-// Escala: DS≥4.6 DA≥4.0 DB≥3.5 DI<3.5
+// Fallas = ausencias en DB.asist dentro del rango DB.drPer[periodo]
+// Excusas = excusas del estudiante cuya fecha cae en el rango del periodo
 // ═══════════════════════════════════════════════════════════════════
 function dlBoletinCepa(estId,perFilter,anno,snapData){
   perFilter=perFilter||'TODOS'; anno=anno||String(new Date().getFullYear());
@@ -6109,7 +6108,7 @@ function dlBoletinCepa(estId,perFilter,anno,snapData){
     : allPers.filter(p=>p===decodeURIComponent(perFilter));
   if(!pers2render.length){sw('info','Sin datos','No hay notas en este periodo.');return;}
 
-  // Helpers
+  // ── Helpers ──────────────────────────────────────────────────────
   const fmt=n=>(+n===0)?'—':(+n).toFixed(1);
   const desCepa=n=>{n=+n;if(!n)return'—';if(n>=4.6)return'DS';if(n>=4.0)return'DA';if(n>=3.5)return'DB';return'DI';};
   const defMat=m=>{
@@ -6118,6 +6117,41 @@ function dlBoletinCepa(estId,perFilter,anno,snapData){
     return+(act.reduce((s,p)=>s+def(notasDelAno[p]?.[m]||{a:0,c:0,r:0}),0)/act.length).toFixed(2);
   };
   const defPer=(m,per)=>{const t=notasDelAno[per]?.[m]||{};return(t.a>0||t.c>0||t.r>0)?def(t):0;};
+
+  // ── Fallas y Excusas por periodo ─────────────────────────────────
+  // Fallas = días ausente en DB.asist dentro del rango de fechas del periodo
+  // Excusas = excusas del estudiante con fecha dentro del rango del periodo
+  const calcFallasExcusas=(per)=>{
+    const rango=DB.drPer?.[per]||null;
+    if(!rango||!rango.s||!rango.e) return {fallas:0,excusas:0};
+    const inicio=new Date(rango.s+'T00:00:00');
+    const fin=new Date(rango.e+'T23:59:59');
+    // Contar fallas (ausencias) en asistencia dentro del rango
+    let fallas=0;
+    Object.entries(DB.asist||{}).forEach(([fecha,salones])=>{
+      const d=new Date(fecha+'T12:00:00');
+      if(d<inicio||d>fin) return;
+      // El valor puede ser {salon:{estId:val}} o variaciones
+      Object.values(salones||{}).forEach(estuds=>{
+        const val=estuds?.[estId];
+        if(val==='ausente') fallas++;
+      });
+    });
+    // Contar excusas del estudiante en el rango
+    const excusas=(DB.exc||[]).filter(x=>{
+      const eid2=x.estId||x.eid||'';
+      if(eid2!==estId) return false;
+      const d=new Date((x.fecha||'')+'T12:00:00');
+      return d>=inicio&&d<=fin;
+    }).length;
+    return {fallas,excusas};
+  };
+
+  // Los 4 periodos siempre (1p 2p 3p 4p mapeados a allPers[0..3])
+  const perMap=allPers.slice(0,4);
+  const perStats=perMap.map(per=>per?calcFallasExcusas(per):{fallas:0,excusas:0});
+  const fallasPerPer=perStats.map(s=>s.fallas);
+  const excusasPerPer=perStats.map(s=>s.excusas);
 
   // Jornada y colegio
   const salonObj=(DB.sals||[]).find(s=>s.nombre===salon)||{};
@@ -6129,13 +6163,7 @@ function dlBoletinCepa(estId,perFilter,anno,snapData){
   const areaMap=(e&&!esHist)?getAreaMatsMap(estId):{};
   const areas=Object.keys(areaMap).filter(k=>k!=='_sinArea'&&(areaMap[k]||[]).length>0);
   const sinArea=areaMap['_sinArea']||[];
-  // Si no hay áreas configuradas, poner todas en bloque único
   const useAreas=areas.length>0;
-
-  // Periodos a mostrar como columnas (siempre 4: 1p 2p 3p 4p)
-  const perLabels=['1p','2p','3p','4p'];
-  // Mapear cada label al periodo real (por posición en allPers)
-  const perMap=perLabels.map((_,i)=>allPers[i]||null);
 
   // Promedio general
   const pgCalc=()=>{
@@ -6147,16 +6175,7 @@ function dlBoletinCepa(estId,perFilter,anno,snapData){
   };
   const pg=(e&&!esHist)?gprom(estId):pgCalc();
 
-  // Fallas por periodo
-  const fallasPerPer=perMap.map(per=>per?(notasDelAno[per]?._fallas??notasDelAno[per]?.fallas??0):0);
-
-  // Observación — materias con definitiva < 3.0
-  const mpList=mats.filter(m=>{const d=defMat(m);return d>0&&d<3.0;});
-  const obsText=mpList.length
-    ? 'Recupera la asignatura de '+mpList.map(m=>`${m} ${fmt(defMat(m))}`).join(', ')+'.'
-    : '&nbsp;';
-
-  // Disciplina (fila COMPORTAMIENTO SOCIAL)
+  // Disciplina
   const discPers=perMap.map(per=>{
     if(!per)return null;
     const dv=notasDelAno[per]?.disciplina??notasDelAno[per]?._disciplina??null;
@@ -6165,37 +6184,36 @@ function dlBoletinCepa(estId,perFilter,anno,snapData){
   const discVals=discPers.filter(v=>v!==null);
   const discProm=discVals.length?+(discVals.reduce((s,v)=>s+v,0)/discVals.length).toFixed(2):null;
 
-  // Colores CEPA exactos del Excel
-  const C1='#333399'; // azul header
-  const CG='#D8D8D8'; // gris área
-  const CW='#fff';
-  const CWT='#fff';
+  // Observación — materias con def < 3.0
+  const mpList=mats.filter(m=>{const d=defMat(m);return d>0&&d<3.0;});
+  const obsText=mpList.length
+    ? 'Recupera la asignatura de '+mpList.map(m=>`${m} ${fmt(defMat(m))}`).join(', ')+'.'
+    : '&nbsp;';
 
-  // CSS tabla compartido
+  // ── Colores CEPA exactos del Excel ────────────────────────────────
+  const C1='#333399';
+  const CG='#D8D8D8';
   const tdB=`border:1px solid #bbb;padding:3px 5px;font-size:10.5px;`;
   const tdBG=`border:1px solid #999;padding:3px 5px;font-size:10.5px;background:${CG};`;
-  const thS=`border:1px solid #22226a;padding:4px 5px;font-size:10px;background:${C1};color:${CWT};text-align:center;font-weight:600;`;
+  const thS=`border:1px solid #22226a;padding:4px 5px;font-size:10px;background:${C1};color:#fff;text-align:center;font-weight:600;`;
 
-  // thead — siempre 4 periodos fijos
   const thead=`<tr>
     <th style="${thS}width:28px">NRO</th>
-    <th colspan="2" style="${thS}text-align:left">Asignaturas</th>
+    <th colspan="2" style="${thS}text-align:left">ASIGNATURAS</th>
     <th style="${thS}width:28px">I.H</th>
-    <th style="${thS}width:32px">1p</th>
-    <th style="${thS}width:32px">2p</th>
-    <th style="${thS}width:32px">3p</th>
-    <th style="${thS}width:32px">4p</th>
-    <th style="${thS}width:34px">Def</th>
-    <th style="${thS}width:38px">Desemp.</th>
-    <th style="${thS}width:36px">Fallas</th>
+    <th style="${thS}width:32px">1P</th>
+    <th style="${thS}width:32px">2P</th>
+    <th style="${thS}width:32px">3P</th>
+    <th style="${thS}width:32px">4P</th>
+    <th style="${thS}width:34px">DEF</th>
+    <th style="${thS}width:40px">DESEMP.</th>
+    <th style="${thS}width:36px">FALLAS</th>
   </tr>`;
 
-  // Filas de materias
   const buildRows=()=>{
     let html='';
     const renderArea=(label,matsArr,idx)=>{
       if(!matsArr.length)return'';
-      // Fila de área (gris)
       html+=`<tr>
         <td style="${tdBG}text-align:center;font-weight:700">${idx}</td>
         <td colspan="2" style="${tdBG}font-weight:700;text-transform:uppercase">${esc(label)}</td>
@@ -6203,26 +6221,23 @@ function dlBoletinCepa(estId,perFilter,anno,snapData){
         <td style="${tdBG}"></td><td style="${tdBG}"></td><td style="${tdBG}"></td><td style="${tdBG}"></td>
         <td style="${tdBG}"></td><td style="${tdBG}"></td><td style="${tdBG}"></td>
       </tr>`;
-      // Sub-materias
       matsArr.forEach((m,mi)=>{
         const sub=`${idx}.${mi+1}`;
         const df=defMat(m);
         const p1=defPer(m,perMap[0]);const p2=defPer(m,perMap[1]);
         const p3=defPer(m,perMap[2]);const p4=defPer(m,perMap[3]);
-        // Fallas por materia (si existe campo específico)
-        const fal='';
-        const fmtP=v=>v>0?`<strong>${fmt(v)}</strong>`:'';
+        const fp=v=>v>0?`<strong>${fmt(v)}</strong>`:'';
         html+=`<tr>
           <td style="${tdB}text-align:center;color:#555">${sub}</td>
           <td colspan="2" style="${tdB}">${esc(m)}</td>
           <td style="${tdB}text-align:center;color:#666"></td>
-          <td style="${tdB}text-align:center">${fmtP(p1)}</td>
-          <td style="${tdB}text-align:center">${fmtP(p2)}</td>
-          <td style="${tdB}text-align:center">${fmtP(p3)}</td>
-          <td style="${tdB}text-align:center">${fmtP(p4)}</td>
+          <td style="${tdB}text-align:center">${fp(p1)}</td>
+          <td style="${tdB}text-align:center">${fp(p2)}</td>
+          <td style="${tdB}text-align:center">${fp(p3)}</td>
+          <td style="${tdB}text-align:center">${fp(p4)}</td>
           <td style="${tdB}text-align:center;font-weight:700;color:${df<3&&df>0?'#c00':'#111'}">${df>0?fmt(df):'—'}</td>
           <td style="${tdB}text-align:center;font-size:9.5px">${df>0?desCepa(df):'—'}</td>
-          <td style="${tdB}text-align:center;color:#777">${fal}</td>
+          <td style="${tdB}text-align:center;color:#777"></td>
         </tr>`;
       });
     };
@@ -6231,12 +6246,11 @@ function dlBoletinCepa(estId,perFilter,anno,snapData){
       areas.forEach((a,i)=>renderArea(a,areaMap[a]||[],i+1));
       if(sinArea.length)renderArea('SIN ÁREA',sinArea,areas.length+1);
     } else {
-      // Sin áreas: una sola área contenedora
       renderArea('ASIGNATURAS',mats,1);
     }
 
-    // Fila COMPORTAMIENTO SOCIAL - Disciplina
-    const aIdx=useAreas?areas.length+(sinArea.length?2:1):(2);
+    // COMPORTAMIENTO SOCIAL
+    const aIdx=useAreas?areas.length+(sinArea.length?2:1):2;
     html+=`<tr>
       <td style="${tdBG}text-align:center;font-weight:700">${aIdx}</td>
       <td colspan="2" style="${tdBG}font-weight:700;text-transform:uppercase">COMPORTAMIENTO SOCIAL</td>
@@ -6244,56 +6258,35 @@ function dlBoletinCepa(estId,perFilter,anno,snapData){
       <td style="${tdBG}"></td><td style="${tdBG}"></td><td style="${tdBG}"></td><td style="${tdBG}"></td>
       <td style="${tdBG}"></td><td style="${tdBG}"></td><td style="${tdBG}"></td>
     </tr>`;
-    const fmtD=v=>v!==null?`<strong>${fmt(v)}</strong>`:'';
+    const fd=v=>v!==null?`<strong>${fmt(v)}</strong>`:'';
     html+=`<tr>
       <td style="${tdB}text-align:center;color:#555">${aIdx}.1</td>
       <td colspan="2" style="${tdB}">Disciplina</td>
       <td style="${tdB}text-align:center;color:#666">0</td>
-      <td style="${tdB}text-align:center">${fmtD(discPers[0])}</td>
-      <td style="${tdB}text-align:center">${fmtD(discPers[1])}</td>
-      <td style="${tdB}text-align:center">${fmtD(discPers[2])}</td>
-      <td style="${tdB}text-align:center">${fmtD(discPers[3])}</td>
+      <td style="${tdB}text-align:center">${fd(discPers[0])}</td>
+      <td style="${tdB}text-align:center">${fd(discPers[1])}</td>
+      <td style="${tdB}text-align:center">${fd(discPers[2])}</td>
+      <td style="${tdB}text-align:center">${fd(discPers[3])}</td>
       <td style="${tdB}text-align:center;font-weight:700">${discProm!==null?fmt(discProm):'—'}</td>
       <td style="${tdB}text-align:center;font-size:9.5px">${discProm!==null?desCepa(discProm):'—'}</td>
       <td style="${tdB}"></td>
     </tr>`;
-
     return html;
   };
 
-  // Tabla de equivalencia (igual al Excel)
+  // ── Tabla de equivalencia ─────────────────────────────────────────
   const tablaEq=`
-    <table style="width:100%;border-collapse:collapse;font-size:9.5px;margin-top:6px">
+    <table style="width:100%;border-collapse:collapse;font-size:9.5px">
       <tr>
-        <td style="border:1px solid #aaa;padding:3px 6px;text-align:center;font-weight:700">CLASIFICACION</td>
-        <td style="border:1px solid #aaa;padding:3px 6px;text-align:center;font-weight:700">ABREVIATURA</td>
-        <td style="border:1px solid #aaa;padding:3px 10px;font-weight:700">DESEMPEÑO</td>
-        <td style="border:1px solid #aaa;padding:3px 6px;text-align:center;font-weight:700">ESCALA</td>
+        <td style="border:1px solid #aaa;padding:3px 8px;text-align:center;font-weight:700">CLASIFICACION</td>
+        <td style="border:1px solid #aaa;padding:3px 8px;text-align:center;font-weight:700">ABREVIATURA</td>
+        <td style="border:1px solid #aaa;padding:3px 12px;font-weight:700">DESEMPEÑO</td>
+        <td style="border:1px solid #aaa;padding:3px 8px;text-align:center;font-weight:700">ESCALA</td>
       </tr>
-      <tr>
-        <td style="border:1px solid #aaa;padding:2px 6px;text-align:center">Superior</td>
-        <td style="border:1px solid #aaa;padding:2px 6px;text-align:center">DS</td>
-        <td style="border:1px solid #aaa;padding:2px 10px">Creativo, innovador y puntual, en la presentación de los trabajos</td>
-        <td style="border:1px solid #aaa;padding:2px 6px;text-align:center">4.6 - 5.0</td>
-      </tr>
-      <tr style="background:#f7f7f7">
-        <td style="border:1px solid #aaa;padding:2px 6px;text-align:center">Alto</td>
-        <td style="border:1px solid #aaa;padding:2px 6px;text-align:center">DA</td>
-        <td style="border:1px solid #aaa;padding:2px 10px">Alcanza los logros propuestos en las asignaturas</td>
-        <td style="border:1px solid #aaa;padding:2px 6px;text-align:center">4.0 - 4.5</td>
-      </tr>
-      <tr>
-        <td style="border:1px solid #aaa;padding:2px 6px;text-align:center">Basica</td>
-        <td style="border:1px solid #aaa;padding:2px 6px;text-align:center">DB</td>
-        <td style="border:1px solid #aaa;padding:2px 10px">Solo Alcanzo los niveles necesarios de logros propuestos</td>
-        <td style="border:1px solid #aaa;padding:2px 6px;text-align:center">3.5 - 3.9</td>
-      </tr>
-      <tr style="background:#f7f7f7">
-        <td style="border:1px solid #aaa;padding:2px 6px;text-align:center">Bajo</td>
-        <td style="border:1px solid #aaa;padding:2px 6px;text-align:center">DI</td>
-        <td style="border:1px solid #aaa;padding:2px 10px">No desarrollo el mínimo de las actividades curriculares requeridas</td>
-        <td style="border:1px solid #aaa;padding:2px 6px;text-align:center">0.0 - 3,4</td>
-      </tr>
+      <tr><td style="border:1px solid #aaa;padding:2px 8px;text-align:center">Superior</td><td style="border:1px solid #aaa;padding:2px 8px;text-align:center">DS</td><td style="border:1px solid #aaa;padding:2px 12px">Creativo, innovador y puntual, en la presentación de los trabajos</td><td style="border:1px solid #aaa;padding:2px 8px;text-align:center">4.6 - 5.0</td></tr>
+      <tr style="background:#f7f7f7"><td style="border:1px solid #aaa;padding:2px 8px;text-align:center">Alto</td><td style="border:1px solid #aaa;padding:2px 8px;text-align:center">DA</td><td style="border:1px solid #aaa;padding:2px 12px">Alcanza los logros propuestos en las asignaturas</td><td style="border:1px solid #aaa;padding:2px 8px;text-align:center">4.0 - 4.5</td></tr>
+      <tr><td style="border:1px solid #aaa;padding:2px 8px;text-align:center">Basica</td><td style="border:1px solid #aaa;padding:2px 8px;text-align:center">DB</td><td style="border:1px solid #aaa;padding:2px 12px">Solo Alcanzo los niveles necesarios de logros propuestos</td><td style="border:1px solid #aaa;padding:2px 8px;text-align:center">3.5 - 3.9</td></tr>
+      <tr style="background:#f7f7f7"><td style="border:1px solid #aaa;padding:2px 8px;text-align:center">Bajo</td><td style="border:1px solid #aaa;padding:2px 8px;text-align:center">DI</td><td style="border:1px solid #aaa;padding:2px 12px">No desarrollo el mínimo de las actividades curriculares requeridas</td><td style="border:1px solid #aaa;padding:2px 8px;text-align:center">0.0 - 3,4</td></tr>
     </table>`;
 
   const suffix=isTodos?'todos':decodeURIComponent(perFilter).replace(/\s+/g,'_');
@@ -6302,75 +6295,77 @@ function dlBoletinCepa(estId,perFilter,anno,snapData){
   box.innerHTML=`
 <div style="font-family:Arial,Helvetica,sans-serif;background:#fff;width:740px;color:#111;padding:0;font-size:11px">
 
-  <!-- ── ENCABEZADO: info izq + logo der ── -->
-  <table style="width:100%;border-collapse:collapse;margin-bottom:4px">
+  <!-- ENCABEZADO -->
+  <table style="width:100%;border-collapse:collapse;margin-bottom:5px">
     <tr>
       <td style="vertical-align:top;padding:4px 0;width:55%">
         <table style="border-collapse:collapse;font-size:11px">
-          <tr><td style="padding:1px 4px;color:#333">Año</td><td style="padding:1px 12px;font-weight:600">${anno}</td></tr>
-          <tr><td style="padding:1px 4px;color:#333">Grado</td><td style="padding:1px 12px;font-weight:600">${esc(salon)}</td></tr>
-          <tr><td style="padding:1px 4px;color:#333">Jornada</td><td style="padding:1px 12px;font-weight:600;text-transform:capitalize">${jornadaLabel}</td></tr>
-          <tr><td style="padding:1px 4px;color:#333">Periodo</td><td style="padding:1px 12px;font-weight:600">${isTodos?'Todos los periodos':decodeURIComponent(perFilter)}</td></tr>
-          <tr><td style="padding:1px 4px;color:#333">Estudiante</td><td style="padding:1px 12px;font-weight:800;font-size:12px;text-transform:uppercase">${esc(nombre)}</td></tr>
-          <tr><td style="padding:1px 4px;color:#333">Identificación</td><td style="padding:1px 12px">${esc(ti)||'—'}</td></tr>
+          <tr><td style="padding:1px 6px;color:#444">Año</td><td style="padding:1px 14px;font-weight:600">${anno}</td></tr>
+          <tr><td style="padding:1px 6px;color:#444">Grado</td><td style="padding:1px 14px;font-weight:600">${esc(salon)}</td></tr>
+          <tr><td style="padding:1px 6px;color:#444">Jornada</td><td style="padding:1px 14px;font-weight:600;text-transform:capitalize">${jornadaLabel}</td></tr>
+          <tr><td style="padding:1px 6px;color:#444">Periodo</td><td style="padding:1px 14px;font-weight:600">${isTodos?'Todos los periodos':decodeURIComponent(perFilter)}</td></tr>
+          <tr><td style="padding:1px 6px;color:#444">Estudiante</td><td style="padding:1px 14px;font-weight:900;font-size:12px;text-transform:uppercase">${esc(nombre)}</td></tr>
+          <tr><td style="padding:1px 6px;color:#444">Identificación</td><td style="padding:1px 14px">${esc(ti)||'—'}</td></tr>
         </table>
       </td>
       <td style="vertical-align:middle;text-align:center;padding:4px">
-        ${_logo?`<img src="${_logo}" style="max-height:90px;max-width:200px;object-fit:contain" alt="Logo">`:`<div style="font-size:14px;font-weight:900;color:${C1};text-align:center;text-transform:uppercase">${esc(_nom)}</div>`}
+        ${_logo?`<img src="${_logo}" style="max-height:90px;max-width:200px;object-fit:contain" alt="Logo">`:`<div style="font-size:14px;font-weight:900;color:${C1};text-transform:uppercase">${esc(_nom)}</div>`}
         <div style="font-size:10px;color:#666;margin-top:4px;font-weight:600">BOLETÍN DE CALIFICACIONES</div>
       </td>
     </tr>
   </table>
 
-  <!-- ── TABLA DE CALIFICACIONES ── -->
+  <!-- TABLA DE CALIFICACIONES -->
   <table style="width:100%;border-collapse:collapse">
     <thead>${thead}</thead>
     <tbody>${buildRows()}</tbody>
   </table>
 
-  <!-- ── OBSERVACIÓN ── -->
+  <!-- OBSERVACIÓN -->
   <table style="width:100%;border-collapse:collapse;margin-top:5px">
     <tr>
-      <td style="border:1px solid #bbb;padding:3px 8px;font-size:10.5px;width:90px;font-weight:700;vertical-align:top">Observación:</td>
+      <td style="border:1px solid #bbb;padding:3px 8px;width:90px;font-weight:700;vertical-align:top;font-size:10.5px">Observación:</td>
       <td style="border:1px solid #bbb;padding:3px 8px;font-size:10.5px">${obsText}</td>
     </tr>
   </table>
 
-  <!-- ── PROMEDIO GENERAL + FALLAS ── -->
-  <table style="width:100%;border-collapse:collapse;margin-top:5px">
+  <!-- PROMEDIO GENERAL + FALLAS + EXCUSAS -->
+  <table style="width:100%;border-collapse:collapse;margin-top:6px">
     <tr>
-      <td style="padding:3px 0;width:200px"></td>
-      <td style="padding:3px 6px;font-size:11px;font-weight:700;text-align:right">PROMEDIO GENERAL:</td>
-      <td style="padding:3px 8px;font-size:13px;font-weight:900;color:${pg>0&&pg<3?'#c00':'#111'}">${pg>0?fmt(pg):'—'}</td>
-    </tr>
-  </table>
-  <table style="border-collapse:collapse;margin-top:3px;font-size:10.5px">
-    <tr>
-      <td style="padding:2px 4px;width:80px"></td>
-      <td style="padding:2px 4px"></td>
-      <td style="padding:2px 4px"></td>
-      <td style="border:1px solid #bbb;padding:2px 10px;background:${C1};color:#fff;font-weight:600;text-align:center">1p</td>
-      <td style="border:1px solid #bbb;padding:2px 10px;background:${C1};color:#fff;font-weight:600;text-align:center">2p</td>
-      <td style="border:1px solid #bbb;padding:2px 10px;background:${C1};color:#fff;font-weight:600;text-align:center">3p</td>
-      <td style="border:1px solid #bbb;padding:2px 10px;background:${C1};color:#fff;font-weight:600;text-align:center">4p</td>
-    </tr>
-    <tr>
-      <td style="padding:2px 4px"></td>
-      <td style="padding:2px 4px"></td>
-      <td style="padding:2px 10px;font-weight:700;text-align:right">Fallas</td>
-      <td style="border:1px solid #bbb;padding:2px 10px;text-align:center;font-weight:700">${fallasPerPer[0]||0}</td>
-      <td style="border:1px solid #bbb;padding:2px 10px;text-align:center;font-weight:700">${fallasPerPer[1]||0}</td>
-      <td style="border:1px solid #bbb;padding:2px 10px;text-align:center;font-weight:700">${fallasPerPer[2]||0}</td>
-      <td style="border:1px solid #bbb;padding:2px 10px;text-align:center;font-weight:700">${fallasPerPer[3]||0}</td>
-    </tr>
-    <tr>
-      <td colspan="2"></td>
-      <td style="padding:2px 10px;font-size:10px;text-align:right">Excusar - SI - NO</td>
-      <td colspan="4"></td>
+      <!-- Promedio alineado a la derecha sobre las columnas de periodo -->
+      <td style="width:55%"></td>
+      <td colspan="5" style="text-align:right;padding:2px 4px;font-size:11px;font-weight:700">
+        PROMEDIO GENERAL: <span style="font-size:13px;font-weight:900;color:${pg>0&&pg<3?'#c00':'#111'}">${pg>0?fmt(pg):'—'}</span>
+      </td>
     </tr>
   </table>
 
-  <!-- ── TABLA DE EQUIVALENCIA ── -->
+  <!-- Tabla Fallas + Excusas juntas -->
+  <table style="border-collapse:collapse;margin-top:4px;font-size:10.5px;width:100%">
+    <tr>
+      <td style="width:55%"></td>
+      <td style="border:1px solid #bbb;padding:3px 8px;background:${C1};color:#fff;font-weight:600;text-align:center;width:60px">1p</td>
+      <td style="border:1px solid #bbb;padding:3px 8px;background:${C1};color:#fff;font-weight:600;text-align:center;width:60px">2p</td>
+      <td style="border:1px solid #bbb;padding:3px 8px;background:${C1};color:#fff;font-weight:600;text-align:center;width:60px">3p</td>
+      <td style="border:1px solid #bbb;padding:3px 8px;background:${C1};color:#fff;font-weight:600;text-align:center;width:60px">4p</td>
+    </tr>
+    <tr>
+      <td style="padding:2px 8px;text-align:right;font-weight:700">Fallas</td>
+      <td style="border:1px solid #bbb;padding:3px 8px;text-align:center;font-weight:700">${fallasPerPer[0]||0}</td>
+      <td style="border:1px solid #bbb;padding:3px 8px;text-align:center;font-weight:700">${fallasPerPer[1]||0}</td>
+      <td style="border:1px solid #bbb;padding:3px 8px;text-align:center;font-weight:700">${fallasPerPer[2]||0}</td>
+      <td style="border:1px solid #bbb;padding:3px 8px;text-align:center;font-weight:700">${fallasPerPer[3]||0}</td>
+    </tr>
+    <tr>
+      <td style="padding:2px 8px;text-align:right;font-size:10px;color:#555">Excusar - SI - NO</td>
+      <td style="border:1px solid #bbb;padding:3px 8px;text-align:center;font-size:10px;color:#333">${excusasPerPer[0]||0}</td>
+      <td style="border:1px solid #bbb;padding:3px 8px;text-align:center;font-size:10px;color:#333">${excusasPerPer[1]||0}</td>
+      <td style="border:1px solid #bbb;padding:3px 8px;text-align:center;font-size:10px;color:#333">${excusasPerPer[2]||0}</td>
+      <td style="border:1px solid #bbb;padding:3px 8px;text-align:center;font-size:10px;color:#333">${excusasPerPer[3]||0}</td>
+    </tr>
+  </table>
+
+  <!-- TABLA DE EQUIVALENCIA -->
   <div style="margin-top:8px;font-size:10.5px;font-weight:700;text-align:center;border:1px solid #bbb;padding:3px;background:#f0f0f0">TABLA DE EQUIVALENCIA</div>
   ${tablaEq}
 
