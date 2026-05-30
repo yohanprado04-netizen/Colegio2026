@@ -269,44 +269,27 @@ function getAreasDelColegio(ciclo){
 function getAreaMatsMap(eid){
   const mats = getMats(eid);
   const e = DB.ests.find(x=>x.id===eid);
-  const salon = e?.salon||'';
-  const ciclo = cicloOf(salon);
+  const ciclo = cicloOf(e?.salon||'');
   const matDocs = DB.materiasDocs||[];
 
   // Áreas asignadas al salón; si el salón no tiene áreas propias, no heredar globales
-  const areasEnSalon = (DB.salAreas||{})[salon] || [];
+  const areasEnSalon = (DB.salAreas||{})[e?.salon||''] || [];
   const areasAplicables = areasEnSalon; // solo las del salón, nunca las globales
 
   if(!areasAplicables.length) return { '_sinArea': mats };
   const map = {};
   areasAplicables.forEach(nombre=>{ map[nombre]=[]; });
 
-  // Si el salón tiene asignación propia de materias por área (CEPA), usarla
-  const salAreaMatsDelSalon = (DB.salAreaMats||{})[salon];
-  if(salAreaMatsDelSalon){
-    mats.forEach(m=>{
-      let asignada=false;
-      for(const areaNombre of areasAplicables){
-        if((salAreaMatsDelSalon[areaNombre]||[]).includes(m)){
-          map[areaNombre].push(m);
-          asignada=true;
-          break;
-        }
-      }
-      if(!asignada){ if(!map['_sinArea']) map['_sinArea']=[]; map['_sinArea'].push(m); }
-    });
-  } else {
-    mats.forEach(m=>{
-      const doc = matDocs.find(d=>d.nombre===m && d.ciclo===ciclo);
-      const areaNombre = doc?.areaNombre||'';
-      if(areaNombre && map[areaNombre]!==undefined){
-        map[areaNombre].push(m);
-      } else {
-        if(!map['_sinArea']) map['_sinArea']=[];
-        map['_sinArea'].push(m);
-      }
-    });
-  }
+  mats.forEach(m=>{
+    const doc = matDocs.find(d=>d.nombre===m && d.ciclo===ciclo);
+    const areaNombre = doc?.areaNombre||'';
+    if(areaNombre && map[areaNombre]!==undefined){
+      map[areaNombre].push(m);
+    } else {
+      if(!map['_sinArea']) map['_sinArea']=[];
+      map['_sinArea'].push(m);
+    }
+  });
   return map;
 }
 
@@ -1331,16 +1314,13 @@ function renderSals(){
           :`<span class="bdg bgy" style="font-size:10px">Sin áreas asignadas</span>`)
         :'';
 
-      // Mostrar áreas con sus materias del salón (usa salAreaMats si existe)
+      // Mostrar áreas con sus materias del salón
       const areasHTML=areasDelSalon.length>0
         ?`<div style="margin-top:10px;border-top:1px solid var(--bd);padding-top:8px">
             <div style="font-size:10px;font-weight:700;color:var(--sl);text-transform:uppercase;margin-bottom:6px">Áreas del salón</div>
             <div style="display:flex;flex-direction:column;gap:5px">
               ${areasDelSalon.map(areaNombre=>{
-                const _salAreaMatsDelSalon=(DB.salAreaMats||{})[s.nombre];
-                const matsDelArea=_salAreaMatsDelSalon&&_salAreaMatsDelSalon[areaNombre]
-                  ?_salAreaMatsDelSalon[areaNombre]
-                  :matsList.filter(m=>{
+                const matsDelArea=matsList.filter(m=>{
                   const d=matDocs.find(x=>x.nombre===m);
                   return d&&d.areaNombre===areaNombre;
                 });
@@ -1367,7 +1347,7 @@ function renderSals(){
             ${areasLabel}
           </div>
           <div style="display:flex;gap:6px;flex-wrap:wrap">
-            <button class="btn xs" style="background:#e0e7ff;color:#3730a3;border:1px solid #a5b4fc" onclick="editSalAreas('${s.nombre}')">📂 Áreas</button>
+            ${hayAreas?`<button class="btn xs" style="background:#e0e7ff;color:#3730a3;border:1px solid #a5b4fc" onclick="editSalAreas('${s.nombre}')">📂 Áreas</button>`:''}
             <button class="btn xs bg" onclick="editSalMats('${s.nombre}')">🎯 Materias</button>
             <button class="btn xs bd" onclick="delSal('${s.nombre}')">🗑</button>
           </div>
@@ -1499,10 +1479,6 @@ async function editSalAreas(sname){
     </label>`;
   }).join('');
 
-  // Materias por área del salón ya guardadas
-  if(!DB.salAreaMats) DB.salAreaMats={};
-  const currentSalAreaMats=(DB.salAreaMats[sname]||{});
-
   const r=await Swal.fire({
     title:`📂 Áreas del Salón ${sname}`,
     width:560,
@@ -1513,7 +1489,7 @@ async function editSalAreas(sname){
       <div style="max-height:380px;overflow-y:auto">${rows}</div>
     </div>`,
     showCancelButton:true,
-    confirmButtonText:'Siguiente: Asignar Materias →',
+    confirmButtonText:'Guardar Áreas',
     cancelButtonText:'Cancelar',
     preConfirm:()=>[...document.querySelectorAll('.sack:checked')].map(c=>c.value)
   });
@@ -1525,57 +1501,7 @@ async function editSalAreas(sname){
   if(!DB.salAreas) DB.salAreas={};
   DB.salAreas[sname]=elegidas;
 
-  // ── Paso 2: asignar materias del salón a cada área elegida ──────────────
-  if(elegidas.length>0){
-    const paso2rows=elegidas.map(areaNombre=>{
-      const curMats=currentSalAreaMats[areaNombre]||[];
-      const matsChk=matsList.map(m=>{
-        const checked=curMats.length?curMats.includes(m):(()=>{
-          const d=matDocs.find(x=>x.nombre===m);
-          return d&&d.areaNombre===areaNombre;
-        })();
-        return`<label style="display:flex;align-items:center;gap:6px;padding:4px 8px;background:var(--bg2);border-radius:6px;border:1px solid var(--bd);cursor:pointer;font-size:12px">
-          <input type="checkbox" class="samck" data-area="${areaNombre}" value="${m}" ${checked?'checked':''}>
-          <span>${m}</span>
-        </label>`;
-      }).join('');
-      return`<div style="margin-bottom:14px">
-        <div style="font-size:13px;font-weight:700;color:#3730a3;margin-bottom:6px">📂 ${areaNombre}</div>
-        <div style="display:flex;flex-wrap:wrap;gap:5px;padding:8px;background:#f5f3ff;border-radius:8px;border:1px solid #ddd6fe">${matsChk}</div>
-      </div>`;
-    }).join('');
-
-    const r2=await Swal.fire({
-      title:`🎯 Materias por Área — Salón ${sname}`,
-      width:620,
-      html:`<div style="text-align:left;font-family:var(--fn)">
-        <div class="al alb" style="margin-bottom:14px;font-size:12px">
-          Asigna las materias de este salón a cada área. Independiente de las globales, se usarán en el boletín.
-        </div>
-        <div style="max-height:420px;overflow-y:auto">${paso2rows}</div>
-      </div>`,
-      showCancelButton:true,
-      confirmButtonText:'Guardar Todo',
-      cancelButtonText:'Omitir',
-      preConfirm:()=>{
-        const asig={};
-        elegidas.forEach(areaNombre=>{
-          asig[areaNombre]=[...document.querySelectorAll(`.samck[data-area="${areaNombre}"]:checked`)].map(c=>c.value);
-        });
-        return asig;
-      }
-    });
-
-    if(r2.isConfirmed){
-      if(!DB.salAreaMats) DB.salAreaMats={};
-      DB.salAreaMats[sname]=r2.value;
-      try{
-        await apiFetch('/api/config/salAreaMats',{method:'PUT',body:JSON.stringify({value:DB.salAreaMats})});
-      }catch(e){ console.warn('Error guardando salAreaMats:',e); }
-    }
-  }
-
-  // Persistir salAreas en config para que sobreviva recargas
+  // Persistir en config para que sobreviva recargas
   try{
     await apiFetch('/api/config/salAreas',{method:'PUT',body:JSON.stringify({value:DB.salAreas})});
   }catch(e){ console.warn('Error guardando salAreas:',e); }
@@ -5484,6 +5410,9 @@ function pgEB(){
 
 function initEB(){
   const e=CU;syncN(e.id);
+  const _esCepa=(CU.colegioNombre||'').toUpperCase().includes('CEPA');
+  const _cepaEstado=(d)=>d===0?'Sin nota':d>=4.6?'DS — Superior':d>=4?'DA — Alto':d>=3.5?'DB — Básica':'DI — Bajo';
+  const _cepaBadge=(d)=>d===0?'bwa':d>=4.6?'bgr':d>=4?'bbl':d>=3.5?'bgy':'brd';
   const pg=gprom(e.id),ps=puestoS(e.id),mp=matPerd(e.id);
   const anoLabel=DB.anoActual||String(new Date().getFullYear());
   const mats=getMats(e.id);
@@ -5547,7 +5476,7 @@ function initEB(){
             <td style="font-family:var(--mn);font-size:12px">${t.c.toFixed(1)}</td>
             <td style="font-family:var(--mn);font-size:12px">${t.r.toFixed(1)}</td>
             <td><span class="${scC(d)}">${fmt(d)}</span></td>
-            <td><span class="bdg ${d>=3?'bgr':'brd'}">${d===0?'Sin nota':d>=3?'Aprobado':'Reprobado'}</span></td>
+            <td><span class="bdg ${_esCepa?_cepaBadge(d):d>=3?'bgr':'brd'}">${_esCepa?_cepaEstado(d):d===0?'Sin nota':d>=3?'Aprobado':'Reprobado'}</span></td>
             <td style="font-size:12px;color:var(--sl2)">${prf?prf.nombre:'Sin asignar'}</td>
           </tr>`;
         });
@@ -5560,7 +5489,7 @@ function initEB(){
           <td style="font-family:var(--mn);font-size:12px">${t.c.toFixed(1)}</td>
           <td style="font-family:var(--mn);font-size:12px">${t.r.toFixed(1)}</td>
           <td><span class="${scC(d)}">${fmt(d)}</span></td>
-          <td><span class="bdg ${d>=3?'bgr':'brd'}">${d===0?'Sin nota':d>=3?'Aprobado':'Reprobado'}</span></td>
+          <td><span class="bdg ${_esCepa?_cepaBadge(d):d>=3?'bgr':'brd'}">${_esCepa?_cepaEstado(d):d===0?'Sin nota':d>=3?'Aprobado':'Reprobado'}</span></td>
           <td style="font-size:12px;color:var(--sl2)">${prf?prf.nombre:'Sin asignar'}</td>
         </tr>`;
       });
@@ -5573,7 +5502,7 @@ function initEB(){
           <td style="font-family:var(--mn);font-size:12px">${t.c.toFixed(1)}</td>
           <td style="font-family:var(--mn);font-size:12px">${t.r.toFixed(1)}</td>
           <td><span class="${scC(d)}">${fmt(d)}</span></td>
-          <td><span class="bdg ${d>=3?'bgr':'brd'}">${d===0?'Sin nota':d>=3?'Aprobado':'Reprobado'}</span></td>
+          <td><span class="bdg ${_esCepa?_cepaBadge(d):d>=3?'bgr':'brd'}">${_esCepa?_cepaEstado(d):d===0?'Sin nota':d>=3?'Aprobado':'Reprobado'}</span></td>
           <td style="font-size:12px;color:var(--sl2)">${prf?prf.nombre:'Sin asignar'}</td>
         </tr>`;
       }).join('');
@@ -6127,12 +6056,6 @@ function dlBoletinUI(estId){
     showConfirmButton:false,showCloseButton:true,width:620});
 }
 
-/**
- * Main PDF generator
- * perFilter: 'TODOS' | encoded period name
- * anno: year string
- * snapData: optional {notas, mats, salon, disciplina, nombre, ti} for deleted students
- */
 // dlBoletinCepa() — Boletín exclusivo COLEGIO CEPA, fiel al Excel
 // Usa getAreaMatsMap() con el fix de normalización de nombres de área
 // Fallas = ausencias en DB.asist dentro del rango DB.drPer[periodo]
@@ -6431,6 +6354,12 @@ function dlBoletinCepa(estId,perFilter,anno,snapData){
   }).from(box).save().then(()=>box.classList.add('hidden'));
 }
 
+/**
+ * Main PDF generator
+ * perFilter: 'TODOS' | encoded period name
+ * anno: year string
+ * snapData: optional {notas, mats, salon, disciplina, nombre, ti} for deleted students
+ */
 function dlBoletin(estId,perFilter,anno,snapData){
   // ── Detectar CEPA y usar su boletín propio ──────────────────────
   if((CU.colegioNombre||'').toUpperCase().includes('CEPA')){
@@ -6546,7 +6475,8 @@ function dlBoletin(estId,perFilter,anno,snapData){
   // ─── Helpers locales de color para boletín (escala de grises) ─────────────
   const bCol = n => { n=+n; if(n===0) return '#aaa'; if(n<3) return '#111'; if(n<4) return '#444'; return '#111'; };
   const bBg  = n => { n=+n; if(n===0) return '#f5f5f5'; if(n<3) return '#f0f0f0'; return '#fff'; };
-  const bDes = n => { n=+n; if(n===0) return '—'; if(n>=4.5) return 'Superior'; if(n>=4) return 'Alto'; if(n>=3) return 'Básico'; return 'Bajo'; };
+  const _isCepaPDF = (CU.colegioNombre||'').toUpperCase().includes('CEPA');
+  const bDes = n => { n=+n; if(n===0) return '—'; if(_isCepaPDF?n>=4.6:n>=4.5) return 'Superior'; if(n>=4) return 'Alto'; if(_isCepaPDF?n>=3.5:n>=3) return 'Básico'; return 'Bajo'; };
 
   // ─── TABLA POR PERIODOS (vista individual) ────────────────────────────────
   let persHTML;
