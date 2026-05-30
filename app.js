@@ -1366,13 +1366,14 @@ function renderSals(){
           <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
             <strong style="font-size:15px">${s.nombre}</strong>
             <span class="bdg bgy">${ebySalon(s.nombre).length} est.</span>
-            ${s.jornada?`<span class="bdg" style="font-size:10px;background:#e0f2fe;color:#0369a1;border:1px solid #7dd3fc;text-transform:capitalize">🕐 ${s.jornada}</span>`:''}
+            ${s.jornada?`<span class="bdg" style="font-size:10px;background:#e0f2fe;color:#0369a1;border:1px solid #7dd3fc;text-transform:capitalize">🕐 ${s.jornada}</span>`:`<span class="bdg" style="font-size:10px;background:#fefce8;color:#854d0e;border:1px solid #fde68a">🕐 Jornada no asignada</span>`}
             ${matsLabel}
             ${areasLabel}
           </div>
           <div style="display:flex;gap:6px;flex-wrap:wrap">
             <button class="btn xs" style="background:#e0e7ff;color:#3730a3;border:1px solid #a5b4fc" onclick="editSalAreas('${s.nombre}')">📂 Áreas</button>
             <button class="btn xs bg" onclick="editSalMats('${s.nombre}')">🎯 Materias</button>
+            <button class="btn xs" style="background:#dcfce7;color:#166534;border:1px solid #86efac" onclick="editSal('${s.nombre}')">✏️ Editar</button>
             <button class="btn xs bd" onclick="delSal('${s.nombre}')">🗑</button>
           </div>
         </div>

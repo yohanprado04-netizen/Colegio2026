@@ -527,6 +527,52 @@ function delSal(n) {
     });
 }
 
+// editSal() — edita jornada de un salón existente
+// ═══════════════════════════════════════════════════════════════════
+async function editSal(sname) {
+  const sal = DB.sals.find(s => s.nombre === sname);
+  if (!sal) { sw('error', 'Salón no encontrado'); return; }
+
+  const jornadaOpts = ['', 'mañana', 'tarde', 'noche'];
+  const jornadaSelect = jornadaOpts.map(j =>
+    `<option value="${j}" ${sal.jornada === j ? 'selected' : ''}>${j || '— Sin asignar —'}</option>`
+  ).join('');
+
+  const { value: formVals, isConfirmed } = await Swal.fire({
+    title: `✏️ Editar Salón: ${sname}`,
+    width: 440,
+    html: `<div style="text-align:left;font-family:var(--fn);display:flex;flex-direction:column;gap:14px;padding:4px 0">
+      <div>
+        <label style="font-size:11px;font-weight:800;text-transform:uppercase;color:var(--sl);display:block;margin-bottom:4px">Jornada</label>
+        <select id="esj" style="width:100%;padding:9px 12px;border:1.5px solid var(--bd);border-radius:8px;font-size:13px;background:#fff">
+          ${jornadaSelect}
+        </select>
+      </div>
+    </div>`,
+    showCancelButton: true,
+    confirmButtonText: '💾 Guardar',
+    cancelButtonText: 'Cancelar',
+    preConfirm: () => ({ jornada: gi('esj').value })
+  });
+
+  if (!isConfirmed) return;
+
+  const nuevaJornada = formVals.jornada;
+  try {
+    await apiFetch(`/api/salones/${encodeURIComponent(sname)}`, {
+      method: 'PUT',
+      body: JSON.stringify({ jornada: nuevaJornada })
+    });
+    sal.jornada = nuevaJornada;
+    renderSals();
+    sw('success',
+      `Salón ${sname} actualizado`,
+      nuevaJornada ? `Jornada: ${nuevaJornada}` : 'Jornada no asignada',
+      2000
+    );
+  } catch (e) { sw('error', 'Error al guardar: ' + e.message); }
+}
+
 // ═══════════════════════════════════════════════════════════════════
 // saveAst() — guarda asistencia
 // ═══════════════════════════════════════════════════════════════════
