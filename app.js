@@ -660,19 +660,17 @@ function estsByCiclo(ciclo){
   });
 }
 function profForMat(mat,salon){
-  /* DB.profs ya viene filtrado por colegioId desde el servidor.
-     Bach: primero buscar en salonMaterias[salon], luego materias globales */
-  const bp=DB.profs.find(p=>{
-    if(p.ciclo!=='bachillerato') return false;
+  /* Busca el prof que da esa materia en ese salón.
+     Funciona para cualquier ciclo — primero busca en salonMaterias, luego fallback. */
+  const byMateria=DB.profs.find(p=>{
     if(!(p.salones||[]).includes(salon)) return false;
     const sm=(p.salonMaterias||{})[salon];
     if(sm&&sm.length) return sm.includes(mat);
-    // Fallback: si no tiene salonMaterias configurado pero tiene la materia en su lista global
     return(p.materias||[]).includes(mat);
   });
-  if(bp) return bp;
-  /* Primaria: cualquier prof asignado al salón */
-  return DB.profs.find(p=>p.ciclo==='primaria'&&(p.salones||[]).includes(salon))||null;
+  if(byMateria) return byMateria;
+  /* Fallback: cualquier prof asignado a este salón */
+  return DB.profs.find(p=>(p.salones||[]).includes(salon))||null;
 }
 function profsInSalon(salon){
   return DB.profs.filter(p=>(p.salones||[]).includes(salon));
@@ -1779,45 +1777,56 @@ function expEstXls(ciclo){
 ============================================================ */
 function pgAPrf(){
   return`<div class="ph"><h2>Profesores</h2><button class="btn xs bg" onclick="showHelp('aprf')" style="margin-top:6px">❓ Ayuda</button></div>
-  <div class="g2">
-    <div class="card"><div class="chd"><span class="cti">📚 Primaria</span>
+  <div class="card">
+    <div class="chd"><span class="cti">👩‍🏫 Todos los Profesores</span>
       <div style="display:flex;gap:8px">
-        <button class="btn bg sm" onclick="abrirCSVPrf('primaria')" title="Carga masiva CSV">📂 CSV</button>
-        <button class="btn bn" onclick="openAddPrf('primaria')" style="padding:8px 18px;font-size:13px;font-weight:700">
+        <button class="btn bg sm" onclick="abrirCSVPrf('primaria')" title="CSV Primaria">📂 CSV</button>
+        <button class="btn bn" onclick="openAddPrf()" style="padding:8px 18px;font-size:13px;font-weight:700">
           ➕ Agregar Profesor
         </button>
-      </div></div><div id="pfP"></div>
+      </div>
     </div>
-    <div class="card"><div class="chd"><span class="cti">🎓 Bachillerato</span>
-      <div style="display:flex;gap:8px">
-        <button class="btn bg sm" onclick="abrirCSVPrf('bachillerato')" title="Carga masiva CSV">📂 CSV</button>
-        <button class="btn bn" onclick="openAddPrf('bachillerato')" style="padding:8px 18px;font-size:13px;font-weight:700">
-          ➕ Agregar Profesor
-        </button>
-      </div></div><div id="pfB"></div>
-    </div>
+    <div id="pfAll"></div>
   </div>`;
 }
 function initAPrf(){renderPrfTbl();}
 function renderPrfTbl(){
-  ['primaria','bachillerato'].forEach(c=>{
-    const el=gi(c==='primaria'?'pfP':'pfB');if(!el) return;
-    const list=DB.profs.filter(p=>p.ciclo===c);
-    if(!list.length){el.innerHTML='<div class="mty" style="padding:20px"><div class="ei">👩‍🏫</div><p>Sin profesores</p></div>';return;}
-    el.innerHTML=`<div class="tw"><table>
-      <thead><tr><th>Nombre</th><th>C.C.</th><th>Salón → Materias</th><th></th></tr></thead>
-      <tbody>${list.map(p=>`<tr>
+  const el=gi('pfAll');if(!el) return;
+  const list=DB.profs;
+  if(!list.length){el.innerHTML='<div class="mty" style="padding:20px"><div class="ei">👩‍🏫</div><p>Sin profesores</p></div>';return;}
+  el.innerHTML=`<div class="tw"><table>
+    <thead><tr>
+      <th>Nombre</th><th>C.C.</th>
+      <th style="width:60px">Ciclo(s)</th>
+      <th>Salón → Materias</th>
+      <th></th>
+    </tr></thead>
+    <tbody>${list.map(p=>{
+      const ciclosDelProf=[...new Set((p.salones||[]).map(s=>cicloOf(s)))];
+      const cicloLabel=ciclosDelProf.length===2
+        ?'<span class="bdg" style="font-size:9px;background:#f3e8ff;color:#7c3aed">Ambos</span>'
+        :ciclosDelProf[0]==='primaria'
+          ?'<span class="bdg bbl" style="font-size:9px">Pri</span>'
+          :ciclosDelProf[0]==='bachillerato'
+            ?'<span class="bdg bte" style="font-size:9px">Bach</span>'
+            :'—';
+      return`<tr>
         <td><strong>${esc(p.nombre)}</strong><br>
           <span style="font-family:var(--mn);font-size:11px;color:var(--sl3)">${esc(p.usuario||"")}</span></td>
         <td style="font-family:var(--mn);font-size:12px">${p.ti||'—'}</td>
+        <td style="text-align:center">${cicloLabel}</td>
         <td style="font-size:12px">
           ${(p.salones||[]).length?`<div style="display:flex;flex-direction:column;gap:4px">
             ${(p.salones||[]).map(s=>{
+              const cicloSal=cicloOf(s);
               const ms=((p.salonMaterias||{})[s]||[]);
+              const salBadge=cicloSal==='primaria'
+                ?`<span class="bdg bbl" style="font-size:10px">${s}</span>`
+                :`<span class="bdg bte" style="font-size:10px">${s}</span>`;
               return`<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
-                <span class="bdg bgy">${s}</span>
-                ${ms.length?ms.map(m=>`<span class="bdg bbl" style="font-size:10px">${m}</span>`).join('')
-                  :'<span style="font-size:10px;color:var(--sl3)">Sin materias asignadas</span>'}
+                ${salBadge}
+                ${ms.length?ms.map(m=>`<span style="font-size:10px;padding:1px 6px;background:#f0fdf4;border:1px solid #86efac;border-radius:4px">${m}</span>`).join('')
+                  :'<span style="font-size:10px;color:var(--sl3)">Sin materias</span>'}
               </div>`;
             }).join('')}
           </div>`:'<span style="color:var(--sl3);font-size:12px">Sin salones</span>'}
@@ -1825,26 +1834,34 @@ function renderPrfTbl(){
         </td>
         <td><div style="display:flex;gap:5px">
           <button class="btn xs bg" onclick="editPrf('${p.id}')">✏️</button>
-          <button class="btn xs bd" onclick="delPrf('${p.id}','${c}')">🗑</button>
+          <button class="btn xs bd" onclick="delPrf('${p.id}')">🗑</button>
         </div></td>
-      </tr>`).join('')}</tbody></table></div>`;
-  });
+      </tr>`;
+    }).join('')}</tbody></table></div>`;
 }
-function openAddPrf(ciclo){
-  const sals=DB.sals.filter(s=>s.ciclo===ciclo);
-  Swal.fire({title:`Nuevo Profesor — ${ciclo==='primaria'?'Primaria':'Bachillerato'}`,width:600,
+function openAddPrf(){
+  /* Mostrar todos los salones del colegio agrupados por ciclo */
+  const salsPri=DB.sals.filter(s=>s.ciclo==='primaria');
+  const salsBach=DB.sals.filter(s=>s.ciclo==='bachillerato');
+  const mkSals=(sals,label)=>sals.length?`
+    <div style="font-size:10px;font-weight:800;text-transform:uppercase;color:var(--sl2);margin:8px 0 4px">${label}</div>
+    <div style="display:flex;flex-wrap:wrap;gap:6px">${sals.map(s=>`
+      <label style="font-size:13px;display:flex;align-items:center;gap:4px;cursor:pointer;
+        background:var(--bg2);padding:5px 9px;border-radius:7px;border:1px solid var(--bd)">
+        <input type="checkbox" class="nps" value="${s.nombre}"> ${s.nombre}</label>`).join('')}
+    </div>`:'';
+  Swal.fire({title:'Nuevo Profesor',width:600,
     html:`<div style="text-align:left;font-family:var(--fn)">
       ${sF([{id:'npn',lb:'Nombre'},{id:'npti',lb:'C.C.',ph:'Ej: 1234567890',attr:'inputmode="numeric" pattern="[0-9]*" oninput="this.value=this.value.replace(/[^0-9]/g,\'\')"'},{id:'npu',lb:'Usuario'},{id:'npp',lb:'Contraseña'}])}
       <div style="text-align:left;margin-bottom:0">
-        <label style="font-size:11px;font-weight:800;text-transform:uppercase;color:var(--sl);display:block;margin-bottom:6px">Salones asignados</label>
-        <div style="display:flex;flex-wrap:wrap;gap:8px">
-          ${sals.map(s=>`<label style="font-size:13px;display:flex;align-items:center;gap:4px;cursor:pointer;
-            background:var(--bg2);padding:5px 9px;border-radius:7px;border:1px solid var(--bd)">
-            <input type="checkbox" class="nps" value="${s.nombre}"> ${s.nombre}</label>`).join('')
-            ||'<p style="font-size:12px;color:var(--sl3)">Sin salones disponibles — créalos primero</p>'}
+        <label style="font-size:11px;font-weight:800;text-transform:uppercase;color:var(--sl);display:block;margin-bottom:4px">Salones asignados</label>
+        <div style="background:var(--bg2);border:1px solid var(--bd);border-radius:8px;padding:10px">
+          ${mkSals(salsPri,'📚 Primaria')}
+          ${mkSals(salsBach,'🎓 Bachillerato')}
+          ${(!salsPri.length&&!salsBach.length)?'<p style="font-size:12px;color:var(--sl3)">Sin salones — créalos primero</p>':''}
         </div>
       </div>
-      <div class="al alb" style="margin-top:12px;font-size:12px">ℹ️ Después podrás asignar qué materia da en cada salón con el botón 🎯.</div>
+      <div class="al alb" style="margin-top:12px;font-size:12px">ℹ️ Puedes asignar salones de cualquier ciclo. Después asigna las materias por salón con 🎯.</div>
     </div>`,
     showCancelButton:true,confirmButtonText:'Guardar',
     preConfirm:()=>{
@@ -1857,6 +1874,9 @@ function openAddPrf(ciclo){
     const d=r.value;
     if(!d.nombre||!d.usuario||!d.password){sw('error','Campos obligatorios vacíos');return;}
     if(uExists(d.usuario)){sw('error','Ese usuario ya existe');return;}
+    /* Determinar ciclo según salones elegidos */
+    const ciclosElegidos=[...new Set(d.salones.map(s=>cicloOf(s)).filter(Boolean))];
+    const ciclo=ciclosElegidos.length===2?'ambos':ciclosElegidos[0]||'primaria';
     try{
       const newProf=await addPrf({id:'prf_'+Date.now(),...d,ciclo});
       const saved=DB.profs[DB.profs.length-1];
@@ -1929,17 +1949,24 @@ function openSalonMaterias(pid,cb){
 
 function editPrf(pid){
   const p=DB.profs.find(x=>x.id===pid);
-  const sals=DB.sals.filter(s=>s.ciclo===p.ciclo);
+  const salsPri=DB.sals.filter(s=>s.ciclo==='primaria');
+  const salsBach=DB.sals.filter(s=>s.ciclo==='bachillerato');
+  const mkEPSals=(sals,label)=>sals.length?`
+    <div style="font-size:10px;font-weight:800;text-transform:uppercase;color:var(--sl2);margin:8px 0 4px">${label}</div>
+    <div style="display:flex;flex-wrap:wrap;gap:6px">${sals.map(s=>`
+      <label style="font-size:13px;display:flex;align-items:center;gap:4px;cursor:pointer;
+        background:var(--bg2);padding:5px 9px;border-radius:7px;border:1px solid var(--bd)">
+        <input type="checkbox" class="eps" value="${s.nombre}" ${(p.salones||[]).includes(s.nombre)?'checked':''}> ${s.nombre}</label>`).join('')}
+    </div>`:'';
   Swal.fire({title:'Editar Profesor',width:600,
     html:`<div style="text-align:left;font-family:var(--fn)">
       ${sF([{id:'epn',lb:'Nombre',val:p.nombre},{id:'epti',lb:'C.C.',val:p.ti||'',ph:'Ej: 1234567890',attr:'inputmode="numeric" pattern="[0-9]*" oninput="this.value=this.value.replace(/[^0-9]/g,\'\')"'},
         {id:'epu',lb:'Usuario',val:p.usuario},{id:'epp',lb:'Nueva Contraseña (dejar vacío para no cambiar)',val:'',tp:'password'}])}
       <div style="text-align:left;margin-bottom:0">
-        <label style="font-size:11px;font-weight:800;text-transform:uppercase;color:var(--sl);display:block;margin-bottom:6px">Salones asignados</label>
-        <div style="display:flex;flex-wrap:wrap;gap:8px">
-          ${sals.map(s=>`<label style="font-size:13px;display:flex;align-items:center;gap:4px;cursor:pointer;
-            background:var(--bg2);padding:5px 9px;border-radius:7px;border:1px solid var(--bd)">
-            <input type="checkbox" class="eps" value="${s.nombre}" ${(p.salones||[]).includes(s.nombre)?'checked':''}> ${s.nombre}</label>`).join('')}
+        <label style="font-size:11px;font-weight:800;text-transform:uppercase;color:var(--sl);display:block;margin-bottom:4px">Salones asignados</label>
+        <div style="background:var(--bg2);border:1px solid var(--bd);border-radius:8px;padding:10px">
+          ${mkEPSals(salsPri,'📚 Primaria')}
+          ${mkEPSals(salsBach,'🎓 Bachillerato')}
         </div>
       </div>
       <div style="margin-top:12px">
@@ -1961,7 +1988,11 @@ function editPrf(pid){
     if(!r.isConfirmed)return;
     const d=r.value;
     p.nombre=d.nombre;p.ti=d.ti;p.usuario=d.usuario;p.salones=d.salones;
-    const upd={nombre:d.nombre,ti:d.ti,usuario:d.usuario,salones:d.salones};
+    /* Recalcular ciclo según salones actuales */
+    const ciclosActuales=[...new Set(d.salones.map(s=>cicloOf(s)).filter(Boolean))];
+    const nuevoCiclo=ciclosActuales.length===2?'ambos':ciclosActuales[0]||p.ciclo||'primaria';
+    p.ciclo=nuevoCiclo;
+    const upd={nombre:d.nombre,ti:d.ti,usuario:d.usuario,salones:d.salones,ciclo:nuevoCiclo};
     if(d.newPwd) upd.password=d.newPwd;
     if(p.salonMaterias){
       Object.keys(p.salonMaterias).forEach(s=>{if(!(p.salones||[]).includes(s))delete p.salonMaterias[s];});
@@ -1973,7 +2004,7 @@ function editPrf(pid){
     }catch(e){sw('error','Error al guardar: '+e.message);}
   });
 }
-function delPrf(pid,ciclo){
+function delPrf(pid){
   const p=DB.profs.find(x=>x.id===pid);
   Swal.fire({title:'¿Eliminar?',text:p.nombre,icon:'warning',showCancelButton:true,
     confirmButtonColor:'#e53e3e'}).then(async r=>{
@@ -3459,7 +3490,8 @@ function pgPH(){
   const excPend=excTotal.filter(x=>!x.respProf).length;
   const pendRec=DB.ext.on?(DB.recs||[]).filter(r=>r.profId===CU.id&&!r.revisado).length:0;
   const perActivo=DB.pers[DB.pers.length-1]||DB.pers[0]||'';
-  const isBach=p.ciclo==='bachillerato';
+  // isBach ya no se usa para controlar la vista — todos los profes usan la misma interfaz
+  const isBach=true; // siempre usa la vista de cards de materias
 
   // Build subject-salon cards para ambos ciclos (primaria y bachillerato)
   const matCards=[];
@@ -4666,7 +4698,8 @@ function dlRptProf(salon,per,matFilter){
 function dlRptXls(salon,per,matFilter){
   const ests=ebySalon(salon);
   if(!ests.length){sw('info','Sin datos','No hay estudiantes en este salón.');return;}
-  let mats=CU.ciclo==='bachillerato'?getProfMatsSalon(CU.id,salon):getMats(ests[0]?.id||'');
+  let mats=getProfMatsSalon(CU.id,salon);
+  if(!mats.length) mats=getMats(ests[0]?.id||'');
   if(matFilter) mats=[matFilter];
   const fechaGen=new Date().toLocaleDateString('es-CO');
   const wb=XLSX.utils.book_new();
@@ -4958,7 +4991,7 @@ function pgPRec(){
     const matsProf=getProfMatsSalon(CU.id,salon);
     ebySalon(salon).forEach(est=>{
       const mp=matPerd(est.id);
-      const misMateriasPerdidas=mp.filter(m=>matsProf.includes(m)||(CU.ciclo==='primaria'&&mp.length));
+      const misMateriasPerdidas=mp.filter(m=>matsProf.includes(m));
       if(misMateriasPerdidas.length>=1&&misMateriasPerdidas.length<=2){
         misMateriasPerdidas.forEach(mat=>{
           const planYaEnviado=(DB.planes||[]).find(p=>p.estId===est.id&&p.materia===mat&&p.profId===CU.id);
@@ -5180,7 +5213,7 @@ function abrirEnviarPlanSalon(salon,matsStr){
       const matsProf=getProfMatsSalon(CU.id,salon);
       const estudiantesDestino=ebySalon(salon).filter(est=>{
         const mp=matPerd(est.id);
-        return mp.some(m=>matsProf.includes(m)||(CU.ciclo==='primaria'));
+        return mp.some(m=>matsProf.includes(m));
       });
       const fecha=new Date().toLocaleDateString('es-CO');
       const planId='plan_'+Date.now();
