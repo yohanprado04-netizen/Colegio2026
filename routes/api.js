@@ -76,7 +76,7 @@ router.post('/usuarios', authMiddleware, requireRole('admin', 'superadmin'), asy
     if (d.role === 'est') {
       await EstHist.findOneAndUpdate(
         { id: d.id },
-        { id: d.id, nombre: d.nombre, ti: d.ti || '', salon: d.salon || '',
+{ id: d.id, nombre: d.nombre, ti: d.ti || '', tipoDoc: d.tipoDoc || '', salon: d.salon || '',
           registrado: new Date().toLocaleDateString('es-CO'), activo: true, colegioId: cid },
         { upsert: true }
       );
@@ -121,7 +121,7 @@ router.put('/usuarios/:id', authMiddleware, async (req, res) => {
       update = { ...d };
     } else if (role === 'admin') {
       // Admin puede cambiar datos de usuarios de su colegio pero NO el role ni colegioId
-      const ADMIN_ALLOWED = ['nombre', 'ti', 'usuario', 'password', 'salon', 'salones',
+      const ADMIN_ALLOWED = ['nombre', 'ti', 'tipoDoc', 'usuario', 'password', 'salon', 'salones',
         'ciclo', 'materia', 'materias', 'salonMaterias', 'blocked', 'activo'];
       ADMIN_ALLOWED.forEach(f => { if (d[f] !== undefined) update[f] = d[f]; });
     } else {
@@ -242,37 +242,17 @@ router.put('/salones/:nombre', authMiddleware, requireRole('admin', 'superadmin'
   try {
     // Seguridad: nunca permitir cambiar colegioId desde el body — siempre usar el del token
     const cid = tenantId(req) || req.user.colegioId || '';
-
-    // Construir $set explícito para que campos como jornada='' se persistan correctamente
-    const setFields = {};
-
-    // Campos editables directos
-    if (req.body.nombre    !== undefined) setFields.nombre    = (req.body.nombre || '').trim().toUpperCase();
-    if (req.body.ciclo     !== undefined) setFields.ciclo     = req.body.ciclo;
-    // ──► jornada: guardar siempre (incluso string vacío) para que el valor se persista
-    if (req.body.jornada   !== undefined) setFields.jornada   = req.body.jornada;
-
-    // ──► mats para primaria: si viene array en el body, reemplazar completamente.
-    //     Si el salón es de primaria y viene mats=[] (se quitaron todas las globales),
-    //     se guarda [] indicando "usa sólo las globales" — el frontend filtra según eso.
-    if (Array.isArray(req.body.mats)) {
-      setFields.mats = req.body.mats;
-    }
-
+    const update = { ...req.body };
     // Forzar colegioId e colegioNombre correctos — evita cross-tenant accidental
-    setFields.colegioId     = cid;
-    setFields.colegioNombre = req.user.colegioNombre || req.body.colegioNombre || '';
-
+    update.colegioId     = cid;
+    update.colegioNombre = req.user.colegioNombre || req.body.colegioNombre || '';
     // No permitir cambiar el nombre del salón a uno que ya exista en este colegio
-    if (setFields.nombre && setFields.nombre !== req.params.nombre) {
-      const yaExiste = await Salon.findOne({ nombre: setFields.nombre, colegioId: cid }).lean();
-      if (yaExiste) return res.status(409).json({ error: `El salón "${setFields.nombre}" ya existe en este colegio.` });
+    if (update.nombre && update.nombre !== req.params.nombre) {
+      const yaExiste = await Salon.findOne({ nombre: update.nombre, colegioId: cid }).lean();
+      if (yaExiste) return res.status(409).json({ error: `El salón "${update.nombre}" ya existe en este colegio.` });
     }
-
     const s = await Salon.findOneAndUpdate(
-      { nombre: req.params.nombre, colegioId: cid },
-      { $set: setFields },
-      { new: true, runValidators: true }
+      { nombre: req.params.nombre, colegioId: cid }, update, { new: true }
     );
     if (!s) return res.status(404).json({ error: 'Salón no encontrado' });
     res.json(s);
