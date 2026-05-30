@@ -280,11 +280,19 @@ function getAreaMatsMap(eid){
   const map = {};
   areasAplicables.forEach(nombre=>{ map[nombre]=[]; });
 
+  // Mapa normalizado para comparación sin distinción de mayúsculas/espacios
+  const normalizar = s => (s||'').trim().toUpperCase();
+  const mapNorm = {};
+  areasAplicables.forEach(nombre=>{ mapNorm[normalizar(nombre)] = nombre; });
+
   mats.forEach(m=>{
-    const doc = matDocs.find(d=>d.nombre===m && d.ciclo===ciclo);
-    const areaNombre = doc?.areaNombre||'';
-    if(areaNombre && map[areaNombre]!==undefined){
-      map[areaNombre].push(m);
+    // Buscar doc ignorando ciclo si no hay match exacto (fallback sin filtro de ciclo)
+    let doc = matDocs.find(d=>d.nombre===m && d.ciclo===ciclo);
+    if(!doc) doc = matDocs.find(d=>d.nombre===m);
+    const areaNombreDoc = normalizar(doc?.areaNombre||'');
+    const areaKey = areaNombreDoc ? mapNorm[areaNombreDoc] : undefined;
+    if(areaKey !== undefined){
+      map[areaKey].push(m);
     } else {
       if(!map['_sinArea']) map['_sinArea']=[];
       map['_sinArea'].push(m);
@@ -6061,7 +6069,7 @@ function dlBoletinUI(estId){
  */
 // ═══════════════════════════════════════════════════════════════════
 // dlBoletinCepa() — Boletín exclusivo COLEGIO CEPA, fiel al Excel
-// Columnas: NRO | Asignaturas | I.H | 1p 2p 3p 4p | Def | Desemp. | Fallas
+// Usa getAreaMatsMap() con el fix de normalización de nombres de área
 // Fallas = ausencias en DB.asist dentro del rango DB.drPer[periodo]
 // Excusas = excusas del estudiante cuya fecha cae en el rango del periodo
 // ═══════════════════════════════════════════════════════════════════
@@ -6108,7 +6116,7 @@ function dlBoletinCepa(estId,perFilter,anno,snapData){
     : allPers.filter(p=>p===decodeURIComponent(perFilter));
   if(!pers2render.length){sw('info','Sin datos','No hay notas en este periodo.');return;}
 
-  // ── Helpers ──────────────────────────────────────────────────────
+  // Helpers
   const fmt=n=>(+n===0)?'—':(+n).toFixed(1);
   const desCepa=n=>{n=+n;if(!n)return'—';if(n>=4.6)return'DS';if(n>=4.0)return'DA';if(n>=3.5)return'DB';return'DI';};
   const defMat=m=>{
@@ -6118,26 +6126,20 @@ function dlBoletinCepa(estId,perFilter,anno,snapData){
   };
   const defPer=(m,per)=>{const t=notasDelAno[per]?.[m]||{};return(t.a>0||t.c>0||t.r>0)?def(t):0;};
 
-  // ── Fallas y Excusas por periodo ─────────────────────────────────
-  // Fallas = días ausente en DB.asist dentro del rango de fechas del periodo
-  // Excusas = excusas del estudiante con fecha dentro del rango del periodo
+  // Fallas y Excusas por periodo usando rangos de fechas
   const calcFallasExcusas=(per)=>{
     const rango=DB.drPer?.[per]||null;
     if(!rango||!rango.s||!rango.e) return {fallas:0,excusas:0};
     const inicio=new Date(rango.s+'T00:00:00');
     const fin=new Date(rango.e+'T23:59:59');
-    // Contar fallas (ausencias) en asistencia dentro del rango
     let fallas=0;
     Object.entries(DB.asist||{}).forEach(([fecha,salones])=>{
       const d=new Date(fecha+'T12:00:00');
       if(d<inicio||d>fin) return;
-      // El valor puede ser {salon:{estId:val}} o variaciones
       Object.values(salones||{}).forEach(estuds=>{
-        const val=estuds?.[estId];
-        if(val==='ausente') fallas++;
+        if((estuds||{})[estId]==='ausente') fallas++;
       });
     });
-    // Contar excusas del estudiante en el rango
     const excusas=(DB.exc||[]).filter(x=>{
       const eid2=x.estId||x.eid||'';
       if(eid2!==estId) return false;
@@ -6147,19 +6149,18 @@ function dlBoletinCepa(estId,perFilter,anno,snapData){
     return {fallas,excusas};
   };
 
-  // Los 4 periodos siempre (1p 2p 3p 4p mapeados a allPers[0..3])
   const perMap=allPers.slice(0,4);
   const perStats=perMap.map(per=>per?calcFallasExcusas(per):{fallas:0,excusas:0});
   const fallasPerPer=perStats.map(s=>s.fallas);
   const excusasPerPer=perStats.map(s=>s.excusas);
 
-  // Jornada y colegio
+  // Jornada y logo
   const salonObj=(DB.sals||[]).find(s=>s.nombre===salon)||{};
   const jornadaLabel=salonObj.jornada||'No asignada';
   const _logo=DB.colegioLogo||'';
   const _nom=CU.colegioNombre||'COLEGIO CEPA';
 
-  // Área-materia map
+  // Mapa de áreas — usa getAreaMatsMap que ya tiene el fix de normalización
   const areaMap=(e&&!esHist)?getAreaMatsMap(estId):{};
   const areas=Object.keys(areaMap).filter(k=>k!=='_sinArea'&&(areaMap[k]||[]).length>0);
   const sinArea=areaMap['_sinArea']||[];
@@ -6190,7 +6191,7 @@ function dlBoletinCepa(estId,perFilter,anno,snapData){
     ? 'Recupera la asignatura de '+mpList.map(m=>`${m} ${fmt(defMat(m))}`).join(', ')+'.'
     : '&nbsp;';
 
-  // ── Colores CEPA exactos del Excel ────────────────────────────────
+  // Colores CEPA
   const C1='#333399';
   const CG='#D8D8D8';
   const tdB=`border:1px solid #bbb;padding:3px 5px;font-size:10.5px;`;
@@ -6274,7 +6275,6 @@ function dlBoletinCepa(estId,perFilter,anno,snapData){
     return html;
   };
 
-  // ── Tabla de equivalencia ─────────────────────────────────────────
   const tablaEq=`
     <table style="width:100%;border-collapse:collapse;font-size:9.5px">
       <tr>
@@ -6294,8 +6294,6 @@ function dlBoletinCepa(estId,perFilter,anno,snapData){
   const box=gi('pdfBox');
   box.innerHTML=`
 <div style="font-family:Arial,Helvetica,sans-serif;background:#fff;width:740px;color:#111;padding:0;font-size:11px">
-
-  <!-- ENCABEZADO -->
   <table style="width:100%;border-collapse:collapse;margin-bottom:5px">
     <tr>
       <td style="vertical-align:top;padding:4px 0;width:55%">
@@ -6314,33 +6312,24 @@ function dlBoletinCepa(estId,perFilter,anno,snapData){
       </td>
     </tr>
   </table>
-
-  <!-- TABLA DE CALIFICACIONES -->
   <table style="width:100%;border-collapse:collapse">
     <thead>${thead}</thead>
     <tbody>${buildRows()}</tbody>
   </table>
-
-  <!-- OBSERVACIÓN -->
   <table style="width:100%;border-collapse:collapse;margin-top:5px">
     <tr>
       <td style="border:1px solid #bbb;padding:3px 8px;width:90px;font-weight:700;vertical-align:top;font-size:10.5px">Observación:</td>
       <td style="border:1px solid #bbb;padding:3px 8px;font-size:10.5px">${obsText}</td>
     </tr>
   </table>
-
-  <!-- PROMEDIO GENERAL + FALLAS + EXCUSAS -->
   <table style="width:100%;border-collapse:collapse;margin-top:6px">
     <tr>
-      <!-- Promedio alineado a la derecha sobre las columnas de periodo -->
       <td style="width:55%"></td>
       <td colspan="5" style="text-align:right;padding:2px 4px;font-size:11px;font-weight:700">
         PROMEDIO GENERAL: <span style="font-size:13px;font-weight:900;color:${pg>0&&pg<3?'#c00':'#111'}">${pg>0?fmt(pg):'—'}</span>
       </td>
     </tr>
   </table>
-
-  <!-- Tabla Fallas + Excusas juntas -->
   <table style="border-collapse:collapse;margin-top:4px;font-size:10.5px;width:100%">
     <tr>
       <td style="width:55%"></td>
@@ -6364,11 +6353,8 @@ function dlBoletinCepa(estId,perFilter,anno,snapData){
       <td style="border:1px solid #bbb;padding:3px 8px;text-align:center;font-size:10px;color:#333">${excusasPerPer[3]||0}</td>
     </tr>
   </table>
-
-  <!-- TABLA DE EQUIVALENCIA -->
   <div style="margin-top:8px;font-size:10.5px;font-weight:700;text-align:center;border:1px solid #bbb;padding:3px;background:#f0f0f0">TABLA DE EQUIVALENCIA</div>
   ${tablaEq}
-
 </div>`;
 
   box.classList.remove('hidden');
