@@ -269,27 +269,44 @@ function getAreasDelColegio(ciclo){
 function getAreaMatsMap(eid){
   const mats = getMats(eid);
   const e = DB.ests.find(x=>x.id===eid);
-  const ciclo = cicloOf(e?.salon||'');
+  const salon = e?.salon||'';
+  const ciclo = cicloOf(salon);
   const matDocs = DB.materiasDocs||[];
 
   // Áreas asignadas al salón; si el salón no tiene áreas propias, no heredar globales
-  const areasEnSalon = (DB.salAreas||{})[e?.salon||''] || [];
+  const areasEnSalon = (DB.salAreas||{})[salon] || [];
   const areasAplicables = areasEnSalon; // solo las del salón, nunca las globales
 
   if(!areasAplicables.length) return { '_sinArea': mats };
   const map = {};
   areasAplicables.forEach(nombre=>{ map[nombre]=[]; });
 
-  mats.forEach(m=>{
-    const doc = matDocs.find(d=>d.nombre===m && d.ciclo===ciclo);
-    const areaNombre = doc?.areaNombre||'';
-    if(areaNombre && map[areaNombre]!==undefined){
-      map[areaNombre].push(m);
-    } else {
-      if(!map['_sinArea']) map['_sinArea']=[];
-      map['_sinArea'].push(m);
-    }
-  });
+  // Si el salón tiene asignación propia de materias por área (CEPA), usarla
+  const salAreaMatsDelSalon = (DB.salAreaMats||{})[salon];
+  if(salAreaMatsDelSalon){
+    mats.forEach(m=>{
+      let asignada=false;
+      for(const areaNombre of areasAplicables){
+        if((salAreaMatsDelSalon[areaNombre]||[]).includes(m)){
+          map[areaNombre].push(m);
+          asignada=true;
+          break;
+        }
+      }
+      if(!asignada){ if(!map['_sinArea']) map['_sinArea']=[]; map['_sinArea'].push(m); }
+    });
+  } else {
+    mats.forEach(m=>{
+      const doc = matDocs.find(d=>d.nombre===m && d.ciclo===ciclo);
+      const areaNombre = doc?.areaNombre||'';
+      if(areaNombre && map[areaNombre]!==undefined){
+        map[areaNombre].push(m);
+      } else {
+        if(!map['_sinArea']) map['_sinArea']=[];
+        map['_sinArea'].push(m);
+      }
+    });
+  }
   return map;
 }
 
@@ -1314,13 +1331,16 @@ function renderSals(){
           :`<span class="bdg bgy" style="font-size:10px">Sin áreas asignadas</span>`)
         :'';
 
-      // Mostrar áreas con sus materias del salón
+      // Mostrar áreas con sus materias del salón (usa salAreaMats si existe)
       const areasHTML=areasDelSalon.length>0
         ?`<div style="margin-top:10px;border-top:1px solid var(--bd);padding-top:8px">
             <div style="font-size:10px;font-weight:700;color:var(--sl);text-transform:uppercase;margin-bottom:6px">Áreas del salón</div>
             <div style="display:flex;flex-direction:column;gap:5px">
               ${areasDelSalon.map(areaNombre=>{
-                const matsDelArea=matsList.filter(m=>{
+                const _salAreaMatsDelSalon=(DB.salAreaMats||{})[s.nombre];
+                const matsDelArea=_salAreaMatsDelSalon&&_salAreaMatsDelSalon[areaNombre]
+                  ?_salAreaMatsDelSalon[areaNombre]
+                  :matsList.filter(m=>{
                   const d=matDocs.find(x=>x.nombre===m);
                   return d&&d.areaNombre===areaNombre;
                 });
@@ -1347,7 +1367,7 @@ function renderSals(){
             ${areasLabel}
           </div>
           <div style="display:flex;gap:6px;flex-wrap:wrap">
-            ${hayAreas?`<button class="btn xs" style="background:#e0e7ff;color:#3730a3;border:1px solid #a5b4fc" onclick="editSalAreas('${s.nombre}')">📂 Áreas</button>`:''}
+            <button class="btn xs" style="background:#e0e7ff;color:#3730a3;border:1px solid #a5b4fc" onclick="editSalAreas('${s.nombre}')">📂 Áreas</button>
             <button class="btn xs bg" onclick="editSalMats('${s.nombre}')">🎯 Materias</button>
             <button class="btn xs bd" onclick="delSal('${s.nombre}')">🗑</button>
           </div>
@@ -1479,6 +1499,10 @@ async function editSalAreas(sname){
     </label>`;
   }).join('');
 
+  // Materias por área del salón ya guardadas
+  if(!DB.salAreaMats) DB.salAreaMats={};
+  const currentSalAreaMats=(DB.salAreaMats[sname]||{});
+
   const r=await Swal.fire({
     title:`📂 Áreas del Salón ${sname}`,
     width:560,
@@ -1489,7 +1513,7 @@ async function editSalAreas(sname){
       <div style="max-height:380px;overflow-y:auto">${rows}</div>
     </div>`,
     showCancelButton:true,
-    confirmButtonText:'Guardar Áreas',
+    confirmButtonText:'Siguiente: Asignar Materias →',
     cancelButtonText:'Cancelar',
     preConfirm:()=>[...document.querySelectorAll('.sack:checked')].map(c=>c.value)
   });
@@ -1501,7 +1525,57 @@ async function editSalAreas(sname){
   if(!DB.salAreas) DB.salAreas={};
   DB.salAreas[sname]=elegidas;
 
-  // Persistir en config para que sobreviva recargas
+  // ── Paso 2: asignar materias del salón a cada área elegida ──────────────
+  if(elegidas.length>0){
+    const paso2rows=elegidas.map(areaNombre=>{
+      const curMats=currentSalAreaMats[areaNombre]||[];
+      const matsChk=matsList.map(m=>{
+        const checked=curMats.length?curMats.includes(m):(()=>{
+          const d=matDocs.find(x=>x.nombre===m);
+          return d&&d.areaNombre===areaNombre;
+        })();
+        return`<label style="display:flex;align-items:center;gap:6px;padding:4px 8px;background:var(--bg2);border-radius:6px;border:1px solid var(--bd);cursor:pointer;font-size:12px">
+          <input type="checkbox" class="samck" data-area="${areaNombre}" value="${m}" ${checked?'checked':''}>
+          <span>${m}</span>
+        </label>`;
+      }).join('');
+      return`<div style="margin-bottom:14px">
+        <div style="font-size:13px;font-weight:700;color:#3730a3;margin-bottom:6px">📂 ${areaNombre}</div>
+        <div style="display:flex;flex-wrap:wrap;gap:5px;padding:8px;background:#f5f3ff;border-radius:8px;border:1px solid #ddd6fe">${matsChk}</div>
+      </div>`;
+    }).join('');
+
+    const r2=await Swal.fire({
+      title:`🎯 Materias por Área — Salón ${sname}`,
+      width:620,
+      html:`<div style="text-align:left;font-family:var(--fn)">
+        <div class="al alb" style="margin-bottom:14px;font-size:12px">
+          Asigna las materias de este salón a cada área. Independiente de las globales, se usarán en el boletín.
+        </div>
+        <div style="max-height:420px;overflow-y:auto">${paso2rows}</div>
+      </div>`,
+      showCancelButton:true,
+      confirmButtonText:'Guardar Todo',
+      cancelButtonText:'Omitir',
+      preConfirm:()=>{
+        const asig={};
+        elegidas.forEach(areaNombre=>{
+          asig[areaNombre]=[...document.querySelectorAll(`.samck[data-area="${areaNombre}"]:checked`)].map(c=>c.value);
+        });
+        return asig;
+      }
+    });
+
+    if(r2.isConfirmed){
+      if(!DB.salAreaMats) DB.salAreaMats={};
+      DB.salAreaMats[sname]=r2.value;
+      try{
+        await apiFetch('/api/config/salAreaMats',{method:'PUT',body:JSON.stringify({value:DB.salAreaMats})});
+      }catch(e){ console.warn('Error guardando salAreaMats:',e); }
+    }
+  }
+
+  // Persistir salAreas en config para que sobreviva recargas
   try{
     await apiFetch('/api/config/salAreas',{method:'PUT',body:JSON.stringify({value:DB.salAreas})});
   }catch(e){ console.warn('Error guardando salAreas:',e); }
@@ -5529,54 +5603,6 @@ function initEB(){
       })()}</tbody></table></div></div>`;
   });
 
-  // ── Tabla de Equivalencia CEPA (solo para Colegio CEPA) ──────────────────
-  const _esCepa = (CU.colegioNombre||'').toUpperCase().includes('CEPA');
-  if(_esCepa){
-    h+=`<div class="card" style="border:2px solid #3730a3;margin-top:16px">
-      <div class="chd" style="background:linear-gradient(90deg,#1e1b4b,#3730a3)">
-        <span class="cti" style="color:#fff">📊 Tabla de Equivalencia — Colegio CEPA</span>
-      </div>
-      <div class="tw">
-        <table>
-          <thead>
-            <tr>
-              <th style="background:#1e1b4b;color:#fff">Clasificación</th>
-              <th style="background:#1e1b4b;color:#fff">Abreviatura</th>
-              <th style="background:#1e1b4b;color:#fff">Desempeño</th>
-              <th style="background:#1e1b4b;color:#fff">Escala</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr style="background:#f0fdf4">
-              <td><span class="bdg" style="background:#dcfce7;color:#14532d;font-weight:800">Superior</span></td>
-              <td><strong style="color:#14532d">DS</strong></td>
-              <td style="font-size:12px">Creativo, innovador y puntual, en la presentación de los trabajos</td>
-              <td><span class="sc scb" style="font-size:14px;font-weight:900">4.6 – 5.0</span></td>
-            </tr>
-            <tr style="background:#eff6ff">
-              <td><span class="bdg" style="background:#dbeafe;color:#1e3a8a;font-weight:800">Alto</span></td>
-              <td><strong style="color:#1e3a8a">DA</strong></td>
-              <td style="font-size:12px">Alcanza los logros propuestos en las asignaturas</td>
-              <td><span class="sc scg" style="font-size:14px;font-weight:900">4.0 – 4.5</span></td>
-            </tr>
-            <tr style="background:#fffbeb">
-              <td><span class="bdg" style="background:#fef9c3;color:#78350f;font-weight:800">Básica</span></td>
-              <td><strong style="color:#78350f">DB</strong></td>
-              <td style="font-size:12px">Solo alcanza los niveles necesarios de logros propuestos</td>
-              <td><span class="sc sco" style="font-size:14px;font-weight:900">3.5 – 3.9</span></td>
-            </tr>
-            <tr style="background:#fef2f2">
-              <td><span class="bdg brd" style="font-weight:800">Bajo</span></td>
-              <td><strong style="color:#991b1b">DI</strong></td>
-              <td style="font-size:12px">No desarrolla el mínimo de las actividades curriculares requeridas</td>
-              <td><span class="sc scr" style="font-size:14px;font-weight:900">0.0 – 3.4</span></td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-    </div>`;
-  }
-
   h+=mkBoletinUI(e.id,'est');
   gi('ebB').innerHTML=h;
 }
@@ -6107,7 +6133,310 @@ function dlBoletinUI(estId){
  * anno: year string
  * snapData: optional {notas, mats, salon, disciplina, nombre, ti} for deleted students
  */
+// dlBoletinCepa() — Boletín exclusivo COLEGIO CEPA, fiel al Excel
+// Usa getAreaMatsMap() con el fix de normalización de nombres de área
+// Fallas = ausencias en DB.asist dentro del rango DB.drPer[periodo]
+// Excusas = excusas del estudiante cuya fecha cae en el rango del periodo
+// ═══════════════════════════════════════════════════════════════════
+function dlBoletinCepa(estId,perFilter,anno,snapData){
+  perFilter=perFilter||'TODOS'; anno=anno||String(new Date().getFullYear());
+
+  const e=DB.ests.find(x=>x.id===estId);
+  if(!e&&!snapData){sw('error','Estudiante no encontrado');return;}
+
+  const anoActual=DB.anoActual||String(new Date().getFullYear());
+  const esHist=anno!==anoActual;
+  const notasDelAno=snapData?.notas||(esHist?(DB.notasPorAno?.[anno]?.[estId]||{}):(e?DB.notas[estId]:null))||{};
+  const nombre=snapData?.nombre||e?.nombre||estId;
+  const ti=snapData?.ti||e?.ti||'';
+  const salon=snapData?.salon||(esHist?(DB.salonPorAno?.[anno]?.[estId]||null):null)||e?.salon||'—';
+  const ciclo=cicloOf(salon);
+  const isTodos=perFilter==='TODOS';
+  const allPers=DB.pers||[];
+
+  // Materias
+  let mats;
+  if(snapData?.mats){ mats=snapData.mats; }
+  else if(esHist&&notasDelAno&&Object.keys(notasDelAno).length){
+    const s=new Set();
+    Object.values(notasDelAno).forEach(pd=>{
+      if(!pd||typeof pd!=='object') return;
+      Object.entries(pd).forEach(([k,v])=>{
+        if(k==='disciplina'||k==='conducta'||k.startsWith('_')) return;
+        if(v&&typeof v==='object'&&(v.a>0||v.c>0||v.r>0)) s.add(k);
+      });
+    });
+    mats=s.size>0?[...s].sort((a,b)=>a.localeCompare(b,'es')):(e?getMats(estId):DB.mP);
+  } else { mats=e?getMats(estId):DB.mP; }
+
+  if(e) syncN(estId);
+
+  // Periodos a incluir
+  const pers2render=isTodos
+    ? allPers.filter(per=>{
+        const tn=mats.some(m=>{const t=notasDelAno[per]?.[m];return t&&(t.a>0||t.c>0||t.r>0);});
+        const td=typeof notasDelAno[per]?.disciplina==='number';
+        return tn||td;
+      })
+    : allPers.filter(p=>p===decodeURIComponent(perFilter));
+  if(!pers2render.length){sw('info','Sin datos','No hay notas en este periodo.');return;}
+
+  // Helpers
+  const fmt=n=>(+n===0)?'—':(+n).toFixed(1);
+  const desCepa=n=>{n=+n;if(!n)return'—';if(n>=4.6)return'DS';if(n>=4.0)return'DA';if(n>=3.5)return'DB';return'DI';};
+  const defMat=m=>{
+    const act=pers2render.filter(per=>{const t=notasDelAno[per]?.[m];return t&&(t.a>0||t.c>0||t.r>0);});
+    if(!act.length)return 0;
+    return+(act.reduce((s,p)=>s+def(notasDelAno[p]?.[m]||{a:0,c:0,r:0}),0)/act.length).toFixed(2);
+  };
+  const defPer=(m,per)=>{const t=notasDelAno[per]?.[m]||{};return(t.a>0||t.c>0||t.r>0)?def(t):0;};
+
+  // Fallas y Excusas por periodo usando rangos de fechas
+  const calcFallasExcusas=(per)=>{
+    const rango=DB.drPer?.[per]||null;
+    if(!rango||!rango.s||!rango.e) return {fallas:0,excusas:0};
+    const inicio=new Date(rango.s+'T00:00:00');
+    const fin=new Date(rango.e+'T23:59:59');
+    let fallas=0;
+    Object.entries(DB.asist||{}).forEach(([fecha,salones])=>{
+      const d=new Date(fecha+'T12:00:00');
+      if(d<inicio||d>fin) return;
+      Object.values(salones||{}).forEach(estuds=>{
+        if((estuds||{})[estId]==='ausente') fallas++;
+      });
+    });
+    const excusas=(DB.exc||[]).filter(x=>{
+      const eid2=x.estId||x.eid||'';
+      if(eid2!==estId) return false;
+      const d=new Date((x.fecha||'')+'T12:00:00');
+      return d>=inicio&&d<=fin;
+    }).length;
+    return {fallas,excusas};
+  };
+
+  const perMap=allPers.slice(0,4);
+  const perStats=perMap.map(per=>per?calcFallasExcusas(per):{fallas:0,excusas:0});
+  const fallasPerPer=perStats.map(s=>s.fallas);
+  const excusasPerPer=perStats.map(s=>s.excusas);
+
+  // Jornada y logo
+  const salonObj=(DB.sals||[]).find(s=>s.nombre===salon)||{};
+  const jornadaLabel=salonObj.jornada||'No asignada';
+  const _logo=DB.colegioLogo||'';
+  const _nom=CU.colegioNombre||'COLEGIO CEPA';
+
+  // Mapa de áreas — usa getAreaMatsMap que ya tiene el fix de normalización
+  const areaMap=(e&&!esHist)?getAreaMatsMap(estId):{};
+  const areas=Object.keys(areaMap).filter(k=>k!=='_sinArea'&&(areaMap[k]||[]).length>0);
+  const sinArea=areaMap['_sinArea']||[];
+  const useAreas=areas.length>0;
+
+  // Promedio general
+  const pgCalc=()=>{
+    const vals=pers2render.map(per=>{
+      const ds=mats.map(m=>defPer(m,per)).filter(v=>v>0);
+      return ds.length?+(ds.reduce((s,v)=>s+v,0)/ds.length).toFixed(2):0;
+    }).filter(v=>v>0);
+    return vals.length?+(vals.reduce((a,b,_,arr)=>a+b/arr.length,0)).toFixed(2):0;
+  };
+  const pg=(e&&!esHist)?gprom(estId):pgCalc();
+
+  // Disciplina
+  const discPers=perMap.map(per=>{
+    if(!per)return null;
+    const dv=notasDelAno[per]?.disciplina??notasDelAno[per]?._disciplina??null;
+    return typeof dv==='number'?dv:null;
+  });
+  const discVals=discPers.filter(v=>v!==null);
+  const discProm=discVals.length?+(discVals.reduce((s,v)=>s+v,0)/discVals.length).toFixed(2):null;
+
+  // Observación — materias con def < 3.0
+  const mpList=mats.filter(m=>{const d=defMat(m);return d>0&&d<3.0;});
+  const obsText=mpList.length
+    ? 'Recupera la asignatura de '+mpList.map(m=>`${m} ${fmt(defMat(m))}`).join(', ')+'.'
+    : '&nbsp;';
+
+  // Colores CEPA
+  const C1='#333399';
+  const CG='#D8D8D8';
+  const tdB=`border:1px solid #bbb;padding:3px 5px;font-size:10.5px;`;
+  const tdBG=`border:1px solid #999;padding:3px 5px;font-size:10.5px;background:${CG};`;
+  const thS=`border:1px solid #22226a;padding:4px 5px;font-size:10px;background:${C1};color:#fff;text-align:center;font-weight:600;`;
+
+  const thead=`<tr>
+    <th style="${thS}width:28px">NRO</th>
+    <th colspan="2" style="${thS}text-align:left">ASIGNATURAS</th>
+    <th style="${thS}width:28px">I.H</th>
+    <th style="${thS}width:32px">1P</th>
+    <th style="${thS}width:32px">2P</th>
+    <th style="${thS}width:32px">3P</th>
+    <th style="${thS}width:32px">4P</th>
+    <th style="${thS}width:34px">DEF</th>
+    <th style="${thS}width:40px">DESEMP.</th>
+    <th style="${thS}width:36px">FALLAS</th>
+  </tr>`;
+
+  const buildRows=()=>{
+    let html='';
+    const renderArea=(label,matsArr,idx)=>{
+      if(!matsArr.length)return'';
+      html+=`<tr>
+        <td style="${tdBG}text-align:center;font-weight:700">${idx}</td>
+        <td colspan="2" style="${tdBG}font-weight:700;text-transform:uppercase">${esc(label)}</td>
+        <td style="${tdBG}"></td>
+        <td style="${tdBG}"></td><td style="${tdBG}"></td><td style="${tdBG}"></td><td style="${tdBG}"></td>
+        <td style="${tdBG}"></td><td style="${tdBG}"></td><td style="${tdBG}"></td>
+      </tr>`;
+      matsArr.forEach((m,mi)=>{
+        const sub=`${idx}.${mi+1}`;
+        const df=defMat(m);
+        const p1=defPer(m,perMap[0]);const p2=defPer(m,perMap[1]);
+        const p3=defPer(m,perMap[2]);const p4=defPer(m,perMap[3]);
+        const fp=v=>v>0?`<strong>${fmt(v)}</strong>`:'';
+        html+=`<tr>
+          <td style="${tdB}text-align:center;color:#555">${sub}</td>
+          <td colspan="2" style="${tdB}">${esc(m)}</td>
+          <td style="${tdB}text-align:center;color:#666"></td>
+          <td style="${tdB}text-align:center">${fp(p1)}</td>
+          <td style="${tdB}text-align:center">${fp(p2)}</td>
+          <td style="${tdB}text-align:center">${fp(p3)}</td>
+          <td style="${tdB}text-align:center">${fp(p4)}</td>
+          <td style="${tdB}text-align:center;font-weight:700;color:${df<3&&df>0?'#c00':'#111'}">${df>0?fmt(df):'—'}</td>
+          <td style="${tdB}text-align:center;font-size:9.5px">${df>0?desCepa(df):'—'}</td>
+          <td style="${tdB}text-align:center;color:#777"></td>
+        </tr>`;
+      });
+    };
+
+    if(useAreas){
+      areas.forEach((a,i)=>renderArea(a,areaMap[a]||[],i+1));
+      if(sinArea.length)renderArea('SIN ÁREA',sinArea,areas.length+1);
+    } else {
+      renderArea('ASIGNATURAS',mats,1);
+    }
+
+    // COMPORTAMIENTO SOCIAL
+    const aIdx=useAreas?areas.length+(sinArea.length?2:1):2;
+    html+=`<tr>
+      <td style="${tdBG}text-align:center;font-weight:700">${aIdx}</td>
+      <td colspan="2" style="${tdBG}font-weight:700;text-transform:uppercase">COMPORTAMIENTO SOCIAL</td>
+      <td style="${tdBG}"></td>
+      <td style="${tdBG}"></td><td style="${tdBG}"></td><td style="${tdBG}"></td><td style="${tdBG}"></td>
+      <td style="${tdBG}"></td><td style="${tdBG}"></td><td style="${tdBG}"></td>
+    </tr>`;
+    const fd=v=>v!==null?`<strong>${fmt(v)}</strong>`:'';
+    html+=`<tr>
+      <td style="${tdB}text-align:center;color:#555">${aIdx}.1</td>
+      <td colspan="2" style="${tdB}">Disciplina</td>
+      <td style="${tdB}text-align:center;color:#666">0</td>
+      <td style="${tdB}text-align:center">${fd(discPers[0])}</td>
+      <td style="${tdB}text-align:center">${fd(discPers[1])}</td>
+      <td style="${tdB}text-align:center">${fd(discPers[2])}</td>
+      <td style="${tdB}text-align:center">${fd(discPers[3])}</td>
+      <td style="${tdB}text-align:center;font-weight:700">${discProm!==null?fmt(discProm):'—'}</td>
+      <td style="${tdB}text-align:center;font-size:9.5px">${discProm!==null?desCepa(discProm):'—'}</td>
+      <td style="${tdB}"></td>
+    </tr>`;
+    return html;
+  };
+
+  const tablaEq=`
+    <table style="width:100%;border-collapse:collapse;font-size:9.5px">
+      <tr>
+        <td style="border:1px solid #aaa;padding:3px 8px;text-align:center;font-weight:700">CLASIFICACION</td>
+        <td style="border:1px solid #aaa;padding:3px 8px;text-align:center;font-weight:700">ABREVIATURA</td>
+        <td style="border:1px solid #aaa;padding:3px 12px;font-weight:700">DESEMPEÑO</td>
+        <td style="border:1px solid #aaa;padding:3px 8px;text-align:center;font-weight:700">ESCALA</td>
+      </tr>
+      <tr><td style="border:1px solid #aaa;padding:2px 8px;text-align:center">Superior</td><td style="border:1px solid #aaa;padding:2px 8px;text-align:center">DS</td><td style="border:1px solid #aaa;padding:2px 12px">Creativo, innovador y puntual, en la presentación de los trabajos</td><td style="border:1px solid #aaa;padding:2px 8px;text-align:center">4.6 - 5.0</td></tr>
+      <tr style="background:#f7f7f7"><td style="border:1px solid #aaa;padding:2px 8px;text-align:center">Alto</td><td style="border:1px solid #aaa;padding:2px 8px;text-align:center">DA</td><td style="border:1px solid #aaa;padding:2px 12px">Alcanza los logros propuestos en las asignaturas</td><td style="border:1px solid #aaa;padding:2px 8px;text-align:center">4.0 - 4.5</td></tr>
+      <tr><td style="border:1px solid #aaa;padding:2px 8px;text-align:center">Basica</td><td style="border:1px solid #aaa;padding:2px 8px;text-align:center">DB</td><td style="border:1px solid #aaa;padding:2px 12px">Solo Alcanzo los niveles necesarios de logros propuestos</td><td style="border:1px solid #aaa;padding:2px 8px;text-align:center">3.5 - 3.9</td></tr>
+      <tr style="background:#f7f7f7"><td style="border:1px solid #aaa;padding:2px 8px;text-align:center">Bajo</td><td style="border:1px solid #aaa;padding:2px 8px;text-align:center">DI</td><td style="border:1px solid #aaa;padding:2px 12px">No desarrollo el mínimo de las actividades curriculares requeridas</td><td style="border:1px solid #aaa;padding:2px 8px;text-align:center">0.0 - 3,4</td></tr>
+    </table>`;
+
+  const suffix=isTodos?'todos':decodeURIComponent(perFilter).replace(/\s+/g,'_');
+
+  const box=gi('pdfBox');
+  box.innerHTML=`
+<div style="font-family:Arial,Helvetica,sans-serif;background:#fff;width:740px;color:#111;padding:0;font-size:11px">
+  <table style="width:100%;border-collapse:collapse;margin-bottom:5px">
+    <tr>
+      <td style="vertical-align:top;padding:4px 0;width:55%">
+        <table style="border-collapse:collapse;font-size:11px">
+          <tr><td style="padding:1px 6px;color:#444">Año</td><td style="padding:1px 14px;font-weight:600">${anno}</td></tr>
+          <tr><td style="padding:1px 6px;color:#444">Grado</td><td style="padding:1px 14px;font-weight:600">${esc(salon)}</td></tr>
+          <tr><td style="padding:1px 6px;color:#444">Jornada</td><td style="padding:1px 14px;font-weight:600;text-transform:capitalize">${jornadaLabel}</td></tr>
+          <tr><td style="padding:1px 6px;color:#444">Periodo</td><td style="padding:1px 14px;font-weight:600">${isTodos?'Todos los periodos':decodeURIComponent(perFilter)}</td></tr>
+          <tr><td style="padding:1px 6px;color:#444">Estudiante</td><td style="padding:1px 14px;font-weight:900;font-size:12px;text-transform:uppercase">${esc(nombre)}</td></tr>
+          <tr><td style="padding:1px 6px;color:#444">Identificación</td><td style="padding:1px 14px">${esc(ti)||'—'}</td></tr>
+        </table>
+      </td>
+      <td style="vertical-align:middle;text-align:center;padding:4px">
+        ${_logo?`<img src="${_logo}" style="max-height:90px;max-width:200px;object-fit:contain" alt="Logo">`:`<div style="font-size:14px;font-weight:900;color:${C1};text-transform:uppercase">${esc(_nom)}</div>`}
+        <div style="font-size:10px;color:#666;margin-top:4px;font-weight:600">BOLETÍN DE CALIFICACIONES</div>
+      </td>
+    </tr>
+  </table>
+  <table style="width:100%;border-collapse:collapse">
+    <thead>${thead}</thead>
+    <tbody>${buildRows()}</tbody>
+  </table>
+  <table style="width:100%;border-collapse:collapse;margin-top:5px">
+    <tr>
+      <td style="border:1px solid #bbb;padding:3px 8px;width:90px;font-weight:700;vertical-align:top;font-size:10.5px">Observación:</td>
+      <td style="border:1px solid #bbb;padding:3px 8px;font-size:10.5px">${obsText}</td>
+    </tr>
+  </table>
+  <table style="width:100%;border-collapse:collapse;margin-top:6px">
+    <tr>
+      <td style="width:55%"></td>
+      <td colspan="5" style="text-align:right;padding:2px 4px;font-size:11px;font-weight:700">
+        PROMEDIO GENERAL: <span style="font-size:13px;font-weight:900;color:${pg>0&&pg<3?'#c00':'#111'}">${pg>0?fmt(pg):'—'}</span>
+      </td>
+    </tr>
+  </table>
+  <table style="border-collapse:collapse;margin-top:4px;font-size:10.5px;width:100%">
+    <tr>
+      <td style="width:55%"></td>
+      <td style="border:1px solid #bbb;padding:3px 8px;background:${C1};color:#fff;font-weight:600;text-align:center;width:60px">1p</td>
+      <td style="border:1px solid #bbb;padding:3px 8px;background:${C1};color:#fff;font-weight:600;text-align:center;width:60px">2p</td>
+      <td style="border:1px solid #bbb;padding:3px 8px;background:${C1};color:#fff;font-weight:600;text-align:center;width:60px">3p</td>
+      <td style="border:1px solid #bbb;padding:3px 8px;background:${C1};color:#fff;font-weight:600;text-align:center;width:60px">4p</td>
+    </tr>
+    <tr>
+      <td style="padding:2px 8px;text-align:right;font-weight:700">Fallas</td>
+      <td style="border:1px solid #bbb;padding:3px 8px;text-align:center;font-weight:700">${fallasPerPer[0]||0}</td>
+      <td style="border:1px solid #bbb;padding:3px 8px;text-align:center;font-weight:700">${fallasPerPer[1]||0}</td>
+      <td style="border:1px solid #bbb;padding:3px 8px;text-align:center;font-weight:700">${fallasPerPer[2]||0}</td>
+      <td style="border:1px solid #bbb;padding:3px 8px;text-align:center;font-weight:700">${fallasPerPer[3]||0}</td>
+    </tr>
+    <tr>
+      <td style="padding:2px 8px;text-align:right;font-size:10px;color:#555">Excusar - SI - NO</td>
+      <td style="border:1px solid #bbb;padding:3px 8px;text-align:center;font-size:10px;color:#333">${excusasPerPer[0]||0}</td>
+      <td style="border:1px solid #bbb;padding:3px 8px;text-align:center;font-size:10px;color:#333">${excusasPerPer[1]||0}</td>
+      <td style="border:1px solid #bbb;padding:3px 8px;text-align:center;font-size:10px;color:#333">${excusasPerPer[2]||0}</td>
+      <td style="border:1px solid #bbb;padding:3px 8px;text-align:center;font-size:10px;color:#333">${excusasPerPer[3]||0}</td>
+    </tr>
+  </table>
+  <div style="margin-top:8px;font-size:10.5px;font-weight:700;text-align:center;border:1px solid #bbb;padding:3px;background:#f0f0f0">TABLA DE EQUIVALENCIA</div>
+  ${tablaEq}
+</div>`;
+
+  box.classList.remove('hidden');
+  html2pdf().set({
+    margin:[3,3,3,3],
+    filename:`boletin_cepa_${nombre.replace(/\s+/g,'_')}_${suffix}_${anno}.pdf`,
+    html2canvas:{scale:2.5,useCORS:true,logging:false,letterRendering:true},
+    jsPDF:{unit:'mm',format:'a4',orientation:'portrait'}
+  }).from(box).save().then(()=>box.classList.add('hidden'));
+}
+
 function dlBoletin(estId,perFilter,anno,snapData){
+  // ── Detectar CEPA y usar su boletín propio ──────────────────────
+  if((CU.colegioNombre||'').toUpperCase().includes('CEPA')){
+    dlBoletinCepa(estId,perFilter,anno,snapData); return;
+  }
+
   perFilter=perFilter||'TODOS';anno=anno||String(new Date().getFullYear());
 
   const e=DB.ests.find(x=>x.id===estId);
@@ -6217,8 +6546,7 @@ function dlBoletin(estId,perFilter,anno,snapData){
   // ─── Helpers locales de color para boletín (escala de grises) ─────────────
   const bCol = n => { n=+n; if(n===0) return '#aaa'; if(n<3) return '#111'; if(n<4) return '#444'; return '#111'; };
   const bBg  = n => { n=+n; if(n===0) return '#f5f5f5'; if(n<3) return '#f0f0f0'; return '#fff'; };
-  const _isCepaBol = (CU.colegioNombre||'').toUpperCase().includes('CEPA');
-  const bDes = n => { n=+n; if(n===0) return '—'; if(_isCepaBol?n>=4.6:n>=4.5) return 'Superior'; if(n>=4) return 'Alto'; if(_isCepaBol?n>=3.5:n>=3) return 'Básico'; return 'Bajo'; };
+  const bDes = n => { n=+n; if(n===0) return '—'; if(n>=4.5) return 'Superior'; if(n>=4) return 'Alto'; if(n>=3) return 'Básico'; return 'Bajo'; };
 
   // ─── TABLA POR PERIODOS (vista individual) ────────────────────────────────
   let persHTML;
@@ -6542,49 +6870,6 @@ function dlBoletin(estId,perFilter,anno,snapData){
       </div>`:''}
       ${persHTML}
     </div>
-    <!-- TABLA DE EQUIVALENCIA CEPA -->
-    ${(CU.colegioNombre||'').toUpperCase().includes('CEPA')?`
-    <div style="margin:16px 24px 0;border:1.5px solid #3730a3;border-radius:6px;overflow:hidden;page-break-inside:avoid">
-      <div style="background:#1e1b4b;color:#fff;padding:7px 14px;font-size:11px;font-weight:800;letter-spacing:.04em">
-        TABLA DE EQUIVALENCIA — COLEGIO CEPA
-      </div>
-      <table style="width:100%;border-collapse:collapse;font-size:10px">
-        <thead>
-          <tr style="background:#ede9fe">
-            <th style="padding:5px 10px;border:1px solid #c4b5fd;text-align:left;font-weight:800;color:#3730a3">CLASIFICACIÓN</th>
-            <th style="padding:5px 10px;border:1px solid #c4b5fd;text-align:center;font-weight:800;color:#3730a3">ABREVIATURA</th>
-            <th style="padding:5px 10px;border:1px solid #c4b5fd;text-align:left;font-weight:800;color:#3730a3">DESEMPEÑO</th>
-            <th style="padding:5px 10px;border:1px solid #c4b5fd;text-align:center;font-weight:800;color:#3730a3">ESCALA</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr style="background:#f0fdf4">
-            <td style="padding:5px 10px;border:1px solid #ddd;font-weight:700;color:#14532d">Superior</td>
-            <td style="padding:5px 10px;border:1px solid #ddd;text-align:center;font-weight:800;color:#14532d">DS</td>
-            <td style="padding:5px 10px;border:1px solid #ddd;color:#333">Creativo, innovador y puntual, en la presentación de los trabajos</td>
-            <td style="padding:5px 10px;border:1px solid #ddd;text-align:center;font-weight:900;color:#14532d">4.6 – 5.0</td>
-          </tr>
-          <tr style="background:#eff6ff">
-            <td style="padding:5px 10px;border:1px solid #ddd;font-weight:700;color:#1e3a8a">Alto</td>
-            <td style="padding:5px 10px;border:1px solid #ddd;text-align:center;font-weight:800;color:#1e3a8a">DA</td>
-            <td style="padding:5px 10px;border:1px solid #ddd;color:#333">Alcanza los logros propuestos en las asignaturas</td>
-            <td style="padding:5px 10px;border:1px solid #ddd;text-align:center;font-weight:900;color:#1e3a8a">4.0 – 4.5</td>
-          </tr>
-          <tr style="background:#fffbeb">
-            <td style="padding:5px 10px;border:1px solid #ddd;font-weight:700;color:#78350f">Básica</td>
-            <td style="padding:5px 10px;border:1px solid #ddd;text-align:center;font-weight:800;color:#78350f">DB</td>
-            <td style="padding:5px 10px;border:1px solid #ddd;color:#333">Solo alcanza los niveles necesarios de logros propuestos</td>
-            <td style="padding:5px 10px;border:1px solid #ddd;text-align:center;font-weight:900;color:#78350f">3.5 – 3.9</td>
-          </tr>
-          <tr style="background:#fef2f2">
-            <td style="padding:5px 10px;border:1px solid #ddd;font-weight:700;color:#991b1b">Bajo</td>
-            <td style="padding:5px 10px;border:1px solid #ddd;text-align:center;font-weight:800;color:#991b1b">DI</td>
-            <td style="padding:5px 10px;border:1px solid #ddd;color:#333">No desarrolla el mínimo de las actividades curriculares requeridas</td>
-            <td style="padding:5px 10px;border:1px solid #ddd;text-align:center;font-weight:900;color:#991b1b">0.0 – 3.4</td>
-          </tr>
-        </tbody>
-      </table>
-    </div>`:''}
     <!-- FIRMAS -->
     <div style="display:flex;justify-content:space-around;margin-top:40px;padding:0 24px 28px">
       <div style="text-align:center">
