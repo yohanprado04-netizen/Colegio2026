@@ -76,7 +76,7 @@ router.post('/usuarios', authMiddleware, requireRole('admin', 'superadmin'), asy
     if (d.role === 'est') {
       await EstHist.findOneAndUpdate(
         { id: d.id },
-        { id: d.id, nombre: d.nombre, ti: d.ti || '', salon: d.salon || '',
+{ id: d.id, nombre: d.nombre, ti: d.ti || '', tipoDoc: d.tipoDoc || '', salon: d.salon || '',
           registrado: new Date().toLocaleDateString('es-CO'), activo: true, colegioId: cid },
         { upsert: true }
       );
@@ -121,7 +121,7 @@ router.put('/usuarios/:id', authMiddleware, async (req, res) => {
       update = { ...d };
     } else if (role === 'admin') {
       // Admin puede cambiar datos de usuarios de su colegio pero NO el role ni colegioId
-      const ADMIN_ALLOWED = ['nombre', 'ti', 'usuario', 'password', 'salon', 'salones',
+      const ADMIN_ALLOWED = ['nombre', 'ti', 'tipoDoc', 'usuario', 'password', 'salon', 'salones',
         'ciclo', 'materia', 'materias', 'salonMaterias', 'blocked', 'activo'];
       ADMIN_ALLOWED.forEach(f => { if (d[f] !== undefined) update[f] = d[f]; });
     } else {
@@ -492,25 +492,6 @@ router.put('/notas/:estId/:periodo/:materia', authMiddleware, async (req, res) =
       }).lean();
       if (!est || !(req.user.salones || []).includes(est.salon))
         return res.status(403).json({ error: 'Sin autorización para este estudiante' });
-
-      // ── Lógica bachillerato: validar materia por salón ───────────────────────
-      // Si el profe tiene salonMaterias definido para el salón del estudiante,
-      // solo puede poner notas en esas materias. Esto aplica para colegios de
-      // bachillerato donde cada profe enseña materias distintas por salón.
-      // (En primaria salonMaterias está vacío, la validación se salta automáticamente)
-      const smProfe = req.user.salonMaterias || {};
-      const salonEst = est.salon || '';
-      const matsPermitidas = smProfe[salonEst];
-      if (matsPermitidas && Array.isArray(matsPermitidas) && matsPermitidas.length > 0) {
-        // materiaRaw es el nombre original (sin sanitizar puntos)
-        if (!matsPermitidas.includes(materiaRaw)) {
-          return res.status(403).json({
-            error: `No tienes permiso para calificar "${materiaRaw}" en el salón "${salonEst}". Solo puedes calificar: ${matsPermitidas.join(', ')}.`
-          });
-        }
-      }
-      // ────────────────────────────────────────────────────────────────────────
-
       // Auto-reparar colegioId si está vacío
       if (est && (!est.colegioId || est.colegioId === '') && cid) {
         Usuario.updateOne({ id: estId }, { $set: { colegioId: cid, colegioNombre: req.user.colegioNombre || '' } }).catch(() => {});
