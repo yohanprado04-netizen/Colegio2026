@@ -168,7 +168,6 @@ async function dbLoad() {
       DB.areas      = DB.areas      || [];
       DB.materiasDocs = DB.materiasDocs || [];
       DB.salAreas   = DB.salAreas   || {};
-      DB.salAreaMats = DB.salAreaMats || {};
       DB.comunicados = DB.comunicados || [];
       DB.sals.forEach(s => { if (!Array.isArray(s.mats)) s.mats = []; });
       if(typeof sortSals==='function') sortSals();
@@ -205,7 +204,7 @@ function dbSave() {
 
 async function _saveConfigBg() {
   try {
-    const cfgKeys = ['mP', 'mB', 'pers', 'dr', 'drPer', 'ext', 'anoActual', 'notaPct', 'salAreas', 'salAreaMats'];
+    const cfgKeys = ['mP', 'mB', 'pers', 'dr', 'drPer', 'ext', 'anoActual', 'notaPct', 'salAreas'];
     await Promise.all(cfgKeys.map(k =>
       apiFetch(`/api/config/${k}`, {
         method: 'PUT',
@@ -1139,6 +1138,14 @@ async function saveAno() {
 async function addPrf(data) {
   try {
     if (!data.id) data.id = 'prf_' + Date.now();
+    // Calcular ciclo automáticamente según los salones asignados
+    if (!data.ciclo || data.ciclo === '') {
+      const ciclosAsig = [...new Set((data.salones||[]).map(s => {
+        const sal = (DB.sals||[]).find(x => x.nombre === s);
+        return sal?.ciclo || '';
+      }).filter(Boolean))];
+      data.ciclo = ciclosAsig.length === 2 ? 'ambos' : ciclosAsig[0] || 'primaria';
+    }
     const newProf = await apiFetch('/api/usuarios', {
       method: 'POST',
       body: JSON.stringify({ ...data, role: 'profe', blocked: false, materias: [], materia: '', salonMaterias: {} })

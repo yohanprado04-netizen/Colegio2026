@@ -181,7 +181,6 @@ function getMats(eid){
 function getSalonMats(salon){
   const set=new Set();
   DB.profs.forEach(p=>{
-    if(p.ciclo!=='bachillerato') return;
     const sm=p.salonMaterias||{};
     if(sm[salon]) sm[salon].forEach(m=>set.add(m));
     else if((p.salones||[]).includes(salon)&&(p.materias||[]).length)
@@ -190,22 +189,24 @@ function getSalonMats(salon){
   return[...set];
 }
 
-/* Get materias a specific professor teaches in a specific salon */
+/* Get materias a specific professor teaches in a specific salon.
+   Primaria y bachillerato funcionan exactamente igual:
+   salonMaterias[salon] tiene prioridad; si no existe, usa la lista global. */
 function getProfMatsSalon(profId,salon){
   const p=DB.profs.find(x=>x.id===profId);if(!p)return[];
-  /* Check if salon has its own custom subjects */
   const sal=DB.sals.find(s=>s.nombre===salon);
-  if(sal?.mats&&sal.mats.length){
-    if(p.ciclo==='primaria') return[...sal.mats];
-    /* Bach: intersect prof's salonMaterias with salon's mats */
-    const sm=(p.salonMaterias||{})[salon]||[];
-    const filtered=sm.filter(m=>sal.mats.includes(m));
-    return filtered.length?filtered:sm;
+  const sm=(p.salonMaterias||{})[salon];
+  if(sm&&sm.length){
+    // Si el salón tiene lista propia, intersectar para coherencia
+    if(sal?.mats?.length){ const f=sm.filter(m=>sal.mats.includes(m)); return f.length?f:sm; }
+    return sm;
   }
-  if(p.ciclo==='primaria') return getMats(DB.ests.find(e=>e.salon===salon)?.id||'');
-  const sm=p.salonMaterias||{};
-  if(sm[salon]&&sm[salon].length) return sm[salon];
-  return p.materias||[];
+  // Fallback: materias del salón o globales del ciclo
+  if(sal?.mats?.length) return[...sal.mats];
+  const ciclo=sal?.ciclo||cicloOf(salon);
+  const globalMats=getMats(DB.ests.find(e=>e.salon===salon)?.id||'');
+  if(globalMats.length) return globalMats;
+  return ciclo==='primaria'?[...DB.mP]:[...DB.mB];
 }
 
 /* Definitiva dinámica — usa DB.notaPct configurado por el superadmin por colegio */
@@ -280,7 +281,7 @@ function getAreaMatsMap(eid){
   const map = {};
   areasAplicables.forEach(nombre=>{ map[nombre]=[]; });
 
-  // Si el salón tiene materias por área definidas específicamente (salAreaMats), usarlas
+  // Si el salón tiene materias por área definidas (salAreaMats del Paso 2), usarlas primero
   const salAreaMatsDelSalon = (DB.salAreaMats||{})[e?.salon||''];
   if(salAreaMatsDelSalon){
     mats.forEach(m=>{
@@ -298,6 +299,7 @@ function getAreaMatsMap(eid){
       }
     });
   } else {
+    // Fallback: asignar por matDocs globales
     mats.forEach(m=>{
       const doc = matDocs.find(d=>d.nombre===m && d.ciclo===ciclo);
       const areaNombre = doc?.areaNombre||'';
@@ -678,19 +680,17 @@ function estsByCiclo(ciclo){
   });
 }
 function profForMat(mat,salon){
-  /* DB.profs ya viene filtrado por colegioId desde el servidor.
-     Bach: primero buscar en salonMaterias[salon], luego materias globales */
-  const bp=DB.profs.find(p=>{
-    if(p.ciclo!=='bachillerato') return false;
+  /* Busca el prof que da esa materia en ese salón.
+     Funciona para cualquier ciclo — primero busca en salonMaterias, luego fallback. */
+  const byMateria=DB.profs.find(p=>{
     if(!(p.salones||[]).includes(salon)) return false;
     const sm=(p.salonMaterias||{})[salon];
     if(sm&&sm.length) return sm.includes(mat);
-    // Fallback: si no tiene salonMaterias configurado pero tiene la materia en su lista global
     return(p.materias||[]).includes(mat);
   });
-  if(bp) return bp;
-  /* Primaria: cualquier prof asignado al salón */
-  return DB.profs.find(p=>p.ciclo==='primaria'&&(p.salones||[]).includes(salon))||null;
+  if(byMateria) return byMateria;
+  /* Fallback: cualquier prof asignado a este salón */
+  return DB.profs.find(p=>(p.salones||[]).includes(salon))||null;
 }
 function profsInSalon(salon){
   return DB.profs.filter(p=>(p.salones||[]).includes(salon));
@@ -1333,16 +1333,15 @@ function renderSals(){
           :`<span class="bdg bgy" style="font-size:10px">Sin áreas asignadas</span>`)
         :'';
 
-      // salAreaMats propias del salón (Paso 2 de editSalAreas)
+      // salAreaMats propias del salón (guardadas en el Paso 2 de editSalAreas)
       const salAreaMatsDelSalon=(DB.salAreaMats||{})[s.nombre]||null;
 
-      // Mostrar áreas con sus materias del salón (usa salAreaMats si existen, si no matDocs)
+      // Mostrar áreas con sus materias del salón (prioriza salAreaMats, fallback a matDocs)
       const areasHTML=areasDelSalon.length>0
         ?`<div style="margin-top:10px;border-top:1px solid var(--bd);padding-top:8px">
             <div style="font-size:10px;font-weight:700;color:var(--sl);text-transform:uppercase;margin-bottom:6px">Áreas del salón</div>
             <div style="display:flex;flex-direction:column;gap:5px">
               ${areasDelSalon.map(areaNombre=>{
-                // Prioridad: salAreaMats específicas del salón → fallback a matDocs globales
                 const matsDelArea=salAreaMatsDelSalon
                   ?(salAreaMatsDelSalon[areaNombre]||[])
                   :matsList.filter(m=>{
@@ -1477,7 +1476,7 @@ async function editSalAreas(sname){
     return;
   }
 
-  // Áreas y materias actuales de este salón
+  // Estado actual del salón
   if(!DB.salAreas) DB.salAreas={};
   if(!DB.salAreaMats) DB.salAreaMats={};
   const current=[...(DB.salAreas[sname]||[])];
@@ -1487,9 +1486,8 @@ async function editSalAreas(sname){
   const matDocs=(DB.materiasDocs||[]).filter(d=>d.ciclo===ciclo);
   const matsList=sal.mats&&sal.mats.length?sal.mats:(ciclo==='primaria'?DB.mP:DB.mB);
 
-  // ── PASO 1: Seleccionar áreas del salón ──────────────────────────────────
   const rows=areasDelCiclo.map(area=>{
-    // Preview: usar salAreaMats si existe, si no fallback a matDocs globales
+    // Preview: prioriza salAreaMats ya guardadas, si no usa matDocs globales
     const matsEspecificas=currentSalAreaMats[area.nombre];
     const matsDeArea=matsEspecificas
       ?matsEspecificas
@@ -1528,15 +1526,15 @@ async function editSalAreas(sname){
   if(!r.isConfirmed) return;
   const elegidas=r.value;
 
-  // Guardar en DB.salAreas
+  // Guardar áreas elegidas en DB
+  if(!DB.salAreas) DB.salAreas={};
   DB.salAreas[sname]=elegidas;
 
-  // ── PASO 2: Asignar materias de este salón a cada área elegida ───────────
+  // ── PASO 2: Asignar materias del salón a cada área elegida ───────────────
   if(elegidas.length>0){
     const paso2rows=elegidas.map(areaNombre=>{
       const curMats=currentSalAreaMats[areaNombre]||[];
       const matsChk=matsList.map(m=>{
-        // Marcar si: ya estaba en salAreaMats, o si no hay asignación previa y matDocs lo asigna
         const checked=curMats.length
           ?curMats.includes(m)
           :(()=>{ const d=matDocs.find(x=>x.nombre===m); return d&&d.areaNombre===areaNombre; })();
@@ -1576,6 +1574,7 @@ async function editSalAreas(sname){
     });
 
     if(r2.isConfirmed){
+      if(!DB.salAreaMats) DB.salAreaMats={};
       DB.salAreaMats[sname]=r2.value;
       try{
         await apiFetch('/api/config/salAreaMats',{method:'PUT',body:JSON.stringify({value:DB.salAreaMats})});
@@ -1860,81 +1859,95 @@ function expEstXls(ciclo){
 ============================================================ */
 function pgAPrf(){
   return`<div class="ph"><h2>Profesores</h2><button class="btn xs bg" onclick="showHelp('aprf')" style="margin-top:6px">❓ Ayuda</button></div>
-  <div class="g2">
-    <div class="card"><div class="chd"><span class="cti">📚 Primaria</span>
+  <div class="card">
+    <div class="chd"><span class="cti">👩‍🏫 Todos los Profesores</span>
       <div style="display:flex;gap:8px">
-        <button class="btn bg sm" onclick="abrirCSVPrf('primaria')" title="Carga masiva CSV">📂 CSV</button>
-        <button class="btn bn" onclick="openAddPrf('primaria')" style="padding:8px 18px;font-size:13px;font-weight:700">
+        <button class="btn bg sm" onclick="abrirCSVPrf('primaria')" title="CSV Primaria">📂 CSV</button>
+        <button class="btn bn" onclick="openAddPrf()" style="padding:8px 18px;font-size:13px;font-weight:700">
           ➕ Agregar Profesor
         </button>
-      </div></div><div id="pfP"></div>
+      </div>
     </div>
-    <div class="card"><div class="chd"><span class="cti">🎓 Bachillerato</span>
-      <div style="display:flex;gap:8px">
-        <button class="btn bg sm" onclick="abrirCSVPrf('bachillerato')" title="Carga masiva CSV">📂 CSV</button>
-        <button class="btn bn" onclick="openAddPrf('bachillerato')" style="padding:8px 18px;font-size:13px;font-weight:700">
-          ➕ Agregar Profesor
-        </button>
-      </div></div><div id="pfB"></div>
-    </div>
+    <div id="pfAll"></div>
   </div>`;
 }
 function initAPrf(){renderPrfTbl();}
 function renderPrfTbl(){
-  ['primaria','bachillerato'].forEach(c=>{
-    const el=gi(c==='primaria'?'pfP':'pfB');if(!el) return;
-    const list=DB.profs.filter(p=>p.ciclo===c);
-    if(!list.length){el.innerHTML='<div class="mty" style="padding:20px"><div class="ei">👩‍🏫</div><p>Sin profesores</p></div>';return;}
-    el.innerHTML=`<div class="tw"><table>
-      <thead><tr><th>Nombre</th><th>C.C.</th>${c==='bachillerato'?'<th>Salón → Materias</th>':'<th>Salones</th>'}<th></th></tr></thead>
-      <tbody>${list.map(p=>`<tr>
+  const el=gi('pfAll');if(!el) return;
+  const list=DB.profs;
+  if(!list.length){el.innerHTML='<div class="mty" style="padding:20px"><div class="ei">👩‍🏫</div><p>Sin profesores</p></div>';return;}
+  el.innerHTML=`<div class="tw"><table>
+    <thead><tr>
+      <th>Nombre</th><th>C.C.</th>
+      <th style="width:60px">Ciclo(s)</th>
+      <th>Salón → Materias</th>
+      <th></th>
+    </tr></thead>
+    <tbody>${list.map(p=>{
+      const ciclosDelProf=[...new Set((p.salones||[]).map(s=>cicloOf(s)))];
+      const cicloLabel=ciclosDelProf.length===2
+        ?'<span class="bdg" style="font-size:9px;background:#f3e8ff;color:#7c3aed">Ambos</span>'
+        :ciclosDelProf[0]==='primaria'
+          ?'<span class="bdg bbl" style="font-size:9px">Pri</span>'
+          :ciclosDelProf[0]==='bachillerato'
+            ?'<span class="bdg bte" style="font-size:9px">Bach</span>'
+            :'—';
+      return`<tr>
         <td><strong>${esc(p.nombre)}</strong><br>
           <span style="font-family:var(--mn);font-size:11px;color:var(--sl3)">${esc(p.usuario||"")}</span></td>
         <td style="font-family:var(--mn);font-size:12px">${p.ti||'—'}</td>
-        ${c==='bachillerato'?`<td style="font-size:12px">
+        <td style="text-align:center">${cicloLabel}</td>
+        <td style="font-size:12px">
           ${(p.salones||[]).length?`<div style="display:flex;flex-direction:column;gap:4px">
             ${(p.salones||[]).map(s=>{
+              const cicloSal=cicloOf(s);
               const ms=((p.salonMaterias||{})[s]||[]);
+              const salBadge=cicloSal==='primaria'
+                ?`<span class="bdg bbl" style="font-size:10px">${s}</span>`
+                :`<span class="bdg bte" style="font-size:10px">${s}</span>`;
               return`<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
-                <span class="bdg bgy">${s}</span>
-                ${ms.length?ms.map(m=>`<span class="bdg bbl" style="font-size:10px">${m}</span>`).join('')
-                  :'<span style="font-size:10px;color:var(--sl3)">Sin materias asignadas</span>'}
+                ${salBadge}
+                ${ms.length?ms.map(m=>`<span style="font-size:10px;padding:1px 6px;background:#f0fdf4;border:1px solid #86efac;border-radius:4px">${m}</span>`).join('')
+                  :'<span style="font-size:10px;color:var(--sl3)">Sin materias</span>'}
               </div>`;
             }).join('')}
           </div>`:'<span style="color:var(--sl3);font-size:12px">Sin salones</span>'}
           <button class="btn xs bg" style="margin-top:5px" onclick="openSalonMaterias('${p.id}',()=>renderPrfTbl())">🎯 Asignar materias</button>
-        </td>`:`<td><div style="display:flex;flex-wrap:wrap;gap:3px">
-          ${(p.salones||[]).map(s=>`<span class="bdg bgy">${s}</span>`).join('')||'—'}
-        </div></td>`}
+        </td>
         <td><div style="display:flex;gap:5px">
           <button class="btn xs bg" onclick="editPrf('${p.id}')">✏️</button>
-          <button class="btn xs bd" onclick="delPrf('${p.id}','${c}')">🗑</button>
+          <button class="btn xs bd" onclick="delPrf('${p.id}')">🗑</button>
         </div></td>
-      </tr>`).join('')}</tbody></table></div>`;
-  });
+      </tr>`;
+    }).join('')}</tbody></table></div>`;
 }
-function openAddPrf(ciclo){
-  const MAX=ciclo==='bachillerato'?Infinity:1;
-  const sals=DB.sals.filter(s=>s.ciclo===ciclo);
-  /* For primaria: only salones. For bach: salones checkboxes, then per-salon materia assignment */
-  Swal.fire({title:`Nuevo Profesor — ${ciclo==='primaria'?'Primaria':'Bachillerato'}`,width:600,
+function openAddPrf(){
+  /* Mostrar todos los salones del colegio agrupados por ciclo */
+  const salsPri=DB.sals.filter(s=>s.ciclo==='primaria');
+  const salsBach=DB.sals.filter(s=>s.ciclo==='bachillerato');
+  const mkSals=(sals,label)=>sals.length?`
+    <div style="font-size:10px;font-weight:800;text-transform:uppercase;color:var(--sl2);margin:8px 0 4px">${label}</div>
+    <div style="display:flex;flex-wrap:wrap;gap:6px">${sals.map(s=>`
+      <label style="font-size:13px;display:flex;align-items:center;gap:4px;cursor:pointer;
+        background:var(--bg2);padding:5px 9px;border-radius:7px;border:1px solid var(--bd)">
+        <input type="checkbox" class="nps" value="${s.nombre}"> ${s.nombre}</label>`).join('')}
+    </div>`:'';
+  Swal.fire({title:'Nuevo Profesor',width:600,
     html:`<div style="text-align:left;font-family:var(--fn)">
       ${sF([{id:'npn',lb:'Nombre'},{id:'npti',lb:'C.C.',ph:'Ej: 1234567890',attr:'inputmode="numeric" pattern="[0-9]*" oninput="this.value=this.value.replace(/[^0-9]/g,\'\')"'},{id:'npu',lb:'Usuario'},{id:'npp',lb:'Contraseña'}])}
       <div style="text-align:left;margin-bottom:0">
-        <label style="font-size:11px;font-weight:800;text-transform:uppercase;color:var(--sl);display:block;margin-bottom:6px">Salones (todos los disponibles para bachillerato, máx 1 para primaria)</label>
-        <div style="display:flex;flex-wrap:wrap;gap:8px">
-          ${sals.map(s=>`<label style="font-size:13px;display:flex;align-items:center;gap:4px;cursor:pointer;
-            background:var(--bg2);padding:5px 9px;border-radius:7px;border:1px solid var(--bd)">
-            <input type="checkbox" class="nps" value="${s.nombre}"> ${s.nombre}</label>`).join('')
-            ||'<p style="font-size:12px;color:var(--sl3)">Sin salones disponibles — créalos primero</p>'}
+        <label style="font-size:11px;font-weight:800;text-transform:uppercase;color:var(--sl);display:block;margin-bottom:4px">Salones asignados</label>
+        <div style="background:var(--bg2);border:1px solid var(--bd);border-radius:8px;padding:10px">
+          ${mkSals(salsPri,'📚 Primaria')}
+          ${mkSals(salsBach,'🎓 Bachillerato')}
+          ${(!salsPri.length&&!salsBach.length)?'<p style="font-size:12px;color:var(--sl3)">Sin salones — créalos primero</p>':''}
         </div>
       </div>
-      ${ciclo==='bachillerato'?'<div class="al alb" style="margin-top:12px;font-size:12px">ℹ️ Después podrás asignar qué materia da en cada salón.</div>':''}
+      <div class="al alb" style="margin-top:12px;font-size:12px">ℹ️ Puedes asignar salones de cualquier ciclo. Después asigna las materias por salón con 🎯.</div>
     </div>`,
     showCancelButton:true,confirmButtonText:'Guardar',
     preConfirm:()=>{
       const salones=qq('.nps:checked').map(c=>c.value);
-      if(salones.length>MAX){Swal.showValidationMessage(MAX===Infinity?`Sin límite de salones`:`Máximo ${MAX} salón(es)`);return false;}
       return{nombre:gi('npn').value.trim(),ti:gi('npti').value.trim().replace(/[^0-9]/g,''),
         usuario:gi('npu').value.trim(),password:gi('npp').value.trim(),salones};
     }
@@ -1943,10 +1956,13 @@ function openAddPrf(ciclo){
     const d=r.value;
     if(!d.nombre||!d.usuario||!d.password){sw('error','Campos obligatorios vacíos');return;}
     if(uExists(d.usuario)){sw('error','Ese usuario ya existe');return;}
+    /* Determinar ciclo según salones elegidos */
+    const ciclosElegidos=[...new Set(d.salones.map(s=>cicloOf(s)).filter(Boolean))];
+    const ciclo=ciclosElegidos.length===2?'ambos':ciclosElegidos[0]||'primaria';
     try{
       const newProf=await addPrf({id:'prf_'+Date.now(),...d,ciclo});
       const saved=DB.profs[DB.profs.length-1];
-      if(ciclo==='bachillerato'&&d.salones.length) openSalonMaterias(saved.id,()=>{renderPrfTbl();});
+      if(d.salones.length) openSalonMaterias(saved.id,()=>{renderPrfTbl();});
       else{renderPrfTbl();sw('success','Profesor agregado','',1400);}
     }catch(e){sw('error','Error al guardar: '+e.message);}
   });
@@ -1960,7 +1976,9 @@ function openSalonMaterias(pid,cb){
   const rows=salones.map(s=>{
     const cur=(p.salonMaterias||{})[s]||[];
     const salObj=DB.sals.find(x=>x.nombre===s);
-    const availMats=(salObj?.mats&&salObj.mats.length)?salObj.mats:DB.mB;
+    const cicloSal=salObj?.ciclo||cicloOf(s);
+    const globalMats=cicloSal==='primaria'?DB.mP:DB.mB;
+    const availMats=(salObj?.mats&&salObj.mats.length)?salObj.mats:globalMats;
     return`<div style="margin-bottom:12px;padding:10px 12px;background:var(--bg2);border-radius:8px;border:1px solid var(--bd)">
       <div style="font-size:12px;font-weight:800;color:var(--nv);margin-bottom:7px">📍 ${s}
         ${salObj?.mats?.length?`<span style="font-size:10px;font-weight:400;color:var(--sl2);margin-left:6px">(${salObj.mats.length} materias del salón)</span>`:''}
@@ -2013,33 +2031,38 @@ function openSalonMaterias(pid,cb){
 
 function editPrf(pid){
   const p=DB.profs.find(x=>x.id===pid);
-  const MAX=p.ciclo==='bachillerato'?Infinity:1;
-  const sals=DB.sals.filter(s=>s.ciclo===p.ciclo);
+  const salsPri=DB.sals.filter(s=>s.ciclo==='primaria');
+  const salsBach=DB.sals.filter(s=>s.ciclo==='bachillerato');
+  const mkEPSals=(sals,label)=>sals.length?`
+    <div style="font-size:10px;font-weight:800;text-transform:uppercase;color:var(--sl2);margin:8px 0 4px">${label}</div>
+    <div style="display:flex;flex-wrap:wrap;gap:6px">${sals.map(s=>`
+      <label style="font-size:13px;display:flex;align-items:center;gap:4px;cursor:pointer;
+        background:var(--bg2);padding:5px 9px;border-radius:7px;border:1px solid var(--bd)">
+        <input type="checkbox" class="eps" value="${s.nombre}" ${(p.salones||[]).includes(s.nombre)?'checked':''}> ${s.nombre}</label>`).join('')}
+    </div>`:'';
   Swal.fire({title:'Editar Profesor',width:600,
     html:`<div style="text-align:left;font-family:var(--fn)">
       ${sF([{id:'epn',lb:'Nombre',val:p.nombre},{id:'epti',lb:'C.C.',val:p.ti||'',ph:'Ej: 1234567890',attr:'inputmode="numeric" pattern="[0-9]*" oninput="this.value=this.value.replace(/[^0-9]/g,\'\')"'},
         {id:'epu',lb:'Usuario',val:p.usuario},{id:'epp',lb:'Nueva Contraseña (dejar vacío para no cambiar)',val:'',tp:'password'}])}
       <div style="text-align:left;margin-bottom:0">
-        <label style="font-size:11px;font-weight:800;text-transform:uppercase;color:var(--sl);display:block;margin-bottom:6px">Salones (todos los disponibles para bachillerato, máx 1 para primaria)</label>
-        <div style="display:flex;flex-wrap:wrap;gap:8px">
-          ${sals.map(s=>`<label style="font-size:13px;display:flex;align-items:center;gap:4px;cursor:pointer;
-            background:var(--bg2);padding:5px 9px;border-radius:7px;border:1px solid var(--bd)">
-            <input type="checkbox" class="eps" value="${s.nombre}" ${(p.salones||[]).includes(s.nombre)?'checked':''}> ${s.nombre}</label>`).join('')}
+        <label style="font-size:11px;font-weight:800;text-transform:uppercase;color:var(--sl);display:block;margin-bottom:4px">Salones asignados</label>
+        <div style="background:var(--bg2);border:1px solid var(--bd);border-radius:8px;padding:10px">
+          ${mkEPSals(salsPri,'📚 Primaria')}
+          ${mkEPSals(salsBach,'🎓 Bachillerato')}
         </div>
       </div>
-      ${p.ciclo==='bachillerato'?`<div style="margin-top:12px">
+      <div style="margin-top:12px">
         <button type="button" class="btn bg sm" onclick="openSalonMaterias('${pid}',()=>renderPrfTbl())">
           🎯 Asignar Materias por Salón</button>
         ${(p.salones||[]).length?`<div style="margin-top:8px;font-size:11px;color:var(--sl2)">${
           Object.entries(p.salonMaterias||{}).filter(([,v])=>v.length).map(([s,ms])=>
             `<strong>${s}:</strong> ${ms.join(', ')}`).join(' · ')||'Sin materias asignadas por salón'
         }</div>`:''}
-      </div>`:''}
+      </div>
     </div>`,
     showCancelButton:true,confirmButtonText:'Guardar',
     preConfirm:()=>{
       const salones=qq('.eps:checked').map(c=>c.value);
-      if(salones.length>MAX){Swal.showValidationMessage(MAX===Infinity?`Sin límite de salones`:`Máximo ${MAX}`);return false;}
       return{nombre:gi('epn').value.trim(),ti:gi('epti').value.trim().replace(/[^0-9]/g,''),
         usuario:gi('epu').value.trim(),newPwd:gi('epp').value.trim(),salones};
     }
@@ -2047,7 +2070,11 @@ function editPrf(pid){
     if(!r.isConfirmed)return;
     const d=r.value;
     p.nombre=d.nombre;p.ti=d.ti;p.usuario=d.usuario;p.salones=d.salones;
-    const upd={nombre:d.nombre,ti:d.ti,usuario:d.usuario,salones:d.salones};
+    /* Recalcular ciclo según salones actuales */
+    const ciclosActuales=[...new Set(d.salones.map(s=>cicloOf(s)).filter(Boolean))];
+    const nuevoCiclo=ciclosActuales.length===2?'ambos':ciclosActuales[0]||p.ciclo||'primaria';
+    p.ciclo=nuevoCiclo;
+    const upd={nombre:d.nombre,ti:d.ti,usuario:d.usuario,salones:d.salones,ciclo:nuevoCiclo};
     if(d.newPwd) upd.password=d.newPwd;
     if(p.salonMaterias){
       Object.keys(p.salonMaterias).forEach(s=>{if(!(p.salones||[]).includes(s))delete p.salonMaterias[s];});
@@ -2059,7 +2086,7 @@ function editPrf(pid){
     }catch(e){sw('error','Error al guardar: '+e.message);}
   });
 }
-function delPrf(pid,ciclo){
+function delPrf(pid){
   const p=DB.profs.find(x=>x.id===pid);
   Swal.fire({title:'¿Eliminar?',text:p.nombre,icon:'warning',showCancelButton:true,
     confirmButtonColor:'#e53e3e'}).then(async r=>{
@@ -3545,25 +3572,24 @@ function pgPH(){
   const excPend=excTotal.filter(x=>!x.respProf).length;
   const pendRec=DB.ext.on?(DB.recs||[]).filter(r=>r.profId===CU.id&&!r.revisado).length:0;
   const perActivo=DB.pers[DB.pers.length-1]||DB.pers[0]||'';
-  const isBach=p.ciclo==='bachillerato';
+  // isBach ya no se usa para controlar la vista — todos los profes usan la misma interfaz
+  const isBach=true; // siempre usa la vista de cards de materias
 
-  // Build subject-salon cards for bachillerato
+  // Build subject-salon cards para ambos ciclos (primaria y bachillerato)
   const matCards=[];
-  if(isBach){
-    sals.forEach(sal=>{
-      const mats=getProfMatsSalon(p.id,sal);
-      const ests=ebySalon(sal);
-      mats.forEach(mat=>{
-        const conNotas=perActivo?ests.filter(e=>{
-          const t=DB.notas[e.id]?.[perActivo]?.[mat];
-          return t&&(t.a>0||t.c>0||t.r>0);
-        }).length:0;
-        const pct=ests.length?Math.round(conNotas/ests.length*100):0;
-        const excSal=excTotal.filter(x=>x.salon===sal&&!x.respProf).length;
-        matCards.push({sal,mat,ests:ests.length,conNotas,pct,excSal});
-      });
+  sals.forEach(sal=>{
+    const mats=getProfMatsSalon(p.id,sal);
+    const ests=ebySalon(sal);
+    mats.forEach(mat=>{
+      const conNotas=perActivo?ests.filter(e=>{
+        const t=DB.notas[e.id]?.[perActivo]?.[mat];
+        return t&&(t.a>0||t.c>0||t.r>0);
+      }).length:0;
+      const pct=ests.length?Math.round(conNotas/ests.length*100):0;
+      const excSal=excTotal.filter(x=>x.salon===sal&&!x.respProf).length;
+      matCards.push({sal,mat,ests:ests.length,conNotas,pct,excSal});
     });
-  }
+  });
 
   // Horario del profesor (DB.horarioPorProf si existe, si no mostrar placeholder)
   const horario=DB.horarioPorProf?.[p.id]||null;
@@ -3634,26 +3660,12 @@ function pgPH(){
   <!-- TABS -->
   <div class="card" style="padding:0;overflow:hidden">
     <div id="phTabBar" style="display:flex;border-bottom:2px solid var(--bd);background:var(--bg2);overflow-x:auto">
-      ${isBach?`<button id="phTabMats" onclick="phTab('__mats')"
+      <button id="phTabMats" onclick="phTab('__mats')"
         style="padding:11px 20px;border:none;background:var(--bg);border-bottom:2px solid var(--nv);margin-bottom:-2px;
         font-size:13px;font-weight:800;color:var(--nv);cursor:pointer;white-space:nowrap;display:flex;align-items:center;gap:6px">
         📚 Mis Materias
         <span style="background:var(--nv);color:#fff;border-radius:20px;padding:1px 8px;font-size:10px;font-weight:700">${matCards.length}</span>
-      </button>`:
-      sals.map((sal,i)=>{
-        const n=ebySalon(sal).length;
-        const excSal=excTotal.filter(x=>x.salon===sal&&!x.respProf).length;
-        return`<button id="phTab_${sal}" onclick="phTab('${sal}')"
-          style="padding:11px 20px;border:none;background:${i===0&&!isBach?'var(--bg)':'transparent'};
-          border-bottom:${i===0&&!isBach?'2px solid var(--nv)':'2px solid transparent'};
-          margin-bottom:-2px;font-size:13px;font-weight:${i===0&&!isBach?'800':'600'};
-          color:${i===0&&!isBach?'var(--nv)':'var(--sl2)'};cursor:pointer;white-space:nowrap;
-          display:flex;align-items:center;gap:6px">
-          🏫 ${sal}
-          <span style="background:#e2e8f0;border-radius:20px;padding:1px 7px;font-size:10px;font-weight:700">${n}</span>
-          ${excSal?`<span style="background:var(--red);color:#fff;border-radius:20px;padding:1px 6px;font-size:10px;font-weight:800">✉${excSal}</span>`:''}
-        </button>`;
-      }).join('')}
+      </button>
       <button id="phTabHor" onclick="phTab('__hor')"
         style="padding:11px 20px;border:none;background:transparent;border-bottom:2px solid transparent;
         margin-bottom:-2px;font-size:13px;font-weight:600;color:var(--sl2);cursor:pointer;white-space:nowrap">
@@ -3676,8 +3688,7 @@ function pgPH(){
 
     <!-- Tab content -->
     <div id="phTabContent" style="padding:16px">
-      ${isBach?renderPhMatsGrid(matCards,perActivo):
-       (sals.length?renderPhSalonTab(sals[0]):'<div class="mty"><p>Sin salones asignados</p></div>')}
+      ${matCards.length?renderPhMatsGrid(matCards,perActivo):'<div class="mty"><div class="ei">📚</div><p>Sin materias asignadas todavía.<br><small style="color:#a0aec0">Pide al admin que te asigne materias por salón.</small></p></div>'}
     </div>
   </div>`;
 }
@@ -4262,12 +4273,12 @@ function pgPNot(){
         <label>Periodo</label>
         <select id="pnp" style="font-size:14px;padding:9px 12px"><option value="">Seleccionar</option>${pO}</select>
       </div>
-      ${isBach?`<div class="fld" style="margin:0;min-width:180px">
+      <div class="fld" style="margin:0;min-width:180px">
         <label>Asignatura</label>
         <select id="pnm" style="font-size:14px;padding:9px 12px">
           <option value="">— Selecciona salón primero —</option>
         </select>
-      </div>`:''}
+      </div>
       <button class="btn bn" onclick="loadPN()" style="height:42px;padding:0 20px;font-size:14px;align-self:flex-end">Cargar ▶</button>
     </div>
     <div id="pnW" style="margin-top:14px"></div>
@@ -4277,9 +4288,13 @@ function updatePNMats(){
   const sel=gi('pnm');if(!sel) return;
   const salon=gi('pns')?.value;
   if(!salon){sel.innerHTML='<option value="">— Selecciona salón primero —</option>';return;}
+  // getProfMatsSalon ahora funciona igual para primaria y bachillerato
   const mats=getProfMatsSalon(CU.id,salon);
+  // Fallback: materias globales del ciclo si no hay asignadas
+  const ciclo=cicloOf(salon);
+  const allMats=mats.length?mats:(ciclo==='primaria'?DB.mP:DB.mB);
   sel.innerHTML=`<option value="">Todas las materias del salón</option>
-    ${mats.map(m=>`<option value="${m}">${m}</option>`).join('')}`;
+    ${allMats.map(m=>`<option value="${m}">${m}</option>`).join('')}`;
 }
 function initPNot(){
   // Recarga DB fresca antes de renderizar — igual que initAEst
@@ -4337,14 +4352,15 @@ function loadPN(){
     // 4) Lista global de bachillerato
     if(!mats.length) mats=[...DB.mB];
   } else {
-    // 1) Materias del salón (puede tener lista personalizada)
-    const sal=DB.sals.find(s=>s.nombre===salon);
-    if(sal?.mats?.length) mats=[...sal.mats];
-    // 2) Materias del primer estudiante
+    // 1) Materias específicas del prof en este salón (igual que bachillerato)
+    mats=getProfMatsSalon(CU.id,salon);
+    // 2) Materias del salón (union de todos los profs del salón)
+    if(!mats.length) mats=getSalonMats(salon);
+    // 3) Materias del primer estudiante
     if(!mats.length){
       for(const e of ests){ const m=getMats(e.id); if(m.length){mats=m;break;} }
     }
-    // 3) Lista global de primaria
+    // 4) Lista global de primaria
     if(!mats.length) mats=[...DB.mP];
   }
   // Filtrar por materia seleccionada si aplica
@@ -4616,12 +4632,7 @@ function loadPN(){
    SELECTOR DE SALÓN + MATERIA PARA REPORTES (bachillerato)
 ============================================================ */
 function selRptProf(defaultSalon,defaultPer,tipo){
-  /* For primaria: go straight to report */
-  if(CU.ciclo!=='bachillerato'){
-    tipo==='pdf'?dlRptProf(defaultSalon,defaultPer,null):dlRptXls(defaultSalon,defaultPer,null);
-    return;
-  }
-  /* For bachillerato: show salon+materia picker */
+  /* Ambos ciclos: mostrar selector de salón + materia */
   const salOpts=(CU.salones||[]).map(s=>`<option value="${s}" ${s===defaultSalon?'selected':''}>${s}</option>`).join('');
   const perOpts=DB.pers.map(p=>`<option value="${p}" ${p===defaultPer?'selected':''}>${p}</option>`).join('');
 
@@ -4678,7 +4689,9 @@ function dlRptProf(salon,per,matFilter){
   const ests=ebySalon(salon);
   if(!ests.length){sw('info','Sin datos','No hay estudiantes en este salón.');return;}
   /* Get materias: if matFilter provided show only that one; else all salon's prof materias */
-  let mats=CU.ciclo==='bachillerato'?getProfMatsSalon(CU.id,salon):getMats(ests[0]?.id||'');
+  // getProfMatsSalon ahora funciona igual para primaria y bachillerato
+  let mats=getProfMatsSalon(CU.id,salon);
+  if(!mats.length) mats=getMats(ests[0]?.id||'');
   if(matFilter) mats=[matFilter];
   const box=gi('pdfBox');
   const fechaGen=new Date().toLocaleDateString('es-CO',{year:'numeric',month:'long',day:'numeric'});
@@ -4767,7 +4780,8 @@ function dlRptProf(salon,per,matFilter){
 function dlRptXls(salon,per,matFilter){
   const ests=ebySalon(salon);
   if(!ests.length){sw('info','Sin datos','No hay estudiantes en este salón.');return;}
-  let mats=CU.ciclo==='bachillerato'?getProfMatsSalon(CU.id,salon):getMats(ests[0]?.id||'');
+  let mats=getProfMatsSalon(CU.id,salon);
+  if(!mats.length) mats=getMats(ests[0]?.id||'');
   if(matFilter) mats=[matFilter];
   const fechaGen=new Date().toLocaleDateString('es-CO');
   const wb=XLSX.utils.book_new();
@@ -5059,7 +5073,7 @@ function pgPRec(){
     const matsProf=getProfMatsSalon(CU.id,salon);
     ebySalon(salon).forEach(est=>{
       const mp=matPerd(est.id);
-      const misMateriasPerdidas=mp.filter(m=>matsProf.includes(m)||(CU.ciclo==='primaria'&&mp.length));
+      const misMateriasPerdidas=mp.filter(m=>matsProf.includes(m));
       if(misMateriasPerdidas.length>=1&&misMateriasPerdidas.length<=2){
         misMateriasPerdidas.forEach(mat=>{
           const planYaEnviado=(DB.planes||[]).find(p=>p.estId===est.id&&p.materia===mat&&p.profId===CU.id);
@@ -5281,7 +5295,7 @@ function abrirEnviarPlanSalon(salon,matsStr){
       const matsProf=getProfMatsSalon(CU.id,salon);
       const estudiantesDestino=ebySalon(salon).filter(est=>{
         const mp=matPerd(est.id);
-        return mp.some(m=>matsProf.includes(m)||(CU.ciclo==='primaria'));
+        return mp.some(m=>matsProf.includes(m));
       });
       const fecha=new Date().toLocaleDateString('es-CO');
       const planId='plan_'+Date.now();
@@ -5492,12 +5506,14 @@ function pgEB(){
 
 function initEB(){
   const e=CU;syncN(e.id);
-  const _esCepa=(CU.colegioNombre||'').toUpperCase().includes('CEPA');
-  const _cepaEstado=(d)=>d===0?'Sin nota':d>=4.6?'DS — Superior':d>=4?'DA — Alto':d>=3.5?'DB — Básica':'DI — Bajo';
-  const _cepaBadge=(d)=>d===0?'bwa':d>=4.6?'bgr':d>=4?'bbl':d>=3.5?'bgy':'brd';
   const pg=gprom(e.id),ps=puestoS(e.id),mp=matPerd(e.id);
   const anoLabel=DB.anoActual||String(new Date().getFullYear());
   const mats=getMats(e.id);
+
+  // ── Lógica de estado para CEPA ───────────────────────────────────
+  const _esCepa = (CU.colegioNombre||'').toUpperCase().includes('CEPA');
+  const _cepaEstado = (d) => d===0?'Sin nota':d>=4.6?'DS – Superior':d>=4?'DA – Alto':d>=3.5?'DB – Básica':'DI – Bajo';
+  const _cepaBadge  = (d) => d===0?'bwa':d>=4.6?'bgr':d>=4?'bbl':d>=3.5?'bgy':'brd';
 
   // Pérdidas por área o por materia
   const areaMap=getAreaMatsMap(e.id);
@@ -5558,7 +5574,7 @@ function initEB(){
             <td style="font-family:var(--mn);font-size:12px">${t.c.toFixed(1)}</td>
             <td style="font-family:var(--mn);font-size:12px">${t.r.toFixed(1)}</td>
             <td><span class="${scC(d)}">${fmt(d)}</span></td>
-            <td><span class="bdg ${_esCepa?_cepaBadge(d):d>=3?'bgr':'brd'}">${_esCepa?_cepaEstado(d):d===0?'Sin nota':d>=3?'Aprobado':'Reprobado'}</span></td>
+            <td><span class="bdg ${_esCepa?_cepaBadge(d):(d>=3?'bgr':'brd')}">${_esCepa?_cepaEstado(d):(d===0?'Sin nota':d>=3?'Aprobado':'Reprobado')}</span></td>
             <td style="font-size:12px;color:var(--sl2)">${prf?prf.nombre:'Sin asignar'}</td>
           </tr>`;
         });
@@ -5571,7 +5587,7 @@ function initEB(){
           <td style="font-family:var(--mn);font-size:12px">${t.c.toFixed(1)}</td>
           <td style="font-family:var(--mn);font-size:12px">${t.r.toFixed(1)}</td>
           <td><span class="${scC(d)}">${fmt(d)}</span></td>
-          <td><span class="bdg ${_esCepa?_cepaBadge(d):d>=3?'bgr':'brd'}">${_esCepa?_cepaEstado(d):d===0?'Sin nota':d>=3?'Aprobado':'Reprobado'}</span></td>
+          <td><span class="bdg ${_esCepa?_cepaBadge(d):(d>=3?'bgr':'brd')}">${_esCepa?_cepaEstado(d):(d===0?'Sin nota':d>=3?'Aprobado':'Reprobado')}</span></td>
           <td style="font-size:12px;color:var(--sl2)">${prf?prf.nombre:'Sin asignar'}</td>
         </tr>`;
       });
@@ -5584,7 +5600,7 @@ function initEB(){
           <td style="font-family:var(--mn);font-size:12px">${t.c.toFixed(1)}</td>
           <td style="font-family:var(--mn);font-size:12px">${t.r.toFixed(1)}</td>
           <td><span class="${scC(d)}">${fmt(d)}</span></td>
-          <td><span class="bdg ${_esCepa?_cepaBadge(d):d>=3?'bgr':'brd'}">${_esCepa?_cepaEstado(d):d===0?'Sin nota':d>=3?'Aprobado':'Reprobado'}</span></td>
+          <td><span class="bdg ${_esCepa?_cepaBadge(d):(d>=3?'bgr':'brd')}">${_esCepa?_cepaEstado(d):(d===0?'Sin nota':d>=3?'Aprobado':'Reprobado')}</span></td>
           <td style="font-size:12px;color:var(--sl2)">${prf?prf.nombre:'Sin asignar'}</td>
         </tr>`;
       }).join('');
@@ -6138,6 +6154,12 @@ function dlBoletinUI(estId){
     showConfirmButton:false,showCloseButton:true,width:620});
 }
 
+/**
+ * Main PDF generator
+ * perFilter: 'TODOS' | encoded period name
+ * anno: year string
+ * snapData: optional {notas, mats, salon, disciplina, nombre, ti} for deleted students
+ */
 // dlBoletinCepa() — Boletín exclusivo COLEGIO CEPA, fiel al Excel
 // Usa getAreaMatsMap() con el fix de normalización de nombres de área
 // Fallas = ausencias en DB.asist dentro del rango DB.drPer[periodo]
@@ -6436,12 +6458,6 @@ function dlBoletinCepa(estId,perFilter,anno,snapData){
   }).from(box).save().then(()=>box.classList.add('hidden'));
 }
 
-/**
- * Main PDF generator
- * perFilter: 'TODOS' | encoded period name
- * anno: year string
- * snapData: optional {notas, mats, salon, disciplina, nombre, ti} for deleted students
- */
 function dlBoletin(estId,perFilter,anno,snapData){
   // ── Detectar CEPA y usar su boletín propio ──────────────────────
   if((CU.colegioNombre||'').toUpperCase().includes('CEPA')){
@@ -6557,8 +6573,7 @@ function dlBoletin(estId,perFilter,anno,snapData){
   // ─── Helpers locales de color para boletín (escala de grises) ─────────────
   const bCol = n => { n=+n; if(n===0) return '#aaa'; if(n<3) return '#111'; if(n<4) return '#444'; return '#111'; };
   const bBg  = n => { n=+n; if(n===0) return '#f5f5f5'; if(n<3) return '#f0f0f0'; return '#fff'; };
-  const _isCepaPDF = (CU.colegioNombre||'').toUpperCase().includes('CEPA');
-  const bDes = n => { n=+n; if(n===0) return '—'; if(_isCepaPDF?n>=4.6:n>=4.5) return 'Superior'; if(n>=4) return 'Alto'; if(_isCepaPDF?n>=3.5:n>=3) return 'Básico'; return 'Bajo'; };
+  const bDes = n => { n=+n; if(n===0) return '—'; if(n>=4.5) return 'Superior'; if(n>=4) return 'Alto'; if(n>=3) return 'Básico'; return 'Bajo'; };
 
   // ─── TABLA POR PERIODOS (vista individual) ────────────────────────────────
   let persHTML;
