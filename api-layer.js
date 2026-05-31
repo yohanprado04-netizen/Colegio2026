@@ -168,6 +168,7 @@ async function dbLoad() {
       DB.areas      = DB.areas      || [];
       DB.materiasDocs = DB.materiasDocs || [];
       DB.salAreas   = DB.salAreas   || {};
+      DB.salAreaMats= DB.salAreaMats|| {};
       DB.comunicados = DB.comunicados || [];
       DB.sals.forEach(s => { if (s.mats !== null && s.mats !== undefined && !Array.isArray(s.mats)) s.mats = null; });
       if(typeof sortSals==='function') sortSals();
@@ -204,7 +205,7 @@ function dbSave() {
 
 async function _saveConfigBg() {
   try {
-    const cfgKeys = ['mP', 'mB', 'pers', 'dr', 'drPer', 'ext', 'anoActual', 'notaPct', 'salAreas'];
+    const cfgKeys = ['mP', 'mB', 'pers', 'dr', 'drPer', 'ext', 'anoActual', 'notaPct', 'salAreas', 'salAreaMats'];
     await Promise.all(cfgKeys.map(k =>
       apiFetch(`/api/config/${k}`, {
         method: 'PUT',
@@ -2228,6 +2229,7 @@ document.addEventListener('DOMContentLoaded', async () => {
           DB.notasPorAno = DB.notasPorAno || {};
           DB.salonPorAno = DB.salonPorAno || {};
           DB.colegioLogo = DB.colegioLogo || '';  // logo del colegio para PDFs
+          DB.salAreaMats = DB.salAreaMats || {};
           DB.sals.forEach(s => { if (s.mats !== null && s.mats !== undefined && !Array.isArray(s.mats)) s.mats = null; });
           if(typeof sortSals==='function') sortSals();
 
