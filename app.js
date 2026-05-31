@@ -1464,7 +1464,7 @@ function editSalMats(sname){
       const checked=[...document.querySelectorAll('.smck:checked')].map(c=>c.value);
       return checked;
     }
-  }).then(r=>{
+  }).then(async r=>{
     if(!r.isConfirmed) return;
     const chosen=r.value;
     sal.mats=chosen; /* empty array = use global */

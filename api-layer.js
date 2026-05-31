@@ -1235,7 +1235,6 @@ async function _saveSalJornada(sname, jornada) {
     method: 'PUT', body: JSON.stringify(payload)
   });
 }
-}
 
 async function _savePlan(planData) {
   const saved = await apiFetch('/api/planes', { method: 'POST', body: JSON.stringify(planData) });
