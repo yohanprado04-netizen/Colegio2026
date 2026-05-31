@@ -213,7 +213,7 @@ router.get('/', authMiddleware, async (req, res) => {
       admin:        admin ? cleanUser(admin) : null,
       profs:        profs.map(cleanUser),
       ests:         ests.map(cleanUser),
-      sals:         salones.map(s => ({ nombre: s.nombre, ciclo: s.ciclo, mats: s.mats || [], colegioId: s.colegioId })),
+      sals:         salones.map(s => ({ _id: s._id, nombre: s.nombre, ciclo: s.ciclo, jornada: s.jornada || '', mats: s.mats ?? null, colegioId: s.colegioId, colegioNombre: s.colegioNombre || '' })),
       mP:           materiasDocs.filter(m => m.ciclo === 'primaria').map(m => m.nombre).length
                       ? materiasDocs.filter(m => m.ciclo === 'primaria').map(m => m.nombre)
                       : (cfg.mP || ['Matemáticas','Lengua Castellana','Ciencias Naturales','Ciencias Sociales','Ed. Artística','Ed. Física','Ética']),
@@ -231,7 +231,6 @@ router.get('/', authMiddleware, async (req, res) => {
       anoActual:    cfg.anoActual || String(new Date().getFullYear()),
       notaPct:      cfg.notaPct   || { a: 60, c: 20, r: 20 },
       salAreas:     cfg.salAreas  || {},
-      salAreaMats:  cfg.salAreaMats || {},
       horarioPorProf: cfg.horarioPorProf || {},
       notas:        notasObj,
       notasPorAno,

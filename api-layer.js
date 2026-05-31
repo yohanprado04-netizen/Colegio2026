@@ -1204,27 +1204,33 @@ function editEst(eid, ciclo) {
 async function _saveSalMats(sname, chosen) {
   const sal = DB.sals.find(s => s.nombre === sname);
   if (!sal) return;
-  sal.mats = chosen;
-  // Solo enviamos mats y jornada — no ciclo para no disparar validación del enum
-  await apiFetch(`/api/salones/${encodeURIComponent(sname)}`, {
-    method: 'PUT',
-    body: JSON.stringify({
-      mats:    chosen,
-      jornada: sal.jornada !== undefined ? sal.jornada : '',
-    })
-  });
+  // Preferir PATCH por _id (más robusto), fallback a PUT por nombre
+  const url = sal._id
+    ? `/api/salones/by-id/${sal._id}`
+    : `/api/salones/${encodeURIComponent(sname)}`;
+  const method = sal._id ? 'PATCH' : 'PUT';
+  const payload = { mats: chosen, jornada: sal.jornada !== undefined ? sal.jornada : '' };
+  const updated = await apiFetch(url, { method, body: JSON.stringify(payload) });
+  // Sincronizar DB.sals con la respuesta del servidor
+  if (updated && Array.isArray(updated.mats)) {
+    sal.mats = updated.mats.length > 0 ? updated.mats : null;
+  }
 }
 
 /* Guardar SÓLO la jornada de un salón — llamado desde editSalJornada() */
 async function _saveSalJornada(sname, jornada) {
   const sal = DB.sals.find(s => s.nombre === sname);
   if (!sal) return;
-  sal.jornada = jornada;
-  // Solo enviamos jornada — no ciclo ni mats para no pisar otros campos
-  await apiFetch(`/api/salones/${encodeURIComponent(sname)}`, {
-    method: 'PUT',
-    body: JSON.stringify({ jornada })
-  });
+  // Preferir PATCH por _id (más robusto), fallback a PUT por nombre
+  const url = sal._id
+    ? `/api/salones/by-id/${sal._id}`
+    : `/api/salones/${encodeURIComponent(sname)}`;
+  const method = sal._id ? 'PATCH' : 'PUT';
+  const updated = await apiFetch(url, { method, body: JSON.stringify({ jornada }) });
+  // Sincronizar DB.sals con la respuesta del servidor
+  if (updated && updated.jornada !== undefined) {
+    sal.jornada = updated.jornada;
+  }
 }
 
 async function _savePlan(planData) {

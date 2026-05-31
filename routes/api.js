@@ -238,6 +238,25 @@ router.post('/salones', authMiddleware, requireRole('admin', 'superadmin'), asyn
   }
 });
 
+// PATCH por _id — para actualizar jornada/mats sin depender del nombre en la URL
+// Más robusto que PUT /:nombre cuando hay caracteres especiales o colegioId vacío
+router.patch('/salones/by-id/:id', authMiddleware, requireRole('admin', 'superadmin'), async (req, res) => {
+  try {
+    const setFields = {};
+    if (req.body.jornada !== undefined) setFields.jornada = req.body.jornada;
+    if (Array.isArray(req.body.mats))   setFields.mats    = req.body.mats;
+    if (!Object.keys(setFields).length) return res.status(400).json({ error: 'Sin campos a actualizar' });
+
+    const s = await Salon.findByIdAndUpdate(
+      req.params.id,
+      { $set: setFields },
+      { new: true }
+    );
+    if (!s) return res.status(404).json({ error: 'Salón no encontrado por _id' });
+    res.json(s);
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
 router.put('/salones/:nombre', authMiddleware, requireRole('admin', 'superadmin'), async (req, res) => {
   try {
     // Seguridad: nunca permitir cambiar colegioId desde el body — siempre usar el del token
