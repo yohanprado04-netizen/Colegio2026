@@ -213,7 +213,7 @@ router.get('/', authMiddleware, async (req, res) => {
       admin:        admin ? cleanUser(admin) : null,
       profs:        profs.map(cleanUser),
       ests:         ests.map(cleanUser),
-      sals:         salones.map(s => ({ _id: s._id, nombre: s.nombre, ciclo: s.ciclo, jornada: s.jornada || '', mats: s.mats ?? null, colegioId: s.colegioId, colegioNombre: s.colegioNombre || '' })),
+      sals:         salones.map(s => ({ _id: String(s._id), nombre: s.nombre, ciclo: s.ciclo, jornada: s.jornada || '', mats: s.mats ?? null, colegioId: s.colegioId, colegioNombre: s.colegioNombre || '' })),
       mP:           materiasDocs.filter(m => m.ciclo === 'primaria').map(m => m.nombre).length
                       ? materiasDocs.filter(m => m.ciclo === 'primaria').map(m => m.nombre)
                       : (cfg.mP || ['Matemáticas','Lengua Castellana','Ciencias Naturales','Ciencias Sociales','Ed. Artística','Ed. Física','Ética']),

@@ -1441,7 +1441,8 @@ async function editSalJornada(sname){
     if(typeof _saveSalJornada==='function') await _saveSalJornada(sname,jornada);
     sw('success',`Jornada de ${sname} guardada`,jornada||'Sin especificar',1800);
   }catch(e){
-    sw('error','Error al guardar en servidor: '+e.message);
+    console.error('[editSalJornada] Error guardando en API:',e);
+    sw('error','Error al guardar jornada',e.message||'Revisa la consola');
   }
 }
 
@@ -1514,9 +1515,12 @@ function editSalMats(sname){
     dbSave();renderSals();
     try{
       if(typeof _saveSalMats==='function') await _saveSalMats(sname,chosen);
-    }catch(e){ console.warn('[editSalMats] Error guardando en API:',e); }
-    sw('success',`Materias de ${sname} actualizadas`,
-      chosen.length?`${chosen.length} materias asignadas`:'Sin materias seleccionadas — revisa la configuración.',2000);
+      sw('success',`Materias de ${sname} actualizadas`,
+        chosen.length?`${chosen.length} materias asignadas`:'Sin materias — se usarán las globales del ciclo.',2000);
+    }catch(e){
+      console.error('[editSalMats] Error guardando en API:',e);
+      sw('error','Error al guardar en servidor',e.message||'Revisa la consola');
+    }
   });
 }
 

@@ -1203,16 +1203,17 @@ function editEst(eid, ciclo) {
 // ═══════════════════════════════════════════════════════════════════
 async function _saveSalMats(sname, chosen) {
   const sal = DB.sals.find(s => s.nombre === sname);
-  if (!sal) return;
-  // Preferir PATCH por _id (más robusto), fallback a PUT por nombre
-  const url = sal._id
-    ? `/api/salones/by-id/${sal._id}`
+  if (!sal) throw new Error(`Salón "${sname}" no encontrado en DB.sals`);
+  const id = sal._id ? String(sal._id) : null;
+  const url = id
+    ? `/api/salones/by-id/${id}`
     : `/api/salones/${encodeURIComponent(sname)}`;
-  const method = sal._id ? 'PATCH' : 'PUT';
+  const method = id ? 'PATCH' : 'PUT';
   const payload = { mats: chosen, jornada: sal.jornada !== undefined ? sal.jornada : '' };
   const updated = await apiFetch(url, { method, body: JSON.stringify(payload) });
-  // Sincronizar DB.sals con la respuesta del servidor
-  if (updated && Array.isArray(updated.mats)) {
+  if (!updated) throw new Error('El servidor no devolvió respuesta al guardar materias');
+  // Sincronizar DB.sals con la respuesta real del servidor
+  if (Array.isArray(updated.mats)) {
     sal.mats = updated.mats.length > 0 ? updated.mats : null;
   }
 }
@@ -1220,17 +1221,16 @@ async function _saveSalMats(sname, chosen) {
 /* Guardar SÓLO la jornada de un salón — llamado desde editSalJornada() */
 async function _saveSalJornada(sname, jornada) {
   const sal = DB.sals.find(s => s.nombre === sname);
-  if (!sal) return;
-  // Preferir PATCH por _id (más robusto), fallback a PUT por nombre
-  const url = sal._id
-    ? `/api/salones/by-id/${sal._id}`
+  if (!sal) throw new Error(`Salón "${sname}" no encontrado en DB.sals`);
+  const id = sal._id ? String(sal._id) : null;
+  const url = id
+    ? `/api/salones/by-id/${id}`
     : `/api/salones/${encodeURIComponent(sname)}`;
-  const method = sal._id ? 'PATCH' : 'PUT';
+  const method = id ? 'PATCH' : 'PUT';
   const updated = await apiFetch(url, { method, body: JSON.stringify({ jornada }) });
-  // Sincronizar DB.sals con la respuesta del servidor
-  if (updated && updated.jornada !== undefined) {
-    sal.jornada = updated.jornada;
-  }
+  if (!updated) throw new Error('El servidor no devolvió respuesta al guardar jornada');
+  // Sincronizar DB.sals con la respuesta real del servidor
+  if (updated.jornada !== undefined) sal.jornada = updated.jornada;
 }
 
 async function _savePlan(planData) {
