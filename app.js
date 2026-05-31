@@ -136,10 +136,15 @@ function syncN(eid){
   const est=DB.ests.find(e=>e.id===eid);
   let matsEfectivas=mats;
   if(!matsEfectivas.length&&est?.salon){
-    const salonMats=getSalonMats(est.salon);
-    if(salonMats.length) matsEfectivas=salonMats;
-    else if(cicloOf(est.salon)==='primaria') matsEfectivas=[...DB.mP];
-    else matsEfectivas=[...DB.mB];
+    // Si el salón tiene mats propias configuradas, usarlas
+    const salObj=DB.sals.find(s=>s.nombre===est.salon);
+    if(Array.isArray(salObj?.mats)&&salObj.mats.length>0) matsEfectivas=[...salObj.mats];
+    else{
+      const salonMats=getSalonMats(est.salon);
+      if(salonMats.length) matsEfectivas=salonMats;
+      else if(cicloOf(est.salon)==='primaria') matsEfectivas=[...DB.mP];
+      else matsEfectivas=[...DB.mB];
+    }
   }
   DB.pers.forEach(p=>{
     if(!DB.notas[eid][p]) DB.notas[eid][p]={};
@@ -163,18 +168,21 @@ function cicloOf(sname){return DB.sals.find(s=>s.nombre===sname)?.ciclo||'bachil
 
 /* getMats: returns subjects for a student.
    For bachillerato: if any professor has salonMaterias[salon], use union of those materias.
-   Otherwise fall back to global mB list. Primaria always uses mP. */
+   Otherwise fall back to global mB list. Primaria always uses mP.
+   IMPORTANTE: sal.mats=null/undefined → sin configurar (usa globales).
+               sal.mats=[...] con length>0 → configurado (usa esas, ignora globales). */
 function getMats(eid){
   const e=DB.ests.find(x=>x.id===eid);
   if(!e) return[...DB.mB];
   const sal=DB.sals.find(s=>s.nombre===e.salon);
-  /* If salon has its own custom subject list, use it (works for both ciclos) */
-  if(sal?.mats&&sal.mats.length) return[...sal.mats];
-  /* Fallback: ciclo-wide defaults */
-  if(cicloOf(e.salon)==='primaria') return[...DB.mP];
-  /* Bach: collect materias assigned to this specific salon via profs */
+  /* Prioridad 1: materias propias del salón (configuradas explícitamente, length>0) */
+  if(Array.isArray(sal?.mats) && sal.mats.length>0) return[...sal.mats];
+  /* Prioridad 2: primaria sin configurar → globales mP */
+  const ciclo=cicloOf(e.salon);
+  if(ciclo==='primaria' && !isBachLogic('primaria')) return[...DB.mP];
+  /* Prioridad 3: bach (o primaria CEPA) → salonMaterias de profs */
   const salonMats=getSalonMats(e.salon);
-  return salonMats.length?salonMats:[...DB.mB];
+  return salonMats.length?salonMats:(ciclo==='primaria'?[...DB.mP]:[...DB.mB]);
 }
 
 /* Get list of subjects assigned to a specific salon (union across all professors) */
@@ -1425,9 +1433,14 @@ function editSalMats(sname){
   const sal=DB.sals.find(s=>s.nombre===sname);if(!sal)return;
   const ciclo=sal.ciclo;
   const globalMats=ciclo==='primaria'?DB.mP:DB.mB;
-  const current=sal.mats&&sal.mats.length?[...sal.mats]:[...globalMats];
 
-  /* Build checkbox list from global defaults + any custom already added */
+  /* Determinar estado actual:
+     - sal.mats con elementos → usar esas (salón tiene propias)
+     - null/undefined/[] → usar globales como punto de partida para editar */
+  const tienePropia=Array.isArray(sal.mats)&&sal.mats.length>0;
+  const current=tienePropia?[...sal.mats]:[...globalMats];
+
+  /* Build checkbox list: globales + cualquier personalizada ya guardada */
   const allMats=[...new Set([...globalMats,...current])];
 
   const rows=allMats.map(m=>`
@@ -1441,9 +1454,14 @@ function editSalMats(sname){
     title:`🎯 Materias del Salón ${sname}`,
     width:600,
     html:`<div style="text-align:left;font-family:var(--fn)">
-      <div class="al alb" style="margin-bottom:12px;font-size:12px">
-        Selecciona las materias que existen en este salón. Si no marcas ninguna, se usarán las materias globales del ciclo.
-        <br>Puedes agregar materias personalizadas en el campo de abajo.
+      <div class="al alb" style="margin-bottom:10px;font-size:12px">
+        Marca solo las materias que tiene <strong>este salón</strong>. Las desmarcadas no aparecerán en notas ni boletín.
+        <br>Puedes agregar materias nuevas abajo. Para volver a las globales del ciclo, usa <em>Restablecer</em>.
+      </div>
+      <div style="display:flex;gap:8px;margin-bottom:10px">
+        <button type="button" class="btn xs bn" onclick="[...document.querySelectorAll('.smck')].forEach(c=>c.checked=true)">✅ Todas</button>
+        <button type="button" class="btn xs bd" onclick="[...document.querySelectorAll('.smck')].forEach(c=>c.checked=false)">☐ Ninguna</button>
+        <span style="font-size:11px;color:var(--sl3);margin-left:auto;align-self:center">${tienePropia?`${sal.mats.length} propias configuradas`:'Usando globales del ciclo'}</span>
       </div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:12px">${rows}</div>
       <div style="display:flex;gap:8px;align-items:center;padding:10px;background:#f7fafc;border-radius:8px;border:1px solid var(--bd)">
@@ -1456,19 +1474,17 @@ function editSalMats(sname){
     showCancelButton:true,
     confirmButtonText:'Guardar Materias',
     cancelButtonText:'Cancelar',
+    footer:`<button class="btn xs bd" style="font-size:11px" onclick="Swal.close();resetSalMats('${sname}')">🔄 Restablecer a globales del ciclo</button>`,
     didOpen:()=>{
-      /* Allow Enter to add custom mat */
       gi('newMat').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();addCustomMatRow();}});
     },
-    preConfirm:()=>{
-      const checked=[...document.querySelectorAll('.smck:checked')].map(c=>c.value);
-      return checked;
-    }
+    preConfirm:()=>[...document.querySelectorAll('.smck:checked')].map(c=>c.value)
   }).then(async r=>{
     if(!r.isConfirmed) return;
     const chosen=r.value;
-    sal.mats=chosen; /* empty array = use global */
-    /* Patch existing student notes to include new mats */
+    /* chosen vacío + usuario hizo submit → guardar [] (significa "ninguna de las globales").
+       Usar null solo cuando se hace reset explícito con resetSalMats() */
+    sal.mats=chosen;
     DB.ests.filter(e=>e.salon===sname).forEach(e=>{
       syncN(e.id);
       DB.pers.forEach(per=>{
@@ -1483,8 +1499,26 @@ function editSalMats(sname){
       if(typeof _saveSalMats==='function') await _saveSalMats(sname,chosen);
     }catch(e){ console.warn('[editSalMats] Error guardando en API:',e); }
     sw('success',`Materias de ${sname} actualizadas`,
-      chosen.length?`${chosen.length} materias asignadas`:'Se usarán las materias globales del ciclo.',2000);
+      chosen.length?`${chosen.length} materias asignadas`:'Sin materias seleccionadas — revisa la configuración.',2000);
   });
+}
+
+/* Restablecer salón a materias globales del ciclo */
+async function resetSalMats(sname){
+  const sal=DB.sals.find(s=>s.nombre===sname);if(!sal)return;
+  const ok=await Swal.fire({
+    title:'¿Restablecer materias?',
+    text:`El salón ${sname} volverá a usar las materias globales del ciclo.`,
+    icon:'question',showCancelButton:true,
+    confirmButtonText:'Sí, restablecer',cancelButtonText:'Cancelar'
+  });
+  if(!ok.isConfirmed) return;
+  sal.mats=null; // null = sin configurar = usar globales
+  dbSave();renderSals();
+  try{
+    if(typeof _saveSalMats==='function') await _saveSalMats(sname,[]);
+  }catch(e){ console.warn('[resetSalMats]',e); }
+  sw('success',`Salón ${sname} restablecido`,`Usando materias globales del ciclo.`,1800);
 }
 /* Called from inside Swal to add a custom subject row */
 function addCustomMatRow(){
