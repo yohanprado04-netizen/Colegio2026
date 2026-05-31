@@ -1372,8 +1372,8 @@ function renderSals(){
           </div>
           <div style="display:flex;gap:6px;flex-wrap:wrap">
             <button class="btn xs" style="background:#e0e7ff;color:#3730a3;border:1px solid #a5b4fc" onclick="editSalAreas('${s.nombre}')">📂 Áreas</button>
+            <button class="btn xs" style="background:#fefce8;color:#854d0e;border:1px solid #fde047" onclick="editSalJornada('${s.nombre}')">🕐 Jornada</button>
             <button class="btn xs bg" onclick="editSalMats('${s.nombre}')">🎯 Materias</button>
-            <button class="btn xs" style="background:#dcfce7;color:#166534;border:1px solid #86efac" onclick="editSal('${s.nombre}')">✏️ Editar</button>
             <button class="btn xs bd" onclick="delSal('${s.nombre}')">🗑</button>
           </div>
         </div>
@@ -1389,6 +1389,36 @@ function renderSals(){
 async function addSal(){ /* implementado en api-layer.js */ }
 /* ── SOBREESCRITA por api-layer.js ── */
 function delSal(n){ /* implementado en api-layer.js */ }
+
+/* Editar jornada de un salón — persiste en MongoDB */
+async function editSalJornada(sname){
+  const sal=DB.sals.find(s=>s.nombre===sname);if(!sal)return;
+  const {value:jornada}=await Swal.fire({
+    title:`🕐 Jornada del Salón ${sname}`,
+    html:`<div style="text-align:left;font-family:var(--fn)">
+      <label style="font-size:13px;font-weight:600;display:block;margin-bottom:8px">Selecciona la jornada:</label>
+      <select id="sj_sel" style="width:100%;padding:10px 14px;font-size:14px;border:1.5px solid var(--bd);border-radius:8px;outline:none">
+        <option value="" ${!sal.jornada?'selected':''}>Sin especificar</option>
+        <option value="mañana" ${sal.jornada==='mañana'?'selected':''}>Mañana</option>
+        <option value="tarde"  ${sal.jornada==='tarde' ?'selected':''}>Tarde</option>
+        <option value="noche"  ${sal.jornada==='noche' ?'selected':''}>Noche</option>
+      </select>
+    </div>`,
+    showCancelButton:true,
+    confirmButtonText:'Guardar',
+    cancelButtonText:'Cancelar',
+    preConfirm:()=>gi('sj_sel').value
+  });
+  if(jornada===undefined) return;
+  sal.jornada=jornada;
+  dbSave();renderSals();
+  try{
+    if(typeof _saveSalJornada==='function') await _saveSalJornada(sname,jornada);
+    sw('success',`Jornada de ${sname} guardada`,jornada||'Sin especificar',1800);
+  }catch(e){
+    sw('error','Error al guardar en servidor: '+e.message);
+  }
+}
 
 /* Assign/edit custom subject list for a salon */
 function editSalMats(sname){
@@ -1449,6 +1479,9 @@ function editSalMats(sname){
       });
     });
     dbSave();renderSals();
+    try{
+      if(typeof _saveSalMats==='function') await _saveSalMats(sname,chosen);
+    }catch(e){ console.warn('[editSalMats] Error guardando en API:',e); }
     sw('success',`Materias de ${sname} actualizadas`,
       chosen.length?`${chosen.length} materias asignadas`:'Se usarán las materias globales del ciclo.',2000);
   });
