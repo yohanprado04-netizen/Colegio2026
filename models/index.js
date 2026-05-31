@@ -40,7 +40,7 @@ const SalonSchema = new Schema({
   nombre:        { type: String, required: true, trim: true },
   ciclo:         { type: String, enum: ['primaria','bachillerato'], required: true },
   jornada:       { type: String, enum: ['mañana','tarde','noche',''], default: '' },
-  mats:          [{ type: String }],
+  mats:          { type: [String], default: null }, // null = usar materias globales del ciclo; [array] = materias propias del salón
   colegioId:     { type: String, required: true, index: true },
   colegioNombre: { type: String, default: '' },   // nombre del colegio al que pertenece
 }, { timestamps: true, collection: 'salones' });

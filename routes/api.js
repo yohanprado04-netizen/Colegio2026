@@ -246,14 +246,12 @@ router.put('/salones/:nombre', authMiddleware, requireRole('admin', 'superadmin'
     // Construir $set explícito para que campos como jornada='' se persistan correctamente
     const setFields = {};
 
-    // Campos editables directos
-    if (req.body.nombre    !== undefined) setFields.nombre    = (req.body.nombre || '').trim().toUpperCase();
-    if (req.body.ciclo     !== undefined) setFields.ciclo     = req.body.ciclo;
+    // Campos editables directos — NO incluir ciclo (es inmutable después de crear)
+    if (req.body.nombre  !== undefined) setFields.nombre  = (req.body.nombre || '').trim().toUpperCase();
     // ──► jornada: guardar siempre (incluso string vacío) para que el valor se persista
-    if (req.body.jornada   !== undefined) setFields.jornada   = req.body.jornada;
+    if (req.body.jornada !== undefined) setFields.jornada = req.body.jornada;
 
     // ──► mats: si viene array en el body, reemplazar completamente.
-    //     Si viene mats=[] (se quitaron todas), se guarda [] indicando "usa sólo las globales".
     if (Array.isArray(req.body.mats)) {
       setFields.mats = req.body.mats;
     }
@@ -271,7 +269,7 @@ router.put('/salones/:nombre', authMiddleware, requireRole('admin', 'superadmin'
     const s = await Salon.findOneAndUpdate(
       { nombre: req.params.nombre, colegioId: cid },
       { $set: setFields },
-      { new: true, runValidators: true }
+      { new: true }
     );
     if (!s) return res.status(404).json({ error: 'Salón no encontrado' });
     res.json(s);

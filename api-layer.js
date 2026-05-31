@@ -169,7 +169,7 @@ async function dbLoad() {
       DB.materiasDocs = DB.materiasDocs || [];
       DB.salAreas   = DB.salAreas   || {};
       DB.comunicados = DB.comunicados || [];
-      DB.sals.forEach(s => { if (!Array.isArray(s.mats)) s.mats = []; });
+      DB.sals.forEach(s => { if (s.mats !== null && s.mats !== undefined && !Array.isArray(s.mats)) s.mats = null; });
       if(typeof sortSals==='function') sortSals();
     }
   } catch (err) {
@@ -505,7 +505,7 @@ async function addSal() {
 
   try {
     const s = await apiFetch('/api/salones', { method: 'POST', body: JSON.stringify(payload) });
-    DB.sals.push({ nombre: n, ciclo: c, jornada: j, mats: [], colegioId: CU.colegioId || '', colegioNombre: CU.colegioNombre || '' });
+    DB.sals.push({ nombre: n, ciclo: c, jornada: j, mats: null, colegioId: CU.colegioId || '', colegioNombre: CU.colegioNombre || '' });
     if(typeof sortSals==='function') sortSals();
     gi('nsn').value = '';
     renderSals();
@@ -1205,18 +1205,14 @@ async function _saveSalMats(sname, chosen) {
   const sal = DB.sals.find(s => s.nombre === sname);
   if (!sal) return;
   sal.mats = chosen;
-  const payload = {
-    mats:          chosen,
-    jornada:       sal.jornada       !== undefined ? sal.jornada       : '',
-    ciclo:         sal.ciclo         !== undefined ? sal.ciclo         : '',
-    colegioId:     CU.colegioId     || '',
-    colegioNombre: CU.colegioNombre || '',
-  };
-  try {
-    await apiFetch(`/api/salones/${encodeURIComponent(sname)}`, {
-      method: 'PUT', body: JSON.stringify(payload)
-    });
-  } catch (e) { console.warn('saveSalMats:', e); }
+  // Solo enviamos mats y jornada — no ciclo para no disparar validación del enum
+  await apiFetch(`/api/salones/${encodeURIComponent(sname)}`, {
+    method: 'PUT',
+    body: JSON.stringify({
+      mats:    chosen,
+      jornada: sal.jornada !== undefined ? sal.jornada : '',
+    })
+  });
 }
 
 /* Guardar SÓLO la jornada de un salón — llamado desde editSalJornada() */
@@ -1224,15 +1220,10 @@ async function _saveSalJornada(sname, jornada) {
   const sal = DB.sals.find(s => s.nombre === sname);
   if (!sal) return;
   sal.jornada = jornada;
-  const payload = {
-    jornada:       jornada,
-    mats:          Array.isArray(sal.mats) ? sal.mats : [],
-    ciclo:         sal.ciclo         || '',
-    colegioId:     CU.colegioId     || '',
-    colegioNombre: CU.colegioNombre || '',
-  };
+  // Solo enviamos jornada — no ciclo ni mats para no pisar otros campos
   await apiFetch(`/api/salones/${encodeURIComponent(sname)}`, {
-    method: 'PUT', body: JSON.stringify(payload)
+    method: 'PUT',
+    body: JSON.stringify({ jornada })
   });
 }
 
@@ -2231,7 +2222,7 @@ document.addEventListener('DOMContentLoaded', async () => {
           DB.notasPorAno = DB.notasPorAno || {};
           DB.salonPorAno = DB.salonPorAno || {};
           DB.colegioLogo = DB.colegioLogo || '';  // logo del colegio para PDFs
-          DB.sals.forEach(s => { if (!Array.isArray(s.mats)) s.mats = []; });
+          DB.sals.forEach(s => { if (s.mats !== null && s.mats !== undefined && !Array.isArray(s.mats)) s.mats = null; });
           if(typeof sortSals==='function') sortSals();
 
           // Reconstruir CU desde DB
