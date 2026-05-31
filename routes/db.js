@@ -298,9 +298,14 @@ async function saveFullDB(DB, colegioId = '') {
   }
 
   for (const s of (DB.sals || [])) {
+    const setFields = { ciclo: s.ciclo, colegioId };
+    // Preservar jornada
+    if (s.jornada !== undefined) setFields.jornada = s.jornada;
+    // mats: null = usa globales, array = propias. NUNCA convertir null→[]
+    setFields.mats = Array.isArray(s.mats) ? s.mats : null;
     await Salon.findOneAndUpdate(
       { nombre: s.nombre, colegioId },
-      { ciclo: s.ciclo, mats: s.mats || [], colegioId },
+      { $set: setFields },
       { upsert: true }
     );
   }

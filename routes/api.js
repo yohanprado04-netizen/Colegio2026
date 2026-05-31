@@ -244,7 +244,9 @@ router.patch('/salones/by-id/:id', authMiddleware, requireRole('admin', 'superad
   try {
     const setFields = {};
     if (req.body.jornada !== undefined) setFields.jornada = req.body.jornada;
-    if (Array.isArray(req.body.mats))   setFields.mats    = req.body.mats;
+    if (Array.isArray(req.body.mats)) {
+      setFields.mats = req.body.mats.length > 0 ? req.body.mats : null;
+    }
     if (!Object.keys(setFields).length) return res.status(400).json({ error: 'Sin campos a actualizar' });
 
     const s = await Salon.findByIdAndUpdate(

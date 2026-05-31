@@ -1209,13 +1209,13 @@ async function _saveSalMats(sname, chosen) {
     ? `/api/salones/by-id/${id}`
     : `/api/salones/${encodeURIComponent(sname)}`;
   const method = id ? 'PATCH' : 'PUT';
-  const payload = { mats: chosen, jornada: sal.jornada !== undefined ? sal.jornada : '' };
+  // chosen vacío = reset a globales → enviar null al backend
+  const matsPayload = (Array.isArray(chosen) && chosen.length > 0) ? chosen : null;
+  const payload = { mats: matsPayload, jornada: sal.jornada !== undefined ? sal.jornada : '' };
   const updated = await apiFetch(url, { method, body: JSON.stringify(payload) });
   if (!updated) throw new Error('El servidor no devolvió respuesta al guardar materias');
   // Sincronizar DB.sals con la respuesta real del servidor
-  if (Array.isArray(updated.mats)) {
-    sal.mats = updated.mats.length > 0 ? updated.mats : null;
-  }
+  sal.mats = Array.isArray(updated.mats) && updated.mats.length > 0 ? updated.mats : null;
 }
 
 /* Guardar SÓLO la jornada de un salón — llamado desde editSalJornada() */
