@@ -88,6 +88,13 @@ const DBK='edusistema_v5'; // Solo usado en modo offline (sin api-layer.js)
 let DB={},CU=null;
 const FA={};
 
+// ── Colegios cuya PRIMARIA usa lógica de bachillerato (múltiples salones + salonMaterias) ──
+const COLEGIOS_PRIM_BACH_LOGIC = ['col_1780002622502'];
+function isBachLogic(ciclo){
+  if(ciclo==='bachillerato') return true;
+  return ciclo==='primaria' && COLEGIOS_PRIM_BACH_LOGIC.includes(CU?.colegioId||'');
+}
+
 /* ── SOBREESCRITA por api-layer.js ── */
 async function dbLoad(){ /* implementado en api-layer.js */ }
 function dbSave(){ /* implementado en api-layer.js */ }
@@ -1193,8 +1200,18 @@ function goto(pid){
   qq('.sbi').forEach(b=>b.classList.remove('on'));
   const btn=gi('ni_'+pid);if(btn)btn.classList.add('on');
   gi('tbTitle').textContent=PL[pid]||pid;
-  gi('contentArea').innerHTML=renderPg(pid);
-  initPg(pid);
+  try{
+    gi('contentArea').innerHTML=renderPg(pid);
+    initPg(pid);
+  }catch(err){
+    console.error('[goto] Error al renderizar página "'+pid+'":', err);
+    gi('contentArea').innerHTML=`<div class="card"><div class="mty">
+      <div class="ei">⚠️</div>
+      <p style="color:var(--red)">Error al cargar la página.<br>
+      <span style="font-size:12px;color:var(--sl3)">${err.message}</span></p>
+      <button class="btn bg" onclick="goto('dash')">Volver al inicio</button>
+    </div></div>`;
+  }
 }
 function renderPg(pid){
   const map={

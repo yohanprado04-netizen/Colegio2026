@@ -257,21 +257,20 @@ router.put('/salones/:nombre', authMiddleware, requireRole('admin', 'superadmin'
     }
 
     // Forzar colegioId e colegioNombre correctos — evita cross-tenant accidental
-    setFields.colegioId     = cid;
-    setFields.colegioNombre = req.user.colegioNombre || req.body.colegioNombre || '';
+    if (cid) setFields.colegioId = cid;
+    if (req.user.colegioNombre || req.body.colegioNombre)
+      setFields.colegioNombre = req.user.colegioNombre || req.body.colegioNombre || '';
 
     // No permitir cambiar el nombre del salón a uno que ya exista en este colegio
     if (setFields.nombre && setFields.nombre !== req.params.nombre) {
-      const yaExiste = await Salon.findOne({ nombre: setFields.nombre, colegioId: cid }).lean();
+      const yaExiste = await Salon.findOne({ nombre: setFields.nombre, ...(cid ? { colegioId: cid } : {}) }).lean();
       if (yaExiste) return res.status(409).json({ error: `El salón "${setFields.nombre}" ya existe en este colegio.` });
     }
 
-    const s = await Salon.findOneAndUpdate(
-      { nombre: req.params.nombre, colegioId: cid },
-      { $set: setFields },
-      { new: true }
-    );
-    if (!s) return res.status(404).json({ error: 'Salón no encontrado' });
+    // Buscar por nombre + colegioId si existe, si no solo por nombre (compatibilidad)
+    const query = cid ? { nombre: req.params.nombre, colegioId: cid } : { nombre: req.params.nombre };
+    const s = await Salon.findOneAndUpdate(query, { $set: setFields }, { new: true });
+    if (!s) return res.status(404).json({ error: `Salón "${req.params.nombre}" no encontrado${cid ? ` en colegio ${cid}` : ''}` });
     res.json(s);
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
