@@ -2550,20 +2550,39 @@ function pgANot(){
   const pO=DB.pers.map(p=>`<option value="${p}">${p}</option>`).join('');
   return`<div class="ph"><h2>Gestión de Notas</h2><button class="btn xs bg" onclick="showHelp('anot')">❓ Ayuda</button></div>
   <div class="card">
-    <div class="fg">
-      <div class="fld"><label>Salón</label><select id="ans"><option value="">Seleccionar</option>${sO}</select></div>
-      <div class="fld"><label>Periodo</label><select id="anp"><option value="">Seleccionar</option>${pO}</select></div>
-      <div class="fld" style="display:flex;align-items:flex-end;gap:8px">
-        <button class="btn bn" onclick="loadAN()">📋 Cargar</button>
-        <button class="btn" style="background:#e0f2fe;color:#0369a1;border:1px solid #7dd3fc" onclick="dlPlantillaNotas()">⬇️ Plantilla CSV</button>
-        <label class="btn" style="background:#dcfce7;color:#166534;border:1px solid #86efac;cursor:pointer;margin:0">
-          ⬆️ Importar CSV<input type="file" accept=".csv" style="display:none" onchange="importNotasCSV(this)">
+    <div style="display:flex;flex-wrap:wrap;gap:14px;align-items:flex-end;margin-bottom:16px">
+      <div class="fld" style="margin:0;min-width:160px;flex:1">
+        <label style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--sl);display:block;margin-bottom:5px">Salón</label>
+        <select id="ans" style="width:100%;padding:10px 12px;font-size:14px;border:1.5px solid var(--bd);border-radius:9px">
+          <option value="">Seleccionar</option>${sO}
+        </select>
+      </div>
+      <div class="fld" style="margin:0;min-width:180px;flex:1">
+        <label style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--sl);display:block;margin-bottom:5px">Periodo</label>
+        <select id="anp" style="width:100%;padding:10px 12px;font-size:14px;border:1.5px solid var(--bd);border-radius:9px">
+          <option value="">Seleccionar</option>${pO}
+        </select>
+      </div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;flex:2;min-width:280px">
+        <button onclick="loadAN()"
+          style="padding:10px 22px;font-size:14px;font-weight:700;background:var(--nv);color:#fff;border:none;border-radius:9px;cursor:pointer;white-space:nowrap">
+          📋 Cargar
+        </button>
+        <button onclick="dlPlantillaNotas()"
+          style="padding:10px 22px;font-size:14px;font-weight:600;background:#e0f2fe;color:#0369a1;border:1.5px solid #7dd3fc;border-radius:9px;cursor:pointer;white-space:nowrap">
+          ⬇️ Plantilla CSV
+        </button>
+        <label style="padding:10px 22px;font-size:14px;font-weight:600;background:#dcfce7;color:#166534;border:1.5px solid #86efac;border-radius:9px;cursor:pointer;white-space:nowrap;display:inline-flex;align-items:center;gap:6px">
+          ⬆️ Importar CSV
+          <input type="file" accept=".csv" style="display:none" onchange="importNotasCSV(this)">
         </label>
       </div>
     </div>
     <div id="anImportResult"></div>
-    <div class="srch"><span style="color:var(--sl3)">🔍</span>
-      <input id="anq" placeholder="Buscar estudiante..." oninput="filterAN()">
+    <div style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:var(--bg2);border-radius:9px;border:1.5px solid var(--bd);margin-bottom:14px">
+      <span style="font-size:16px;color:var(--sl3)">🔍</span>
+      <input id="anq" placeholder="Buscar estudiante..." oninput="filterAN()"
+        style="flex:1;border:none;background:transparent;font-size:14px;outline:none;color:var(--tx)">
     </div>
     <div id="anW"></div>
   </div>`;
