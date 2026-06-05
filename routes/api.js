@@ -238,60 +238,23 @@ router.post('/salones', authMiddleware, requireRole('admin', 'superadmin'), asyn
   }
 });
 
-// PATCH por _id — para actualizar jornada/mats sin depender del nombre en la URL
-// Más robusto que PUT /:nombre cuando hay caracteres especiales o colegioId vacío
-router.patch('/salones/by-id/:id', authMiddleware, requireRole('admin', 'superadmin'), async (req, res) => {
-  try {
-    const setFields = {};
-    if (req.body.jornada !== undefined) setFields.jornada = req.body.jornada;
-    if (Array.isArray(req.body.mats)) {
-      setFields.mats = req.body.mats.length > 0 ? req.body.mats : null;
-    }
-    if (!Object.keys(setFields).length) return res.status(400).json({ error: 'Sin campos a actualizar' });
-
-    const s = await Salon.findByIdAndUpdate(
-      req.params.id,
-      { $set: setFields },
-      { new: true }
-    );
-    if (!s) return res.status(404).json({ error: 'Salón no encontrado por _id' });
-    res.json(s);
-  } catch (err) { res.status(500).json({ error: err.message }); }
-});
-
 router.put('/salones/:nombre', authMiddleware, requireRole('admin', 'superadmin'), async (req, res) => {
   try {
     // Seguridad: nunca permitir cambiar colegioId desde el body — siempre usar el del token
     const cid = tenantId(req) || req.user.colegioId || '';
-
-    // Construir $set explícito para que campos como jornada='' se persistan correctamente
-    const setFields = {};
-
-    // Campos editables directos — NO incluir ciclo (es inmutable después de crear)
-    if (req.body.nombre  !== undefined) setFields.nombre  = (req.body.nombre || '').trim().toUpperCase();
-    // ──► jornada: guardar siempre (incluso string vacío) para que el valor se persista
-    if (req.body.jornada !== undefined) setFields.jornada = req.body.jornada;
-
-    // ──► mats: si viene array en el body, reemplazar completamente.
-    if (Array.isArray(req.body.mats)) {
-      setFields.mats = req.body.mats;
-    }
-
+    const update = { ...req.body };
     // Forzar colegioId e colegioNombre correctos — evita cross-tenant accidental
-    if (cid) setFields.colegioId = cid;
-    if (req.user.colegioNombre || req.body.colegioNombre)
-      setFields.colegioNombre = req.user.colegioNombre || req.body.colegioNombre || '';
-
+    update.colegioId     = cid;
+    update.colegioNombre = req.user.colegioNombre || req.body.colegioNombre || '';
     // No permitir cambiar el nombre del salón a uno que ya exista en este colegio
-    if (setFields.nombre && setFields.nombre !== req.params.nombre) {
-      const yaExiste = await Salon.findOne({ nombre: setFields.nombre, ...(cid ? { colegioId: cid } : {}) }).lean();
-      if (yaExiste) return res.status(409).json({ error: `El salón "${setFields.nombre}" ya existe en este colegio.` });
+    if (update.nombre && update.nombre !== req.params.nombre) {
+      const yaExiste = await Salon.findOne({ nombre: update.nombre, colegioId: cid }).lean();
+      if (yaExiste) return res.status(409).json({ error: `El salón "${update.nombre}" ya existe en este colegio.` });
     }
-
-    // Buscar por nombre + colegioId si existe, si no solo por nombre (compatibilidad)
-    const query = cid ? { nombre: req.params.nombre, colegioId: cid } : { nombre: req.params.nombre };
-    const s = await Salon.findOneAndUpdate(query, { $set: setFields }, { new: true });
-    if (!s) return res.status(404).json({ error: `Salón "${req.params.nombre}" no encontrado${cid ? ` en colegio ${cid}` : ''}` });
+    const s = await Salon.findOneAndUpdate(
+      { nombre: req.params.nombre, colegioId: cid }, update, { new: true }
+    );
+    if (!s) return res.status(404).json({ error: 'Salón no encontrado' });
     res.json(s);
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
@@ -1185,15 +1148,26 @@ router.get('/comunicados', authMiddleware, async (req, res) => {
 
     // Query 2: comunicados globales del superadmin dirigidos a este colegio
     const paraRoles = role === 'admin' ? ['todos','admin'] : role === 'profe' ? ['todos','profe'] : ['todos','est'];
+    const userId = req.user.id || '';
     const saQuery = {
       esSuperAdmin: true,
       activo: true,
       fechaFin: { $gte: hoy },
       fechaInicio: { $lte: hoy },
-      para: { $in: paraRoles },
       $or: [
-        { colegiosDestino: { $size: 0 } },   // destino vacío = todos los colegios
-        { colegiosDestino: cid },              // o específicamente este colegio
+        // Comunicado grupal: para el rol correcto y colegio correcto
+        {
+          para: { $in: paraRoles },
+          $or: [
+            { colegiosDestino: { $size: 0 } },   // todos los colegios
+            { colegiosDestino: cid },              // este colegio específico
+          ],
+          destinatarioId: { $in: ['', null, undefined] } // sin destinatario individual
+        },
+        // Comunicado individual: dirigido exactamente a este usuario
+        {
+          destinatarioId: userId
+        },
       ],
     };
 

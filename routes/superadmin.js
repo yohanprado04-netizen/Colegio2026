@@ -527,17 +527,41 @@ router.get('/usuarios', async (req, res) => {
 
 /* ── PUT /api/superadmin/usuarios/:uid/blocked ──────────────────────────────
    Bloquea o desbloquea un usuario individual por su campo `id`.
+   Actualiza tanto el campo blocked en Usuario como la colección Bloqueo
+   (que es la que verifica el login en auth.js).
 ────────────────────────────────────────────────────────────────────────────── */
 router.put('/usuarios/:uid/blocked', async (req, res) => {
   try {
     const { blocked } = req.body;
     if (typeof blocked !== 'boolean') return res.status(400).json({ error: 'blocked debe ser boolean' });
+
     const u = await Usuario.findOneAndUpdate(
       { id: req.params.uid },
       { $set: { blocked } },
-      { new: true, select: 'id nombre usuario role blocked' }
+      { new: true, select: 'id nombre usuario role blocked colegioId' }
     );
     if (!u) return res.status(404).json({ error: 'Usuario no encontrado' });
+
+    // Sincronizar con la colección Bloqueo (que es la que verifica auth.js en el login)
+    if (blocked) {
+      await Bloqueo.findOneAndUpdate(
+        { usuario: u.usuario },
+        { on: true, ts: new Date().toISOString(), colegioId: u.colegioId || '' },
+        { upsert: true }
+      );
+    } else {
+      // Desbloquear: apagar todos los registros de bloqueo de este usuario
+      await Bloqueo.updateMany({ usuario: u.usuario }, { $set: { on: false } });
+    }
+
+    // Registrar en auditoría
+    await Auditoria.create({
+      ts: new Date().toISOString(), uid: 'superadmin', who: 'superadmin',
+      role: 'superadmin',
+      accion: `Usuario ${blocked ? 'bloqueado' : 'desbloqueado'} por superadmin: ${u.nombre} (${u.usuario})`,
+      extra: '', colegioId: u.colegioId || ''
+    }).catch(() => {});
+
     res.json({ ok: true, id: u.id, nombre: u.nombre, blocked: u.blocked });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
