@@ -507,4 +507,39 @@ router.delete('/comunicados/:id', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
+/* ── GET /api/superadmin/usuarios?colegioId=&rol= ───────────────────────────
+   Lista usuarios de un colegio filtrados por rol para el panel de bloqueo
+   y el selector de comunicado a persona específica.
+────────────────────────────────────────────────────────────────────────────── */
+router.get('/usuarios', async (req, res) => {
+  try {
+    const { colegioId, rol } = req.query;
+    if (!colegioId) return res.status(400).json({ error: 'colegioId requerido' });
+    const rolesPermitidos = ['admin','profe','est'];
+    const roleFilter = rol && rolesPermitidos.includes(rol) ? [rol] : rolesPermitidos;
+    const usuarios = await Usuario.find(
+      { colegioId, role: { $in: roleFilter } },
+      'id nombre usuario role blocked salon ciclo'
+    ).sort({ role: 1, nombre: 1 }).lean();
+    res.json(usuarios);
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+/* ── PUT /api/superadmin/usuarios/:uid/blocked ──────────────────────────────
+   Bloquea o desbloquea un usuario individual por su campo `id`.
+────────────────────────────────────────────────────────────────────────────── */
+router.put('/usuarios/:uid/blocked', async (req, res) => {
+  try {
+    const { blocked } = req.body;
+    if (typeof blocked !== 'boolean') return res.status(400).json({ error: 'blocked debe ser boolean' });
+    const u = await Usuario.findOneAndUpdate(
+      { id: req.params.uid },
+      { $set: { blocked } },
+      { new: true, select: 'id nombre usuario role blocked' }
+    );
+    if (!u) return res.status(404).json({ error: 'Usuario no encontrado' });
+    res.json({ ok: true, id: u.id, nombre: u.nombre, blocked: u.blocked });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
 module.exports = router;

@@ -320,6 +320,9 @@ const ComunicadoSchema = new Schema({
   // colegiosDestino: [] = todos los colegios; ['cid1','cid2'] = colegios específicos
   esSuperAdmin:     { type: Boolean, default: false },
   colegiosDestino:  [{ type: String }],
+  // comunicado a persona individual
+  destinatarioId:   { type: String, default: '' },
+  destinatarioNombre:{ type: String, default: '' },
 }, { timestamps: true, collection: 'comunicados' });
 ComunicadoSchema.index({ colegioId: 1, activo: 1 });
 ComunicadoSchema.index({ esSuperAdmin: 1, activo: 1 });

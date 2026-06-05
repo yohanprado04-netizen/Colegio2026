@@ -7694,91 +7694,219 @@ function icfesReiniciarTodo(){
 ============================================================ */
 
 function pgSACom() {
-  return `<div class="ph">
-    <h2>📢 Comunicados Globales</h2>
-    <p style="font-size:13px;color:var(--sl2)">Crea comunicados visibles para todos los colegios o para colegios específicos.</p>
+  return `<div style="margin-bottom:20px">
+    <h2 style="margin:0;font-size:20px">📢 Comunicados Globales</h2>
+    <p style="margin:5px 0 0;font-size:13px;color:var(--sl2)">Publica mensajes para todos los colegios, para grupos específicos o para una persona en particular.</p>
   </div>
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
-    <div class="card">
-      <div class="chd"><span class="cti">➕ Nuevo Comunicado Global</span></div>
-      <div class="fg">
-        <div class="fld" style="grid-column:1/-1">
-          <label>Título</label>
-          <input id="sacomTit" placeholder="Ej: Reunión de directivos" style="padding:9px 12px;border:1.5px solid var(--bd);border-radius:var(--r);font-size:13px;background:var(--bg2);color:var(--tx);outline:none;font-family:var(--fn)">
+    <div class="card" style="padding:0;overflow:hidden">
+      <div style="padding:14px 20px;background:var(--bg2);border-bottom:1px solid var(--bd)">
+        <span style="font-weight:800;font-size:14px;color:var(--nv)">➕ Nuevo Comunicado</span>
+      </div>
+      <div style="padding:18px;display:flex;flex-direction:column;gap:14px">
+        <div>
+          <label style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--sl);display:block;margin-bottom:5px">Título *</label>
+          <input id="sacomTit" placeholder="Ej: Reunión de directivos"
+            style="width:100%;padding:9px 12px;border:1.5px solid var(--bd);border-radius:8px;font-size:13px;background:var(--bg2);color:var(--tx);outline:none;box-sizing:border-box">
         </div>
-        <div class="fld" style="grid-column:1/-1">
-          <label>Mensaje</label>
-          <textarea id="sacomMsg" rows="4" placeholder="Escribe el contenido del comunicado..." style="width:100%;resize:vertical;padding:8px;border:1.5px solid var(--bd);border-radius:var(--r);font-size:13px;font-family:inherit"></textarea>
+        <div>
+          <label style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--sl);display:block;margin-bottom:5px">Mensaje *</label>
+          <textarea id="sacomMsg" rows="4" placeholder="Escribe el contenido del comunicado..."
+            style="width:100%;resize:vertical;padding:9px 12px;border:1.5px solid var(--bd);border-radius:8px;font-size:13px;font-family:inherit;background:var(--bg2);color:var(--tx);outline:none;box-sizing:border-box"></textarea>
         </div>
-        <div class="fld">
-          <label>Dirigido a</label>
-          <select id="sacomPara" style="padding:9px 12px;border:1.5px solid var(--bd);border-radius:var(--r);font-size:13px;background:var(--bg2);color:var(--tx);outline:none;font-family:var(--fn)">
-            <option value="todos">👥 Todos (admins, profes y estudiantes)</option>
-            <option value="admin">🏫 Solo Administradores</option>
-            <option value="profe">👩‍🏫 Solo Profesores</option>
-            <option value="est">🎓 Solo Estudiantes</option>
-          </select>
-        </div>
-        <div class="fld">
-          <label>Color / Tipo</label>
-          <select id="sacomColor" style="padding:9px 12px;border:1.5px solid var(--bd);border-radius:var(--r);font-size:13px;background:var(--bg2);color:var(--tx);outline:none;font-family:var(--fn)">
-            <option value="azul">🔵 Azul — Informativo</option>
-            <option value="verde">🟢 Verde — Positivo</option>
-            <option value="naranja">🟠 Naranja — Precaución</option>
-            <option value="rojo">🔴 Rojo — Urgente</option>
-            <option value="morado">🟣 Morado — Especial</option>
-          </select>
-        </div>
-        <div class="fld">
-          <label>Fecha Inicio</label>
-          <input type="date" id="sacomFi" style="padding:9px 12px;border:1.5px solid var(--bd);border-radius:var(--r);font-size:13px;background:var(--bg2);color:var(--tx);outline:none;font-family:var(--fn)" value="${new Date().toISOString().slice(0,10)}">
-        </div>
-        <div class="fld">
-          <label>Fecha Fin</label>
-          <input type="date" id="sacomFf" style="padding:9px 12px;border:1.5px solid var(--bd);border-radius:var(--r);font-size:13px;background:var(--bg2);color:var(--tx);outline:none;font-family:var(--fn)">
-        </div>
-        <div class="fld" style="grid-column:1/-1">
-          <label>Colegios destinatarios</label>
-          <div style="font-size:11px;color:var(--sl2);margin-bottom:6px">Deja todos sin marcar para enviar a TODOS los colegios. Marca los específicos si quieres segmentar.</div>
-          <div id="sacomColegiosChk" style="display:flex;flex-wrap:wrap;gap:8px;padding:10px;background:var(--bg2);border-radius:8px;border:1px solid var(--bd)">
-            <span style="font-size:12px;color:var(--sl3)">Cargando colegios...</span>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+          <div>
+            <label style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--sl);display:block;margin-bottom:5px">Color / Tipo</label>
+            <select id="sacomColor" style="width:100%;padding:9px 12px;border:1.5px solid var(--bd);border-radius:8px;font-size:13px;background:var(--bg2);color:var(--tx);outline:none">
+              <option value="azul">🔵 Azul — Informativo</option>
+              <option value="verde">🟢 Verde — Positivo</option>
+              <option value="naranja">🟠 Naranja — Precaución</option>
+              <option value="rojo">🔴 Rojo — Urgente</option>
+              <option value="morado">🟣 Morado — Especial</option>
+            </select>
+          </div>
+          <div>
+            <label style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--sl);display:block;margin-bottom:5px">Fecha Inicio *</label>
+            <input type="date" id="sacomFi" style="width:100%;padding:9px 12px;border:1.5px solid var(--bd);border-radius:8px;font-size:13px;background:var(--bg2);color:var(--tx);outline:none;box-sizing:border-box" value="${new Date().toISOString().slice(0,10)}">
           </div>
         </div>
+        <div>
+          <label style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--sl);display:block;margin-bottom:5px">Fecha Fin *</label>
+          <input type="date" id="sacomFf" style="width:100%;padding:9px 12px;border:1.5px solid var(--bd);border-radius:8px;font-size:13px;background:var(--bg2);color:var(--tx);outline:none;box-sizing:border-box">
+        </div>
+
+        <!-- Destinatario -->
+        <div style="border:1.5px solid var(--bd);border-radius:10px;overflow:hidden">
+          <div style="padding:10px 14px;background:var(--bg2);border-bottom:1px solid var(--bd)">
+            <span style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--sl)">🎯 Destinatario</span>
+          </div>
+          <div style="padding:12px 14px;display:flex;flex-direction:column;gap:10px">
+            <div style="display:flex;gap:8px;flex-wrap:wrap">
+              ${[['grupo','👥 Grupo / Rol'],['persona','👤 Persona específica']].map(([v,l])=>`
+                <label style="display:flex;align-items:center;gap:6px;padding:7px 13px;background:var(--bg2);border:1.5px solid var(--bd);border-radius:8px;cursor:pointer;font-size:13px;font-weight:600">
+                  <input type="radio" name="sacomTipo" value="${v}" ${v==='grupo'?'checked':''} onchange="sacomTipoChange()"> ${l}
+                </label>`).join('')}
+            </div>
+
+            <!-- Modo grupo -->
+            <div id="sacomModoGrupo" style="display:flex;flex-direction:column;gap:10px">
+              <div>
+                <label style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--sl);display:block;margin-bottom:5px">Dirigido a</label>
+                <select id="sacomPara" style="width:100%;padding:9px 12px;border:1.5px solid var(--bd);border-radius:8px;font-size:13px;background:var(--bg2);color:var(--tx);outline:none">
+                  <option value="todos">👥 Todos (admins, profes y estudiantes)</option>
+                  <option value="admin">🏫 Solo Administradores</option>
+                  <option value="profe">👩‍🏫 Solo Profesores</option>
+                  <option value="est">🎓 Solo Estudiantes</option>
+                </select>
+              </div>
+              <div>
+                <label style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--sl);display:block;margin-bottom:5px">Colegios destinatarios</label>
+                <div style="font-size:11px;color:var(--sl2);margin-bottom:6px">Sin marcar = todos los colegios</div>
+                <div id="sacomColegiosChk" style="display:flex;flex-wrap:wrap;gap:7px;padding:10px;background:var(--bg2);border-radius:8px;border:1px solid var(--bd);max-height:140px;overflow-y:auto">
+                  <span style="font-size:12px;color:var(--sl3)">Cargando colegios...</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Modo persona específica -->
+            <div id="sacomModoPersona" style="display:none;flex-direction:column;gap:10px">
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+                <div>
+                  <label style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--sl);display:block;margin-bottom:5px">Colegio</label>
+                  <select id="sacomPColegio" onchange="sacomBuscarPersonas()"
+                    style="width:100%;padding:9px 12px;border:1.5px solid var(--bd);border-radius:8px;font-size:13px;background:var(--bg2);color:var(--tx);outline:none">
+                    <option value="">— Seleccionar —</option>
+                  </select>
+                </div>
+                <div>
+                  <label style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--sl);display:block;margin-bottom:5px">Rol</label>
+                  <select id="sacomPRol" onchange="sacomBuscarPersonas()"
+                    style="width:100%;padding:9px 12px;border:1.5px solid var(--bd);border-radius:8px;font-size:13px;background:var(--bg2);color:var(--tx);outline:none">
+                    <option value="admin">🏫 Admin</option>
+                    <option value="profe">👩‍🏫 Profesor</option>
+                    <option value="est">🎓 Estudiante</option>
+                  </select>
+                </div>
+              </div>
+              <div style="display:flex;align-items:center;gap:8px;background:var(--bg2);border:1.5px solid var(--bd);border-radius:8px;padding:8px 12px">
+                <span style="color:var(--sl3)">🔍</span>
+                <input id="sacomPQ" placeholder="Buscar por nombre…" oninput="sacomFiltrarPersonas()"
+                  style="border:none;background:transparent;font-size:13px;outline:none;color:var(--tx);flex:1">
+              </div>
+              <div id="sacomPersonaListW" style="max-height:180px;overflow-y:auto;border:1.5px solid var(--bd);border-radius:9px;padding:6px">
+                <div style="text-align:center;padding:16px;font-size:12px;color:var(--sl3)">Selecciona colegio y rol</div>
+              </div>
+              <div id="sacomPersonaSelW" style="display:none;padding:9px 12px;background:#eff6ff;border:1.5px solid #bfdbfe;border-radius:8px;font-size:13px;font-weight:700;color:#1d4ed8">
+                ✅ <span id="sacomPersonaNombre">—</span>
+                <button onclick="sacomDeselectPersona()" style="float:right;background:none;border:none;cursor:pointer;color:#6b7280;font-size:16px;line-height:1">×</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <button onclick="sacomPublicar()"
+          style="width:100%;padding:11px;font-size:14px;font-weight:700;background:var(--nv);color:#fff;border:none;border-radius:9px;cursor:pointer">
+          📢 Publicar Comunicado
+        </button>
       </div>
-      <button class="btn bn" style="margin-top:12px" onclick="sacomPublicar()">📢 Publicar Comunicado Global</button>
     </div>
-    <div class="card">
-      <div class="chd"><span class="cti">📋 Comunicados Creados</span></div>
-      <div id="sacomListW"><div class="mty"><div class="ei">📢</div><p>Cargando...</p></div></div>
+
+    <div class="card" style="padding:0;overflow:hidden">
+      <div style="padding:14px 20px;background:var(--bg2);border-bottom:1px solid var(--bd);display:flex;align-items:center;justify-content:space-between">
+        <span style="font-weight:800;font-size:14px;color:var(--nv)">📋 Comunicados Creados</span>
+        <button onclick="sacomRenderList()" style="background:none;border:none;cursor:pointer;font-size:16px;color:var(--sl3)" title="Actualizar">🔄</button>
+      </div>
+      <div id="sacomListW" style="padding:12px;max-height:700px;overflow-y:auto">
+        <div class="mty"><div class="ei">📢</div><p>Cargando...</p></div>
+      </div>
     </div>
   </div>`;
 }
 
 async function initSACom() {
-  // Set default end date
   const d = new Date(); d.setDate(d.getDate()+7);
   const ff = gi('sacomFf'); if(ff) ff.value = d.toISOString().slice(0,10);
-  // Load colegios for checkboxes
+  // Cargar colegios para checkboxes y selects
   try {
     const colegios = await saApiFetch('/api/superadmin/colegios');
+    window._saColegiosCom = Array.isArray(colegios) ? colegios : [];
     const chkEl = gi('sacomColegiosChk');
-    if(chkEl && Array.isArray(colegios)) {
-      if(!colegios.length) {
-        chkEl.innerHTML = '<span style="font-size:12px;color:var(--sl3)">No hay colegios registrados</span>';
-      } else {
-        chkEl.innerHTML = `<label style="font-size:12px;font-weight:700;color:var(--nv);width:100%">
-          <input type="checkbox" id="sacomTodos" checked onchange="sacomToggleTodos(this)"> 
-          🌐 Todos los colegios (${colegios.length})
-        </label>` +
-        colegios.map(c=>`<label style="font-size:12px;padding:4px 8px;background:#fff;border-radius:6px;border:1px solid var(--bd);cursor:pointer">
-          <input type="checkbox" class="sacomCh" value="${c.id}" disabled> ${esc(c.nombre)}
-        </label>`).join('');
-      }
+    if(chkEl && colegios.length) {
+      chkEl.innerHTML = `<label style="font-size:12px;font-weight:700;color:var(--nv);width:100%;display:flex;align-items:center;gap:6px">
+          <input type="checkbox" id="sacomTodos" checked onchange="sacomToggleTodos(this)">
+          🌐 Todos los colegios (${colegios.length})</label>` +
+        colegios.map(c=>`<label style="font-size:12px;padding:4px 9px;background:var(--wh);border-radius:6px;border:1px solid var(--bd);cursor:pointer;display:flex;align-items:center;gap:5px">
+          <input type="checkbox" class="sacomCh" value="${c.id}" disabled> ${esc(c.nombre)}</label>`).join('');
+    }
+    // Poblar select de colegio en modo persona
+    const pSel = gi('sacomPColegio');
+    if(pSel) pSel.innerHTML = '<option value="">— Seleccionar —</option>' +
+      colegios.map(c=>`<option value="${c.id}">${esc(c.nombre)}</option>`).join('');
+    // Poblar select de colegio en panel de bloqueo (si existe)
+    const bSel = gi('saBlkColegio');
+    if(bSel && !bSel.options.length > 1) {
+      bSel.innerHTML = '<option value="">— Selecciona un colegio —</option>' +
+        colegios.map(c=>`<option value="${c.id}">${esc(c.nombre)}</option>`).join('');
     }
   } catch(e) {}
   await sacomRenderList();
 }
 
+function sacomTipoChange(){
+  const tipo = document.querySelector('input[name="sacomTipo"]:checked')?.value||'grupo';
+  gi('sacomModoGrupo').style.display = tipo==='grupo' ? 'flex' : 'none';
+  gi('sacomModoPersona').style.display = tipo==='persona' ? 'flex' : 'none';
+}
+
+window._sacomPersonasSel = null;
+window._sacomPersonasTodas = [];
+
+async function sacomBuscarPersonas(){
+  const cid = gi('sacomPColegio')?.value;
+  const rol = gi('sacomPRol')?.value||'admin';
+  const el = gi('sacomPersonaListW'); if(!el) return;
+  if(!cid){ el.innerHTML='<div style="text-align:center;padding:14px;font-size:12px;color:var(--sl3)">Selecciona un colegio</div>'; return; }
+  el.innerHTML='<div style="text-align:center;padding:14px;font-size:12px;color:var(--sl3)">⏳ Cargando...</div>';
+  try{
+    const data = await saApiFetch(`/api/superadmin/usuarios?colegioId=${cid}&rol=${rol}`);
+    window._sacomPersonasTodas = Array.isArray(data) ? data : [];
+    sacomFiltrarPersonas();
+  }catch(e){ el.innerHTML=`<div class="al aly" style="font-size:12px">Error: ${esc(e.message)}</div>`; }
+}
+
+function sacomFiltrarPersonas(){
+  const q=(gi('sacomPQ')?.value||'').toLowerCase().trim();
+  const el=gi('sacomPersonaListW'); if(!el) return;
+  const lista=(window._sacomPersonasTodas||[]).filter(u=>
+    !q||(u.nombre||u.usuario||'').toLowerCase().includes(q)
+  );
+  if(!lista.length){ el.innerHTML='<div style="text-align:center;padding:14px;font-size:12px;color:var(--sl3)">Sin resultados</div>'; return; }
+  const roleIcon={admin:'🏫',profe:'👩‍🏫',est:'🎓'};
+  el.innerHTML=lista.map(u=>`
+    <div onclick="sacomSelectPersona('${u.id}','${esc(u.nombre||u.usuario)}','${u.role}')"
+      style="padding:8px 10px;border-radius:8px;cursor:pointer;display:flex;align-items:center;gap:9px;
+        transition:background .15s;border:1.5px solid transparent"
+      onmouseover="this.style.background='var(--bg2)'" onmouseout="this.style.background='transparent'">
+      <div style="flex:1">
+        <div style="font-size:13px;font-weight:700">${roleIcon[u.role]||'👤'} ${esc(u.nombre||u.usuario)}</div>
+        <div style="font-size:11px;color:var(--sl3)">${esc(u.usuario)} · ${u.role}</div>
+      </div>
+    </div>`).join('');
+}
+
+function sacomSelectPersona(uid, nombre, role){
+  window._sacomPersonasSel = {id:uid, nombre, role};
+  const w = gi('sacomPersonaSelW'); if(w){ w.style.display='block'; }
+  const n = gi('sacomPersonaNombre'); if(n) n.textContent = nombre;
+  gi('sacomPersonaListW').innerHTML='';
+  gi('sacomPQ').value='';
+}
+
+function sacomDeselectPersona(){
+  window._sacomPersonasSel = null;
+  const w = gi('sacomPersonaSelW'); if(w) w.style.display='none';
+  sacomFiltrarPersonas();
+}
 function sacomToggleTodos(chk) {
   document.querySelectorAll('.sacomCh').forEach(c => {
     c.disabled = chk.checked;
@@ -7789,7 +7917,6 @@ function sacomToggleTodos(chk) {
 async function sacomPublicar() {
   const tit = (gi('sacomTit')?.value||'').trim();
   const msg = (gi('sacomMsg')?.value||'').trim();
-  const para = gi('sacomPara')?.value||'todos';
   const color = gi('sacomColor')?.value||'azul';
   const fi = gi('sacomFi')?.value||'';
   const ff = gi('sacomFf')?.value||'';
@@ -7798,22 +7925,35 @@ async function sacomPublicar() {
   if(!fi||!ff){ sw('warning','Selecciona las fechas'); return; }
   if(fi>ff){ sw('warning','La fecha fin debe ser mayor o igual al inicio'); return; }
 
-  // Get selected colegios
-  const todosChk = gi('sacomTodos');
-  let colegiosDestino = [];
-  if(!todosChk?.checked) {
-    document.querySelectorAll('.sacomCh:checked').forEach(c => colegiosDestino.push(c.value));
+  const tipo = document.querySelector('input[name="sacomTipo"]:checked')?.value||'grupo';
+  let para, colegiosDestino=[], destinatarioId=null, destinatarioNombre=null;
+
+  if(tipo==='persona'){
+    if(!window._sacomPersonasSel){ sw('warning','Busca y selecciona una persona'); return; }
+    para = window._sacomPersonasSel.role;
+    destinatarioId = window._sacomPersonasSel.id;
+    destinatarioNombre = window._sacomPersonasSel.nombre;
+    colegiosDestino = [];
+  } else {
+    para = gi('sacomPara')?.value||'todos';
+    const todosChk = gi('sacomTodos');
+    if(!todosChk?.checked)
+      document.querySelectorAll('.sacomCh:checked').forEach(c=>colegiosDestino.push(c.value));
   }
 
   try {
     await saApiFetch('/api/superadmin/comunicados', {
       method: 'POST',
-      body: JSON.stringify({ titulo:tit, mensaje:msg, para, color, fechaInicio:fi, fechaFin:ff, colegiosDestino })
+      body: JSON.stringify({ titulo:tit, mensaje:msg, para, color, fechaInicio:fi, fechaFin:ff,
+        colegiosDestino, destinatarioId, destinatarioNombre })
     });
-    sw('success','📢 Comunicado global publicado');
+    sw('success', destinatarioId
+      ? `📢 Comunicado enviado a ${destinatarioNombre}`
+      : '📢 Comunicado global publicado');
     gi('sacomTit').value=''; gi('sacomMsg').value='';
-    // Reset colegios to "todos"
-    const todosEl = gi('sacomTodos'); if(todosEl){ todosEl.checked=true; sacomToggleTodos(todosEl); }
+    window._sacomPersonasSel=null;
+    const selW=gi('sacomPersonaSelW'); if(selW) selW.style.display='none';
+    const todosEl=gi('sacomTodos'); if(todosEl){ todosEl.checked=true; sacomToggleTodos(todosEl); }
     await sacomRenderList();
   } catch(e){ sw('error','Error: '+e.message); }
 }
@@ -7834,9 +7974,11 @@ async function sacomRenderList() {
     el.innerHTML = lista.map(c=>{
       const cs = colorMap[c.color]||colorMap.azul;
       const vigente = c.activo&&c.fechaInicio<=hoy&&c.fechaFin>=hoy;
-      const destLabel = (!c.colegiosDestino||!c.colegiosDestino.length)
-        ? '🌐 Todos los colegios'
-        : `${c.colegiosDestino.length} colegio(s) específico(s)`;
+      const destLabel = c.destinatarioId
+        ? `👤 ${esc(c.destinatarioNombre||c.destinatarioId)}`
+        : (!c.colegiosDestino||!c.colegiosDestino.length)
+          ? '🌐 Todos los colegios'
+          : `${c.colegiosDestino.length} colegio(s) específico(s)`;
       const paraLabel = {todos:'👥 Todos',admin:'🏫 Admins',profe:'👩‍🏫 Profes',est:'🎓 Estudiantes'}[c.para]||c.para;
       return `<div style="border:1.5px solid ${cs.border};border-radius:10px;background:${cs.bg};padding:14px;margin-bottom:10px">
         <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;flex-wrap:wrap">
@@ -8477,13 +8619,66 @@ async function initSADash() {
 
 /* ─── COLEGIOS & ADMINS ─────────────────────────────────── */
 function pgSAColegios() {
-  return `<div class="card">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;flex-wrap:wrap;gap:.5rem">
-      <h2>🏫 Colegios & Admins</h2>
-      <button class="btn" onclick="modalNuevoColegio()">＋ Nuevo Colegio</button>
+  return `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;flex-wrap:wrap;gap:12px">
+    <div>
+      <h2 style="margin:0;font-size:20px">🏫 Colegios & Admins</h2>
+      <p style="margin:4px 0 0;font-size:13px;color:var(--sl2)">Administra colegios, usuarios y accesos del sistema.</p>
     </div>
-    <input id="saColSearch" style="padding:9px 12px;border:1.5px solid var(--bd);border-radius:var(--r);font-size:13px;background:var(--bg2);color:var(--tx);outline:none;font-family:var(--fn)" style="max-width:300px;margin-bottom:1rem" placeholder="🔍 Buscar colegio…" oninput="filtrarColegios()">
-    <div id="saColegiosTable" style="overflow-x:auto">Cargando…</div>
+    <button class="btn bn" onclick="modalNuevoColegio()">＋ Nuevo Colegio</button>
+  </div>
+
+  <div style="display:grid;grid-template-columns:1fr 420px;gap:20px;align-items:start">
+    <div class="card" style="padding:0;overflow:hidden">
+      <div style="padding:16px 20px;border-bottom:1px solid var(--bd);display:flex;align-items:center;gap:12px;background:var(--bg2)">
+        <span style="font-size:14px;font-weight:700;color:var(--nv)">📋 Listado de Colegios</span>
+        <div style="flex:1;display:flex;align-items:center;gap:8px;background:var(--wh);border:1.5px solid var(--bd);border-radius:8px;padding:7px 12px;margin-left:auto;max-width:260px">
+          <span style="color:var(--sl3)">🔍</span>
+          <input id="saColSearch" placeholder="Buscar colegio…" oninput="filtrarColegios()"
+            style="border:none;background:transparent;font-size:13px;outline:none;color:var(--tx);width:100%">
+        </div>
+      </div>
+      <div id="saColegiosTable" style="overflow-x:auto;padding:4px">Cargando…</div>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:16px">
+      <!-- Panel bloqueo individual -->
+      <div class="card" style="padding:0;overflow:hidden;border:1.5px solid #fde68a">
+        <div style="padding:14px 18px;background:#fffbeb;border-bottom:1px solid #fde68a;display:flex;align-items:center;gap:10px">
+          <span style="font-size:18px">🔒</span>
+          <div>
+            <div style="font-weight:800;font-size:14px;color:#92400e">Bloquear / Desbloquear Usuario</div>
+            <div style="font-size:11px;color:#b45309;margin-top:2px">Busca por nombre y gestiona el acceso individualmente</div>
+          </div>
+        </div>
+        <div style="padding:16px">
+          <div style="margin-bottom:12px">
+            <label style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--sl);display:block;margin-bottom:5px">Colegio</label>
+            <select id="saBlkColegio" onchange="saBlkLoadUsuarios()"
+              style="width:100%;padding:9px 12px;font-size:13px;border:1.5px solid var(--bd);border-radius:8px;background:var(--bg2);color:var(--tx);outline:none">
+              <option value="">— Selecciona un colegio —</option>
+            </select>
+          </div>
+          <div style="margin-bottom:12px">
+            <label style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--sl);display:block;margin-bottom:5px">Rol</label>
+            <div style="display:flex;gap:6px;flex-wrap:wrap">
+              ${['todos','admin','profe','est'].map(r=>`
+                <label style="display:flex;align-items:center;gap:5px;padding:6px 11px;background:var(--bg2);border:1.5px solid var(--bd);border-radius:7px;cursor:pointer;font-size:12px;font-weight:600">
+                  <input type="radio" name="saBlkRol" value="${r}" ${r==='todos'?'checked':''} onchange="saBlkFiltrar()">
+                  ${{todos:'👥 Todos',admin:'🏫 Admin',profe:'👩‍🏫 Profe',est:'🎓 Est.'}[r]}
+                </label>`).join('')}
+            </div>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px;background:var(--bg2);border:1.5px solid var(--bd);border-radius:8px;padding:8px 12px;margin-bottom:12px">
+            <span style="color:var(--sl3)">🔍</span>
+            <input id="saBlkQ" placeholder="Buscar por nombre…" oninput="saBlkFiltrar()"
+              style="border:none;background:transparent;font-size:13px;outline:none;color:var(--tx);flex:1">
+          </div>
+          <div id="saBlkListW" style="max-height:320px;overflow-y:auto">
+            <div class="mty" style="padding:20px"><div class="ei" style="font-size:28px">🔍</div><p style="font-size:12px">Selecciona un colegio</p></div>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>`;
 }
 
@@ -8492,10 +8687,80 @@ async function initSAColegios() {
     const raw = await saApiFetch('/api/superadmin/colegios');
     window._saColegios = Array.isArray(raw) ? raw : [];
     renderSAColegiosTable(window._saColegios);
+    // Poblar select de colegios en el panel de bloqueo
+    const sel = gi('saBlkColegio');
+    if(sel){
+      sel.innerHTML = '<option value="">— Selecciona un colegio —</option>' +
+        window._saColegios.map(c=>`<option value="${c.id}">${esc(c.nombre)}</option>`).join('');
+    }
   } catch (e) {
     const el = gi('saColegiosTable');
     if (el) el.innerHTML = `<p style="color:red">Error: ${e.message} <button class="btn bsm" onclick="initSAColegios()">Reintentar</button></p>`;
   }
+}
+
+// ── Cargar usuarios del colegio seleccionado para bloqueo ──
+window._saBlkUsuarios = [];
+async function saBlkLoadUsuarios(){
+  const cid = gi('saBlkColegio')?.value;
+  const el = gi('saBlkListW');
+  if(!cid){ if(el) el.innerHTML='<div class="mty" style="padding:20px"><div class="ei" style="font-size:28px">🔍</div><p style="font-size:12px">Selecciona un colegio</p></div>'; return; }
+  if(el) el.innerHTML='<div style="text-align:center;padding:20px;font-size:12px;color:var(--sl3)">⏳ Cargando usuarios...</div>';
+  try{
+    const data = await saApiFetch(`/api/superadmin/usuarios?colegioId=${cid}`);
+    window._saBlkUsuarios = Array.isArray(data) ? data : [];
+    saBlkFiltrar();
+  }catch(e){ if(el) el.innerHTML=`<div class="al aly" style="font-size:12px">Error: ${esc(e.message)}</div>`; }
+}
+
+function saBlkFiltrar(){
+  const q=(gi('saBlkQ')?.value||'').toLowerCase().trim();
+  const rol=document.querySelector('input[name="saBlkRol"]:checked')?.value||'todos';
+  const el=gi('saBlkListW'); if(!el) return;
+  let lista=window._saBlkUsuarios||[];
+  if(rol!=='todos') lista=lista.filter(u=>u.role===rol);
+  if(q) lista=lista.filter(u=>(u.nombre||u.usuario||'').toLowerCase().includes(q));
+  if(!lista.length){
+    el.innerHTML='<div class="mty" style="padding:16px"><div class="ei" style="font-size:24px">😶</div><p style="font-size:12px">Sin resultados</p></div>';
+    return;
+  }
+  const roleIcon={admin:'🏫',profe:'👩‍🏫',est:'🎓',superadmin:'⭐'};
+  el.innerHTML=lista.map(u=>`
+    <div style="display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:9px;
+      border:1.5px solid ${u.blocked?'#fecaca':'var(--bd)'};background:${u.blocked?'#fff5f5':'var(--bg2)'};margin-bottom:7px">
+      <div style="flex:1;min-width:0">
+        <div style="font-weight:700;font-size:13px;color:var(--tx);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">
+          ${roleIcon[u.role]||'👤'} ${esc(u.nombre||u.usuario)}
+        </div>
+        <div style="font-size:11px;color:var(--sl3);margin-top:1px">${esc(u.usuario)} · ${u.role}</div>
+      </div>
+      <span class="bdg ${u.blocked?'bred':'bgr'}" style="font-size:10px;white-space:nowrap">${u.blocked?'🔒 Bloqueado':'✅ Activo'}</span>
+      <button onclick="saBlkToggleUsuario('${u.id}',${!u.blocked},'${esc(u.nombre||u.usuario)}')"
+        style="padding:5px 11px;font-size:11px;font-weight:700;border-radius:7px;cursor:pointer;white-space:nowrap;border:1.5px solid;
+          ${u.blocked?'background:#dcfce7;color:#166534;border-color:#86efac':'background:#fff5f5;color:#b91c1c;border-color:#fca5a5'}">
+        ${u.blocked?'🔓 Desbloquear':'🔒 Bloquear'}
+      </button>
+    </div>`).join('');
+}
+
+async function saBlkToggleUsuario(uid, block, nombre){
+  const accion=block?'bloquear':'desbloquear';
+  const conf=await Swal.fire({
+    title:`¿${block?'Bloquear':'Desbloquear'} a ${nombre}?`,
+    text:block?'El usuario no podrá iniciar sesión.':'El usuario podrá volver a ingresar.',
+    icon:block?'warning':'question',showCancelButton:true,
+    confirmButtonText:`Sí, ${accion}`,confirmButtonColor:block?'#e53e3e':'#38a169',
+    cancelButtonText:'Cancelar'
+  });
+  if(!conf.isConfirmed) return;
+  try{
+    await saApiFetch(`/api/superadmin/usuarios/${uid}/blocked`,{method:'PUT',body:JSON.stringify({blocked:block})});
+    // Actualizar local
+    const u=window._saBlkUsuarios.find(x=>x.id===uid);
+    if(u) u.blocked=block;
+    saBlkFiltrar();
+    sw('success', block?`${nombre} bloqueado`:`${nombre} desbloqueado`,'',1800);
+  }catch(e){ sw('error','Error: '+e.message); }
 }
 
 function filtrarColegios() {
