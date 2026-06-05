@@ -386,6 +386,22 @@ async function saveTri(inp) {
 }
 
 // ═══════════════════════════════════════════════════════════════════
+// saveNotaDirecta() — guarda nota {a,c,r} sin depender del DOM
+// Usado por importNotasCSV en el admin
+// ═══════════════════════════════════════════════════════════════════
+async function saveNotaDirecta(estId, per, mat, nota) {
+  syncN(estId);
+  if (!DB.notas[estId][per])       DB.notas[estId][per] = {};
+  if (!DB.notas[estId][per][mat])  DB.notas[estId][per][mat] = { a: 0, c: 0, r: 0 };
+  const clamp = v => Math.min(5, Math.max(0, isNaN(v) ? 0 : parseFloat(v) || 0));
+  DB.notas[estId][per][mat] = { a: clamp(nota.a), c: clamp(nota.c), r: clamp(nota.r) };
+  await apiFetch(
+    `/api/notas/${estId}/${encodeURIComponent(per)}/${encodeURIComponent(mat)}`,
+    { method: 'PUT', body: JSON.stringify(DB.notas[estId][per][mat]) }
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════
 // auditLog() / logAudit() / logAuditAnon()
 // ═══════════════════════════════════════════════════════════════════
 function auditLog(estN, campo, oldV, newV) {

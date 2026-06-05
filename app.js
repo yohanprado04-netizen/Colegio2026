@@ -1260,6 +1260,7 @@ function pgDash(){
     </div>` : ''}
   </div>
   <div class="sr" id="dSt"></div>
+  <div id="dSinSalon" style="display:none;margin-bottom:16px;background:var(--wh);border:2px solid #fbbf24;border-radius:12px;overflow:hidden"></div>
   <div class="g2">
     <div class="card"><div class="chd"><span class="cti">🏆 Mejores por Salón</span></div><div id="dTop"></div></div>
     <div class="card"><div class="chd"><span class="cti">🕐 Últimas Auditorías</span></div><div class="lw" id="dLog"></div></div>
@@ -1270,6 +1271,29 @@ function initDash(){
     {v:DB.profs.length,l:'Profesores',i:'👩‍🏫'},{v:DB.sals.length,l:'Salones',i:'🏫'},
     {v:DB.mB.length+DB.mP.length,l:'Materias',i:'📖'}]
     .map(s=>`<div class="scc" data-i="${s.i}"><div class="sv">${s.v}</div><div class="sl">${s.l}</div><div class="bar"></div></div>`).join('');
+
+  // Widget estudiantes sin salón
+  const sinSalon = DB.ests.filter(e=>!e.salon||!DB.sals.find(s=>s.nombre===e.salon));
+  const dSinSalon = gi('dSinSalon');
+  if(dSinSalon){
+    if(sinSalon.length){
+      dSinSalon.innerHTML=`<div class="chd" style="background:#fffbeb;border-radius:12px 12px 0 0;padding:12px 18px;
+        display:flex;align-items:center;gap:8px;border-bottom:1px solid #fde68a">
+        <span>⚠️</span>
+        <span style="font-weight:800;font-size:13px;color:#92400e">${sinSalon.length} estudiante${sinSalon.length>1?'s':''} sin salón</span>
+        <button class="btn xs" onclick="goto('apri')" style="margin-left:auto;font-size:11px;background:#fef3c7;color:#92400e;border:1px solid #fbbf24">Ver todos →</button>
+      </div>
+      <div style="padding:10px 16px;display:flex;flex-wrap:wrap;gap:6px">
+        ${sinSalon.slice(0,8).map(e=>`<span style="font-size:12px;padding:4px 10px;background:#fff;
+          border:1px solid #fde68a;border-radius:7px;color:var(--nv);font-weight:600">${esc(e.nombre)}</span>`).join('')}
+        ${sinSalon.length>8?`<span style="font-size:12px;padding:4px 10px;background:#fef3c7;border-radius:7px;color:#92400e">+${sinSalon.length-8} más...</span>`:''}
+      </div>`;
+      dSinSalon.style.display='block';
+    } else {
+      dSinSalon.style.display='none';
+    }
+  }
+
   let h='';
   DB.sals.forEach(sal=>{
     const ests=ebySalon(sal.nombre);if(!ests.length) return;
@@ -1689,14 +1713,34 @@ async function editSalAreas(sname){
 ============================================================ */
 function pgAEst(ciclo){
   const tt = ciclo === 'primaria' ? 'Primaria (1°-5°)' : 'Bachillerato (6°-11°)';
-  // Get salones sorted (already sorted by sortSals)
   const sals = DB.sals.filter(s => s.ciclo === ciclo);
+  // Estudiantes sin salón de cualquier ciclo (o del ciclo indicado si tienen matrícula)
+  const sinSalon = DB.ests.filter(e => !e.salon || !DB.sals.find(s => s.nombre === e.salon));
+  const sinSalonSection = sinSalon.length ? `
+    <div class="card" style="margin-top:18px;border:2px solid #fbbf24;border-radius:14px">
+      <div class="chd" style="background:#fffbeb;border-radius:12px 12px 0 0;padding:14px 18px;display:flex;align-items:center;gap:10px">
+        <span style="font-size:18px">⚠️</span>
+        <span style="font-weight:800;font-size:14px;color:#92400e">${sinSalon.length} Estudiante${sinSalon.length>1?'s':''} sin salón asignado</span>
+        <span style="margin-left:auto;font-size:11px;color:#b45309">Deben ser asignados a un salón</span>
+      </div>
+      <div style="padding:12px 18px;display:flex;flex-wrap:wrap;gap:8px">
+        ${sinSalon.map(e=>`
+          <div style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:#fff;
+            border:1px solid #fde68a;border-radius:9px;font-size:13px">
+            <span style="font-weight:700;color:var(--nv)">${esc(e.nombre)}</span>
+            <span style="font-size:10px;color:var(--sl3)">${e.ti||''}</span>
+            <button class="btn xs bn" onclick="asignarSalonEst('${e.id}','${ciclo}')"
+              style="font-size:11px;padding:3px 8px;margin-left:4px">📌 Asignar</button>
+          </div>`).join('')}
+      </div>
+    </div>` : '';
   return `<div class="ph">
     <h2>Estudiantes — ${tt}</h2>
     <button class="btn xs bg" onclick="showHelp('${ciclo==='primaria'?'apri':'abac'}')" style="margin-top:6px">❓ Ayuda</button>
   </div>
   <div id="aestContent">
     ${sals.length ? renderSalonGrid(ciclo, sals) : renderSalonVacio(ciclo)}
+    ${sinSalonSection}
   </div>`;
 }
 
@@ -1737,6 +1781,36 @@ function renderSalonVacio(ciclo){
 }
 
 /* Open a salon and show its students */
+/* Asignar salón a un estudiante sin salón */
+async function asignarSalonEst(estId, ciclo){
+  const e = DB.ests.find(x=>x.id===estId); if(!e) return;
+  const sals = DB.sals.filter(s=>!ciclo||s.ciclo===ciclo);
+  if(!sals.length){ sw('info','Sin salones','Crea salones primero en Salones & Grados.'); return; }
+  const opts = sals.map(s=>`<option value="${s.nombre}">${esc(s.nombre)} (${s.ciclo})</option>`).join('');
+  const {value:salon, isConfirmed} = await Swal.fire({
+    title:`📌 Asignar salón a ${esc(e.nombre)}`,
+    html:`<div style="text-align:left;font-family:var(--fn)">
+      <label style="font-size:11px;font-weight:800;text-transform:uppercase;color:var(--sl);display:block;margin-bottom:6px">Selecciona el salón</label>
+      <select id="aseSel" style="width:100%;padding:10px 12px;border:1.5px solid var(--bd);border-radius:8px;font-size:14px">
+        ${opts}
+      </select>
+    </div>`,
+    showCancelButton:true, confirmButtonText:'Asignar', cancelButtonText:'Cancelar',
+    preConfirm:()=>gi('aseSel').value
+  });
+  if(!isConfirmed||!salon) return;
+  try{
+    await apiFetch(`/api/usuarios/${e.id}`,{method:'PUT',body:JSON.stringify({salon})});
+    e.salon = salon;
+    syncN(e.id);
+    // Re-renderizar la vista actual
+    const pid = ciclo==='primaria'?'apri':'abac';
+    gi('contentArea').innerHTML = renderPg(pid);
+    initPg(pid);
+    sw('success',`${e.nombre} asignado a ${salon}`,'',1800);
+  }catch(err){ sw('error','Error al asignar: '+err.message); }
+}
+
 function abrirSalon(salon, ciclo){
   const el = gi('aestContent'); if(!el) return;
   const sOpts = DB.sals.filter(s=>s.ciclo===ciclo).map(s=>`<option value="${s.nombre}"${s.nombre===salon?' selected':''}>${s.nombre}</option>`).join('');
@@ -1909,14 +1983,10 @@ async function eliminarTodosSalon(salon, ciclo){
 
 function initAEst(c){
   if(typeof dbLoad==='function') dbLoad().catch(()=>{}).finally(()=>{
-    const el = gi('aestContent');
-    const sals = DB.sals.filter(s=>s.ciclo===c);
-    if(el) el.innerHTML = sals.length ? renderSalonGrid(c, sals) : renderSalonVacio(c);
+    gi('contentArea').innerHTML = renderPg(c==='primaria'?'apri':'abac');
   });
   else {
-    const el = gi('aestContent');
-    const sals = DB.sals.filter(s=>s.ciclo===c);
-    if(el) el.innerHTML = sals.length ? renderSalonGrid(c, sals) : renderSalonVacio(c);
+    gi('contentArea').innerHTML = renderPg(c==='primaria'?'apri':'abac');
   }
 }
 
@@ -2483,8 +2553,15 @@ function pgANot(){
     <div class="fg">
       <div class="fld"><label>Salón</label><select id="ans"><option value="">Seleccionar</option>${sO}</select></div>
       <div class="fld"><label>Periodo</label><select id="anp"><option value="">Seleccionar</option>${pO}</select></div>
-      <div class="fld" style="display:flex;align-items:flex-end"><button class="btn bn" onclick="loadAN()">Cargar</button></div>
+      <div class="fld" style="display:flex;align-items:flex-end;gap:8px">
+        <button class="btn bn" onclick="loadAN()">📋 Cargar</button>
+        <button class="btn" style="background:#e0f2fe;color:#0369a1;border:1px solid #7dd3fc" onclick="dlPlantillaNotas()">⬇️ Plantilla CSV</button>
+        <label class="btn" style="background:#dcfce7;color:#166534;border:1px solid #86efac;cursor:pointer;margin:0">
+          ⬆️ Importar CSV<input type="file" accept=".csv" style="display:none" onchange="importNotasCSV(this)">
+        </label>
+      </div>
     </div>
+    <div id="anImportResult"></div>
     <div class="srch"><span style="color:var(--sl3)">🔍</span>
       <input id="anq" placeholder="Buscar estudiante..." oninput="filterAN()">
     </div>
@@ -2492,6 +2569,150 @@ function pgANot(){
   </div>`;
 }
 function initANot(){}
+
+/* ── Descargar plantilla CSV de notas ── */
+function dlPlantillaNotas(){
+  const salon=gi('ans')?.value;
+  const per=gi('anp')?.value;
+  if(!salon||!per){sw('warning','Selecciona salón y periodo primero');return;}
+  const ests=ebySalon(salon);
+  if(!ests.length){sw('info','Sin estudiantes en este salón');return;}
+  const mats=getMats(ests[0].id);
+  const notaPct=DB.notaPct||{a:60,c:20,r:20};
+  // Cabecera: Estudiante,TI,materia_a(60%),materia_c(20%),materia_r(20%),...,Disciplina,Conducta
+  const matCols=mats.flatMap(m=>[
+    `${m}_apt(${notaPct.a||60}%)`,
+    `${m}_act(${notaPct.c||20}%)`,
+    `${m}_res(${notaPct.r||20}%)`
+  ]);
+  const header=['Estudiante','TI',...matCols,'Disciplina','Conducta'];
+  const rows=ests.map(e=>{
+    syncN(e.id);
+    const matVals=mats.flatMap(m=>{
+      const t=DB.notas[e.id]?.[per]?.[m]||{a:0,c:0,r:0};
+      return[t.a.toFixed(1),t.c.toFixed(1),t.r.toFixed(1)];
+    });
+    const disc=DB.notas[e.id]?.[per]?.disciplina??'';
+    const cond=DB.notas[e.id]?.[per]?.conducta??'';
+    return[`"${e.nombre}"`,e.ti||'',...matVals,disc!==''?disc:'',cond!==''?cond:''];
+  });
+  const csv=[header,...rows].map(r=>r.join(',')).join('\n');
+  const blob=new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download=`plantilla_notas_${salon}_${per.replace(/\s/g,'_')}.csv`;
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+/* ── Importar notas desde CSV ── */
+async function importNotasCSV(input){
+  const salon=gi('ans')?.value;
+  const per=gi('anp')?.value;
+  const file=input.files?.[0];
+  input.value=''; // reset para permitir re-subir el mismo archivo
+  if(!salon||!per){sw('warning','Selecciona salón y periodo antes de importar');return;}
+  if(!file){return;}
+
+  const text=await file.text();
+  const lines=text.replace(/\r/g,'').split('\n').filter(l=>l.trim());
+  if(lines.length<2){sw('error','El CSV está vacío o sin datos');return;}
+
+  // Parsear cabecera
+  const header=lines[0].split(',').map(h=>h.trim().replace(/^"|"$/g,''));
+  if(header[0].toLowerCase()!=='estudiante'){
+    sw('error','Formato inválido: la primera columna debe ser "Estudiante"');return;
+  }
+
+  // Detectar columnas de materias: nombre_apt/act/res
+  // Formato: "Matemáticas_apt(60%)", "Matemáticas_act(20%)", "Matemáticas_res(20%)"
+  const matMap={}; // { matNombre: { a: colIdx, c: colIdx, r: colIdx } }
+  header.forEach((h,i)=>{
+    const m=h.match(/^(.+)_(apt|act|res)\(/i)||h.match(/^(.+)_(a|c|r)$/i);
+    if(m){
+      const mat=m[1].trim();
+      const field=m[2].toLowerCase().startsWith('apt')||m[2]==='a'?'a':
+                  m[2].toLowerCase().startsWith('act')||m[2]==='c'?'c':'r';
+      if(!matMap[mat]) matMap[mat]={};
+      matMap[mat][field]=i;
+    }
+  });
+  const discIdx=header.findIndex(h=>h.toLowerCase()==='disciplina');
+  const condIdx=header.findIndex(h=>h.toLowerCase()==='conducta');
+  const tiIdx=header.findIndex(h=>h.toLowerCase()==='ti');
+
+  const mats=Object.keys(matMap);
+  if(!mats.length){sw('error','No se encontraron columnas de materias en el CSV');return;}
+
+  // Buscar estudiantes por nombre o TI
+  let ok=0,skip=0,errores=[];
+  const resultEl=gi('anImportResult');
+  if(resultEl) resultEl.innerHTML=`<div class="al alb" style="margin-bottom:8px">⏳ Importando notas...</div>`;
+
+  for(let i=1;i<lines.length;i++){
+    const cols=lines[i].split(',').map(c=>c.trim().replace(/^"|"$/g,''));
+    if(!cols[0]) continue;
+    const nombreCSV=cols[0].trim();
+    const tiCSV=tiIdx>=0?cols[tiIdx]?.trim():'';
+
+    // Buscar estudiante por TI primero, luego por nombre (case-insensitive)
+    let est=tiCSV?DB.ests.find(e=>e.ti===tiCSV&&e.salon===salon):null;
+    if(!est) est=DB.ests.find(e=>e.nombre.toLowerCase()===nombreCSV.toLowerCase()&&e.salon===salon);
+    if(!est){skip++;errores.push(`Fila ${i+1}: "${nombreCSV}" no encontrado en ${salon}`);continue;}
+
+    syncN(est.id);
+    if(!DB.notas[est.id][per]) DB.notas[est.id][per]={};
+
+    // Guardar notas de cada materia
+    for(const mat of mats){
+      const mc=matMap[mat];
+      const clamp=v=>Math.min(5,Math.max(0,isNaN(parseFloat(v))?0:parseFloat(v)));
+      const nota={
+        a:clamp(cols[mc.a??-1]),
+        c:clamp(cols[mc.c??-1]),
+        r:clamp(cols[mc.r??-1])
+      };
+      try{
+        await saveNotaDirecta(est.id, per, mat, nota);
+      }catch(e2){
+        errores.push(`Error guardando ${mat} de ${est.nombre}: ${e2.message}`);
+      }
+    }
+
+    // Disciplina y conducta
+    if(discIdx>=0&&cols[discIdx]!==''){
+      const dv=parseFloat(cols[discIdx]);
+      if(!isNaN(dv)){
+        DB.notas[est.id][per].disciplina=Math.min(5,Math.max(0,dv));
+        try{ await saveDisc(est.id,dv,encodeURIComponent(per)); }catch(e){}
+      }
+    }
+    if(condIdx>=0&&cols[condIdx]!==''){
+      const cv=parseFloat(cols[condIdx]);
+      if(!isNaN(cv)){
+        DB.notas[est.id][per].conducta=Math.min(5,Math.max(0,cv));
+        try{ await saveConducta(est.id,cv,encodeURIComponent(per)); }catch(e){}
+      }
+    }
+    ok++;
+  }
+
+  // Mostrar resultado
+  const color=errores.length?'aly':'alg';
+  if(resultEl) resultEl.innerHTML=`<div class="al ${color}" style="margin-bottom:8px">
+    ✅ ${ok} estudiante${ok!==1?'s':''} importados correctamente.
+    ${skip?`⚠️ ${skip} no encontrados.`:''}
+    ${errores.length?`<details style="margin-top:6px"><summary style="cursor:pointer;font-size:11px">Ver errores (${errores.length})</summary>
+      <div style="font-size:11px;margin-top:4px">${errores.map(e=>`<div>• ${e}</div>`).join('')}</div>
+    </details>`:''}
+  </div>`;
+
+  // Recargar tabla visible
+  if(ok>0){
+    loadAN();
+    sw('success',`${ok} notas importadas`,salon+' — '+per,2200);
+  }
+}
 function loadAN(){const s=gi('ans')?.value,p=gi('anp')?.value;if(!s||!p){sw('warning','Selecciona salón y periodo');return;}_anE=ebySalon(s);renderANotTbl(s,p,_anE);}
 function filterAN(){const s=gi('ans')?.value,p=gi('anp')?.value;if(!s||!p)return;const f=(gi('anq')?.value||'').toLowerCase();renderANotTbl(s,p,_anE.filter(e=>e.nombre.toLowerCase().includes(f)));}
 function renderANotTbl(salon,per,list){
@@ -6357,7 +6578,7 @@ function dlBoletinCepa(estId,perFilter,anno,snapData){
   };
   const pg=(e&&!esHist)?gprom(estId):pgCalc();
 
-  // Disciplina
+  // Disciplina por periodo y promedio
   const discPers=perMap.map(per=>{
     if(!per)return null;
     const dv=notasDelAno[per]?.disciplina??notasDelAno[per]?._disciplina??null;
@@ -6365,6 +6586,15 @@ function dlBoletinCepa(estId,perFilter,anno,snapData){
   });
   const discVals=discPers.filter(v=>v!==null);
   const discProm=discVals.length?+(discVals.reduce((s,v)=>s+v,0)/discVals.length).toFixed(2):null;
+
+  // Conducta por periodo y promedio
+  const condPers=perMap.map(per=>{
+    if(!per)return null;
+    const cv=notasDelAno[per]?.conducta??notasDelAno[per]?._conducta??null;
+    return typeof cv==='number'?cv:null;
+  });
+  const condVals=condPers.filter(v=>v!==null);
+  const condProm=condVals.length?+(condVals.reduce((s,v)=>s+v,0)/condVals.length).toFixed(2):null;
 
   // Observación — materias con def < 3.0
   const mpList=mats.filter(m=>{const d=defMat(m);return d>0&&d<3.0;});
@@ -6451,6 +6681,18 @@ function dlBoletinCepa(estId,perFilter,anno,snapData){
       <td style="${tdB}text-align:center">${fd(discPers[3])}</td>
       <td style="${tdB}text-align:center;font-weight:700">${discProm!==null?fmt(discProm):'—'}</td>
       <td style="${tdB}text-align:center;font-size:9.5px">${discProm!==null?desCepa(discProm):'—'}</td>
+      <td style="${tdB}"></td>
+    </tr>`;
+    html+=`<tr>
+      <td style="${tdB}text-align:center;color:#555">${aIdx}.2</td>
+      <td colspan="2" style="${tdB}">Conducta</td>
+      <td style="${tdB}text-align:center;color:#666">0</td>
+      <td style="${tdB}text-align:center">${fd(condPers[0])}</td>
+      <td style="${tdB}text-align:center">${fd(condPers[1])}</td>
+      <td style="${tdB}text-align:center">${fd(condPers[2])}</td>
+      <td style="${tdB}text-align:center">${fd(condPers[3])}</td>
+      <td style="${tdB}text-align:center;font-weight:700">${condProm!==null?fmt(condProm):'—'}</td>
+      <td style="${tdB}text-align:center;font-size:9.5px">${condProm!==null?desCepa(condProm):'—'}</td>
       <td style="${tdB}"></td>
     </tr>`;
     return html;
