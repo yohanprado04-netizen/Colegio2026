@@ -802,7 +802,7 @@ function resetSessionTimer(){
   document.addEventListener(ev,()=>{if(CU)resetSessionTimer();},{passive:true}));
 /* ── 1. AGREGAR EN ROLE_MAP (reemplaza la línea de ROLE_MAP completa) ── */
 const ROLE_MAP={
-  superadmin:new Set(['sadash','sacolegios','saestadisticas','saauditoria','samantenimiento','sasug','sacom']),
+  superadmin:new Set(['sadash','sacolegios','saestadisticas','saauditoria','samantenimiento','sasug','sacom','safin']),
   admin:new Set(['dash','asal','apri','abac','aprf','amat','anot','areh','afec','ablk','aaud','aexp','aexc','avcl','ahist','asug','acom','ahor']),
   profe:new Set(['ph','pnot','past','pvir','ptar','prec','phist','psug','pcom']),
   est:new Set(['eb','east','etare','eexc','eprof','evir','ereh','ehist','esug','eicfes','ecom'])
@@ -845,7 +845,7 @@ function logAuditAnon(usuario,msg){ /* implementado en api-layer.js */ }
 ============================================================ */
 const PL={
   sadash:'Panel Global', sacolegios:'Colegios & Admins', saplan:'Plan de Estudios',
-  sacom:'Comunicados Globales',
+  sacom:'Comunicados Globales', safin:'Módulo Financiero',
   saestadisticas:'Estadísticas Globales', saauditoria:'Auditoría Global',
   samantenimiento:'Mantenimiento', sasug:'Sugerencias Recibidas',
   dash:'Panel General',asal:'Salones & Grados',apri:'Primaria (1°-5°)',abac:'Bachillerato (6°-11°)',
@@ -1104,6 +1104,7 @@ function navItems(){
     {s:'Supervisión'},{id:'saestadisticas',ic:'📊',lb:'Estadísticas'},
     {id:'saauditoria',ic:'🔍',lb:'Auditoría Global'},
     {s:'Comunicación'},{id:'sacom',ic:'📢',lb:'Comunicados Globales'},
+    {s:'Finanzas'},{id:'safin',ic:'💰',lb:'Módulo Financiero'},
     {s:'Sistema'},{id:'samantenimiento',ic:'⚙️',lb:'Mantenimiento'},
     {id:'sasug',ic:'💡',lb:'Sugerencias Recibidas'},
   ];
@@ -1221,7 +1222,7 @@ function renderPg(pid){
     ph:pgPH,pnot:pgPNot,past:pgPAst,pvir:pgPVir,ptar:pgPTar,prec:pgPRec,phist:pgPHist,
     eb:pgEB,east:pgEAst,etare:pgETare,eexc:pgEExc,eprof:pgEProf,
     evir:pgEVir,ereh:pgEReh,ehist:pgEHist,eicfes:pgEIcfes,
-    sadash:pgSADash,sacolegios:pgSAColegios,saplan:pgSAPlan,sacom:pgSACom,
+    sadash:pgSADash,sacolegios:pgSAColegios,saplan:pgSAPlan,sacom:pgSACom,safin:pgSAFin,
     saestadisticas:pgSAEstadisticas,saauditoria:pgSAAuditoria,samantenimiento:pgSAMantenimiento,
     sasug:pgSASug,
     asug:pgSugerencias,psug:pgSugerencias,esug:pgSugerencias,
@@ -1234,7 +1235,7 @@ function initPg(pid){
     aprf:initAPrf,ahor:initAHor,amat:initAMat,anot:initANot,areh:initAReh,aexc:initAExc,avcl:initAVcl,acom:initACom,pcom:initComVer,ecom:initComVer,
     pnot:initPNot,past:initPAst,eb:initEB,eicfes:initEIcfes,
     ph:()=>{ setTimeout(()=>{ renderPExcR(); notifNuevasExcusas(); },0); },
-    sadash:initSADash,sacolegios:initSAColegios,saplan:initSAPlan,sacom:initSACom,
+    sadash:initSADash,sacolegios:initSAColegios,saplan:initSAPlan,sacom:initSACom,safin:initSAFin,
     saestadisticas:initSAEstadisticas,saauditoria:initSAAuditoria,samantenimiento:initSAMantenimiento,
     sasug:initSASug,
     asug:initSugerencias,psug:initSugerencias,esug:initSugerencias,
@@ -7693,6 +7694,234 @@ function icfesReiniciarTodo(){
    SUPERADMIN — COMUNICADOS GLOBALES
 ============================================================ */
 
+/* ═══════════════════════════════════════════════════════════
+   SUPERADMIN — MÓDULO FINANCIERO
+════════════════════════════════════════════════════════════ */
+function pgSAFin(){
+  return`<div style="margin-bottom:20px">
+    <h2 style="margin:0;font-size:20px">💰 Módulo Financiero</h2>
+    <p style="margin:5px 0 0;font-size:13px;color:var(--sl2)">Gestiona los usuarios financieros (finAdmin / finUser) de cada colegio.</p>
+  </div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
+
+    <!-- Crear usuario financiero -->
+    <div class="card" style="padding:0;overflow:hidden">
+      <div style="padding:14px 20px;background:var(--bg2);border-bottom:1px solid var(--bd)">
+        <span style="font-weight:800;font-size:14px;color:var(--nv)">➕ Nuevo Usuario Financiero</span>
+      </div>
+      <div style="padding:18px;display:flex;flex-direction:column;gap:13px">
+        <div>
+          <label style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--sl);display:block;margin-bottom:5px">Colegio *</label>
+          <select id="safinColegio" style="width:100%;padding:9px 12px;font-size:13px;border:1.5px solid var(--bd);border-radius:8px;background:var(--bg2);color:var(--tx);outline:none">
+            <option value="">— Seleccionar —</option>
+          </select>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+          <div>
+            <label style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--sl);display:block;margin-bottom:5px">Nombre *</label>
+            <input id="safinNombre" placeholder="Nombre completo"
+              style="width:100%;padding:9px 12px;font-size:13px;border:1.5px solid var(--bd);border-radius:8px;background:var(--bg2);color:var(--tx);outline:none;box-sizing:border-box">
+          </div>
+          <div>
+            <label style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--sl);display:block;margin-bottom:5px">Rol *</label>
+            <select id="safinRol" style="width:100%;padding:9px 12px;font-size:13px;border:1.5px solid var(--bd);border-radius:8px;background:var(--bg2);color:var(--tx);outline:none">
+              <option value="finAdmin">💼 finAdmin — Gestión completa</option>
+              <option value="finUser">👁️ finUser — Solo lectura / caja</option>
+            </select>
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+          <div>
+            <label style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--sl);display:block;margin-bottom:5px">Usuario *</label>
+            <input id="safinUsuario" placeholder="usuario_financiero"
+              style="width:100%;padding:9px 12px;font-size:13px;border:1.5px solid var(--bd);border-radius:8px;background:var(--bg2);color:var(--tx);outline:none;box-sizing:border-box">
+          </div>
+          <div>
+            <label style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--sl);display:block;margin-bottom:5px">Contraseña *</label>
+            <input id="safinPass" type="password" placeholder="••••••••"
+              style="width:100%;padding:9px 12px;font-size:13px;border:1.5px solid var(--bd);border-radius:8px;background:var(--bg2);color:var(--tx);outline:none;box-sizing:border-box">
+          </div>
+        </div>
+        <button onclick="saFinCrearUsuario()"
+          style="padding:11px;font-size:14px;font-weight:700;background:var(--nv);color:#fff;border:none;border-radius:9px;cursor:pointer;width:100%">
+          💾 Crear Usuario Financiero
+        </button>
+      </div>
+    </div>
+
+    <!-- Lista de usuarios financieros -->
+    <div class="card" style="padding:0;overflow:hidden">
+      <div style="padding:14px 20px;background:var(--bg2);border-bottom:1px solid var(--bd);display:flex;align-items:center;justify-content:space-between">
+        <span style="font-weight:800;font-size:14px;color:var(--nv)">👥 Usuarios Financieros</span>
+        <button onclick="saFinLoadUsuarios()" style="background:none;border:none;cursor:pointer;font-size:16px;color:var(--sl3)">🔄</button>
+      </div>
+      <div style="padding:10px 14px;border-bottom:1px solid var(--bd)">
+        <div style="display:flex;align-items:center;gap:8px;background:var(--bg2);border:1.5px solid var(--bd);border-radius:8px;padding:8px 12px">
+          <span style="color:var(--sl3)">🔍</span>
+          <input id="safinQ" placeholder="Buscar por nombre o colegio…" oninput="saFinFiltrar()"
+            style="border:none;background:transparent;font-size:13px;outline:none;color:var(--tx);flex:1">
+        </div>
+      </div>
+      <div id="safinListW" style="padding:10px;max-height:520px;overflow-y:auto">
+        <div class="mty"><div class="ei">💰</div><p>Cargando...</p></div>
+      </div>
+    </div>
+  </div>`;
+}
+
+window._saFinUsuarios = [];
+async function initSAFin(){
+  // Cargar colegios para el select
+  try{
+    const cols = window._saColegios || await saApiFetch('/api/superadmin/colegios');
+    window._saColegios = cols;
+    const sel = gi('safinColegio');
+    if(sel) sel.innerHTML = '<option value="">— Seleccionar —</option>' +
+      cols.map(c=>`<option value="${c.id}">${esc(c.nombre)}</option>`).join('');
+  }catch(e){}
+  await saFinLoadUsuarios();
+}
+
+async function saFinLoadUsuarios(){
+  const el = gi('safinListW'); if(!el) return;
+  el.innerHTML='<div style="text-align:center;padding:20px;font-size:12px;color:var(--sl3)">⏳ Cargando...</div>';
+  try{
+    const data = await saApiFetch('/api/fin/superadmin/usuarios');
+    window._saFinUsuarios = Array.isArray(data) ? data : [];
+    saFinFiltrar();
+  }catch(e){ el.innerHTML=`<div class="al aly" style="font-size:12px">Error: ${esc(e.message)}</div>`; }
+}
+
+function saFinFiltrar(){
+  const el = gi('safinListW'); if(!el) return;
+  const q = (gi('safinQ')?.value||'').toLowerCase().trim();
+  let lista = window._saFinUsuarios||[];
+  if(q) lista = lista.filter(u=>(u.nombre+u.usuario+u.colegioNombre).toLowerCase().includes(q));
+  if(!lista.length){
+    el.innerHTML='<div class="mty" style="padding:20px"><div class="ei" style="font-size:28px">😶</div><p style="font-size:12px">Sin usuarios financieros</p></div>';
+    return;
+  }
+  const rolBadge = r => r==='finAdmin'
+    ?'<span class="bdg" style="font-size:10px;background:#ede9fe;color:#5b21b6;border:1px solid #c4b5fd">💼 finAdmin</span>'
+    :'<span class="bdg bgy" style="font-size:10px">👁️ finUser</span>';
+  el.innerHTML = lista.map(u=>`
+    <div style="display:flex;align-items:center;gap:10px;padding:10px 8px;border-radius:9px;
+      border:1.5px solid var(--bd);background:var(--bg2);margin-bottom:8px">
+      <div style="flex:1;min-width:0">
+        <div style="font-weight:700;font-size:13px;display:flex;align-items:center;gap:7px;flex-wrap:wrap">
+          💰 ${esc(u.nombre)} ${rolBadge(u.role)}
+          ${u.blocked?'<span class="bdg bred" style="font-size:10px">🔒 Bloqueado</span>':''}
+        </div>
+        <div style="font-size:11px;color:var(--sl3);margin-top:2px">${esc(u.usuario)} · ${esc(u.colegioNombre||u.colegioId)}</div>
+      </div>
+      <div style="display:flex;gap:6px;flex-shrink:0">
+        <button onclick="saFinEditUsuario('${u.id}')"
+          style="padding:5px 10px;font-size:11px;font-weight:600;background:#e0e7ff;color:#3730a3;border:1.5px solid #a5b4fc;border-radius:7px;cursor:pointer">✏️</button>
+        <button onclick="saFinToggleBlocked('${u.id}',${!u.blocked},'${esc(u.nombre)}')"
+          style="padding:5px 10px;font-size:11px;font-weight:600;border-radius:7px;cursor:pointer;border:1.5px solid;
+            ${u.blocked?'background:#dcfce7;color:#166534;border-color:#86efac':'background:#fff5f5;color:#b91c1c;border-color:#fca5a5'}">
+          ${u.blocked?'🔓':'🔒'}
+        </button>
+        <button onclick="saFinEliminar('${u.id}','${esc(u.nombre)}')"
+          style="padding:5px 10px;font-size:11px;font-weight:600;background:#fff5f5;color:#b91c1c;border:1.5px solid #fca5a5;border-radius:7px;cursor:pointer">🗑</button>
+      </div>
+    </div>`).join('');
+}
+
+async function saFinCrearUsuario(){
+  const colegioId = gi('safinColegio')?.value;
+  const nombre    = gi('safinNombre')?.value.trim();
+  const usuario   = gi('safinUsuario')?.value.trim();
+  const password  = gi('safinPass')?.value.trim();
+  const role      = gi('safinRol')?.value||'finAdmin';
+  if(!colegioId){ sw('warning','Selecciona un colegio'); return; }
+  if(!nombre||!usuario||!password){ sw('warning','Completa todos los campos'); return; }
+  try{
+    await saApiFetch('/api/fin/superadmin/usuarios',{
+      method:'POST',
+      body:JSON.stringify({nombre,usuario,password,colegioId,role})
+    });
+    gi('safinNombre').value=''; gi('safinUsuario').value=''; gi('safinPass').value='';
+    gi('safinColegio').value='';
+    sw('success','Usuario financiero creado','',1800);
+    await saFinLoadUsuarios();
+  }catch(e){ sw('error','Error: '+e.message); }
+}
+
+async function saFinToggleBlocked(uid, block, nombre){
+  const conf = await Swal.fire({
+    title:`¿${block?'Bloquear':'Desbloquear'} a ${nombre}?`,
+    icon:block?'warning':'question', showCancelButton:true,
+    confirmButtonText:`Sí, ${block?'bloquear':'desbloquear'}`,
+    confirmButtonColor:block?'#e53e3e':'#38a169', cancelButtonText:'Cancelar'
+  });
+  if(!conf.isConfirmed) return;
+  try{
+    await saApiFetch(`/api/fin/superadmin/usuarios/${uid}`,{
+      method:'PUT', body:JSON.stringify({blocked:block})
+    });
+    const u = window._saFinUsuarios.find(x=>x.id===uid);
+    if(u) u.blocked = block;
+    saFinFiltrar();
+    sw('success', block?`${nombre} bloqueado`:`${nombre} desbloqueado`,'',1800);
+  }catch(e){ sw('error','Error: '+e.message); }
+}
+
+async function saFinEditUsuario(uid){
+  const u = window._saFinUsuarios.find(x=>x.id===uid); if(!u) return;
+  const r = await Swal.fire({
+    title:`✏️ Editar — ${u.nombre}`,width:440,
+    html:`<div style="text-align:left;font-family:var(--fn);display:flex;flex-direction:column;gap:11px">
+      <div>
+        <label style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--sl);display:block;margin-bottom:4px">Nombre</label>
+        <input id="sefn" value="${esc(u.nombre)}" style="width:100%;padding:9px 12px;font-size:13px;border:1.5px solid var(--bd);border-radius:8px;background:var(--bg2);color:var(--tx);outline:none;box-sizing:border-box">
+      </div>
+      <div>
+        <label style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--sl);display:block;margin-bottom:4px">Rol</label>
+        <select id="sefr" style="width:100%;padding:9px 12px;font-size:13px;border:1.5px solid var(--bd);border-radius:8px;background:var(--bg2);color:var(--tx);outline:none">
+          <option value="finAdmin" ${u.role==='finAdmin'?'selected':''}>💼 finAdmin — Gestión completa</option>
+          <option value="finUser"  ${u.role==='finUser' ?'selected':''}>👁️ finUser — Solo lectura / caja</option>
+        </select>
+      </div>
+      <div>
+        <label style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--sl);display:block;margin-bottom:4px">Nueva contraseña <span style="font-weight:400;color:var(--sl3)">(dejar vacío para no cambiar)</span></label>
+        <input id="sefp" type="password" placeholder="••••••••" style="width:100%;padding:9px 12px;font-size:13px;border:1.5px solid var(--bd);border-radius:8px;background:var(--bg2);color:var(--tx);outline:none;box-sizing:border-box">
+      </div>
+    </div>`,
+    showCancelButton:true,confirmButtonText:'Guardar',cancelButtonText:'Cancelar',
+    preConfirm:()=>({
+      nombre: gi('sefn').value.trim(),
+      role:   gi('sefr').value,
+      password: gi('sefp').value.trim()||undefined
+    })
+  });
+  if(!r.isConfirmed) return;
+  const payload = { nombre:r.value.nombre, role:r.value.role };
+  if(r.value.password) payload.password = r.value.password;
+  try{
+    await saApiFetch(`/api/fin/superadmin/usuarios/${uid}`,{method:'PUT',body:JSON.stringify(payload)});
+    Object.assign(u, payload); delete u.password;
+    saFinFiltrar();
+    sw('success','Usuario actualizado','',1600);
+  }catch(e){ sw('error','Error: '+e.message); }
+}
+
+async function saFinEliminar(uid, nombre){
+  const conf = await Swal.fire({
+    title:`¿Eliminar a ${nombre}?`,text:'Esta acción no se puede deshacer.',
+    icon:'warning',showCancelButton:true,
+    confirmButtonText:'Sí, eliminar',confirmButtonColor:'#e53e3e',cancelButtonText:'Cancelar'
+  });
+  if(!conf.isConfirmed) return;
+  try{
+    await saApiFetch(`/api/fin/superadmin/usuarios/${uid}`,{method:'DELETE'});
+    window._saFinUsuarios = window._saFinUsuarios.filter(x=>x.id!==uid);
+    saFinFiltrar();
+    sw('success','Usuario eliminado','',1600);
+  }catch(e){ sw('error','Error: '+e.message); }
+}
+
+/* ── pgSACom ── */
 function pgSACom() {
   return `<div style="margin-bottom:20px">
     <h2 style="margin:0;font-size:20px">📢 Comunicados Globales</h2>

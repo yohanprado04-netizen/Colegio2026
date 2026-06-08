@@ -136,6 +136,7 @@ app.use('/api/auth',        loginLimiter, require('./routes/auth'));
 app.use('/api/superadmin',               require('./routes/superadmin'));
 app.use('/api/sugerencias',              require('./routes/sugerencias'));
 app.use('/api/db',                       require('./routes/db'));
+app.use('/api/fin',                      require('./routes/finanzas'));
 app.use('/api',                          require('./routes/api'));
 
 // ─── Health check ─────────────────────────────────────────────────
