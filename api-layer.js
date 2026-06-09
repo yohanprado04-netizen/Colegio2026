@@ -250,33 +250,35 @@ async function doLogin() {
 
     // ── Intento 2: si falla con 401/403, probar login financiero ──
     if (!res.ok && (res.status === 401 || res.status === 403)) {
-      let resF;
+      let resF, dataF;
       try {
         resF = await fetch(API_BASE + '/api/fin/auth/login', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ usuario: u, password: p })
         });
+        dataF = await resF.json().catch(() => ({}));
       } catch (_) {}
 
-      if (resF && resF.ok) {
-        const dataF = await resF.json().catch(() => ({}));
-        if (dataF.token && dataF.user?.finRole) {
-          // Login financiero exitoso — redirigir a la app financiera
-          TokenStore.set(dataF.token);
-          show('');
-          // Guardar token financiero y redirigir al módulo de finanzas
-          window._finToken = dataF.token;
-          window._finUser  = dataF.user;
-          gi('ls').classList.add('hidden');
-          // Mostrar interfaz financiera embebida
-          _bootFinanzas(dataF.user, dataF.token);
-          return;
-        }
+      // Login financiero exitoso
+      if (resF && resF.ok && dataF?.token && dataF?.user?.finRole) {
+        TokenStore.set(dataF.token);
+        show('');
+        window._finToken = dataF.token;
+        window._finUser  = dataF.user;
+        gi('ls').classList.add('hidden');
+        _bootFinanzas(dataF.user, dataF.token);
+        return;
       }
 
-      // Ambos fallaron — mostrar error original
-      show(data.error || 'Credenciales incorrectas.');
+      // /api/fin no existe aún en el servidor (no desplegado)
+      if (!resF || resF.status === 404) {
+        show(data.error || 'Credenciales incorrectas.');
+        return;
+      }
+
+      // Error específico del login financiero
+      show(dataF?.error || data.error || 'Credenciales incorrectas.');
       return;
     }
 
