@@ -18,12 +18,12 @@ const bcrypt   = require('bcryptjs');
 // CONFIGURACIÓN MANUAL — edita estos valores si no usas variables de entorno
 // ══════════════════════════════════════════════════════════════════════════════
 const MANUAL = {
-  colegioId: 'col_1780002622502',       // ← ID del colegio
-  usuario:   'luismoreno',              // ← usuario de acceso al módulo financiero
-  password:  'luis026',                 // ← contraseña
-  nombre:    'Administrador Financiero CEPA', // ← nombre visible
-  role:      'finAdmin',                // 'finAdmin' o 'finUser'
-  reset:     false,                     // true = forzar reset de contraseña si ya existe
+  colegioId: 'col_1780002622502',
+  usuario:   'luismoreno',
+  password:  'luis026',
+  nombre:    'Administrador Financiero CEPA',
+  role:      'finAdmin',
+  reset:     true,   // ← fuerza reset de contraseña si el usuario ya existe
 };
 // ══════════════════════════════════════════════════════════════════════════════
 

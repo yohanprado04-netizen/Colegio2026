@@ -62,7 +62,10 @@ router.post('/auth/login', async (req, res) => {
       return res.status(400).json({ error: 'Usuario y contraseña requeridos' });
 
     const u = await FinUsuario.findOne({ usuario });
-    if (!u)        return res.status(401).json({ error: 'Credenciales incorrectas' });
+    if (!u) {
+      console.log(`[fin/login] "${usuario}" no encontrado en fin_usuarios`);
+      return res.status(401).json({ error: 'Credenciales incorrectas' });
+    }
     if (u.blocked) return res.status(403).json({ error: 'Cuenta bloqueada. Contacta al administrador.' });
 
     const col = await Colegio.findOne({ id: u.colegioId }).select('activo nombre').lean();
@@ -70,6 +73,7 @@ router.post('/auth/login', async (req, res) => {
       return res.status(403).json({ error: 'Tu institución está desactivada.' });
 
     const ok = await bcrypt.compare(password, u.password);
+    console.log(`[fin/login] "${usuario}" encontrado | bcrypt ok=${ok} | col=${u.colegioNombre}`);
     if (!ok) return res.status(401).json({ error: 'Credenciales incorrectas' });
 
     const token = jwt.sign(
