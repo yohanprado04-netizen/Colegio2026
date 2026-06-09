@@ -28,7 +28,7 @@ const UsuarioSchema = new Schema({
   colegioNombre: { type: String, default: '' },
   salon:         { type: String, default: '' },
   registrado:    { type: String, default: '' },
-  ciclo:         { type: String, enum: ['primaria','bachillerato',''], default: '' },
+  ciclo:         { type: String, enum: ['primaria','bachillerato','ambos',''], default: '' }, // 'ambos' = enseña en los dos ciclos
   salones:       [{ type: String }],
   materias:      [{ type: String }],
   materia:       { type: String, default: '' },
@@ -40,7 +40,7 @@ const SalonSchema = new Schema({
   nombre:        { type: String, required: true, trim: true },
   ciclo:         { type: String, enum: ['primaria','bachillerato'], required: true },
   jornada:       { type: String, enum: ['mañana','tarde','noche',''], default: '' },
-  mats:          [{ type: String }],
+  mats:          { type: mongoose.Schema.Types.Mixed, default: null }, // null = globales; [String] = propias del salón
   colegioId:     { type: String, required: true, index: true },
   colegioNombre: { type: String, default: '' },   // nombre del colegio al que pertenece
 }, { timestamps: true, collection: 'salones' });
@@ -320,50 +320,73 @@ const ComunicadoSchema = new Schema({
   // colegiosDestino: [] = todos los colegios; ['cid1','cid2'] = colegios específicos
   esSuperAdmin:     { type: Boolean, default: false },
   colegiosDestino:  [{ type: String }],
+  // comunicado a persona individual
+  destinatarioId:   { type: String, default: '' },
+  destinatarioNombre:{ type: String, default: '' },
 }, { timestamps: true, collection: 'comunicados' });
 ComunicadoSchema.index({ colegioId: 1, activo: 1 });
 ComunicadoSchema.index({ esSuperAdmin: 1, activo: 1 });
 
-// ─── USUARIOS FINANCIEROS ─────────────────────────────────────────────────────
-// Colección separada de los usuarios académicos.
-// Roles: 'finAdmin' (gestión completa) | 'finUser' (solo lectura / consulta)
-const FinUserSchema = new Schema({
+// ─── MÓDULO FINANCIERO ──────────────────────────────────────────────────────
+const FinUsuarioSchema = new Schema({
   id:            { type: String, required: true, unique: true },
-  nombre:        { type: String, required: true, trim: true },
-  usuario:       { type: String, required: true, unique: true, trim: true },
+  nombre:        { type: String, required: true },
+  usuario:       { type: String, required: true, unique: true },
   password:      { type: String, required: true },
-  role:          { type: String, enum: ['finAdmin', 'finUser'], default: 'finUser' },
+  role:          { type: String, enum: ['finAdmin','finUser'], default: 'finAdmin' },
   colegioId:     { type: String, required: true, index: true },
   colegioNombre: { type: String, default: '' },
-  activo:        { type: Boolean, default: true },
-  creadoPor:     { type: String, default: '' },
+  blocked:       { type: Boolean, default: false },
+  createdBy:     { type: String, default: 'superadmin' },
 }, { timestamps: true, collection: 'fin_usuarios' });
-FinUserSchema.index({ usuario: 1 });
-FinUserSchema.index({ colegioId: 1 });
 
-// ─── PAGOS (módulo financiero) ───────────────────────────────────────────────
+const ConceptoCobroSchema = new Schema({
+  id:          { type: String, required: true, unique: true },
+  colegioId:   { type: String, required: true, index: true },
+  nombre:      { type: String, required: true },
+  valor:       { type: Number, required: true },
+  descripcion: { type: String, default: '' },
+  aplica:      { type: String, default: 'todos' }, // 'todos','primaria','bachillerato'
+  activo:      { type: Boolean, default: true },
+  creadoPor:   { type: String, default: '' },
+}, { timestamps: true, collection: 'fin_conceptos' });
+
 const PagoSchema = new Schema({
-  id:            { type: String, required: true, unique: true },
-  estId:         { type: String, required: true, index: true },
-  estNombre:     { type: String, default: '' },
-  salon:         { type: String, default: '' },
-  colegioId:     { type: String, required: true, index: true },
-  concepto:      { type: String, required: true, trim: true },
-  valorTotal:    { type: Number, required: true, default: 0 },
-  valorFinal:    { type: Number, required: true, default: 0 }, // tras descuentos
-  descuento:     { type: Number, default: 0 },
-  estado:        { type: String, enum: ['pendiente', 'pagado', 'vencido', 'anulado'], default: 'pendiente' },
-  anoPago:       { type: String, required: true },   // '2026'
-  mesPago:       { type: String, default: '' },       // '06'
-  fechaVence:    { type: String, default: '' },
-  fechaPago:     { type: String, default: '' },
-  metodoPago:    { type: String, default: '' },
-  observaciones: { type: String, default: '' },
-  creadoPor:     { type: String, default: '' },
-}, { timestamps: true, collection: 'pagos' });
-PagoSchema.index({ colegioId: 1, anoPago: 1 });
-PagoSchema.index({ estId: 1, anoPago: 1 });
-PagoSchema.index({ estado: 1 });
+  id:             { type: String, required: true, unique: true },
+  colegioId:      { type: String, required: true, index: true },
+  estId:          { type: String, required: true, index: true },
+  estNombre:      { type: String, required: true },
+  salon:          { type: String, default: '' },
+  conceptoId:     { type: String, required: true },
+  conceptoNombre: { type: String, default: '' },
+  valor:          { type: Number, default: 0 },
+  descuento:      { type: Number, default: 0 },
+  valorFinal:     { type: Number, default: 0 },
+  estado:         { type: String, enum: ['pendiente','pagado','vencido','anulado'], default: 'pendiente' },
+  fechaVence:     { type: String, default: '' },
+  fechaPago:      { type: String, default: '' },
+  metodoPago:     { type: String, default: '' },
+  comprobante:    { type: String, default: '' },
+  observacion:    { type: String, default: '' },
+  registradoPor:  { type: String, default: '' },
+  anoPago:        { type: String, default: '' },
+  periodoStr:     { type: String, default: '' },
+}, { timestamps: true, collection: 'fin_pagos' });
+PagoSchema.index({ colegioId: 1, estId: 1 });
+PagoSchema.index({ colegioId: 1, estado: 1, anoPago: 1 });
+
+const FinComunicadoSchema = new Schema({
+  id:          { type: String, required: true, unique: true },
+  colegioId:   { type: String, required: true, index: true },
+  titulo:      { type: String, required: true },
+  mensaje:     { type: String, required: true },
+  para:        { type: String, default: 'todos' }, // 'todos','profe','est'
+  color:       { type: String, default: 'azul' },
+  fechaInicio: { type: String, required: true },
+  fechaFin:    { type: String, required: true },
+  activo:      { type: Boolean, default: true },
+  creadoPor:   { type: String, default: '' },
+}, { timestamps: true, collection: 'fin_comunicados' });
 
 module.exports = {
   Area:          mongoose.model('Area',          AreaSchema),
@@ -386,6 +409,9 @@ module.exports = {
   Estadistica:   mongoose.model('Estadistica',   EstadisticaSchema),
   Sugerencia:    mongoose.model('Sugerencia',    SugerenciaSchema),
   Comunicado:    mongoose.model('Comunicado',    ComunicadoSchema),
-  FinUser:       mongoose.model('FinUser',       FinUserSchema),
+  // Financiero
+  FinUsuario:    mongoose.model('FinUsuario',    FinUsuarioSchema),
+  ConceptoCobro: mongoose.model('ConceptoCobro', ConceptoCobroSchema),
   Pago:          mongoose.model('Pago',          PagoSchema),
+  FinComunicado: mongoose.model('FinComunicado', FinComunicadoSchema),
 };

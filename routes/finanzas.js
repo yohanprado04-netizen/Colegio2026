@@ -215,88 +215,75 @@ router.delete('/conceptos/:id', finAuth, requireFinRole('finAdmin'), async (req,
 // PAGOS
 // ══════════════════════════════════════════════════════════════════════════════
 
-// GET /api/fin/pagos?anoPago=&estId=&estado=&salon=&page=&limit=
+// GET /api/fin/pagos?estId=&estado=&anoPago=&salon=&page=&limit=
 router.get('/pagos', finAuth, async (req, res) => {
   try {
     const filter = { colegioId: req.colegioId };
-    if (req.query.anoPago)    filter.anoPago    = req.query.anoPago;
     if (req.query.estId)      filter.estId      = req.query.estId;
-    if (req.query.estado)     filter.estado     = req.query.estado;
-    if (req.query.salon)      filter.salon      = req.query.salon;
-    if (req.query.conceptoId) filter.conceptoId = req.query.conceptoId;
+    if (req.query.estado)     filter.estado      = req.query.estado;
+    if (req.query.anoPago)    filter.anoPago     = req.query.anoPago;
+    if (req.query.salon)      filter.salon       = req.query.salon;
+    if (req.query.conceptoId) filter.conceptoId  = req.query.conceptoId;
 
     const page  = Math.max(1, parseInt(req.query.page  || '1'));
     const limit = Math.min(200, parseInt(req.query.limit || '100'));
 
     const [pagos, total] = await Promise.all([
-      Pago.find(filter, '-__v').sort({ createdAt: -1 }).skip((page-1)*limit).limit(limit).lean(),
+      Pago.find(filter).sort({ createdAt: -1 }).skip((page-1)*limit).limit(limit).lean(),
       Pago.countDocuments(filter),
     ]);
     res.json({ pagos, total, page, pages: Math.ceil(total/limit) });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-// POST /api/fin/pagos — crear pago
+// POST /api/fin/pagos — registrar pago
 router.post('/pagos', finAuth, async (req, res) => {
   try {
-    if (req.finUser.role !== 'finAdmin')
-      return res.status(403).json({ error: 'Solo finAdmin puede crear pagos' });
-    const d = req.body;
-    if (!d.estId || !d.estNombre || (!d.conceptoId && !d.concepto))
-      return res.status(400).json({ error: 'estId, estNombre y concepto/conceptoId son obligatorios' });
+    const { estId, estNombre, salon, conceptoId, valor, descuento,
+            fechaVences, metodoPago, comprobante, observacion,
+            anoPago, periodoStr, estado } = req.body;
 
-    let conceptoNombre = d.concepto || '';
-    let valorBase = Number(d.valor ?? d.valorTotal ?? 0);
+    if (!estId || !estNombre || !conceptoId)
+      return res.status(400).json({ error: 'estId, estNombre y conceptoId son requeridos' });
 
-    if (d.conceptoId) {
-      const concepto = await ConceptoCobro.findOne({ id: d.conceptoId, colegioId: req.colegioId }).lean();
-      if (!concepto) return res.status(404).json({ error: 'Concepto no encontrado' });
-      conceptoNombre = concepto.nombre;
-      valorBase = valorBase || concepto.valor;
-    }
+    const concepto = await ConceptoCobro.findOne({ id: conceptoId, colegioId: req.colegioId }).lean();
+    if (!concepto) return res.status(404).json({ error: 'Concepto no encontrado' });
 
-    const desc       = Number(d.descuento || 0);
-    const valorFinal = d.valorFinal != null ? Number(d.valorFinal) : Math.max(0, valorBase - desc);
+    const valorBase  = Number(valor ?? concepto.valor);
+    const desc       = Number(descuento ?? 0);
+    const valorFinal = Math.max(0, valorBase - desc);
 
     const pago = await Pago.create({
-      id:             'pago_' + Date.now() + '_' + Math.random().toString(36).slice(2,6),
-      colegioId:      req.colegioId,
-      estId:          d.estId,
-      estNombre:      d.estNombre,
-      salon:          d.salon          || '',
-      conceptoId:     d.conceptoId     || '',
-      conceptoNombre, concepto: conceptoNombre,
-      valor:          valorBase, valorTotal: valorBase,
-      descuento:      desc, valorFinal,
-      estado:         d.estado         || 'pendiente',
-      anoPago:        d.anoPago        || String(new Date().getFullYear()),
-      mesPago:        d.mesPago        || '',
-      periodoStr:     d.periodoStr     || d.mesPago || '',
-      fechaVence:     d.fechaVence     || d.fechaVences || '',
-      fechaPago:      d.estado === 'pagado' ? (d.fechaPago || new Date().toISOString().slice(0,10)) : (d.fechaPago || ''),
-      metodoPago:     d.metodoPago     || '',
-      comprobante:    d.comprobante    || '',
-      observaciones:  d.observaciones  || d.observacion || '',
-      creadoPor:      req.finUser.usuario,
-      registradoPor:  req.finUser.id,
+      id: 'pago_' + Date.now() + '_' + Math.random().toString(36).slice(2,6),
+      colegioId: req.colegioId,
+      estId, estNombre, salon: salon || '',
+      conceptoId, conceptoNombre: concepto.nombre,
+      valor: valorBase, descuento: desc, valorFinal,
+      estado: estado || 'pendiente',
+      fechaVence:  fechaVences || '',
+      fechaPago:   estado === 'pagado' ? new Date().toISOString().slice(0,10) : '',
+      metodoPago:  metodoPago  || '',
+      comprobante: comprobante || '',
+      observacion: observacion || '',
+      registradoPor: req.finUser.id,
+      anoPago:    anoPago    || String(new Date().getFullYear()),
+      periodoStr: periodoStr || '',
     });
     res.status(201).json(pago);
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-// PUT /api/fin/pagos/:id — actualizar estado / datos de un pago
+// PUT /api/fin/pagos/:id
 router.put('/pagos/:id', finAuth, async (req, res) => {
   try {
-    if (req.finUser.role !== 'finAdmin')
-      return res.status(403).json({ error: 'Solo finAdmin puede editar pagos' });
-    const allowed = ['estado','metodoPago','comprobante','observaciones','observacion',
-                     'valorFinal','descuento','mesPago','periodoStr','fechaVence','fechaPago','valor'];
+    const allowed = ['estado','metodoPago','comprobante','observacion',
+                     'descuento','fechaPago','fechaVence','periodoStr','valor'];
     const upd = {};
-    allowed.forEach(f => { if (req.body[f] !== undefined) upd[f] = req.body[f]; });
+    allowed.forEach(k => { if (req.body[k] != null) upd[k] = req.body[k]; });
 
     if (upd.valor != null || upd.descuento != null) {
       const actual = await Pago.findOne({ id: req.params.id }).lean();
-      const v = Number(upd.valor     ?? actual?.valor    ?? actual?.valorTotal ?? 0);
+      const v = Number(upd.valor     ?? actual?.valor    ?? 0);
       const d = Number(upd.descuento ?? actual?.descuento ?? 0);
       upd.valorFinal = Math.max(0, v - d);
     }
@@ -304,23 +291,20 @@ router.put('/pagos/:id', finAuth, async (req, res) => {
       upd.fechaPago = new Date().toISOString().slice(0,10);
 
     const pago = await Pago.findOneAndUpdate(
-      { id: req.params.id, colegioId: req.colegioId },
-      upd, { new: true }
+      { id: req.params.id, colegioId: req.colegioId }, upd, { new: true }
     ).lean();
     if (!pago) return res.status(404).json({ error: 'Pago no encontrado' });
     res.json(pago);
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-// DELETE /api/fin/pagos/:id — anular pago (no borrar físicamente)
+// DELETE /api/fin/pagos/:id — anular pago
 router.delete('/pagos/:id', finAuth, requireFinRole('finAdmin'), async (req, res) => {
   try {
-    const pago = await Pago.findOneAndUpdate(
-      { id: req.params.id, colegioId: req.colegioId },
-      { estado: 'anulado' }, { new: true }
-    ).lean();
-    if (!pago) return res.status(404).json({ error: 'Pago no encontrado' });
-    res.json({ ok: true, pago });
+    await Pago.findOneAndUpdate(
+      { id: req.params.id, colegioId: req.colegioId }, { estado: 'anulado' }
+    );
+    res.json({ ok: true });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
@@ -627,43 +611,6 @@ router.get('/reporte/cartera', finAuth, async (req, res) => {
       { $sort: { salon: 1, estNombre: 1 } },
     ]);
     res.json(cartera);
-  } catch (e) { res.status(500).json({ error: e.message }); }
-});
-
-module.exports = router;
-
-// ══════════════════════════════════════════════════════════════════════════════
-// USUARIOS FINANCIEROS (lectura para finAdmin del propio colegio)
-// ══════════════════════════════════════════════════════════════════════════════
-
-// GET /api/fin/usuarios — listar usuarios financieros del colegio
-router.get('/usuarios', finAuth, async (req, res) => {
-  try {
-    const lista = await FinUsuario.find({ colegioId: req.colegioId }, '-password -__v').lean();
-    res.json(lista);
-  } catch (e) { res.status(500).json({ error: e.message }); }
-});
-
-// ══════════════════════════════════════════════════════════════════════════════
-// REPORTE RESUMEN (totales del colegio)
-// ══════════════════════════════════════════════════════════════════════════════
-
-// GET /api/fin/reporte/resumen?anoPago=2026
-router.get('/reporte/resumen', finAuth, async (req, res) => {
-  try {
-    const ano = req.query.anoPago || String(new Date().getFullYear());
-    const [resumen] = await Pago.aggregate([
-      { $match: { colegioId: req.colegioId, anoPago: ano, estado: { $ne: 'anulado' } } },
-      { $group: {
-        _id:            null,
-        totalPagado:    { $sum: { $cond: [{ $eq: ['$estado','pagado']                   }, '$valorFinal', 0] } },
-        totalPendiente: { $sum: { $cond: [{ $in: ['$estado',['pendiente','vencido']]     }, '$valorFinal', 0] } },
-        totalAnulado:   { $sum: { $cond: [{ $eq: ['$estado','anulado']                  }, '$valorFinal', 0] } },
-        cantPagado:     { $sum: { $cond: [{ $eq: ['$estado','pagado']                   }, 1, 0] } },
-        cantPendiente:  { $sum: { $cond: [{ $in: ['$estado',['pendiente','vencido']]     }, 1, 0] } },
-      }},
-    ]);
-    res.json(resumen || { totalPagado:0, totalPendiente:0, totalAnulado:0, cantPagado:0, cantPendiente:0 });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
