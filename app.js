@@ -803,6 +803,8 @@ function resetSessionTimer(){
 /* ── 1. AGREGAR EN ROLE_MAP (reemplaza la línea de ROLE_MAP completa) ── */
 const ROLE_MAP={
   superadmin:new Set(['sadash','sacolegios','saestadisticas','saauditoria','samantenimiento','sasug','sacom','safin']),
+  finAdmin:  new Set(['findash','finpagos','finconceptos','finmorosos','fincom','finbloqueos']),
+  finUser:   new Set(['findash','finpagos','finmorosos']),
   admin:new Set(['dash','asal','apri','abac','aprf','amat','anot','areh','afec','ablk','aaud','aexp','aexc','avcl','ahist','asug','acom','ahor']),
   profe:new Set(['ph','pnot','past','pvir','ptar','prec','phist','psug','pcom']),
   est:new Set(['eb','east','etare','eexc','eprof','evir','ereh','ehist','esug','eicfes','ecom'])
@@ -811,6 +813,8 @@ const ROLE_MAP={
 function canAccess(pid){
   if(!CU) return false;
   if(CU.role==='superadmin') return ROLE_MAP.superadmin.has(pid);
+  if(CU.role==='finAdmin')   return ROLE_MAP.finAdmin.has(pid);
+  if(CU.role==='finUser')    return ROLE_MAP.finUser.has(pid);
   const role=CU.role==='admin'?'admin':CU.role==='profe'?'profe':'est';
   return ROLE_MAP[role]?.has(pid)??false;
 }
@@ -846,6 +850,8 @@ function logAuditAnon(usuario,msg){ /* implementado en api-layer.js */ }
 const PL={
   sadash:'Panel Global', sacolegios:'Colegios & Admins', saplan:'Plan de Estudios',
   sacom:'Comunicados Globales', safin:'Módulo Financiero',
+  findash:'Panel Financiero', finpagos:'Pagos & Cobros', finconceptos:'Conceptos de Cobro',
+  finmorosos:'Reporte de Morosos', fincom:'Comunicados', finbloqueos:'Bloqueos',
   saestadisticas:'Estadísticas Globales', saauditoria:'Auditoría Global',
   samantenimiento:'Mantenimiento', sasug:'Sugerencias Recibidas',
   dash:'Panel General',asal:'Salones & Grados',apri:'Primaria (1°-5°)',abac:'Bachillerato (6°-11°)',
@@ -1095,18 +1101,31 @@ function notifyExtPeriod(){
 }
 function defPg(){
   if(CU.role==='superadmin') return 'sadash';
+  if(CU.role==='finAdmin'||CU.role==='finUser') return 'findash';
   return CU.role==='admin'?'dash':CU.role==='profe'?'ph':'eb';
 }
 function navItems(){
   if(CU.role==='superadmin') return[
     {s:'Super Admin'},{id:'sadash',ic:'🌐',lb:'Panel Global'},
-    {id:'sacolegios',ic:'🏫',lb:'Colegios & Admins'},
     {s:'Supervisión'},{id:'saestadisticas',ic:'📊',lb:'Estadísticas'},
     {id:'saauditoria',ic:'🔍',lb:'Auditoría Global'},
     {s:'Comunicación'},{id:'sacom',ic:'📢',lb:'Comunicados Globales'},
     {s:'Finanzas'},{id:'safin',ic:'💰',lb:'Módulo Financiero'},
     {s:'Sistema'},{id:'samantenimiento',ic:'⚙️',lb:'Mantenimiento'},
     {id:'sasug',ic:'💡',lb:'Sugerencias Recibidas'},
+  ];
+  if(CU.role==='finAdmin') return[
+    {s:'Financiero'},{id:'findash',ic:'📊',lb:'Panel Financiero'},
+    {s:'Gestión'},{id:'finpagos',ic:'💳',lb:'Pagos & Cobros'},
+    {id:'finconceptos',ic:'📋',lb:'Conceptos de Cobro'},
+    {s:'Control'},{id:'finmorosos',ic:'⚠️',lb:'Reporte de Morosos'},
+    {id:'finbloqueos',ic:'🔒',lb:'Bloqueos'},
+    {s:'Comunicación'},{id:'fincom',ic:'📢',lb:'Comunicados'},
+  ];
+  if(CU.role==='finUser') return[
+    {s:'Financiero'},{id:'findash',ic:'📊',lb:'Panel Financiero'},
+    {id:'finpagos',ic:'💳',lb:'Pagos & Cobros'},
+    {id:'finmorosos',ic:'⚠️',lb:'Reporte de Morosos'},
   ];
 
   if(CU.role==='admin') return[
@@ -1223,6 +1242,8 @@ function renderPg(pid){
     eb:pgEB,east:pgEAst,etare:pgETare,eexc:pgEExc,eprof:pgEProf,
     evir:pgEVir,ereh:pgEReh,ehist:pgEHist,eicfes:pgEIcfes,
     sadash:pgSADash,sacolegios:pgSAColegios,saplan:pgSAPlan,sacom:pgSACom,safin:pgSAFin,
+    findash:pgFinDash,finpagos:pgFinPagos,finconceptos:pgFinConceptos,
+    finmorosos:pgFinMorosos,fincom:pgFinCom,finbloqueos:pgFinBloqueos,
     saestadisticas:pgSAEstadisticas,saauditoria:pgSAAuditoria,samantenimiento:pgSAMantenimiento,
     sasug:pgSASug,
     asug:pgSugerencias,psug:pgSugerencias,esug:pgSugerencias,
@@ -1236,6 +1257,8 @@ function initPg(pid){
     pnot:initPNot,past:initPAst,eb:initEB,eicfes:initEIcfes,
     ph:()=>{ setTimeout(()=>{ renderPExcR(); notifNuevasExcusas(); },0); },
     sadash:initSADash,sacolegios:initSAColegios,saplan:initSAPlan,sacom:initSACom,safin:initSAFin,
+    findash:initFinDash,finpagos:initFinPagos,finconceptos:initFinConceptos,
+    finmorosos:initFinMorosos,fincom:initFinCom,finbloqueos:initFinBloqueos,
     saestadisticas:initSAEstadisticas,saauditoria:initSAAuditoria,samantenimiento:initSAMantenimiento,
     sasug:initSASug,
     asug:initSugerencias,psug:initSugerencias,esug:initSugerencias,
@@ -10049,3 +10072,457 @@ async function cargarMisSugerencias() {
 document.addEventListener('keydown',ev=>{
   if(ev.key==='Enter'&&!gi('ls').classList.contains('hidden')) doLogin();
 });
+/* ═══════════════════════════════════════════════════════════
+   MÓDULO FINANCIERO — Páginas de la app
+════════════════════════════════════════════════════════════ */
+
+// ── Panel principal financiero ───────────────────────────────
+function pgFinDash(){
+  const rol=CU.role==='finAdmin'?'💼 Administrador Financiero':'👁️ Usuario de Caja';
+  return`<div style="margin-bottom:20px">
+    <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+      <div><h2 style="margin:0;font-size:20px">💰 Panel Financiero</h2>
+        <p style="margin:4px 0 0;font-size:13px;color:var(--sl2)">${esc(CU.colegioNombre)} · ${rol}</p></div>
+    </div></div>
+  <div id="finDashW"><div class="mty"><div class="ei">📊</div><p>Cargando...</p></div></div>`;
+}
+async function initFinDash(){
+  const el=gi('finDashW'); if(!el) return;
+  try{
+    const r=await apiFin('/resumen');
+    const fmt=v=>`$${(v||0).toLocaleString('es-CO')}`;
+    el.innerHTML=`
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;margin-bottom:20px">
+        ${[
+          {l:'Pagado',v:fmt(r.pagado),c:'#dcfce7',tc:'#166534',ic:'✅'},
+          {l:'Pendiente',v:fmt(r.pendiente?.monto),c:'#fef9c3',tc:'#854d0e',ic:'⏳',sub:`${r.pendiente?.cantidad||0} cobros`},
+          {l:'Vencido',v:fmt(r.vencido?.monto),c:'#fee2e2',tc:'#b91c1c',ic:'🚨',sub:`${r.vencido?.cantidad||0} cobros`},
+          {l:'Anulados',v:r.anulados||0,c:'#f3f4f6',tc:'#6b7280',ic:'❌',sub:'transacciones'},
+        ].map(s=>`<div style="padding:16px 18px;border-radius:12px;background:${s.c};border:1px solid ${s.c}">
+          <div style="font-size:22px;margin-bottom:4px">${s.ic}</div>
+          <div style="font-size:20px;font-weight:800;color:${s.tc}">${s.v}</div>
+          <div style="font-size:11px;font-weight:700;color:${s.tc};text-transform:uppercase">${s.l}</div>
+          ${s.sub?`<div style="font-size:11px;color:${s.tc};opacity:.7">${s.sub}</div>`:''}
+        </div>`).join('')}
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+        <div class="card" style="padding:0;overflow:hidden">
+          <div style="padding:12px 16px;background:var(--bg2);border-bottom:1px solid var(--bd);font-weight:800;font-size:13px">📋 Por Concepto</div>
+          <div style="padding:12px">${(r.porConcepto||[]).length?r.porConcepto.map(c=>`
+            <div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--bd);font-size:13px">
+              <span>${esc(c._id)}</span><strong>${fmt(c.total)}</strong>
+            </div>`).join(''):'<div class="mty" style="padding:12px"><p style="font-size:12px">Sin datos</p></div>'}
+          </div>
+        </div>
+        <div class="card" style="padding:0;overflow:hidden">
+          <div style="padding:12px 16px;background:var(--bg2);border-bottom:1px solid var(--bd);font-weight:800;font-size:13px">🕐 Últimas Transacciones</div>
+          <div style="padding:12px">${(r.recientes||[]).length?r.recientes.map(p=>`
+            <div style="padding:7px 0;border-bottom:1px solid var(--bd);font-size:12px">
+              <div style="display:flex;justify-content:space-between">
+                <span style="font-weight:700">${esc(p.estNombre)}</span>
+                <span class="bdg ${p.estado==='pagado'?'bgr':p.estado==='vencido'?'bred':'bgy'}" style="font-size:10px">${p.estado}</span>
+              </div>
+              <div style="color:var(--sl3)">${esc(p.conceptoNombre)} · $${(p.valorFinal||0).toLocaleString('es-CO')}</div>
+            </div>`).join(''):'<div class="mty" style="padding:12px"><p style="font-size:12px">Sin transacciones</p></div>'}
+          </div>
+        </div>
+      </div>`;
+  }catch(e){ el.innerHTML=`<div class="al aly">Error: ${esc(e.message)}</div>`; }
+}
+
+// ── Pagos & Cobros ───────────────────────────────────────────
+function pgFinPagos(){
+  return`<div style="margin-bottom:16px"><h2 style="margin:0">💳 Pagos & Cobros</h2></div>
+  <div class="card" style="padding:16px;margin-bottom:16px">
+    <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end">
+      <div style="flex:1;min-width:160px">
+        <label style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--sl);display:block;margin-bottom:4px">Salón</label>
+        <select id="fpSalon" style="width:100%;padding:9px 12px;font-size:13px;border:1.5px solid var(--bd);border-radius:8px;background:var(--bg2);color:var(--tx);outline:none">
+          <option value="">Todos</option>
+        </select>
+      </div>
+      <div style="flex:1;min-width:130px">
+        <label style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--sl);display:block;margin-bottom:4px">Estado</label>
+        <select id="fpEstado" style="width:100%;padding:9px 12px;font-size:13px;border:1.5px solid var(--bd);border-radius:8px;background:var(--bg2);color:var(--tx);outline:none">
+          <option value="">Todos</option>
+          <option value="pendiente">⏳ Pendiente</option>
+          <option value="pagado">✅ Pagado</option>
+          <option value="vencido">🚨 Vencido</option>
+          <option value="anulado">❌ Anulado</option>
+        </select>
+      </div>
+      <div style="display:flex;gap:8px;align-items:flex-end">
+        <button onclick="finLoadPagos()" style="padding:10px 18px;font-size:13px;font-weight:700;background:var(--nv);color:#fff;border:none;border-radius:8px;cursor:pointer">Buscar</button>
+        ${CU.role==='finAdmin'?`<button onclick="finNuevoPago()" style="padding:10px 18px;font-size:13px;font-weight:700;background:#dcfce7;color:#166534;border:1.5px solid #86efac;border-radius:8px;cursor:pointer">➕ Nuevo Pago</button>`:''}
+      </div>
+    </div>
+  </div>
+  <div id="fpW"><div class="mty"><div class="ei">💳</div><p>Carga los pagos con el filtro</p></div></div>`;
+}
+async function initFinPagos(){
+  try{
+    const sals=await apiFin('/salones');
+    const sel=gi('fpSalon');
+    if(sel) sel.innerHTML='<option value="">Todos</option>'+sals.map(s=>`<option value="${s.nombre}">${esc(s.nombre)}</option>`).join('');
+  }catch(e){}
+}
+async function finLoadPagos(){
+  const el=gi('fpW');if(!el)return;
+  el.innerHTML='<div style="text-align:center;padding:24px;color:var(--sl3)">⏳ Cargando...</div>';
+  const salon=gi('fpSalon')?.value||'';
+  const estado=gi('fpEstado')?.value||'';
+  try{
+    const ano=new Date().getFullYear();
+    let qs=`anoPago=${ano}`;
+    if(salon)  qs+=`&salon=${encodeURIComponent(salon)}`;
+    if(estado) qs+=`&estado=${encodeURIComponent(estado)}`;
+    const {pagos}=await apiFin(`/pagos?${qs}`);
+    if(!pagos.length){el.innerHTML='<div class="mty"><div class="ei">🔍</div><p>Sin resultados</p></div>';return;}
+    const fmt=v=>`$${(v||0).toLocaleString('es-CO')}`;
+    const stBadge=s=>({pagado:'bgr',pendiente:'bgy',vencido:'bred',anulado:'bgy'}[s]||'bgy');
+    el.innerHTML=`<div class="tw"><table>
+      <thead><tr><th>Estudiante</th><th>Salón</th><th>Concepto</th><th>Valor</th><th>Estado</th><th>Fecha</th>${CU.role==='finAdmin'?'<th></th>':''}</tr></thead>
+      <tbody>${pagos.map(p=>`<tr>
+        <td style="font-weight:700">${esc(p.estNombre)}</td>
+        <td>${esc(p.salon||'—')}</td>
+        <td style="font-size:12px">${esc(p.conceptoNombre)}</td>
+        <td style="font-weight:700">${fmt(p.valorFinal)}</td>
+        <td><span class="bdg ${stBadge(p.estado)}" style="font-size:11px">${p.estado}</span></td>
+        <td style="font-size:11px;color:var(--sl3)">${p.fechaPago||p.fechaVence||'—'}</td>
+        ${CU.role==='finAdmin'?`<td><button onclick="finEditPago('${p.id}')" style="padding:4px 9px;font-size:11px;background:#e0e7ff;color:#3730a3;border:1.5px solid #a5b4fc;border-radius:6px;cursor:pointer">✏️</button></td>`:''}
+      </tr>`).join('')}</tbody>
+    </table></div>`;
+  }catch(e){el.innerHTML=`<div class="al aly">Error: ${esc(e.message)}</div>`;}
+}
+async function finNuevoPago(){
+  const [ests,conceptos]=await Promise.all([apiFin('/estudiantes'),apiFin('/conceptos')]).catch(()=>[[],[]]);
+  const {value,isConfirmed}=await Swal.fire({
+    title:'➕ Registrar Pago',width:560,
+    html:`<div style="text-align:left;font-family:var(--fn);display:flex;flex-direction:column;gap:11px">
+      <div><label style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--sl);display:block;margin-bottom:4px">Estudiante *</label>
+        <select id="fpEstId" style="width:100%;padding:9px 12px;font-size:13px;border:1.5px solid var(--bd);border-radius:8px;background:var(--bg2);color:var(--tx);outline:none">
+          <option value="">— Seleccionar —</option>${ests.map(e=>`<option value="${e.id}" data-nombre="${esc(e.nombre)}" data-salon="${esc(e.salon||'')}">${esc(e.nombre)} (${e.salon||'Sin salón'})</option>`).join('')}
+        </select></div>
+      <div><label style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--sl);display:block;margin-bottom:4px">Concepto *</label>
+        <select id="fpConId" style="width:100%;padding:9px 12px;font-size:13px;border:1.5px solid var(--bd);border-radius:8px;background:var(--bg2);color:var(--tx);outline:none">
+          <option value="">— Seleccionar —</option>${conceptos.map(c=>`<option value="${c.id}" data-valor="${c.valor}">${esc(c.nombre)} — $${c.valor.toLocaleString('es-CO')}</option>`).join('')}
+        </select></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <div><label style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--sl);display:block;margin-bottom:4px">Estado</label>
+          <select id="fpEst" style="width:100%;padding:9px 12px;font-size:13px;border:1.5px solid var(--bd);border-radius:8px;background:var(--bg2);color:var(--tx);outline:none">
+            <option value="pendiente">⏳ Pendiente</option><option value="pagado">✅ Pagado</option>
+          </select></div>
+        <div><label style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--sl);display:block;margin-bottom:4px">Método de pago</label>
+          <select id="fpMet" style="width:100%;padding:9px 12px;font-size:13px;border:1.5px solid var(--bd);border-radius:8px;background:var(--bg2);color:var(--tx);outline:none">
+            <option value="">—</option><option>Efectivo</option><option>Transferencia</option><option>Tarjeta</option>
+          </select></div>
+      </div>
+      <div><label style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--sl);display:block;margin-bottom:4px">Observación</label>
+        <input id="fpObs" style="width:100%;padding:9px 12px;font-size:13px;border:1.5px solid var(--bd);border-radius:8px;background:var(--bg2);color:var(--tx);outline:none;box-sizing:border-box"></div>
+    </div>`,
+    showCancelButton:true,confirmButtonText:'Guardar Pago',cancelButtonText:'Cancelar',
+    preConfirm:()=>{
+      const estEl=gi('fpEstId'),conEl=gi('fpConId');
+      const estOpt=estEl.options[estEl.selectedIndex];
+      return{estId:estEl.value,estNombre:estOpt?.dataset?.nombre||'',salon:estOpt?.dataset?.salon||'',
+        conceptoId:conEl.value,estado:gi('fpEst').value,metodoPago:gi('fpMet').value,observacion:gi('fpObs').value};
+    }
+  });
+  if(!isConfirmed||!value.estId||!value.conceptoId){return;}
+  try{
+    await apiFin('/pagos',{method:'POST',body:JSON.stringify({...value,anoPago:String(new Date().getFullYear())})});
+    sw('success','Pago registrado','',1800);finLoadPagos();
+  }catch(e){sw('error','Error: '+e.message);}
+}
+async function finEditPago(pid){
+  const r=await Swal.fire({
+    title:'✏️ Actualizar Estado del Pago',width:420,
+    html:`<div style="text-align:left;font-family:var(--fn);display:flex;flex-direction:column;gap:11px">
+      <div><label style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--sl);display:block;margin-bottom:4px">Estado</label>
+        <select id="epEst" style="width:100%;padding:9px 12px;font-size:13px;border:1.5px solid var(--bd);border-radius:8px;background:var(--bg2);color:var(--tx);outline:none">
+          <option value="pendiente">⏳ Pendiente</option><option value="pagado">✅ Pagado</option>
+          <option value="vencido">🚨 Vencido</option><option value="anulado">❌ Anulado</option>
+        </select></div>
+      <div><label style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--sl);display:block;margin-bottom:4px">Comprobante / Observación</label>
+        <input id="epObs" style="width:100%;padding:9px 12px;font-size:13px;border:1.5px solid var(--bd);border-radius:8px;background:var(--bg2);color:var(--tx);outline:none;box-sizing:border-box">
+      </div></div>`,
+    showCancelButton:true,confirmButtonText:'Guardar',cancelButtonText:'Cancelar',
+    preConfirm:()=>({estado:gi('epEst').value,observacion:gi('epObs').value})
+  });
+  if(!r.isConfirmed)return;
+  try{
+    await apiFin(`/pagos/${pid}`,{method:'PUT',body:JSON.stringify(r.value)});
+    sw('success','Pago actualizado','',1600);finLoadPagos();
+  }catch(e){sw('error','Error: '+e.message);}
+}
+
+// ── Conceptos de cobro ───────────────────────────────────────
+function pgFinConceptos(){
+  return`<div style="margin-bottom:16px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">
+    <h2 style="margin:0">📋 Conceptos de Cobro</h2>
+    <button onclick="finNuevoConcepto()" style="padding:10px 18px;font-size:13px;font-weight:700;background:#dcfce7;color:#166534;border:1.5px solid #86efac;border-radius:8px;cursor:pointer">➕ Nuevo Concepto</button>
+  </div>
+  <div id="fcW"><div class="mty"><div class="ei">📋</div><p>Cargando...</p></div></div>`;
+}
+async function initFinConceptos(){
+  const el=gi('fcW');if(!el)return;
+  try{
+    const list=await apiFin('/conceptos');
+    if(!list.length){el.innerHTML='<div class="mty"><div class="ei">📋</div><p>Sin conceptos. Crea uno.</p></div>';return;}
+    el.innerHTML=`<div class="tw"><table>
+      <thead><tr><th>Nombre</th><th>Valor</th><th>Aplica</th><th>Estado</th><th></th></tr></thead>
+      <tbody>${list.map(c=>`<tr>
+        <td style="font-weight:700">${esc(c.nombre)}</td>
+        <td style="font-weight:700;color:#166534">$${(c.valor||0).toLocaleString('es-CO')}</td>
+        <td style="font-size:12px">${esc(c.aplica||'todos')}</td>
+        <td><span class="bdg ${c.activo!==false?'bgr':'bgy'}" style="font-size:11px">${c.activo!==false?'Activo':'Inactivo'}</span></td>
+        <td><div style="display:flex;gap:6px">
+          <button onclick="finEditConcepto('${c.id}')" style="padding:4px 9px;font-size:11px;background:#e0e7ff;color:#3730a3;border:1.5px solid #a5b4fc;border-radius:6px;cursor:pointer">✏️</button>
+          <button onclick="finDelConcepto('${c.id}','${esc(c.nombre)}')" style="padding:4px 9px;font-size:11px;background:#fff5f5;color:#b91c1c;border:1.5px solid #fca5a5;border-radius:6px;cursor:pointer">🗑</button>
+        </div></td>
+      </tr>`).join('')}</tbody></table></div>`;
+  }catch(e){el.innerHTML=`<div class="al aly">Error: ${esc(e.message)}</div>`;}
+}
+async function finNuevoConcepto(){
+  const{value,isConfirmed}=await Swal.fire({
+    title:'➕ Nuevo Concepto de Cobro',width:440,
+    html:`<div style="text-align:left;font-family:var(--fn);display:flex;flex-direction:column;gap:11px">
+      <div><label style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--sl);display:block;margin-bottom:4px">Nombre *</label>
+        <input id="ncN" placeholder="Ej: Matrícula anual" style="width:100%;padding:9px 12px;font-size:13px;border:1.5px solid var(--bd);border-radius:8px;background:var(--bg2);color:var(--tx);outline:none;box-sizing:border-box"></div>
+      <div><label style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--sl);display:block;margin-bottom:4px">Valor (COP) *</label>
+        <input id="ncV" type="number" min="0" placeholder="0" style="width:100%;padding:9px 12px;font-size:13px;border:1.5px solid var(--bd);border-radius:8px;background:var(--bg2);color:var(--tx);outline:none;box-sizing:border-box"></div>
+      <div><label style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--sl);display:block;margin-bottom:4px">Aplica a</label>
+        <select id="ncA" style="width:100%;padding:9px 12px;font-size:13px;border:1.5px solid var(--bd);border-radius:8px;background:var(--bg2);color:var(--tx);outline:none">
+          <option value="todos">Todos</option><option value="primaria">Primaria</option><option value="bachillerato">Bachillerato</option>
+        </select></div>
+      <div><label style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--sl);display:block;margin-bottom:4px">Descripción</label>
+        <input id="ncD" style="width:100%;padding:9px 12px;font-size:13px;border:1.5px solid var(--bd);border-radius:8px;background:var(--bg2);color:var(--tx);outline:none;box-sizing:border-box"></div>
+    </div>`,
+    showCancelButton:true,confirmButtonText:'Crear',cancelButtonText:'Cancelar',
+    preConfirm:()=>({nombre:gi('ncN').value.trim(),valor:Number(gi('ncV').value),aplica:gi('ncA').value,descripcion:gi('ncD').value.trim()})
+  });
+  if(!isConfirmed||!value.nombre||!value.valor)return;
+  try{await apiFin('/conceptos',{method:'POST',body:JSON.stringify(value)});sw('success','Concepto creado','',1600);initFinConceptos();}
+  catch(e){sw('error','Error: '+e.message);}
+}
+async function finEditConcepto(cid){
+  const r=await Swal.fire({
+    title:'✏️ Editar Concepto',width:400,
+    html:`<div style="text-align:left;font-family:var(--fn);display:flex;flex-direction:column;gap:11px">
+      <div><label style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--sl);display:block;margin-bottom:4px">Nuevo Valor (COP)</label>
+        <input id="ecV" type="number" min="0" style="width:100%;padding:9px 12px;font-size:13px;border:1.5px solid var(--bd);border-radius:8px;background:var(--bg2);color:var(--tx);outline:none;box-sizing:border-box"></div>
+      <div><label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer">
+        <input type="checkbox" id="ecAct" checked> Activo</label></div>
+    </div>`,
+    showCancelButton:true,confirmButtonText:'Guardar',cancelButtonText:'Cancelar',
+    preConfirm:()=>({valor:gi('ecV').value?Number(gi('ecV').value):undefined,activo:gi('ecAct').checked})
+  });
+  if(!r.isConfirmed)return;
+  const upd={};if(r.value.valor)upd.valor=r.value.valor;upd.activo=r.value.activo;
+  try{await apiFin(`/conceptos/${cid}`,{method:'PUT',body:JSON.stringify(upd)});sw('success','Concepto actualizado','',1600);initFinConceptos();}
+  catch(e){sw('error','Error: '+e.message);}
+}
+async function finDelConcepto(cid,nombre){
+  const conf=await Swal.fire({title:`¿Desactivar "${nombre}"?`,icon:'warning',showCancelButton:true,confirmButtonText:'Sí, desactivar',confirmButtonColor:'#e53e3e',cancelButtonText:'Cancelar'});
+  if(!conf.isConfirmed)return;
+  try{await apiFin(`/conceptos/${cid}`,{method:'DELETE'});sw('success','Concepto desactivado','',1600);initFinConceptos();}
+  catch(e){sw('error','Error: '+e.message);}
+}
+
+// ── Reporte de morosos ───────────────────────────────────────
+function pgFinMorosos(){
+  return`<div style="margin-bottom:16px"><h2 style="margin:0">⚠️ Reporte de Morosos</h2></div>
+  <div id="fmW"><div class="mty"><div class="ei">⏳</div><p>Cargando...</p></div></div>`;
+}
+async function initFinMorosos(){
+  const el=gi('fmW');if(!el)return;
+  try{
+    const data=await apiFin('/reporte/morosos');
+    if(!data.length){el.innerHTML='<div class="mty"><div class="ei">🎉</div><p>Sin morosos. Excelente.</p></div>';return;}
+    const fmt=v=>`$${(v||0).toLocaleString('es-CO')}`;
+    el.innerHTML=`<div class="al aly" style="margin-bottom:12px;font-size:13px">⚠️ ${data.length} estudiante${data.length>1?'s':''} con deuda pendiente</div>
+    <div class="tw"><table>
+      <thead><tr><th>Estudiante</th><th>Salón</th><th>Deuda Total</th><th>Cobros Pendientes</th></tr></thead>
+      <tbody>${data.map(m=>`<tr>
+        <td style="font-weight:700">${esc(m.estNombre)}</td>
+        <td>${esc(m.salon||'—')}</td>
+        <td style="font-weight:700;color:#b91c1c">${fmt(m.deuda)}</td>
+        <td><span class="bdg bred" style="font-size:11px">${m.cantPendientes}</span></td>
+      </tr>`).join('')}</tbody></table></div>`;
+  }catch(e){el.innerHTML=`<div class="al aly">Error: ${esc(e.message)}</div>`;}
+}
+
+// ── Comunicados financieros ───────────────────────────────────
+function pgFinCom(){
+  return`<div style="margin-bottom:16px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">
+    <div><h2 style="margin:0">📢 Comunicados Financieros</h2>
+      <p style="margin:4px 0 0;font-size:12px;color:var(--sl2)">Visibles para profes y estudiantes en la app educativa.</p></div>
+  </div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px">
+    <div class="card" style="padding:0;overflow:hidden">
+      <div style="padding:12px 18px;background:var(--bg2);border-bottom:1px solid var(--bd);font-weight:800;font-size:13px">➕ Nuevo Comunicado</div>
+      <div style="padding:16px;display:flex;flex-direction:column;gap:12px">
+        <div><label style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--sl);display:block;margin-bottom:4px">Título *</label>
+          <input id="fcomT" style="width:100%;padding:9px 12px;font-size:13px;border:1.5px solid var(--bd);border-radius:8px;background:var(--bg2);color:var(--tx);outline:none;box-sizing:border-box"></div>
+        <div><label style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--sl);display:block;margin-bottom:4px">Mensaje *</label>
+          <textarea id="fcomM" rows="3" style="width:100%;resize:vertical;padding:9px 12px;font-size:13px;border:1.5px solid var(--bd);border-radius:8px;font-family:inherit;background:var(--bg2);color:var(--tx);outline:none;box-sizing:border-box"></textarea></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+          <div><label style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--sl);display:block;margin-bottom:4px">Dirigido a</label>
+            <select id="fcomP" style="width:100%;padding:9px 12px;font-size:13px;border:1.5px solid var(--bd);border-radius:8px;background:var(--bg2);color:var(--tx);outline:none">
+              <option value="todos">👥 Todos</option><option value="profe">👩‍🏫 Profes</option><option value="est">🎓 Estudiantes</option>
+            </select></div>
+          <div><label style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--sl);display:block;margin-bottom:4px">Color</label>
+            <select id="fcomC" style="width:100%;padding:9px 12px;font-size:13px;border:1.5px solid var(--bd);border-radius:8px;background:var(--bg2);color:var(--tx);outline:none">
+              <option value="naranja">🟠 Naranja</option><option value="rojo">🔴 Urgente</option><option value="azul">🔵 Info</option>
+            </select></div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+          <div><label style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--sl);display:block;margin-bottom:4px">Fecha inicio *</label>
+            <input type="date" id="fcomFi" value="${new Date().toISOString().slice(0,10)}" style="width:100%;padding:9px 12px;font-size:13px;border:1.5px solid var(--bd);border-radius:8px;background:var(--bg2);color:var(--tx);outline:none;box-sizing:border-box"></div>
+          <div><label style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--sl);display:block;margin-bottom:4px">Fecha fin *</label>
+            <input type="date" id="fcomFf" style="width:100%;padding:9px 12px;font-size:13px;border:1.5px solid var(--bd);border-radius:8px;background:var(--bg2);color:var(--tx);outline:none;box-sizing:border-box"></div>
+        </div>
+        <button onclick="finPublicarCom()" style="padding:11px;font-size:14px;font-weight:700;background:var(--nv);color:#fff;border:none;border-radius:9px;cursor:pointer;width:100%">📢 Publicar</button>
+      </div>
+    </div>
+    <div class="card" style="padding:0;overflow:hidden">
+      <div style="padding:12px 18px;background:var(--bg2);border-bottom:1px solid var(--bd);font-weight:800;font-size:13px">📋 Publicados</div>
+      <div id="fcomListW" style="padding:12px;max-height:520px;overflow-y:auto">
+        <div class="mty"><div class="ei">📢</div><p>Cargando...</p></div>
+      </div>
+    </div>
+  </div>`;
+}
+async function initFinCom(){
+  const d=new Date();d.setDate(d.getDate()+30);
+  const ff=gi('fcomFf');if(ff)ff.value=d.toISOString().slice(0,10);
+  await finCargarComs();
+}
+async function finCargarComs(){
+  const el=gi('fcomListW');if(!el)return;
+  try{
+    const list=await apiFin('/comunicados');
+    if(!list.length){el.innerHTML='<div class="mty"><div class="ei">📢</div><p>Sin comunicados publicados</p></div>';return;}
+    el.innerHTML=list.map(c=>`
+      <div style="padding:10px 12px;border-radius:9px;border:1.5px solid var(--bd);margin-bottom:8px;background:var(--bg2)">
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px">
+          <div style="flex:1">
+            <div style="font-weight:700;font-size:13px">💰 ${esc(c.titulo)}</div>
+            <div style="font-size:12px;color:var(--sl2);margin-top:2px">${esc(c.mensaje)}</div>
+            <div style="font-size:10px;color:var(--sl3);margin-top:4px">${c.para} · ${c.fechaInicio} → ${c.fechaFin}</div>
+          </div>
+          <div style="display:flex;gap:5px;flex-shrink:0">
+            <span class="bdg ${c.activo?'bgr':'bgy'}" style="font-size:10px">${c.activo?'Activo':'Inactivo'}</span>
+            <button onclick="finToggleCom('${c.id}',${!c.activo})" style="padding:4px 8px;font-size:10px;background:${c.activo?'#fff5f5':'#dcfce7'};color:${c.activo?'#b91c1c':'#166534'};border:1px solid ${c.activo?'#fca5a5':'#86efac'};border-radius:5px;cursor:pointer">${c.activo?'Desactivar':'Activar'}</button>
+            <button onclick="finDelCom('${c.id}')" style="padding:4px 8px;font-size:10px;background:#fff5f5;color:#b91c1c;border:1px solid #fca5a5;border-radius:5px;cursor:pointer">🗑</button>
+          </div>
+        </div>
+      </div>`).join('');
+  }catch(e){el.innerHTML=`<div class="al aly" style="font-size:12px">Error: ${esc(e.message)}</div>`;}
+}
+async function finPublicarCom(){
+  const t=(gi('fcomT')?.value||'').trim();const m=(gi('fcomM')?.value||'').trim();
+  const fi=gi('fcomFi')?.value;const ff=gi('fcomFf')?.value;
+  if(!t||!m||!fi||!ff){sw('warning','Completa todos los campos');return;}
+  try{
+    await apiFin('/comunicados',{method:'POST',body:JSON.stringify({titulo:t,mensaje:m,para:gi('fcomP').value,color:gi('fcomC').value,fechaInicio:fi,fechaFin:ff})});
+    gi('fcomT').value='';gi('fcomM').value='';
+    sw('success','Comunicado publicado','Los profes y estudiantes lo verán en la app educativa.',2200);
+    finCargarComs();
+  }catch(e){sw('error','Error: '+e.message);}
+}
+async function finToggleCom(id,activo){
+  try{await apiFin(`/comunicados/${id}`,{method:'PUT',body:JSON.stringify({activo})});finCargarComs();}
+  catch(e){sw('error','Error: '+e.message);}
+}
+async function finDelCom(id){
+  const c=await Swal.fire({title:'¿Eliminar comunicado?',icon:'warning',showCancelButton:true,confirmButtonText:'Eliminar',confirmButtonColor:'#e53e3e',cancelButtonText:'Cancelar'});
+  if(!c.isConfirmed)return;
+  try{await apiFin(`/comunicados/${id}`,{method:'DELETE'});finCargarComs();}
+  catch(e){sw('error','Error: '+e.message);}
+}
+
+// ── Bloqueos de estudiantes ───────────────────────────────────
+function pgFinBloqueos(){
+  return`<div style="margin-bottom:16px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">
+    <div><h2 style="margin:0">🔒 Bloqueos de Acceso</h2>
+      <p style="margin:4px 0 0;font-size:12px;color:var(--sl2)">Bloquea o desbloquea estudiantes de este colegio.</p></div>
+    <button onclick="initFinBloqueos()" style="padding:8px 14px;font-size:13px;background:var(--bg2);border:1.5px solid var(--bd);border-radius:8px;cursor:pointer">🔄 Actualizar</button>
+  </div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px">
+    <div class="card" style="padding:0;overflow:hidden">
+      <div style="padding:12px 18px;background:#fff5f5;border-bottom:1px solid #fecaca;font-weight:800;font-size:13px;color:#b91c1c">🔒 Bloquear Estudiante</div>
+      <div style="padding:16px;display:flex;flex-direction:column;gap:10px">
+        <div style="display:flex;align-items:center;gap:8px;background:var(--bg2);border:1.5px solid var(--bd);border-radius:8px;padding:8px 12px">
+          <span style="color:var(--sl3)">🔍</span>
+          <input id="fblkQ" placeholder="Buscar estudiante por nombre…" oninput="finBuscarEstBlk()"
+            style="border:none;background:transparent;font-size:13px;outline:none;color:var(--tx);flex:1">
+        </div>
+        <div id="fblkResultados" style="max-height:320px;overflow-y:auto"></div>
+      </div>
+    </div>
+    <div class="card" style="padding:0;overflow:hidden">
+      <div style="padding:12px 18px;background:#fff5f5;border-bottom:1px solid #fecaca;font-weight:800;font-size:13px;color:#b91c1c">🔒 Estudiantes Bloqueados</div>
+      <div id="fblkListW" style="padding:12px;max-height:420px;overflow-y:auto">
+        <div class="mty"><div class="ei">🔍</div><p style="font-size:12px">Cargando...</p></div>
+      </div>
+    </div>
+  </div>`;
+}
+async function initFinBloqueos(){
+  const el=gi('fblkListW');if(!el)return;
+  try{
+    const list=await apiFin('/bloqueos');
+    if(!list.length){el.innerHTML='<div class="mty"><div class="ei">✅</div><p style="font-size:12px">Sin estudiantes bloqueados</p></div>';return;}
+    el.innerHTML=list.map(b=>`
+      <div style="display:flex;align-items:center;gap:9px;padding:9px 8px;border-radius:9px;border:1.5px solid #fecaca;background:#fff5f5;margin-bottom:7px">
+        <div style="flex:1;min-width:0">
+          <div style="font-weight:700;font-size:13px">🎓 ${esc(b.est?.nombre||b.usuario)}</div>
+          <div style="font-size:11px;color:var(--sl3)">${esc(b.est?.salon||'—')} · ${b.usuario}</div>
+        </div>
+        <button onclick="finDesbloquear('${b.est?.id||''}','${esc(b.est?.nombre||b.usuario)}')"
+          style="padding:5px 11px;font-size:11px;font-weight:700;background:#dcfce7;color:#166534;border:1.5px solid #86efac;border-radius:7px;cursor:pointer;white-space:nowrap">
+          🔓 Desbloquear
+        </button>
+      </div>`).join('');
+  }catch(e){el.innerHTML=`<div class="al aly" style="font-size:12px">Error: ${esc(e.message)}</div>`;}
+}
+window._fblkTimer=null;
+async function finBuscarEstBlk(){
+  clearTimeout(window._fblkTimer);
+  window._fblkTimer=setTimeout(async()=>{
+    const q=(gi('fblkQ')?.value||'').trim();
+    const el=gi('fblkResultados');if(!el)return;
+    if(q.length<2){el.innerHTML='';return;}
+    el.innerHTML='<div style="font-size:12px;color:var(--sl3);padding:8px">⏳ Buscando...</div>';
+    try{
+      const ests=await apiFin(`/estudiantes?q=${encodeURIComponent(q)}`);
+      if(!ests.length){el.innerHTML='<div style="font-size:12px;color:var(--sl3);padding:8px">Sin resultados</div>';return;}
+      el.innerHTML=ests.map(e=>`
+        <div style="display:flex;align-items:center;gap:9px;padding:8px;border-radius:8px;border:1.5px solid var(--bd);background:var(--bg2);margin-bottom:6px">
+          <div style="flex:1"><div style="font-weight:700;font-size:13px">🎓 ${esc(e.nombre)}</div>
+            <div style="font-size:11px;color:var(--sl3)">${esc(e.salon||'Sin salón')} · ${e.ti||''}</div></div>
+          <button onclick="finBloquear('${e.id}','${esc(e.nombre)}')"
+            style="padding:5px 11px;font-size:11px;font-weight:700;background:#fff5f5;color:#b91c1c;border:1.5px solid #fca5a5;border-radius:7px;cursor:pointer;white-space:nowrap">
+            🔒 Bloquear
+          </button>
+        </div>`).join('');
+    }catch(e2){el.innerHTML=`<div class="al aly" style="font-size:12px">Error: ${esc(e2.message)}</div>`;}
+  },350);
+}
+async function finBloquear(estId,nombre){
+  const c=await Swal.fire({title:`¿Bloquear a ${nombre}?`,text:'No podrá iniciar sesión.',icon:'warning',showCancelButton:true,confirmButtonText:'Sí, bloquear',confirmButtonColor:'#e53e3e',cancelButtonText:'Cancelar'});
+  if(!c.isConfirmed)return;
+  try{await apiFin('/bloquear',{method:'POST',body:JSON.stringify({estId,bloquear:true})});
+    gi('fblkQ').value='';gi('fblkResultados').innerHTML='';
+    sw('success',`${nombre} bloqueado`,'',1800);initFinBloqueos();}
+  catch(e){sw('error','Error: '+e.message);}
+}
+async function finDesbloquear(estId,nombre){
+  if(!estId)return;
+  const c=await Swal.fire({title:`¿Desbloquear a ${nombre}?`,icon:'question',showCancelButton:true,confirmButtonText:'Sí, desbloquear',confirmButtonColor:'#38a169',cancelButtonText:'Cancelar'});
+  if(!c.isConfirmed)return;
+  try{await apiFin('/bloquear',{method:'POST',body:JSON.stringify({estId,bloquear:false})});
+    sw('success',`${nombre} desbloqueado`,'',1800);initFinBloqueos();}
+  catch(e){sw('error','Error: '+e.message);}
+}

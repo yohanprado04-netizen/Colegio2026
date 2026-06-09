@@ -227,7 +227,9 @@ async function doLogin() {
   if (!u || !p) { show('Ingresa usuario y contraseña.'); return; }
 
   try {
-    let res;
+    let res, data, isFinanciero = false;
+
+    // ── Intento 1: sistema educativo ──────────────────────────────
     try {
       res = await fetch(API_BASE + '/api/auth/login', {
         method: 'POST',
@@ -239,13 +241,45 @@ async function doLogin() {
       return;
     }
 
-    // 502/503 = servidor caído o iniciando en Render
     if (res.status === 502 || res.status === 503 || res.status === 504) {
       show('⚠️ El servidor está iniciando (puede tardar ~30 segundos en Render). Intenta de nuevo en un momento.');
       return;
     }
 
-    const data = await res.json().catch(() => ({}));
+    data = await res.json().catch(() => ({}));
+
+    // ── Intento 2: si falla con 401/403, probar login financiero ──
+    if (!res.ok && (res.status === 401 || res.status === 403)) {
+      let resF;
+      try {
+        resF = await fetch(API_BASE + '/api/fin/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ usuario: u, password: p })
+        });
+      } catch (_) {}
+
+      if (resF && resF.ok) {
+        const dataF = await resF.json().catch(() => ({}));
+        if (dataF.token && dataF.user?.finRole) {
+          // Login financiero exitoso — redirigir a la app financiera
+          TokenStore.set(dataF.token);
+          show('');
+          // Guardar token financiero y redirigir al módulo de finanzas
+          window._finToken = dataF.token;
+          window._finUser  = dataF.user;
+          gi('ls').classList.add('hidden');
+          // Mostrar interfaz financiera embebida
+          _bootFinanzas(dataF.user, dataF.token);
+          return;
+        }
+      }
+
+      // Ambos fallaron — mostrar error original
+      show(data.error || 'Credenciales incorrectas.');
+      return;
+    }
+
     if (!res.ok) { show(data.error || 'Credenciales incorrectas.'); return; }
 
     TokenStore.set(data.token);
@@ -328,6 +362,51 @@ async function doLogin() {
 // ═══════════════════════════════════════════════════════════════════
 // doLogout()
 // ═══════════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════════
+// _bootFinanzas() — inicializa la interfaz del módulo financiero
+// Se llama cuando el login detecta un usuario finAdmin/finUser
+// ═══════════════════════════════════════════════════════════════════
+function _bootFinanzas(user, token) {
+  // Mostrar el app y cargar el panel financiero
+  gi('app').classList.remove('hidden');
+  gi('ls').classList.add('hidden');
+  resetSessionTimer();
+  // Inicializar CU como usuario financiero para que la UI lo reconozca
+  CU = {
+    id:            user.id,
+    nombre:        user.nombre,
+    usuario:       user.usuario,
+    role:          user.finRole,   // 'finAdmin' o 'finUser'
+    finRole:       user.finRole,
+    colegioId:     user.colegioId,
+    colegioNombre: user.colegioNombre || '',
+    _isFinanciero: true,
+  };
+  DB = {
+    admin: CU, profs: [], ests: [], sals: [],
+    mP: [], mB: [], pers: [], notas: {}, dr: { s:'', e:'' },
+    drPer: {}, notaPct: { a:60, c:20, r:20 },
+    ext: { on:false, s:'', e:'' }, ups: {}, asist: {},
+    exc: [], vclases: [], recs: [], planes: [],
+    histRecs: [], histPlanes: [], audit: [], blk: {},
+  };
+  bootApp();
+}
+
+// Helper: fetch autenticado para el módulo financiero
+async function apiFin(path, opts = {}) {
+  const token = window._finToken || TokenStore.get();
+  const res = await fetch(API_BASE + '/api/fin' + path, {
+    ...opts,
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}`, ...(opts.headers||{}) }
+  });
+  if (!res.ok) {
+    const e = await res.json().catch(() => ({ error: `HTTP ${res.status}` }));
+    throw new Error(e.error || `HTTP ${res.status}`);
+  }
+  return res.json();
+}
+
 function doLogout() {
   clearTimeout(_sessionTimer);
   TokenStore.clear();
