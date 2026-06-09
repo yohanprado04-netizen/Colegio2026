@@ -6,7 +6,8 @@ const { verifyToken, requireRole } = require('../middleware/auth');
 const {
   Usuario, Colegio, Config, PlanEstudios, Materia, Comunicado,
   Nota, Asistencia, Auditoria, Estadistica,
-  Salon, EstHist, Upload, Plan, Recuperacion, Bloqueo, Excusa, VClase
+  Salon, EstHist, Upload, Plan, Recuperacion, Bloqueo, Excusa, VClase,
+  FinUser,
 } = require('../models');
 
 // Middleware: solo superadmin
@@ -507,63 +508,78 @@ router.delete('/comunicados/:id', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-/* ── GET /api/superadmin/usuarios?colegioId=&rol= ───────────────────────────
-   Lista usuarios de un colegio filtrados por rol para el panel de bloqueo
-   y el selector de comunicado a persona específica.
-────────────────────────────────────────────────────────────────────────────── */
-router.get('/usuarios', async (req, res) => {
+// ══════════════════════════════════════════════════════════════════
+// MÓDULO FINANCIERO — Gestión de usuarios financieros (superadmin)
+// ══════════════════════════════════════════════════════════════════
+
+// GET /api/superadmin/fin-usuarios — listar todos los finUsers
+router.get('/fin-usuarios', verifyToken, requireRole('superadmin'), async (req, res) => {
   try {
-    const { colegioId, rol } = req.query;
-    if (!colegioId) return res.status(400).json({ error: 'colegioId requerido' });
-    const rolesPermitidos = ['admin','profe','est'];
-    const roleFilter = rol && rolesPermitidos.includes(rol) ? [rol] : rolesPermitidos;
-    const usuarios = await Usuario.find(
-      { colegioId, role: { $in: roleFilter } },
-      'id nombre usuario role blocked salon ciclo'
-    ).sort({ role: 1, nombre: 1 }).lean();
-    res.json(usuarios);
+    const lista = await FinUser.find({}, '-password -__v').sort({ colegioId: 1, nombre: 1 }).lean();
+    res.json(lista);
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-/* ── PUT /api/superadmin/usuarios/:uid/blocked ──────────────────────────────
-   Bloquea o desbloquea un usuario individual por su campo `id`.
-   Actualiza tanto el campo blocked en Usuario como la colección Bloqueo
-   (que es la que verifica el login en auth.js).
-────────────────────────────────────────────────────────────────────────────── */
-router.put('/usuarios/:uid/blocked', async (req, res) => {
+// POST /api/superadmin/fin-usuarios — crear finUser
+router.post('/fin-usuarios', verifyToken, requireRole('superadmin'), async (req, res) => {
   try {
-    const { blocked } = req.body;
-    if (typeof blocked !== 'boolean') return res.status(400).json({ error: 'blocked debe ser boolean' });
+    const { nombre, usuario, password, role, colegioId } = req.body;
+    if (!nombre || !usuario || !password || !colegioId)
+      return res.status(400).json({ error: 'nombre, usuario, password y colegioId son obligatorios' });
+    if (!['finAdmin','finUser'].includes(role))
+      return res.status(400).json({ error: 'role debe ser finAdmin o finUser' });
 
-    const u = await Usuario.findOneAndUpdate(
-      { id: req.params.uid },
-      { $set: { blocked } },
-      { new: true, select: 'id nombre usuario role blocked colegioId' }
-    );
-    if (!u) return res.status(404).json({ error: 'Usuario no encontrado' });
+    const existe = await FinUser.findOne({ usuario }).lean();
+    if (existe) return res.status(409).json({ error: 'El usuario ya existe' });
 
-    // Sincronizar con la colección Bloqueo (que es la que verifica auth.js en el login)
-    if (blocked) {
-      await Bloqueo.findOneAndUpdate(
-        { usuario: u.usuario },
-        { on: true, ts: new Date().toISOString(), colegioId: u.colegioId || '' },
-        { upsert: true }
-      );
-    } else {
-      // Desbloquear: apagar todos los registros de bloqueo de este usuario
-      await Bloqueo.updateMany({ usuario: u.usuario }, { $set: { on: false } });
-    }
+    const col = await Colegio.findOne({ id: colegioId }).select('nombre').lean();
+    const hash = await bcrypt.hash(password, 12);
 
-    // Registrar en auditoría
-    await Auditoria.create({
-      ts: new Date().toISOString(), uid: 'superadmin', who: 'superadmin',
-      role: 'superadmin',
-      accion: `Usuario ${blocked ? 'bloqueado' : 'desbloqueado'} por superadmin: ${u.nombre} (${u.usuario})`,
-      extra: '', colegioId: u.colegioId || ''
-    }).catch(() => {});
+    const finUser = await FinUser.create({
+      id:            require('crypto').randomUUID(),
+      nombre:        nombre.trim(),
+      usuario:       usuario.trim().toLowerCase(),
+      password:      hash,
+      role:          role || 'finUser',
+      colegioId:     colegioId,
+      colegioNombre: col?.nombre || '',
+      activo:        true,
+      creadoPor:     'superadmin',
+    });
 
-    res.json({ ok: true, id: u.id, nombre: u.nombre, blocked: u.blocked });
+    const out = finUser.toObject();
+    delete out.password; delete out._id; delete out.__v;
+    res.status(201).json(out);
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
+
+// PUT /api/superadmin/fin-usuarios/:id — editar finUser
+router.put('/fin-usuarios/:id', verifyToken, requireRole('superadmin'), async (req, res) => {
+  try {
+    const { nombre, password, role, activo } = req.body;
+    const update = {};
+    if (nombre   !== undefined) update.nombre  = nombre.trim();
+    if (role     !== undefined) update.role    = role;
+    if (activo   !== undefined) update.activo  = activo;
+    if (password)               update.password = await bcrypt.hash(password, 12);
+
+    const finUser = await FinUser.findOneAndUpdate({ id: req.params.id }, update, { new: true });
+    if (!finUser) return res.status(404).json({ error: 'Usuario financiero no encontrado' });
+
+    const out = finUser.toObject();
+    delete out.password; delete out._id; delete out.__v;
+    res.json(out);
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// DELETE /api/superadmin/fin-usuarios/:id — eliminar finUser
+router.delete('/fin-usuarios/:id', verifyToken, requireRole('superadmin'), async (req, res) => {
+  try {
+    const result = await FinUser.deleteOne({ id: req.params.id });
+    if (result.deletedCount === 0) return res.status(404).json({ error: 'No encontrado' });
+    res.json({ ok: true });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
 
 module.exports = router;

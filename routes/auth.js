@@ -1,10 +1,10 @@
-// routes/auth.js — Login / Logout
+// routes/auth.js — Login / Logout (académico + financiero)
 'use strict';
 const router = require('express').Router();
 const bcrypt = require('bcryptjs');
 const jwt    = require('jsonwebtoken');
 const crypto = require('crypto');
-const { Usuario, Bloqueo, Auditoria, Colegio } = require('../models');
+const { Usuario, Bloqueo, Auditoria, Colegio, FinUser } = require('../models');
 
 const MAX_INTENTOS = 5;
 const LOCKOUT_MS   = 30 * 60 * 1000;
@@ -133,6 +133,53 @@ router.post('/login', async (req, res) => {
     res.json({ token, user: userData });
   } catch (err) {
     console.error('[auth/login] Error:', err);
+    res.status(500).json({ error: 'Error interno del servidor' });
+  }
+});
+
+// ─── Login para usuarios del módulo financiero ──────────────────────────────
+// Los finUsers NO están en la colección 'usuarios' — usan 'fin_usuarios'.
+// El frontend financiero llama a este endpoint; devuelve un JWT con role finAdmin|finUser.
+router.post('/fin/login', async (req, res) => {
+  try {
+    const usuario  = typeof req.body.usuario  === 'string' ? req.body.usuario.trim()  : '';
+    const password = typeof req.body.password === 'string' ? req.body.password        : '';
+
+    if (!usuario || !password)
+      return res.status(400).json({ error: 'Usuario y contraseña requeridos' });
+
+    const finUser = await FinUser.findOne({ usuario, activo: true });
+    if (!finUser)
+      return res.status(401).json({ error: 'Credenciales incorrectas' });
+
+    // Verificar que el colegio siga activo
+    const col = await Colegio.findOne({ id: finUser.colegioId }).select('activo').lean();
+    if (col && !col.activo)
+      return res.status(403).json({ error: 'Tu institución está desactivada. Contacta al administrador.' });
+
+    const ok = await bcrypt.compare(password, finUser.password).catch(() => false);
+    if (!ok)
+      return res.status(401).json({ error: 'Credenciales incorrectas' });
+
+    const payload = {
+      id:            finUser.id,
+      usuario:       finUser.usuario,
+      role:          finUser.role,        // 'finAdmin' | 'finUser'
+      nombre:        finUser.nombre,
+      colegioId:     finUser.colegioId,
+      colegioNombre: finUser.colegioNombre || '',
+    };
+
+    const token = jwt.sign(payload, JWT_SECRET_FINAL, { expiresIn: JWT_EXPIRES_IN });
+
+    const userData = finUser.toObject();
+    delete userData.password;
+    delete userData._id;
+    delete userData.__v;
+
+    res.json({ token, user: userData });
+  } catch (err) {
+    console.error('[auth/fin/login] Error:', err);
     res.status(500).json({ error: 'Error interno del servidor' });
   }
 });
