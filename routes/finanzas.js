@@ -559,16 +559,41 @@ router.delete('/comunicados/:id', finAuth, requireFinRole('finAdmin'), async (re
 // ESTADO DE CUENTA DE UN ESTUDIANTE
 // ══════════════════════════════════════════════════════════════════════════════
 
-router.get('/cuenta/:estId', finAuth, async (req, res) => {
+router.get('/cuenta/:estId', async (req, res) => {
   try {
-    const { estId } = req.params;
-    const ano = req.query.anoPago || String(new Date().getFullYear());
+    // Acepta tanto token financiero (finAdmin/finUser) como token normal del estudiante
+    const h = req.headers.authorization;
+    if (!h || !h.startsWith('Bearer ')) return res.status(401).json({ error: 'Token no provisto' });
+    const jwt = require('jsonwebtoken');
+    const JWT_SECRET = process.env.JWT_SECRET || 'dev_only_secret_cambiar_en_produccion';
+    let decoded;
+    try { decoded = jwt.verify(h.split(' ')[1], JWT_SECRET); }
+    catch(e) { return res.status(401).json({ error: 'Token inválido' }); }
 
+    const { estId } = req.params;
+
+    // Determinar colegioId según tipo de token
+    let colegioId;
+    if (decoded.finRole) {
+      // Token financiero
+      const { FinUsuario } = require('../models');
+      const fu = await FinUsuario.findOne({ id: decoded.id }).lean();
+      if (!fu) return res.status(401).json({ error: 'Usuario financiero no encontrado' });
+      colegioId = fu.colegioId;
+    } else if (decoded.role === 'est' || decoded.role === 'admin' || decoded.role === 'profe') {
+      // Token normal del sistema educativo
+      // Solo el propio estudiante puede ver su cuenta (o admin/profe del mismo colegio)
+      if (decoded.role === 'est' && decoded.id !== estId)
+        return res.status(403).json({ error: 'Solo puedes ver tu propia cuenta' });
+      colegioId = decoded.colegioId;
+    } else {
+      return res.status(403).json({ error: 'Sin acceso a la cuenta financiera' });
+    }
+
+    const ano = req.query.anoPago || String(new Date().getFullYear());
     const [pagos, est] = await Promise.all([
-      Pago.find({ colegioId: req.colegioId, estId, anoPago: ano })
-        .sort({ createdAt: 1 }).lean(),
-      Usuario.findOne({ id: estId, colegioId: req.colegioId })
-        .select('id nombre salon ti usuario blocked').lean(),
+      Pago.find({ colegioId, estId, anoPago: ano }).sort({ createdAt: 1 }).lean(),
+      Usuario.findOne({ id: estId, colegioId }).select('id nombre salon ti usuario blocked').lean(),
     ]);
 
     const blk = est ? await Bloqueo.findOne({ usuario: est.usuario, on: true }).lean() : null;

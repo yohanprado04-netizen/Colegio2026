@@ -807,7 +807,7 @@ const ROLE_MAP={
   finUser:   new Set(['findash','finpagos','finmorosos']),
   admin:new Set(['dash','asal','apri','abac','aprf','amat','anot','areh','afec','ablk','aaud','aexp','aexc','avcl','ahist','asug','acom','ahor']),
   profe:new Set(['ph','pnot','past','pvir','ptar','prec','phist','psug','pcom']),
-  est:new Set(['eb','east','etare','eexc','eprof','evir','ereh','ehist','esug','eicfes','ecom'])
+  est:new Set(['eb','east','etare','eexc','eprof','evir','ereh','ehist','esug','eicfes','ecom','ecuen'])
 };
 /* ── 2. REEMPLAZA canAccess ── */
 function canAccess(pid){
@@ -861,7 +861,7 @@ const PL={
   ph:'Mi Panel',pnot:'Ingresar Notas',past:'Asistencias',pvir:'Clases Virtuales',ptar:'Tareas Recibidas',prec:'Recuperaciones',phist:'Historial Recuperaciones',psug:'Sugerencias',
   eb:'Mi Boletín',east:'Mi Asistencia',etare:'Tareas & Talleres',
   eexc:'Excusas',eprof:'Mis Profesores',ereh:'Mi Recuperación',evir:'Mis Clases Virtuales',
-  ehist:'Historial Recuperaciones',esug:'Sugerencias'
+  ehist:'Historial Recuperaciones',esug:'Sugerencias',ecuen:'Mi Cuenta'
 };
 
 
@@ -1153,6 +1153,7 @@ function navItems(){
   /* estudiante */
   const it=[
     {s:'Comunicados'},{id:'ecom',ic:'📢',lb:'Comunicados'},
+    {s:'Financiero'},{id:'ecuen',ic:'💳',lb:'Mi Cuenta'},
     {s:'Mi Perfil'},{id:'eb',ic:'📋',lb:'Mi Boletín'},{id:'east',ic:'✅',lb:'Mi Asistencia'},
     {id:'etare',ic:'📎',lb:'Tareas & Talleres'},{id:'eexc',ic:'✉️',lb:'Excusas'},
     {id:'eprof',ic:'👩‍🏫',lb:'Mis Profesores'},{id:'evir',ic:'💻',lb:'Mis Clases Virtuales'},
@@ -1240,7 +1241,7 @@ function renderPg(pid){
     ablk:pgABlk,aaud:pgAAud,aexp:pgAExp,aexc:pgAExc,avcl:pgAVcl,ahist:pgAHist,acom:pgACom,pcom:pgComVer,ecom:pgComVer,
     ph:pgPH,pnot:pgPNot,past:pgPAst,pvir:pgPVir,ptar:pgPTar,prec:pgPRec,phist:pgPHist,
     eb:pgEB,east:pgEAst,etare:pgETare,eexc:pgEExc,eprof:pgEProf,
-    evir:pgEVir,ereh:pgEReh,ehist:pgEHist,eicfes:pgEIcfes,
+    evir:pgEVir,ereh:pgEReh,ehist:pgEHist,eicfes:pgEIcfes,ecuen:pgECuen,
     sadash:pgSADash,sacolegios:pgSAColegios,saplan:pgSAPlan,sacom:pgSACom,safin:pgSAFin,
     findash:pgFinDash,finpagos:pgFinPagos,finconceptos:pgFinConceptos,
     finmorosos:pgFinMorosos,fincom:pgFinCom,finbloqueos:pgFinBloqueos,
@@ -1254,7 +1255,7 @@ function initPg(pid){
   const map={
     dash:initDash,asal:initASal,apri:()=>initAEst('primaria'),abac:()=>initAEst('bachillerato'),
     aprf:initAPrf,ahor:initAHor,amat:initAMat,anot:initANot,areh:initAReh,aexc:initAExc,avcl:initAVcl,acom:initACom,pcom:initComVer,ecom:initComVer,
-    pnot:initPNot,past:initPAst,eb:initEB,eicfes:initEIcfes,
+    pnot:initPNot,past:initPAst,eb:initEB,eicfes:initEIcfes,ecuen:initECuen,
     ph:()=>{ setTimeout(()=>{ renderPExcR(); notifNuevasExcusas(); },0); },
     sadash:initSADash,sacolegios:initSAColegios,saplan:initSAPlan,sacom:initSACom,safin:initSAFin,
     findash:initFinDash,finpagos:initFinPagos,finconceptos:initFinConceptos,
@@ -7716,6 +7717,102 @@ function icfesReiniciarTodo(){
 /* ============================================================
    SUPERADMIN — COMUNICADOS GLOBALES
 ============================================================ */
+
+/* ═══════════════════════════════════════════════════════════
+   ESTUDIANTE — MI CUENTA (Estado de pagos)
+════════════════════════════════════════════════════════════ */
+function pgECuen(){
+  return`<div style="margin-bottom:20px">
+    <h2 style="margin:0;font-size:20px">💳 Mi Cuenta</h2>
+    <p style="margin:4px 0 0;font-size:13px;color:var(--sl2)">Consulta el estado de tus cobros y pagos pendientes.</p>
+  </div>
+  <div id="ecuenW"><div class="mty"><div class="ei">💳</div><p>Cargando tu estado de cuenta…</p></div></div>`;
+}
+async function initECuen(){
+  const el=gi('ecuenW'); if(!el) return;
+  el.innerHTML='<div style="text-align:center;padding:24px;color:var(--sl3)">⏳ Cargando…</div>';
+  try{
+    // Usar apiFetch con el token normal del estudiante
+    const data=await apiFetch(`/api/fin/cuenta/${CU.id}`);
+    const pagos=data.pagos||[];
+    const fmt=v=>`$${(v||0).toLocaleString('es-CO')}`;
+
+    const pendientes=pagos.filter(p=>p.estado==='pendiente'||p.estado==='vencido');
+    const pagados=pagos.filter(p=>p.estado==='pagado');
+    const totalDeuda=pendientes.reduce((a,p)=>a+(p.valorFinal||0),0);
+    const totalPagado=pagados.reduce((a,p)=>a+(p.valorFinal||0),0);
+
+    const stBadge=s=>({pagado:'bgr',pendiente:'bgy',vencido:'bred',anulado:'bgy'}[s]||'bgy');
+    const stLabel=s=>({pagado:'✅ Pagado',pendiente:'⏳ Pendiente',vencido:'🚨 Vencido',anulado:'❌ Anulado'}[s]||s);
+
+    el.innerHTML=`
+      <!-- Tarjetas resumen -->
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:20px">
+        <div style="padding:16px;border-radius:12px;background:${pendientes.length?'#fef9c3':'#f0fdf4'};border:1.5px solid ${pendientes.length?'#fde68a':'#86efac'}">
+          <div style="font-size:22px;margin-bottom:4px">${pendientes.length?'⏳':'🎉'}</div>
+          <div style="font-size:20px;font-weight:800;color:${pendientes.length?'#854d0e':'#166534'}">${fmt(totalDeuda)}</div>
+          <div style="font-size:11px;font-weight:700;color:${pendientes.length?'#854d0e':'#166534'};text-transform:uppercase">Por pagar</div>
+          <div style="font-size:11px;color:${pendientes.length?'#854d0e':'#166534'};opacity:.8">${pendientes.length} cobro${pendientes.length!==1?'s':''}</div>
+        </div>
+        <div style="padding:16px;border-radius:12px;background:#dcfce7;border:1.5px solid #86efac">
+          <div style="font-size:22px;margin-bottom:4px">✅</div>
+          <div style="font-size:20px;font-weight:800;color:#166534">${fmt(totalPagado)}</div>
+          <div style="font-size:11px;font-weight:700;color:#166534;text-transform:uppercase">Pagado</div>
+          <div style="font-size:11px;color:#166534;opacity:.8">${pagados.length} cobro${pagados.length!==1?'s':''}</div>
+        </div>
+      </div>
+
+      ${pendientes.length?`
+      <!-- Cobros pendientes -->
+      <div class="card" style="padding:0;overflow:hidden;margin-bottom:16px">
+        <div style="padding:12px 16px;background:#fef9c3;border-bottom:1.5px solid #fde68a;font-weight:800;font-size:13px;color:#854d0e">
+          ⏳ Cobros pendientes de pago
+        </div>
+        <div style="padding:12px">
+          ${pendientes.map(p=>`
+            <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;padding:12px 0;border-bottom:1px solid var(--bd)">
+              <div style="flex:1;min-width:180px">
+                <div style="font-weight:700;font-size:14px">${esc(p.conceptoNombre)}</div>
+                <div style="font-size:11px;color:var(--sl3);margin-top:2px">
+                  ${p.fechaVence?`Vence: <strong>${p.fechaVence}</strong>`:'Sin fecha de vencimiento'}
+                </div>
+              </div>
+              <div style="display:flex;align-items:center;gap:10px">
+                <span style="font-size:17px;font-weight:800;color:${p.estado==='vencido'?'#b91c1c':'#854d0e'}">${fmt(p.valorFinal)}</span>
+                <span class="bdg ${stBadge(p.estado)}" style="font-size:11px">${stLabel(p.estado)}</span>
+              </div>
+            </div>`).join('')}
+        </div>
+        <div style="padding:12px 16px;background:var(--bg2);border-top:1px solid var(--bd);font-size:12px;color:var(--sl3)">
+          💡 Para pagar, acércate a la tesorería del colegio o comunícate con la administración.
+        </div>
+      </div>`:''}
+
+      ${pagos.length?`
+      <!-- Historial completo -->
+      <div class="card" style="padding:0;overflow:hidden">
+        <div style="padding:12px 16px;background:var(--bg2);border-bottom:1px solid var(--bd);font-weight:800;font-size:13px">
+          📄 Historial de cobros
+        </div>
+        <div class="tw"><table>
+          <thead><tr><th>Concepto</th><th>Valor</th><th>Estado</th><th>Fecha</th></tr></thead>
+          <tbody>${pagos.map(p=>`<tr>
+            <td style="font-weight:700">${esc(p.conceptoNombre)}</td>
+            <td>${fmt(p.valorFinal)}</td>
+            <td><span class="bdg ${stBadge(p.estado)}" style="font-size:11px">${stLabel(p.estado)}</span></td>
+            <td style="font-size:11px;color:var(--sl3)">${p.fechaPago||p.fechaVence||'—'}</td>
+          </tr>`).join('')}</tbody>
+        </table></div>
+      </div>`
+      :`<div class="mty"><div class="ei">📭</div><p>No tienes cobros registrados todavía.</p></div>`}`;
+
+  }catch(e){
+    el.innerHTML=`<div class="card"><div class="mty"><div class="ei">💳</div>
+      <p style="font-size:13px">La información financiera no está disponible en este momento.</p>
+      <p style="font-size:12px;color:var(--sl3)">${esc(e.message)}</p>
+    </div></div>`;
+  }
+}
 
 /* ═══════════════════════════════════════════════════════════
    SUPERADMIN — MÓDULO FINANCIERO
