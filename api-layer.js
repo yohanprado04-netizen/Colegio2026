@@ -252,13 +252,17 @@ async function doLogin() {
     if (!res.ok && (res.status === 401 || res.status === 403)) {
       let resF, dataF;
       try {
+        console.log('[fin-login] Intentando /api/auth/fin/login...');
         resF = await fetch(API_BASE + '/api/auth/fin/login', {  // ruta en routes/auth.js
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ usuario: u, password: p })
         });
         dataF = await resF.json().catch(() => ({}));
-      } catch (_) {}
+        console.log('[fin-login] status:', resF.status, '| data:', JSON.stringify(dataF));
+      } catch (finErr) {
+        console.error('[fin-login] fetch error:', finErr.message);
+      }
 
       // Login financiero exitoso
       if (resF && resF.ok && dataF?.token && dataF?.user?.finRole) {
