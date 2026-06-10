@@ -225,7 +225,7 @@ router.post('/fin/login', async (req, res) => {
       JWT_SECRET, { expiresIn: JWT_EXPIRES }
     );
 
-    const safe = { ...u }; delete safe.password; delete safe._id; delete safe.__v;
+    const safe = u.toObject ? u.toObject() : { ...u }; delete safe.password; delete safe._id; delete safe.__v;
     safe.finRole = u.role;  // alias esperado por _bootFinanzas() en api-layer.js
     res.json({ token, user: safe });
   } catch (e) {

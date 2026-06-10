@@ -931,7 +931,7 @@ function bootApp(){
   if(_sbUser) _sbUser.innerHTML=`<div class="sbav">${(CU.nombre||'?')[0].toUpperCase()}</div>
   <div>
     <div class="sbun">${CU.nombre}</div>
-    <div class="sbur">${CU.role==='superadmin'?'Super Admin':(CU.colegioNombre?CU.colegioNombre+' · '+CU.role:CU.role)}</div>
+    <div class="sbur">${CU.role==='superadmin'?'Super Admin':CU.role==='finAdmin'?'Fin. Admin'+(CU.colegioNombre?' · '+CU.colegioNombre:''):CU.role==='finUser'?'Fin. Usuario'+(CU.colegioNombre?' · '+CU.colegioNombre:''):(CU.colegioNombre?CU.colegioNombre+' · '+CU.role:CU.role)}</div>
   </div>`;
   buildNav();
   /* ── Mostrar logo en sidebar — robusto contra fugas entre roles ── */
@@ -10079,26 +10079,29 @@ document.addEventListener('keydown',ev=>{
 // ── Panel principal financiero ───────────────────────────────
 function pgFinDash(){
   const rol=CU.role==='finAdmin'?'💼 Administrador Financiero':'👁️ Usuario de Caja';
+  const ano=new Date().getFullYear();
   return`<div style="margin-bottom:20px">
-    <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">
       <div><h2 style="margin:0;font-size:20px">💰 Panel Financiero</h2>
-        <p style="margin:4px 0 0;font-size:13px;color:var(--sl2)">${esc(CU.colegioNombre)} · ${rol}</p></div>
+        <p style="margin:4px 0 0;font-size:13px;color:var(--sl2)">${esc(CU.colegioNombre)} · ${rol} · Año ${ano}</p></div>
+      <button onclick="initFinDash()" style="padding:8px 14px;font-size:13px;background:var(--bg2);border:1.5px solid var(--bd);border-radius:8px;cursor:pointer">🔄 Actualizar</button>
     </div></div>
   <div id="finDashW"><div class="mty"><div class="ei">📊</div><p>Cargando...</p></div></div>`;
 }
 async function initFinDash(){
   const el=gi('finDashW'); if(!el) return;
+  el.innerHTML='<div style="text-align:center;padding:24px;color:var(--sl3)">⏳ Cargando resumen...</div>';
   try{
     const r=await apiFin('/resumen');
     const fmt=v=>`$${(v||0).toLocaleString('es-CO')}`;
     el.innerHTML=`
       <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;margin-bottom:20px">
         ${[
-          {l:'Pagado',v:fmt(r.pagado),c:'#dcfce7',tc:'#166534',ic:'✅'},
-          {l:'Pendiente',v:fmt(r.pendiente?.monto),c:'#fef9c3',tc:'#854d0e',ic:'⏳',sub:`${r.pendiente?.cantidad||0} cobros`},
-          {l:'Vencido',v:fmt(r.vencido?.monto),c:'#fee2e2',tc:'#b91c1c',ic:'🚨',sub:`${r.vencido?.cantidad||0} cobros`},
-          {l:'Anulados',v:r.anulados||0,c:'#f3f4f6',tc:'#6b7280',ic:'❌',sub:'transacciones'},
-        ].map(s=>`<div style="padding:16px 18px;border-radius:12px;background:${s.c};border:1px solid ${s.c}">
+          {l:'Pagado',v:fmt(r.pagado),c:'#dcfce7',tc:'#166534',ic:'✅',click:"nav('finpagos');setTimeout(()=>{const s=gi('fpEstado');if(s)s.value='pagado';finLoadPagos();},400)"},
+          {l:'Pendiente',v:fmt(r.pendiente?.monto),c:'#fef9c3',tc:'#854d0e',ic:'⏳',sub:`${r.pendiente?.cantidad||0} cobros`,click:"nav('finpagos');setTimeout(()=>{const s=gi('fpEstado');if(s)s.value='pendiente';finLoadPagos();},400)"},
+          {l:'Vencido',v:fmt(r.vencido?.monto),c:'#fee2e2',tc:'#b91c1c',ic:'🚨',sub:`${r.vencido?.cantidad||0} cobros`,click:"nav('finmorosos')"},
+          {l:'Anulados',v:r.anulados||0,c:'#f3f4f6',tc:'#6b7280',ic:'❌',sub:'transacciones',click:"nav('finpagos');setTimeout(()=>{const s=gi('fpEstado');if(s)s.value='anulado';finLoadPagos();},400)"},
+        ].map(s=>`<div onclick="${s.click}" style="padding:16px 18px;border-radius:12px;background:${s.c};border:1px solid ${s.c};cursor:pointer;transition:opacity .15s" onmouseover="this.style.opacity='.85'" onmouseout="this.style.opacity='1'">
           <div style="font-size:22px;margin-bottom:4px">${s.ic}</div>
           <div style="font-size:20px;font-weight:800;color:${s.tc}">${s.v}</div>
           <div style="font-size:11px;font-weight:700;color:${s.tc};text-transform:uppercase">${s.l}</div>
@@ -10117,7 +10120,7 @@ async function initFinDash(){
         <div class="card" style="padding:0;overflow:hidden">
           <div style="padding:12px 16px;background:var(--bg2);border-bottom:1px solid var(--bd);font-weight:800;font-size:13px">🕐 Últimas Transacciones</div>
           <div style="padding:12px">${(r.recientes||[]).length?r.recientes.map(p=>`
-            <div style="padding:7px 0;border-bottom:1px solid var(--bd);font-size:12px">
+            <div style="padding:7px 0;border-bottom:1px solid var(--bd);font-size:12px;cursor:pointer" onclick="nav('finpagos');setTimeout(()=>{const inp=gi('fpEstNombre');if(inp){inp.value='${esc(p.estNombre)}';finLoadPagos();}},400)">
               <div style="display:flex;justify-content:space-between">
                 <span style="font-weight:700">${esc(p.estNombre)}</span>
                 <span class="bdg ${p.estado==='pagado'?'bgr':p.estado==='vencido'?'bred':'bgy'}" style="font-size:10px">${p.estado}</span>
@@ -10132,18 +10135,34 @@ async function initFinDash(){
 
 // ── Pagos & Cobros ───────────────────────────────────────────
 function pgFinPagos(){
-  return`<div style="margin-bottom:16px"><h2 style="margin:0">💳 Pagos & Cobros</h2></div>
+  const curYear=new Date().getFullYear();
+  const yearOpts=[curYear,curYear-1,curYear-2].map(y=>`<option value="${y}"${y===curYear?' selected':''}>${y}</option>`).join('');
+  return`<div style="margin-bottom:16px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">
+    <h2 style="margin:0">💳 Pagos & Cobros</h2>
+    ${CU.role==='finAdmin'?`<button onclick="finNuevoPago()" style="padding:10px 18px;font-size:13px;font-weight:700;background:#dcfce7;color:#166534;border:1.5px solid #86efac;border-radius:8px;cursor:pointer">➕ Nuevo Pago</button>`:''}
+  </div>
   <div class="card" style="padding:16px;margin-bottom:16px">
     <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end">
-      <div style="flex:1;min-width:160px">
+      <div style="flex:1;min-width:200px">
+        <label style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--sl);display:block;margin-bottom:4px">🔍 Estudiante</label>
+        <input id="fpEstNombre" placeholder="Buscar por nombre…" oninput="finLoadPagos()"
+          style="width:100%;padding:9px 12px;font-size:13px;border:1.5px solid var(--bd);border-radius:8px;background:var(--bg2);color:var(--tx);outline:none;box-sizing:border-box">
+      </div>
+      <div style="flex:1;min-width:150px">
         <label style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--sl);display:block;margin-bottom:4px">Salón</label>
-        <select id="fpSalon" style="width:100%;padding:9px 12px;font-size:13px;border:1.5px solid var(--bd);border-radius:8px;background:var(--bg2);color:var(--tx);outline:none">
+        <select id="fpSalon" onchange="finLoadPagos()" style="width:100%;padding:9px 12px;font-size:13px;border:1.5px solid var(--bd);border-radius:8px;background:var(--bg2);color:var(--tx);outline:none">
+          <option value="">Todos</option>
+        </select>
+      </div>
+      <div style="flex:1;min-width:140px">
+        <label style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--sl);display:block;margin-bottom:4px">Concepto</label>
+        <select id="fpConcepto" onchange="finLoadPagos()" style="width:100%;padding:9px 12px;font-size:13px;border:1.5px solid var(--bd);border-radius:8px;background:var(--bg2);color:var(--tx);outline:none">
           <option value="">Todos</option>
         </select>
       </div>
       <div style="flex:1;min-width:130px">
         <label style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--sl);display:block;margin-bottom:4px">Estado</label>
-        <select id="fpEstado" style="width:100%;padding:9px 12px;font-size:13px;border:1.5px solid var(--bd);border-radius:8px;background:var(--bg2);color:var(--tx);outline:none">
+        <select id="fpEstado" onchange="finLoadPagos()" style="width:100%;padding:9px 12px;font-size:13px;border:1.5px solid var(--bd);border-radius:8px;background:var(--bg2);color:var(--tx);outline:none">
           <option value="">Todos</option>
           <option value="pendiente">⏳ Pendiente</option>
           <option value="pagado">✅ Pagado</option>
@@ -10151,107 +10170,224 @@ function pgFinPagos(){
           <option value="anulado">❌ Anulado</option>
         </select>
       </div>
+      <div style="flex:0;min-width:100px">
+        <label style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--sl);display:block;margin-bottom:4px">Año</label>
+        <select id="fpAno" onchange="finLoadPagos()" style="width:100%;padding:9px 12px;font-size:13px;border:1.5px solid var(--bd);border-radius:8px;background:var(--bg2);color:var(--tx);outline:none">
+          ${yearOpts}
+        </select>
+      </div>
       <div style="display:flex;gap:8px;align-items:flex-end">
-        <button onclick="finLoadPagos()" style="padding:10px 18px;font-size:13px;font-weight:700;background:var(--nv);color:#fff;border:none;border-radius:8px;cursor:pointer">Buscar</button>
-        ${CU.role==='finAdmin'?`<button onclick="finNuevoPago()" style="padding:10px 18px;font-size:13px;font-weight:700;background:#dcfce7;color:#166534;border:1.5px solid #86efac;border-radius:8px;cursor:pointer">➕ Nuevo Pago</button>`:''}
+        <button onclick="finLimpiarFiltrosPagos()" style="padding:10px 14px;font-size:13px;font-weight:700;background:var(--bg2);color:var(--sl);border:1.5px solid var(--bd);border-radius:8px;cursor:pointer" title="Limpiar filtros">🧹</button>
       </div>
     </div>
+    <div id="fpResumen" style="margin-top:10px;font-size:12px;color:var(--sl3)"></div>
   </div>
-  <div id="fpW"><div class="mty"><div class="ei">💳</div><p>Carga los pagos con el filtro</p></div></div>`;
+  <div id="fpW"><div class="mty"><div class="ei">💳</div><p>Usa los filtros para buscar pagos</p></div></div>`;
 }
+window._fpTimer=null;
 async function initFinPagos(){
   try{
-    const sals=await apiFin('/salones');
-    const sel=gi('fpSalon');
-    if(sel) sel.innerHTML='<option value="">Todos</option>'+sals.map(s=>`<option value="${s.nombre}">${esc(s.nombre)}</option>`).join('');
+    const [sals,conceptos]=await Promise.all([apiFin('/salones'),apiFin('/conceptos')]).catch(()=>[[],[]]);
+    const selSalon=gi('fpSalon');
+    if(selSalon) selSalon.innerHTML='<option value="">Todos</option>'+sals.map(s=>`<option value="${s.nombre}">${esc(s.nombre)}</option>`).join('');
+    const selCon=gi('fpConcepto');
+    if(selCon) selCon.innerHTML='<option value="">Todos</option>'+conceptos.map(c=>`<option value="${c.id}">${esc(c.nombre)}</option>`).join('');
   }catch(e){}
+  finLoadPagos();
+}
+function finLimpiarFiltrosPagos(){
+  const ids=['fpEstNombre','fpSalon','fpConcepto','fpEstado'];
+  ids.forEach(id=>{const el=gi(id);if(el)el.value='';});
+  const ano=gi('fpAno');if(ano)ano.value=String(new Date().getFullYear());
+  finLoadPagos();
 }
 async function finLoadPagos(){
-  const el=gi('fpW');if(!el)return;
-  el.innerHTML='<div style="text-align:center;padding:24px;color:var(--sl3)">⏳ Cargando...</div>';
-  const salon=gi('fpSalon')?.value||'';
-  const estado=gi('fpEstado')?.value||'';
+  clearTimeout(window._fpTimer);
+  window._fpTimer=setTimeout(async()=>{
+    const el=gi('fpW');if(!el)return;
+    el.innerHTML='<div style="text-align:center;padding:24px;color:var(--sl3)">⏳ Cargando...</div>';
+    const salon=gi('fpSalon')?.value||'';
+    const estado=gi('fpEstado')?.value||'';
+    const conceptoId=gi('fpConcepto')?.value||'';
+    const nombreQ=(gi('fpEstNombre')?.value||'').trim();
+    const ano=gi('fpAno')?.value||String(new Date().getFullYear());
+    try{
+      let qs=`anoPago=${ano}`;
+      if(salon)      qs+=`&salon=${encodeURIComponent(salon)}`;
+      if(estado)     qs+=`&estado=${encodeURIComponent(estado)}`;
+      if(conceptoId) qs+=`&conceptoId=${encodeURIComponent(conceptoId)}`;
+      if(nombreQ)    qs+=`&q=${encodeURIComponent(nombreQ)}`;
+      const {pagos}=await apiFin(`/pagos?${qs}`);
+      // Resumen rápido
+      const resEl=gi('fpResumen');
+      if(resEl){
+        const total=pagos.reduce((a,p)=>a+(p.valorFinal||0),0);
+        const pagados=pagos.filter(p=>p.estado==='pagado').length;
+        const pendientes=pagos.filter(p=>p.estado==='pendiente'||p.estado==='vencido').length;
+        resEl.innerHTML=pagos.length?`<span style="margin-right:14px">📄 <strong>${pagos.length}</strong> registro${pagos.length!==1?'s':''}</span><span style="margin-right:14px">💰 Total: <strong>$${total.toLocaleString('es-CO')}</strong></span><span style="color:#166534;margin-right:14px">✅ ${pagados} pagados</span><span style="color:#b91c1c">⏳ ${pendientes} pendientes/vencidos</span>`:'';
+      }
+      if(!pagos.length){el.innerHTML='<div class="mty"><div class="ei">🔍</div><p>Sin resultados con estos filtros</p></div>';return;}
+      const fmt=v=>`$${(v||0).toLocaleString('es-CO')}`;
+      const stBadge=s=>({pagado:'bgr',pendiente:'bgy',vencido:'bred',anulado:'bgy'}[s]||'bgy');
+      el.innerHTML=`<div class="tw"><table>
+        <thead><tr><th>Estudiante</th><th>Salón</th><th>Concepto</th><th>Valor</th><th>Estado</th><th>Fecha</th>${CU.role==='finAdmin'?'<th></th>':''}</tr></thead>
+        <tbody>${pagos.map(p=>`<tr>
+          <td style="font-weight:700">${esc(p.estNombre)}</td>
+          <td>${esc(p.salon||'—')}</td>
+          <td style="font-size:12px">${esc(p.conceptoNombre)}</td>
+          <td style="font-weight:700">${fmt(p.valorFinal)}</td>
+          <td><span class="bdg ${stBadge(p.estado)}" style="font-size:11px">${p.estado}</span></td>
+          <td style="font-size:11px;color:var(--sl3)">${p.fechaPago||p.fechaVence||'—'}</td>
+          ${CU.role==='finAdmin'?`<td><div style="display:flex;gap:5px">
+            <button onclick="finEditPago('${p.id}','${esc(p.estado)}')" style="padding:4px 9px;font-size:11px;background:#e0e7ff;color:#3730a3;border:1.5px solid #a5b4fc;border-radius:6px;cursor:pointer" title="Editar">✏️</button>
+            <button onclick="finVerDetalle('${p.id}')" style="padding:4px 9px;font-size:11px;background:#f0f9ff;color:#0369a1;border:1.5px solid #7dd3fc;border-radius:6px;cursor:pointer" title="Ver detalle">👁</button>
+          </div></td>`:''}
+        </tr>`).join('')}</tbody>
+      </table></div>`;
+    }catch(e){el.innerHTML=`<div class="al aly">Error: ${esc(e.message)}</div>`;}
+  },300);
+}
+async function finVerDetalle(pid){
   try{
-    const ano=new Date().getFullYear();
-    let qs=`anoPago=${ano}`;
-    if(salon)  qs+=`&salon=${encodeURIComponent(salon)}`;
-    if(estado) qs+=`&estado=${encodeURIComponent(estado)}`;
-    const {pagos}=await apiFin(`/pagos?${qs}`);
-    if(!pagos.length){el.innerHTML='<div class="mty"><div class="ei">🔍</div><p>Sin resultados</p></div>';return;}
+    const p=await apiFin(`/pagos/${pid}`);
     const fmt=v=>`$${(v||0).toLocaleString('es-CO')}`;
-    const stBadge=s=>({pagado:'bgr',pendiente:'bgy',vencido:'bred',anulado:'bgy'}[s]||'bgy');
-    el.innerHTML=`<div class="tw"><table>
-      <thead><tr><th>Estudiante</th><th>Salón</th><th>Concepto</th><th>Valor</th><th>Estado</th><th>Fecha</th>${CU.role==='finAdmin'?'<th></th>':''}</tr></thead>
-      <tbody>${pagos.map(p=>`<tr>
-        <td style="font-weight:700">${esc(p.estNombre)}</td>
-        <td>${esc(p.salon||'—')}</td>
-        <td style="font-size:12px">${esc(p.conceptoNombre)}</td>
-        <td style="font-weight:700">${fmt(p.valorFinal)}</td>
-        <td><span class="bdg ${stBadge(p.estado)}" style="font-size:11px">${p.estado}</span></td>
-        <td style="font-size:11px;color:var(--sl3)">${p.fechaPago||p.fechaVence||'—'}</td>
-        ${CU.role==='finAdmin'?`<td><button onclick="finEditPago('${p.id}')" style="padding:4px 9px;font-size:11px;background:#e0e7ff;color:#3730a3;border:1.5px solid #a5b4fc;border-radius:6px;cursor:pointer">✏️</button></td>`:''}
-      </tr>`).join('')}</tbody>
-    </table></div>`;
-  }catch(e){el.innerHTML=`<div class="al aly">Error: ${esc(e.message)}</div>`;}
+    await Swal.fire({
+      title:'📄 Detalle del Pago',width:420,
+      html:`<div style="text-align:left;font-family:var(--fn);font-size:13px;display:flex;flex-direction:column;gap:0">
+        ${[['Estudiante',esc(p.estNombre)],['Salón',esc(p.salon||'—')],['Concepto',esc(p.conceptoNombre)],
+           ['Valor',`<strong style="color:#166534">${fmt(p.valorFinal)}</strong>`],['Estado',p.estado],
+           ['Método',p.metodoPago||'—'],['Fecha pago',p.fechaPago||'—'],['Fecha vence',p.fechaVence||'—'],
+           ...(p.observacion?[['Observación',esc(p.observacion)]]:[])]
+          .map(([k,v])=>`<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--bd)"><span style="color:var(--sl)">${k}</span><span>${v}</span></div>`).join('')}
+      </div>`,
+      showCancelButton:false,confirmButtonText:'Cerrar'
+    });
+  }catch(e){sw('error','Error al cargar detalle: '+e.message);}
 }
 async function finNuevoPago(){
   const [ests,conceptos]=await Promise.all([apiFin('/estudiantes'),apiFin('/conceptos')]).catch(()=>[[],[]]);
+  const hoy=new Date().toISOString().slice(0,10);
   const {value,isConfirmed}=await Swal.fire({
-    title:'➕ Registrar Pago',width:560,
+    title:'➕ Registrar Pago',width:580,
     html:`<div style="text-align:left;font-family:var(--fn);display:flex;flex-direction:column;gap:11px">
-      <div><label style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--sl);display:block;margin-bottom:4px">Estudiante *</label>
-        <select id="fpEstId" style="width:100%;padding:9px 12px;font-size:13px;border:1.5px solid var(--bd);border-radius:8px;background:var(--bg2);color:var(--tx);outline:none">
-          <option value="">— Seleccionar —</option>${ests.map(e=>`<option value="${e.id}" data-nombre="${esc(e.nombre)}" data-salon="${esc(e.salon||'')}">${esc(e.nombre)} (${e.salon||'Sin salón'})</option>`).join('')}
-        </select></div>
+      <div style="display:grid;grid-template-columns:1fr;gap:0">
+        <label style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--sl);display:block;margin-bottom:4px">Estudiante *</label>
+        <input id="fpEstSearch" placeholder="Escribir nombre para buscar…" autocomplete="off"
+          style="width:100%;padding:9px 12px;font-size:13px;border:1.5px solid var(--bd);border-radius:8px 8px 0 0;background:var(--bg2);color:var(--tx);outline:none;box-sizing:border-box">
+        <select id="fpEstId" size="4" style="width:100%;font-size:13px;border:1.5px solid var(--bd);border-top:none;border-radius:0 0 8px 8px;background:var(--bg2);color:var(--tx);outline:none">
+          ${ests.map(e=>`<option value="${e.id}" data-nombre="${esc(e.nombre)}" data-salon="${esc(e.salon||'')}">${esc(e.nombre)} (${e.salon||'Sin salón'})</option>`).join('')}
+        </select>
+      </div>
       <div><label style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--sl);display:block;margin-bottom:4px">Concepto *</label>
-        <select id="fpConId" style="width:100%;padding:9px 12px;font-size:13px;border:1.5px solid var(--bd);border-radius:8px;background:var(--bg2);color:var(--tx);outline:none">
+        <select id="fpConId" onchange="(()=>{const o=this.options[this.selectedIndex];const v=o?.dataset?.valor;if(v){document.getElementById('fpValor').value=Number(v).toLocaleString('es-CO');document.getElementById('fpValorReal').value=v;}})()"
+          style="width:100%;padding:9px 12px;font-size:13px;border:1.5px solid var(--bd);border-radius:8px;background:var(--bg2);color:var(--tx);outline:none">
           <option value="">— Seleccionar —</option>${conceptos.map(c=>`<option value="${c.id}" data-valor="${c.valor}">${esc(c.nombre)} — $${c.valor.toLocaleString('es-CO')}</option>`).join('')}
         </select></div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <div><label style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--sl);display:block;margin-bottom:4px">Valor (COP)</label>
+          <input id="fpValor" placeholder="Se autocompleta" readonly
+            style="width:100%;padding:9px 12px;font-size:13px;border:1.5px solid var(--bd);border-radius:8px;background:#f8f9fa;color:var(--tx);outline:none;box-sizing:border-box">
+          <input type="hidden" id="fpValorReal">
+        </div>
         <div><label style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--sl);display:block;margin-bottom:4px">Estado</label>
           <select id="fpEst" style="width:100%;padding:9px 12px;font-size:13px;border:1.5px solid var(--bd);border-radius:8px;background:var(--bg2);color:var(--tx);outline:none">
             <option value="pendiente">⏳ Pendiente</option><option value="pagado">✅ Pagado</option>
           </select></div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
         <div><label style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--sl);display:block;margin-bottom:4px">Método de pago</label>
           <select id="fpMet" style="width:100%;padding:9px 12px;font-size:13px;border:1.5px solid var(--bd);border-radius:8px;background:var(--bg2);color:var(--tx);outline:none">
             <option value="">—</option><option>Efectivo</option><option>Transferencia</option><option>Tarjeta</option>
           </select></div>
+        <div><label style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--sl);display:block;margin-bottom:4px">Fecha vencimiento</label>
+          <input type="date" id="fpFVence" value="${hoy}"
+            style="width:100%;padding:9px 12px;font-size:13px;border:1.5px solid var(--bd);border-radius:8px;background:var(--bg2);color:var(--tx);outline:none;box-sizing:border-box"></div>
       </div>
       <div><label style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--sl);display:block;margin-bottom:4px">Observación</label>
         <input id="fpObs" style="width:100%;padding:9px 12px;font-size:13px;border:1.5px solid var(--bd);border-radius:8px;background:var(--bg2);color:var(--tx);outline:none;box-sizing:border-box"></div>
     </div>`,
+    didOpen:()=>{
+      const searchEl=document.getElementById('fpEstSearch');
+      const selEl=document.getElementById('fpEstId');
+      if(searchEl&&selEl){
+        searchEl.addEventListener('input',()=>{
+          const q=searchEl.value.toLowerCase();
+          Array.from(selEl.options).forEach(o=>{
+            o.style.display=o.text.toLowerCase().includes(q)?'':'none';
+          });
+        });
+      }
+    },
     showCancelButton:true,confirmButtonText:'Guardar Pago',cancelButtonText:'Cancelar',
     preConfirm:()=>{
       const estEl=gi('fpEstId'),conEl=gi('fpConId');
+      if(!estEl.value){Swal.showValidationMessage('Selecciona un estudiante');return false;}
+      if(!conEl.value){Swal.showValidationMessage('Selecciona un concepto');return false;}
       const estOpt=estEl.options[estEl.selectedIndex];
       return{estId:estEl.value,estNombre:estOpt?.dataset?.nombre||'',salon:estOpt?.dataset?.salon||'',
-        conceptoId:conEl.value,estado:gi('fpEst').value,metodoPago:gi('fpMet').value,observacion:gi('fpObs').value};
+        conceptoId:conEl.value,estado:gi('fpEst').value,metodoPago:gi('fpMet').value,
+        fechaVence:gi('fpFVence').value,observacion:gi('fpObs').value};
     }
   });
-  if(!isConfirmed||!value.estId||!value.conceptoId){return;}
+  if(!isConfirmed||!value)return;
   try{
     await apiFin('/pagos',{method:'POST',body:JSON.stringify({...value,anoPago:String(new Date().getFullYear())})});
     sw('success','Pago registrado','',1800);finLoadPagos();
   }catch(e){sw('error','Error: '+e.message);}
 }
-async function finEditPago(pid){
+async function finEditPago(pid, estadoActual=''){
+  // Cargar datos actuales del pago para pre-llenar el formulario
+  let pagoActual={};
+  try{ pagoActual=await apiFin(`/pagos/${pid}`); }catch(e){}
+  const est=pagoActual.estado||estadoActual;
+  const hoy=new Date().toISOString().slice(0,10);
   const r=await Swal.fire({
-    title:'✏️ Actualizar Estado del Pago',width:420,
+    title:'✏️ Editar Pago',width:460,
     html:`<div style="text-align:left;font-family:var(--fn);display:flex;flex-direction:column;gap:11px">
-      <div><label style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--sl);display:block;margin-bottom:4px">Estado</label>
-        <select id="epEst" style="width:100%;padding:9px 12px;font-size:13px;border:1.5px solid var(--bd);border-radius:8px;background:var(--bg2);color:var(--tx);outline:none">
-          <option value="pendiente">⏳ Pendiente</option><option value="pagado">✅ Pagado</option>
-          <option value="vencido">🚨 Vencido</option><option value="anulado">❌ Anulado</option>
-        </select></div>
+      <div style="padding:10px 12px;background:var(--bg2);border-radius:8px;border:1.5px solid var(--bd);font-size:12px">
+        <strong>${esc(pagoActual.estNombre||'')}</strong> · ${esc(pagoActual.conceptoNombre||'')}
+        <span style="float:right;font-weight:700;color:#166534">$${(pagoActual.valorFinal||0).toLocaleString('es-CO')}</span>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <div><label style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--sl);display:block;margin-bottom:4px">Estado</label>
+          <select id="epEst" style="width:100%;padding:9px 12px;font-size:13px;border:1.5px solid var(--bd);border-radius:8px;background:var(--bg2);color:var(--tx);outline:none">
+            <option value="pendiente"${est==='pendiente'?' selected':''}>⏳ Pendiente</option>
+            <option value="pagado"${est==='pagado'?' selected':''}>✅ Pagado</option>
+            <option value="vencido"${est==='vencido'?' selected':''}>🚨 Vencido</option>
+            <option value="anulado"${est==='anulado'?' selected':''}>❌ Anulado</option>
+          </select></div>
+        <div><label style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--sl);display:block;margin-bottom:4px">Método de pago</label>
+          <select id="epMet" style="width:100%;padding:9px 12px;font-size:13px;border:1.5px solid var(--bd);border-radius:8px;background:var(--bg2);color:var(--tx);outline:none">
+            <option value="">—</option>
+            ${['Efectivo','Transferencia','Tarjeta'].map(m=>`<option${pagoActual.metodoPago===m?' selected':''}>${m}</option>`).join('')}
+          </select></div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <div><label style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--sl);display:block;margin-bottom:4px">Fecha de pago</label>
+          <input type="date" id="epFPago" value="${pagoActual.fechaPago||''}"
+            style="width:100%;padding:9px 12px;font-size:13px;border:1.5px solid var(--bd);border-radius:8px;background:var(--bg2);color:var(--tx);outline:none;box-sizing:border-box"></div>
+        <div><label style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--sl);display:block;margin-bottom:4px">Fecha vencimiento</label>
+          <input type="date" id="epFVence" value="${pagoActual.fechaVence||hoy}"
+            style="width:100%;padding:9px 12px;font-size:13px;border:1.5px solid var(--bd);border-radius:8px;background:var(--bg2);color:var(--tx);outline:none;box-sizing:border-box"></div>
+      </div>
       <div><label style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--sl);display:block;margin-bottom:4px">Comprobante / Observación</label>
-        <input id="epObs" style="width:100%;padding:9px 12px;font-size:13px;border:1.5px solid var(--bd);border-radius:8px;background:var(--bg2);color:var(--tx);outline:none;box-sizing:border-box">
+        <input id="epObs" value="${esc(pagoActual.observacion||'')}"
+          style="width:100%;padding:9px 12px;font-size:13px;border:1.5px solid var(--bd);border-radius:8px;background:var(--bg2);color:var(--tx);outline:none;box-sizing:border-box">
       </div></div>`,
     showCancelButton:true,confirmButtonText:'Guardar',cancelButtonText:'Cancelar',
-    preConfirm:()=>({estado:gi('epEst').value,observacion:gi('epObs').value})
+    preConfirm:()=>({
+      estado:gi('epEst').value,
+      metodoPago:gi('epMet').value,
+      fechaPago:gi('epFPago').value||undefined,
+      fechaVence:gi('epFVence').value||undefined,
+      observacion:gi('epObs').value
+    })
   });
   if(!r.isConfirmed)return;
+  // Limpiar campos vacíos
+  const upd=Object.fromEntries(Object.entries(r.value).filter(([,v])=>v!==undefined&&v!==''));
   try{
-    await apiFin(`/pagos/${pid}`,{method:'PUT',body:JSON.stringify(r.value)});
+    await apiFin(`/pagos/${pid}`,{method:'PUT',body:JSON.stringify(upd)});
     sw('success','Pago actualizado','',1600);finLoadPagos();
   }catch(e){sw('error','Error: '+e.message);}
 }
@@ -10331,25 +10467,97 @@ async function finDelConcepto(cid,nombre){
 
 // ── Reporte de morosos ───────────────────────────────────────
 function pgFinMorosos(){
-  return`<div style="margin-bottom:16px"><h2 style="margin:0">⚠️ Reporte de Morosos</h2></div>
+  return`<div style="margin-bottom:16px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">
+    <h2 style="margin:0">⚠️ Reporte de Morosos</h2>
+    <button onclick="initFinMorosos()" style="padding:8px 14px;font-size:13px;background:var(--bg2);border:1.5px solid var(--bd);border-radius:8px;cursor:pointer">🔄 Actualizar</button>
+  </div>
+  <div class="card" style="padding:14px;margin-bottom:16px">
+    <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end">
+      <div style="flex:1;min-width:200px">
+        <label style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--sl);display:block;margin-bottom:4px">🔍 Buscar estudiante</label>
+        <input id="fmSearch" placeholder="Nombre del estudiante…" oninput="finFiltrarMorosos()"
+          style="width:100%;padding:9px 12px;font-size:13px;border:1.5px solid var(--bd);border-radius:8px;background:var(--bg2);color:var(--tx);outline:none;box-sizing:border-box">
+      </div>
+      <div style="flex:1;min-width:150px">
+        <label style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--sl);display:block;margin-bottom:4px">Salón</label>
+        <select id="fmSalon" onchange="finFiltrarMorosos()" style="width:100%;padding:9px 12px;font-size:13px;border:1.5px solid var(--bd);border-radius:8px;background:var(--bg2);color:var(--tx);outline:none">
+          <option value="">Todos</option>
+        </select>
+      </div>
+      <div style="flex:1;min-width:150px">
+        <label style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--sl);display:block;margin-bottom:4px">Ordenar por</label>
+        <select id="fmOrden" onchange="finFiltrarMorosos()" style="width:100%;padding:9px 12px;font-size:13px;border:1.5px solid var(--bd);border-radius:8px;background:var(--bg2);color:var(--tx);outline:none">
+          <option value="deuda">Mayor deuda</option>
+          <option value="nombre">Nombre A-Z</option>
+          <option value="cant">Más cobros</option>
+        </select>
+      </div>
+    </div>
+  </div>
   <div id="fmW"><div class="mty"><div class="ei">⏳</div><p>Cargando...</p></div></div>`;
 }
+window._fmData=[];
 async function initFinMorosos(){
   const el=gi('fmW');if(!el)return;
+  el.innerHTML='<div style="text-align:center;padding:24px;color:var(--sl3)">⏳ Cargando reporte...</div>';
   try{
     const data=await apiFin('/reporte/morosos');
-    if(!data.length){el.innerHTML='<div class="mty"><div class="ei">🎉</div><p>Sin morosos. Excelente.</p></div>';return;}
-    const fmt=v=>`$${(v||0).toLocaleString('es-CO')}`;
-    el.innerHTML=`<div class="al aly" style="margin-bottom:12px;font-size:13px">⚠️ ${data.length} estudiante${data.length>1?'s':''} con deuda pendiente</div>
+    window._fmData=data;
+    // Poblar selector de salones
+    const salones=[...new Set(data.map(m=>m.salon).filter(Boolean))].sort();
+    const selSal=gi('fmSalon');
+    if(selSal) selSal.innerHTML='<option value="">Todos</option>'+salones.map(s=>`<option value="${s}">${esc(s)}</option>`).join('');
+    finFiltrarMorosos();
+  }catch(e){el.innerHTML=`<div class="al aly">Error: ${esc(e.message)}</div>`;}
+}
+function finFiltrarMorosos(){
+  const el=gi('fmW');if(!el)return;
+  const q=(gi('fmSearch')?.value||'').toLowerCase();
+  const salon=gi('fmSalon')?.value||'';
+  const orden=gi('fmOrden')?.value||'deuda';
+  let data=[...(window._fmData||[])];
+  if(q) data=data.filter(m=>(m.estNombre||'').toLowerCase().includes(q));
+  if(salon) data=data.filter(m=>m.salon===salon);
+  if(orden==='deuda') data.sort((a,b)=>(b.deuda||0)-(a.deuda||0));
+  else if(orden==='nombre') data.sort((a,b)=>(a.estNombre||'').localeCompare(b.estNombre||''));
+  else if(orden==='cant') data.sort((a,b)=>(b.cantPendientes||0)-(a.cantPendientes||0));
+  if(!data.length){
+    el.innerHTML='<div class="mty"><div class="ei">'+(window._fmData.length?'🔍':'🎉')+'</div><p>'+(window._fmData.length?'Sin resultados con esos filtros':'¡Sin morosos! Excelente.')+'</p></div>';
+    return;
+  }
+  const fmt=v=>`$${(v||0).toLocaleString('es-CO')}`;
+  const totalDeuda=data.reduce((a,m)=>a+(m.deuda||0),0);
+  el.innerHTML=`
+    <div style="display:flex;gap:14px;flex-wrap:wrap;margin-bottom:14px">
+      <div style="padding:12px 16px;border-radius:10px;background:#fee2e2;border:1px solid #fecaca;flex:1;min-width:140px">
+        <div style="font-size:11px;font-weight:700;color:#b91c1c;text-transform:uppercase">Estudiantes</div>
+        <div style="font-size:22px;font-weight:800;color:#b91c1c">${data.length}</div>
+      </div>
+      <div style="padding:12px 16px;border-radius:10px;background:#fee2e2;border:1px solid #fecaca;flex:1;min-width:140px">
+        <div style="font-size:11px;font-weight:700;color:#b91c1c;text-transform:uppercase">Deuda Total</div>
+        <div style="font-size:20px;font-weight:800;color:#b91c1c">${fmt(totalDeuda)}</div>
+      </div>
+    </div>
     <div class="tw"><table>
-      <thead><tr><th>Estudiante</th><th>Salón</th><th>Deuda Total</th><th>Cobros Pendientes</th></tr></thead>
+      <thead><tr><th>Estudiante</th><th>Salón</th><th>Deuda Total</th><th>Cobros Pendientes</th><th></th></tr></thead>
       <tbody>${data.map(m=>`<tr>
         <td style="font-weight:700">${esc(m.estNombre)}</td>
         <td>${esc(m.salon||'—')}</td>
         <td style="font-weight:700;color:#b91c1c">${fmt(m.deuda)}</td>
         <td><span class="bdg bred" style="font-size:11px">${m.cantPendientes}</span></td>
-      </tr>`).join('')}</tbody></table></div>`;
-  }catch(e){el.innerHTML=`<div class="al aly">Error: ${esc(e.message)}</div>`;}
+        <td><button onclick="finVerPagosEstudiante('${m.estId||''}','${esc(m.estNombre)}')"
+          style="padding:4px 9px;font-size:11px;background:#f0f9ff;color:#0369a1;border:1.5px solid #7dd3fc;border-radius:6px;cursor:pointer" title="Ver pagos">👁 Ver</button></td>
+      </tr>`).join('')}</tbody>
+    </table></div>`;
+}
+async function finVerPagosEstudiante(estId,nombre){
+  if(!estId){sw('warning','Sin ID de estudiante');return;}
+  // Ir a la pestaña de pagos y pre-filtrar por nombre
+  nav('finpagos');
+  setTimeout(()=>{
+    const inp=gi('fpEstNombre');
+    if(inp){inp.value=nombre;finLoadPagos();}
+  },400);
 }
 
 // ── Comunicados financieros ───────────────────────────────────
