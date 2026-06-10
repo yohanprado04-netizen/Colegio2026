@@ -14,6 +14,7 @@ const failedAttempts = {};
 // 🔒 SECURITY: JWT_SECRET DEBE estar en variables de entorno de Render
 // Si no está configurado en producción, el servidor no debe arrancar
 const JWT_SECRET = process.env.JWT_SECRET;
+const JWT_EXPIRES = process.env.JWT_EXPIRES_IN || '8h';
 if (!JWT_SECRET) {
   if (process.env.NODE_ENV === 'production') {
     console.error('[FATAL] JWT_SECRET no está configurado en producción. Servidor detenido.');
@@ -178,5 +179,58 @@ function sha256Match(raw, stored) {
     return hash === stored || raw === stored;
   } catch { return false; }
 }
+
+// ══════════════════════════════════════════════════════════════════════════════
+// POST /api/auth/fin/login — Login del módulo financiero
+// Busca en FinUsuario (colección fin_usuarios), separado del Usuario académico.
+// Así funciona aunque models/index.js no tenga FinUsuario: hace require seguro.
+// ══════════════════════════════════════════════════════════════════════════════
+router.post('/fin/login', async (req, res) => {
+  try {
+    const usuario  = typeof req.body.usuario  === 'string' ? req.body.usuario.trim()  : '';
+    const password = typeof req.body.password === 'string' ? req.body.password        : '';
+    if (!usuario || !password)
+      return res.status(400).json({ error: 'Usuario y contraseña requeridos' });
+
+    // Importar FinUsuario de forma segura — si no existe en models, falla claro
+    let FinUsuario;
+    try {
+      ({ FinUsuario } = require('../models'));
+    } catch (e) {
+      console.error('[fin/login] Error importando FinUsuario:', e.message);
+      return res.status(503).json({ error: 'Módulo financiero no disponible. Contacta al administrador.' });
+    }
+    if (!FinUsuario) {
+      return res.status(503).json({ error: 'Módulo financiero no configurado en el servidor.' });
+    }
+
+    const u = await FinUsuario.findOne({ usuario });
+    if (!u) {
+      console.log(`[fin/login] "${usuario}" no encontrado en fin_usuarios`);
+      return res.status(401).json({ error: 'Credenciales incorrectas' });
+    }
+    if (u.blocked) return res.status(403).json({ error: 'Cuenta bloqueada. Contacta al administrador.' });
+
+    const col = await Colegio.findOne({ id: u.colegioId }).select('activo nombre').lean();
+    if (col && !col.activo)
+      return res.status(403).json({ error: 'Tu institución está desactivada.' });
+
+    const ok = await bcrypt.compare(password, u.password);
+    console.log(`[fin/login] "${usuario}" | bcrypt ok=${ok} | colegio=${u.colegioNombre}`);
+    if (!ok) return res.status(401).json({ error: 'Credenciales incorrectas' });
+
+    const token = jwt.sign(
+      { id: u.id, usuario: u.usuario, finRole: u.role, nombre: u.nombre,
+        colegioId: u.colegioId, colegioNombre: u.colegioNombre },
+      JWT_SECRET, { expiresIn: JWT_EXPIRES }
+    );
+
+    const safe = { ...u }; delete safe.password; delete safe._id; delete safe.__v;
+    res.json({ token, user: safe });
+  } catch (e) {
+    console.error('[fin/login] Error:', e.message);
+    res.status(500).json({ error: e.message });
+  }
+});
 
 module.exports = router;

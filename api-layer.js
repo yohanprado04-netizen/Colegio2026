@@ -252,7 +252,7 @@ async function doLogin() {
     if (!res.ok && (res.status === 401 || res.status === 403)) {
       let resF, dataF;
       try {
-        resF = await fetch(API_BASE + '/api/fin/auth/login', {
+        resF = await fetch(API_BASE + '/api/auth/fin/login', {  // ruta en routes/auth.js
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ usuario: u, password: p })
