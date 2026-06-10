@@ -10395,7 +10395,10 @@ async function finEditPago(pid, estadoActual=''){
 // ── Conceptos de cobro ───────────────────────────────────────
 function pgFinConceptos(){
   return`<div style="margin-bottom:16px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">
-    <h2 style="margin:0">📋 Conceptos de Cobro</h2>
+    <div>
+      <h2 style="margin:0">📋 Conceptos de Cobro</h2>
+      <p style="margin:4px 0 0;font-size:12px;color:var(--sl2)">Crea conceptos y luego genera cobros masivos para asignarlos a los estudiantes.</p>
+    </div>
     <button onclick="finNuevoConcepto()" style="padding:10px 18px;font-size:13px;font-weight:700;background:#dcfce7;color:#166534;border:1.5px solid #86efac;border-radius:8px;cursor:pointer">➕ Nuevo Concepto</button>
   </div>
   <div id="fcW"><div class="mty"><div class="ei">📋</div><p>Cargando...</p></div></div>`;
@@ -10404,20 +10407,209 @@ async function initFinConceptos(){
   const el=gi('fcW');if(!el)return;
   try{
     const list=await apiFin('/conceptos');
-    if(!list.length){el.innerHTML='<div class="mty"><div class="ei">📋</div><p>Sin conceptos. Crea uno.</p></div>';return;}
+    if(!list.length){el.innerHTML='<div class="mty"><div class="ei">📋</div><p>Sin conceptos. Crea uno primero.</p></div>';return;}
     el.innerHTML=`<div class="tw"><table>
-      <thead><tr><th>Nombre</th><th>Valor</th><th>Aplica</th><th>Estado</th><th></th></tr></thead>
+      <thead><tr><th>Nombre</th><th>Valor</th><th>Aplica</th><th>Estado</th><th>Acciones</th></tr></thead>
       <tbody>${list.map(c=>`<tr>
         <td style="font-weight:700">${esc(c.nombre)}</td>
         <td style="font-weight:700;color:#166534">$${(c.valor||0).toLocaleString('es-CO')}</td>
         <td style="font-size:12px">${esc(c.aplica||'todos')}</td>
         <td><span class="bdg ${c.activo!==false?'bgr':'bgy'}" style="font-size:11px">${c.activo!==false?'Activo':'Inactivo'}</span></td>
-        <td><div style="display:flex;gap:6px">
+        <td><div style="display:flex;gap:6px;flex-wrap:wrap">
+          <button onclick="finGenerarCobros('${c.id}','${esc(c.nombre)}','${c.valor}','${esc(c.aplica||'todos')}')"
+            style="padding:5px 10px;font-size:11px;font-weight:700;background:#eff6ff;color:#1d4ed8;border:1.5px solid #93c5fd;border-radius:6px;cursor:pointer"
+            title="Asignar este cobro a estudiantes en masa">⚡ Cobro masivo</button>
           <button onclick="finEditConcepto('${c.id}')" style="padding:4px 9px;font-size:11px;background:#e0e7ff;color:#3730a3;border:1.5px solid #a5b4fc;border-radius:6px;cursor:pointer">✏️</button>
           <button onclick="finDelConcepto('${c.id}','${esc(c.nombre)}')" style="padding:4px 9px;font-size:11px;background:#fff5f5;color:#b91c1c;border:1.5px solid #fca5a5;border-radius:6px;cursor:pointer">🗑</button>
         </div></td>
       </tr>`).join('')}</tbody></table></div>`;
   }catch(e){el.innerHTML=`<div class="al aly">Error: ${esc(e.message)}</div>`;}
+}
+
+// ── Cobro masivo ─────────────────────────────────────────────
+async function finGenerarCobros(conceptoId, conceptoNombre, valorBase, aplica){
+  // 1. Cargar salones para el filtro
+  let sals=[];
+  try{ sals=await apiFin('/salones'); }catch(e){}
+
+  const hoy=new Date().toISOString().slice(0,10);
+  // Fecha de vencimiento por defecto: fin del mes actual
+  const ahora=new Date();
+  const finMes=new Date(ahora.getFullYear(),ahora.getMonth()+1,0).toISOString().slice(0,10);
+
+  const salonOpts=`<option value="">— Todos los salones —</option>`
+    +sals.map(s=>`<option value="${s.nombre}">${esc(s.nombre)}</option>`).join('');
+
+  const {value,isConfirmed}=await Swal.fire({
+    title:'⚡ Cobro Masivo',
+    width:540,
+    html:`<div style="text-align:left;font-family:var(--fn);display:flex;flex-direction:column;gap:13px">
+
+      <!-- Info del concepto -->
+      <div style="padding:10px 14px;border-radius:9px;background:#eff6ff;border:1.5px solid #93c5fd;font-size:13px">
+        <span style="font-weight:700;color:#1d4ed8">📋 ${esc(conceptoNombre)}</span>
+        <span style="float:right;font-weight:700;color:#166534">$${Number(valorBase).toLocaleString('es-CO')}</span><br>
+        <span style="font-size:11px;color:var(--sl3)">Aplica a: ${aplica}</span>
+      </div>
+
+      <!-- Filtro de salón -->
+      <div>
+        <label style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--sl);display:block;margin-bottom:4px">Asignar a salón</label>
+        <select id="cmSalon" onchange="finPrevisualizarCobro()"
+          style="width:100%;padding:9px 12px;font-size:13px;border:1.5px solid var(--bd);border-radius:8px;background:var(--bg2);color:var(--tx);outline:none">
+          ${salonOpts}
+        </select>
+      </div>
+
+      <!-- Opciones de año y vencimiento -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <div>
+          <label style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--sl);display:block;margin-bottom:4px">Año del cobro</label>
+          <select id="cmAno" style="width:100%;padding:9px 12px;font-size:13px;border:1.5px solid var(--bd);border-radius:8px;background:var(--bg2);color:var(--tx);outline:none">
+            ${[0,1,2].map(i=>{ const y=new Date().getFullYear()-i; return `<option value="${y}"${i===0?' selected':''}>${y}</option>`; }).join('')}
+          </select>
+        </div>
+        <div>
+          <label style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--sl);display:block;margin-bottom:4px">Fecha vencimiento</label>
+          <input type="date" id="cmFVence" value="${finMes}"
+            style="width:100%;padding:9px 12px;font-size:13px;border:1.5px solid var(--bd);border-radius:8px;background:var(--bg2);color:var(--tx);outline:none;box-sizing:border-box">
+        </div>
+      </div>
+
+      <!-- Omitir si ya tiene cobro -->
+      <div style="display:flex;align-items:center;gap:8px;padding:9px 12px;border-radius:8px;background:var(--bg2);border:1.5px solid var(--bd)">
+        <input type="checkbox" id="cmOmitir" checked style="width:16px;height:16px;cursor:pointer">
+        <label for="cmOmitir" style="font-size:13px;cursor:pointer">Omitir estudiantes que ya tienen este cobro en el año seleccionado</label>
+      </div>
+
+      <!-- Previsualización -->
+      <div id="cmPreview" style="padding:10px 12px;border-radius:8px;background:var(--bg2);border:1.5px solid var(--bd);font-size:13px;color:var(--sl3)">
+        Selecciona un salón para ver cuántos estudiantes recibirán el cobro.
+      </div>
+    </div>`,
+    didOpen:()=>{ finPrevisualizarCobro(); },
+    showCancelButton:true,
+    confirmButtonText:'⚡ Generar cobros',
+    cancelButtonText:'Cancelar',
+    preConfirm:()=>({
+      salon:    document.getElementById('cmSalon').value,
+      anoPago:  document.getElementById('cmAno').value,
+      fechaVence: document.getElementById('cmFVence').value,
+      omitir:   document.getElementById('cmOmitir').checked,
+    })
+  });
+  if(!isConfirmed||!value)return;
+
+  // 2. Confirmar cantidad
+  const prevEl=document.getElementById('cmPreview');
+  const cantStr=prevEl?.dataset?.cant||'?';
+  const conf=await Swal.fire({
+    title:`¿Generar cobros para ${cantStr} estudiante${cantStr!=='1'?'s':''}?`,
+    text:`Se creará un cobro de $${Number(valorBase).toLocaleString('es-CO')} por "${conceptoNombre}" para cada uno.`,
+    icon:'question',
+    showCancelButton:true,
+    confirmButtonText:'Sí, generar',
+    confirmButtonColor:'#1d4ed8',
+    cancelButtonText:'Cancelar'
+  });
+  if(!conf.isConfirmed)return;
+
+  // 3. Cargar estudiantes y generar los cobros
+  try{
+    Swal.fire({title:'⚡ Generando cobros…',text:'Por favor espera.',allowOutsideClick:false,showConfirmButton:false,
+      didOpen:()=>Swal.showLoading()});
+
+    // Obtener estudiantes filtrados
+    let url=`/estudiantes?`;
+    if(value.salon) url+=`salon=${encodeURIComponent(value.salon)}&`;
+    const ests=await apiFin(url.slice(0,-1)||'/estudiantes');
+
+    // Filtrar por 'aplica' del concepto
+    let estsFiltrados=ests;
+    if(aplica==='primaria')      estsFiltrados=ests.filter(e=>finEsCiclo(e.salon,'primaria'));
+    else if(aplica==='bachillerato') estsFiltrados=ests.filter(e=>finEsCiclo(e.salon,'bachillerato'));
+
+    // Si omitir=true, verificar cuáles ya tienen cobro
+    let yaExisten=new Set();
+    if(value.omitir){
+      const existentes=await apiFin(`/pagos?conceptoId=${encodeURIComponent(conceptoId)}&anoPago=${value.anoPago}&limit=500`);
+      (existentes.pagos||[]).forEach(p=>yaExisten.add(p.estId));
+    }
+    estsFiltrados=estsFiltrados.filter(e=>!yaExisten.has(e.id));
+
+    if(!estsFiltrados.length){
+      Swal.close();
+      sw('warning','Sin estudiantes nuevos','Todos ya tienen este cobro asignado o no hay estudiantes en el filtro.');
+      return;
+    }
+
+    // Crear cobros en paralelo (lotes de 10 para no saturar)
+    let creados=0, errores=0;
+    const lote=10;
+    for(let i=0;i<estsFiltrados.length;i+=lote){
+      const batch=estsFiltrados.slice(i,i+lote);
+      await Promise.all(batch.map(async e=>{
+        try{
+          await apiFin('/pagos',{method:'POST',body:JSON.stringify({
+            estId:      e.id,
+            estNombre:  e.nombre,
+            salon:      e.salon||'',
+            conceptoId,
+            estado:     'pendiente',
+            anoPago:    value.anoPago,
+            fechaVence: value.fechaVence,
+          })});
+          creados++;
+        }catch(err){ errores++; console.warn('Error cobro para',e.nombre,err.message); }
+      }));
+    }
+
+    Swal.close();
+    if(creados>0){
+      sw('success',`✅ ${creados} cobro${creados!==1?'s':''} generado${creados!==1?'s':''}`,
+        errores?`${errores} error${errores!==1?'es':''}. Revisa la consola.`:'Todos los estudiantes tienen su cobro pendiente.',3500);
+    } else {
+      sw('error','No se generó ningún cobro',`${errores} errores. Revisa la conexión.`);
+    }
+    initFinConceptos();
+  }catch(e){ Swal.close(); sw('error','Error: '+e.message); }
+}
+
+// Determina si un salón pertenece a un ciclo
+function finEsCiclo(salonNombre, ciclo){
+  if(!salonNombre)return false;
+  const s=salonNombre.toLowerCase();
+  if(ciclo==='primaria'){
+    return /^[1-5]°|primero|segundo|tercero|cuarto|quinto|grado\s*[1-5]|[1-5]\s*(a|b|c|d)/i.test(salonNombre)
+      || /primaria/i.test(s);
+  }
+  if(ciclo==='bachillerato'){
+    return /^[6-9]°|^1[0-1]°|sexto|séptimo|octavo|noveno|décimo|once|bachil|secundar|grado\s*[6-9]|grado\s*1[01]/i.test(salonNombre)
+      || /bachil|secundar/i.test(s);
+  }
+  return true;
+}
+
+// Previsualiza cuántos estudiantes recibirán el cobro
+window._cmPrevTimer=null;
+async function finPrevisualizarCobro(){
+  clearTimeout(window._cmPrevTimer);
+  window._cmPrevTimer=setTimeout(async()=>{
+    const prevEl=document.getElementById('cmPreview');
+    if(!prevEl)return;
+    prevEl.innerHTML='<span style="color:var(--sl3)">⏳ Contando estudiantes…</span>';
+    try{
+      const salon=document.getElementById('cmSalon')?.value||'';
+      let url='/estudiantes';
+      if(salon) url+=`?salon=${encodeURIComponent(salon)}`;
+      const ests=await apiFin(url);
+      const n=ests.length;
+      prevEl.dataset.cant=String(n);
+      prevEl.innerHTML=n
+        ?`<span style="color:#1d4ed8;font-weight:700">👥 ${n} estudiante${n!==1?'s':''}</span> recibirán este cobro${salon?' en '+salon:''}.<br><span style="font-size:11px;color:var(--sl3)">El sistema omitirá automáticamente a quienes ya lo tengan (si la opción está activa).</span>`
+        :`<span style="color:#b91c1c">Sin estudiantes en este filtro.</span>`;
+    }catch(e){prevEl.innerHTML=`<span style="color:#b91c1c">Error al contar: ${esc(e.message)}</span>`;}
+  },400);
 }
 async function finNuevoConcepto(){
   const{value,isConfirmed}=await Swal.fire({
