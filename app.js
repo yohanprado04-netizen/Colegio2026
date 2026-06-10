@@ -971,6 +971,40 @@ function bootApp(){
   if(CU.role==='est') notifyExtPeriod();
   /* Notify student about unread excusa replies */
   if(CU.role==='est') setTimeout(notifRespuestasExcusas, 800);
+  if(CU.role==='est') setTimeout(notifDeudaEstudiante, 1200);
+}
+/* Notifica al estudiante si tiene cobros pendientes y pone badge en Mi Cuenta */
+async function notifDeudaEstudiante(){
+  try{
+    const data=await apiFetch(`/api/fin/cuenta/${CU.id}`).catch(()=>null);
+    if(!data) return;
+    const pendientes=(data.pagos||[]).filter(p=>p.estado==='pendiente'||p.estado==='vencido');
+    if(!pendientes.length) return;
+    const total=pendientes.reduce((a,p)=>a+(p.valorFinal||0),0);
+    const fmt=v=>`$${(v||0).toLocaleString('es-CO')}`;
+    // Badge en el botón "Mi Cuenta" del menú lateral
+    const btn=document.querySelector('[data-id="ecuen"]');
+    if(btn&&!btn.querySelector('.deuda-badge')){
+      const badge=document.createElement('span');
+      badge.className='deuda-badge';
+      badge.style.cssText='display:inline-flex;align-items:center;justify-content:center;background:#e53e3e;color:#fff;border-radius:20px;padding:1px 7px;font-size:10px;font-weight:800;margin-left:auto;min-width:18px';
+      badge.textContent=pendientes.length;
+      btn.appendChild(badge);
+    }
+    // Toast de aviso (solo si es la primera vez en esta sesión)
+    if(sessionStorage.getItem('deudaNotifShown')) return;
+    sessionStorage.setItem('deudaNotifShown','1');
+    await Swal.fire({
+      icon:'warning',
+      title:'⚠️ Tienes cobros pendientes',
+      html:`<div style="font-family:var(--fn);font-size:14px">
+        <p>Tienes <strong>${pendientes.length} cobro${pendientes.length!==1?'s':''}</strong> pendiente${pendientes.length!==1?'s':''} por un total de <strong style="color:#b91c1c">${fmt(total)}</strong>.</p>
+        <p style="font-size:12px;color:var(--sl3);margin-top:8px">Dirígete a <strong>💳 Mi Cuenta</strong> para ver el detalle.</p>
+      </div>`,
+      confirmButtonText:'Ver mi cuenta',cancelButtonText:'Cerrar',
+      showCancelButton:true,
+    }).then(r=>{ if(r.isConfirmed) goto('ecuen'); });
+  }catch(e){}
 }
 /* Notifica al estudiante si tiene respuestas de excusas no leídas */
 async function notifRespuestasExcusas(){
@@ -10315,6 +10349,9 @@ async function finLoadPagos(){
       if(conceptoId) qs+=`&conceptoId=${encodeURIComponent(conceptoId)}`;
       if(nombreQ)    qs+=`&q=${encodeURIComponent(nombreQ)}`;
       const {pagos}=await apiFin(`/pagos?${qs}`);
+      // Poblar cache para el ojito
+      if(!window._finPagosCache) window._finPagosCache={};
+      (pagos||[]).forEach(x=>{window._finPagosCache[x.id]=x;});
       // Resumen rápido
       const resEl=gi('fpResumen');
       if(resEl){
@@ -10338,104 +10375,212 @@ async function finLoadPagos(){
           ${CU.role==='finAdmin'?`<td><div style="display:flex;gap:5px">
             <button onclick="finEditPago('${p.id}','${esc(p.estado)}')" style="padding:4px 9px;font-size:11px;background:#e0e7ff;color:#3730a3;border:1.5px solid #a5b4fc;border-radius:6px;cursor:pointer" title="Editar">✏️</button>
             <button onclick="finVerDetalle('${p.id}')" style="padding:4px 9px;font-size:11px;background:#f0f9ff;color:#0369a1;border:1.5px solid #7dd3fc;border-radius:6px;cursor:pointer" title="Ver detalle">👁</button>
+            <button onclick="finEliminarPago('${p.id}')" style="padding:4px 9px;font-size:11px;background:#fee2e2;color:#b91c1c;border:1.5px solid #fca5a5;border-radius:6px;cursor:pointer" title="Anular">🗑</button>
           </div></td>`:''}
         </tr>`).join('')}</tbody>
       </table></div>`;
     }catch(e){el.innerHTML=`<div class="al aly">Error: ${esc(e.message)}</div>`;}
   },300);
 }
+window._finPagosCache={};
 async function finVerDetalle(pid){
   try{
-    const p=await apiFin(`/pagos/${pid}`);
+    let p=window._finPagosCache[pid];
+    if(!p){
+      const ano=gi('fpAno')?.value||String(new Date().getFullYear());
+      const {pagos}=await apiFin(`/pagos?limit=200&anoPago=${ano}`);
+      (pagos||[]).forEach(x=>{window._finPagosCache[x.id]=x;});
+      p=window._finPagosCache[pid];
+    }
+    if(!p){sw('error','No se encontró el pago');return;}
     const fmt=v=>`$${(v||0).toLocaleString('es-CO')}`;
+    const stBadge=s=>({pagado:'bgr',pendiente:'bgy',vencido:'bred',anulado:'bgy'}[s]||'bgy');
     await Swal.fire({
-      title:'📄 Detalle del Pago',width:420,
+      title:'📄 Detalle del Pago',width:440,
       html:`<div style="text-align:left;font-family:var(--fn);font-size:13px;display:flex;flex-direction:column;gap:0">
-        ${[['Estudiante',esc(p.estNombre)],['Salón',esc(p.salon||'—')],['Concepto',esc(p.conceptoNombre)],
-           ['Valor',`<strong style="color:#166534">${fmt(p.valorFinal)}</strong>`],['Estado',p.estado],
+        ${[['Estudiante',`<strong>${esc(p.estNombre)}</strong>`],['Salón',esc(p.salon||'—')],
+           ['Concepto',esc(p.conceptoNombre||p.concepto||'—')],
+           ['Total',`<strong style="color:#166534;font-size:15px">${fmt(p.valorFinal)}</strong>`],
+           ['Estado',`<span class="bdg ${stBadge(p.estado)}" style="font-size:11px">${p.estado}</span>`],
            ['Método',p.metodoPago||'—'],['Fecha pago',p.fechaPago||'—'],['Fecha vence',p.fechaVence||'—'],
-           ...(p.observacion?[['Observación',esc(p.observacion)]]:[])]
-          .map(([k,v])=>`<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--bd)"><span style="color:var(--sl)">${k}</span><span>${v}</span></div>`).join('')}
+           ['Registrado por',p.creadoPor||'—'],
+           ...(p.observaciones||p.observacion?[['Observación',esc(p.observaciones||p.observacion)]]:[]) ]
+          .map(([k,v])=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--bd)"><span style="color:var(--sl);min-width:120px">${k}</span><span>${v}</span></div>`).join('')}
       </div>`,
-      showCancelButton:false,confirmButtonText:'Cerrar'
+      showCancelButton:false,confirmButtonText:'Cerrar',
+      footer:CU.role==='finAdmin'?`<button onclick="Swal.close();finEliminarPago('${pid}')" style="background:#fee2e2;color:#b91c1c;border:1.5px solid #fca5a5;border-radius:6px;padding:6px 14px;font-size:12px;font-weight:700;cursor:pointer">🗑 Eliminar / Anular pago</button>`:''
     });
   }catch(e){sw('error','Error al cargar detalle: '+e.message);}
 }
+async function finEliminarPago(pid){
+  const r=await Swal.fire({
+    icon:'warning',title:'¿Eliminar este pago?',
+    text:'El pago quedará marcado como anulado. Esta acción no se puede deshacer.',
+    showCancelButton:true,confirmButtonText:'Sí, anular',cancelButtonText:'Cancelar',
+    confirmButtonColor:'#b91c1c'
+  });
+  if(!r.isConfirmed) return;
+  try{
+    await apiFin(`/pagos/${pid}`,{method:'DELETE'});
+    delete window._finPagosCache[pid];
+    sw('success','Pago anulado','',1600);finLoadPagos();
+  }catch(e){sw('error','Error: '+e.message);}
+}
 async function finNuevoPago(){
-  const [ests,conceptos]=await Promise.all([apiFin('/estudiantes'),apiFin('/conceptos')]).catch(()=>[[],[]]);
+  const [ests,conceptos,sals]=await Promise.all([apiFin('/estudiantes'),apiFin('/conceptos'),apiFin('/salones')]).catch(()=>[[],[],[]]);
   const hoy=new Date().toISOString().slice(0,10);
+  const salones=[...new Set(ests.map(e=>e.salon).filter(Boolean))].sort();
+  const salonOpts=salones.map(s=>`<option value="${s}">${esc(s)}</option>`).join('');
   const {value,isConfirmed}=await Swal.fire({
-    title:'➕ Registrar Pago',width:580,
+    title:'➕ Registrar Pago',width:620,
     html:`<div style="text-align:left;font-family:var(--fn);display:flex;flex-direction:column;gap:11px">
-      <div style="display:grid;grid-template-columns:1fr;gap:0">
+      <!-- Modo: individual o masivo -->
+      <div style="display:flex;gap:8px;background:var(--bg2);border-radius:10px;padding:6px;border:1.5px solid var(--bd)">
+        <button type="button" id="modoIndBtn" onclick="fnSetModo('ind')"
+          style="flex:1;padding:7px;font-size:12px;font-weight:700;border-radius:7px;border:none;cursor:pointer;background:#3730a3;color:#fff">👤 Individual</button>
+        <button type="button" id="modoMasBtn" onclick="fnSetModo('mas')"
+          style="flex:1;padding:7px;font-size:12px;font-weight:700;border-radius:7px;border:none;cursor:pointer;background:transparent;color:var(--sl)">🏫 Todo un salón</button>
+        <button type="button" id="modoGrpBtn" onclick="fnSetModo('grp')"
+          style="flex:1;padding:7px;font-size:12px;font-weight:700;border-radius:7px;border:none;cursor:pointer;background:transparent;color:var(--sl)">✏️ Varios estudiantes</button>
+      </div>
+      <!-- Selector individual -->
+      <div id="modoInd">
         <label style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--sl);display:block;margin-bottom:4px">Estudiante *</label>
         <input id="fpEstSearch" placeholder="Escribir nombre para buscar…" autocomplete="off"
           style="width:100%;padding:9px 12px;font-size:13px;border:1.5px solid var(--bd);border-radius:8px 8px 0 0;background:var(--bg2);color:var(--tx);outline:none;box-sizing:border-box">
-        <select id="fpEstId" size="4" style="width:100%;font-size:13px;border:1.5px solid var(--bd);border-top:none;border-radius:0 0 8px 8px;background:var(--bg2);color:var(--tx);outline:none">
+        <select id="fpEstId" size="5" style="width:100%;font-size:13px;border:1.5px solid var(--bd);border-top:none;border-radius:0 0 8px 8px;background:var(--bg2);color:var(--tx);outline:none">
           ${ests.map(e=>`<option value="${e.id}" data-nombre="${esc(e.nombre)}" data-salon="${esc(e.salon||'')}">${esc(e.nombre)} (${e.salon||'Sin salón'})</option>`).join('')}
         </select>
       </div>
+      <!-- Selector por salón -->
+      <div id="modoMas" style="display:none">
+        <label style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--sl);display:block;margin-bottom:4px">Salón *</label>
+        <select id="fpSalonMas" onchange="fnPreviewSalon()" style="width:100%;padding:9px 12px;font-size:13px;border:1.5px solid var(--bd);border-radius:8px;background:var(--bg2);color:var(--tx);outline:none">
+          <option value="">— Seleccionar salón —</option>${salonOpts}
+        </select>
+        <div id="fpSalonPreview" style="margin-top:6px;font-size:12px;color:var(--sl3)"></div>
+      </div>
+      <!-- Selector múltiple -->
+      <div id="modoGrp" style="display:none">
+        <label style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--sl);display:block;margin-bottom:4px">Selecciona estudiantes *</label>
+        <input id="fpGrpSearch" placeholder="Filtrar…" autocomplete="off" oninput="fnFilterGrp()"
+          style="width:100%;padding:8px 12px;font-size:13px;border:1.5px solid var(--bd);border-radius:8px 8px 0 0;background:var(--bg2);color:var(--tx);outline:none;box-sizing:border-box">
+        <select id="fpEstGrp" multiple size="7" style="width:100%;font-size:12px;border:1.5px solid var(--bd);border-top:none;border-radius:0 0 8px 8px;background:var(--bg2);color:var(--tx);outline:none">
+          ${ests.map(e=>`<option value="${e.id}" data-nombre="${esc(e.nombre)}" data-salon="${esc(e.salon||'')}">${esc(e.nombre)} (${e.salon||'Sin salón'})</option>`).join('')}
+        </select>
+        <div style="font-size:11px;color:var(--sl3);margin-top:3px">Ctrl+clic o Cmd+clic para seleccionar varios</div>
+      </div>
+      <!-- Concepto -->
       <div><label style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--sl);display:block;margin-bottom:4px">Concepto *</label>
-        <select id="fpConId" onchange="(()=>{const o=this.options[this.selectedIndex];const v=o?.dataset?.valor;if(v){document.getElementById('fpValor').value=Number(v).toLocaleString('es-CO');document.getElementById('fpValorReal').value=v;}})()"
+        <select id="fpConId" onchange="(()=>{const o=this.options[this.selectedIndex];const v=o?.dataset?.valor;if(v){document.getElementById('fpValorReal').value=v;}})()"
           style="width:100%;padding:9px 12px;font-size:13px;border:1.5px solid var(--bd);border-radius:8px;background:var(--bg2);color:var(--tx);outline:none">
           <option value="">— Seleccionar —</option>${conceptos.map(c=>`<option value="${c.id}" data-valor="${c.valor}">${esc(c.nombre)} — $${c.valor.toLocaleString('es-CO')}</option>`).join('')}
         </select></div>
+      <input type="hidden" id="fpValorReal">
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-        <div><label style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--sl);display:block;margin-bottom:4px">Valor (COP)</label>
-          <input id="fpValor" placeholder="Se autocompleta" readonly
-            style="width:100%;padding:9px 12px;font-size:13px;border:1.5px solid var(--bd);border-radius:8px;background:#f8f9fa;color:var(--tx);outline:none;box-sizing:border-box">
-          <input type="hidden" id="fpValorReal">
-        </div>
-        <div><label style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--sl);display:block;margin-bottom:4px">Estado</label>
+        <div><label style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--sl);display:block;margin-bottom:4px">Estado inicial</label>
           <select id="fpEst" style="width:100%;padding:9px 12px;font-size:13px;border:1.5px solid var(--bd);border-radius:8px;background:var(--bg2);color:var(--tx);outline:none">
             <option value="pendiente">⏳ Pendiente</option><option value="pagado">✅ Pagado</option>
           </select></div>
+        <div><label style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--sl);display:block;margin-bottom:4px">Fecha vencimiento</label>
+          <input type="date" id="fpFVence" value="${hoy}"
+            style="width:100%;padding:9px 12px;font-size:13px;border:1.5px solid var(--bd);border-radius:8px;background:var(--bg2);color:var(--tx);outline:none;box-sizing:border-box"></div>
       </div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
         <div><label style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--sl);display:block;margin-bottom:4px">Método de pago</label>
           <select id="fpMet" style="width:100%;padding:9px 12px;font-size:13px;border:1.5px solid var(--bd);border-radius:8px;background:var(--bg2);color:var(--tx);outline:none">
             <option value="">—</option><option>Efectivo</option><option>Transferencia</option><option>Tarjeta</option>
           </select></div>
-        <div><label style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--sl);display:block;margin-bottom:4px">Fecha vencimiento</label>
-          <input type="date" id="fpFVence" value="${hoy}"
-            style="width:100%;padding:9px 12px;font-size:13px;border:1.5px solid var(--bd);border-radius:8px;background:var(--bg2);color:var(--tx);outline:none;box-sizing:border-box"></div>
+        <div><label style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--sl);display:block;margin-bottom:4px">Observación</label>
+          <input id="fpObs" style="width:100%;padding:9px 12px;font-size:13px;border:1.5px solid var(--bd);border-radius:8px;background:var(--bg2);color:var(--tx);outline:none;box-sizing:border-box"></div>
       </div>
-      <div><label style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--sl);display:block;margin-bottom:4px">Observación</label>
-        <input id="fpObs" style="width:100%;padding:9px 12px;font-size:13px;border:1.5px solid var(--bd);border-radius:8px;background:var(--bg2);color:var(--tx);outline:none;box-sizing:border-box"></div>
     </div>`,
     didOpen:()=>{
+      window._fnEstsCache=ests;
+      window._fnModo='ind';
       const searchEl=document.getElementById('fpEstSearch');
       const selEl=document.getElementById('fpEstId');
       if(searchEl&&selEl){
         searchEl.addEventListener('input',()=>{
           const q=searchEl.value.toLowerCase();
-          Array.from(selEl.options).forEach(o=>{
-            o.style.display=o.text.toLowerCase().includes(q)?'':'none';
-          });
+          Array.from(selEl.options).forEach(o=>{ o.style.display=o.text.toLowerCase().includes(q)?'':'none'; });
         });
       }
     },
     showCancelButton:true,confirmButtonText:'Guardar Pago',cancelButtonText:'Cancelar',
     preConfirm:()=>{
-      const estEl=gi('fpEstId'),conEl=gi('fpConId');
-      if(!estEl.value){Swal.showValidationMessage('Selecciona un estudiante');return false;}
+      const conEl=gi('fpConId');
       if(!conEl.value){Swal.showValidationMessage('Selecciona un concepto');return false;}
-      const estOpt=estEl.options[estEl.selectedIndex];
-      return{estId:estEl.value,estNombre:estOpt?.dataset?.nombre||'',salon:estOpt?.dataset?.salon||'',
-        conceptoId:conEl.value,estado:gi('fpEst').value,metodoPago:gi('fpMet').value,
-        fechaVence:gi('fpFVence').value,observacion:gi('fpObs').value};
+      const modo=window._fnModo||'ind';
+      const ano=String(new Date().getFullYear());
+      const base={conceptoId:conEl.value,estado:gi('fpEst').value,metodoPago:gi('fpMet').value,
+        fechaVence:gi('fpFVence').value,observacion:gi('fpObs').value,anoPago:ano};
+      if(modo==='ind'){
+        const estEl=gi('fpEstId');
+        if(!estEl.value){Swal.showValidationMessage('Selecciona un estudiante');return false;}
+        const estOpt=estEl.options[estEl.selectedIndex];
+        return{mode:'single',pago:{...base,estId:estEl.value,estNombre:estOpt?.dataset?.nombre||'',salon:estOpt?.dataset?.salon||''}};
+      }
+      if(modo==='mas'){
+        const salon=gi('fpSalonMas')?.value;
+        if(!salon){Swal.showValidationMessage('Selecciona un salón');return false;}
+        const arr=(window._fnEstsCache||[]).filter(e=>e.salon===salon);
+        if(!arr.length){Swal.showValidationMessage('Ese salón no tiene estudiantes');return false;}
+        return{mode:'bulk',pagos:arr.map(e=>({...base,estId:e.id,estNombre:e.nombre,salon:e.salon||''}))};
+      }
+      if(modo==='grp'){
+        const grpEl=gi('fpEstGrp');
+        const sel=Array.from(grpEl.selectedOptions);
+        if(!sel.length){Swal.showValidationMessage('Selecciona al menos un estudiante');return false;}
+        return{mode:'bulk',pagos:sel.map(o=>({...base,estId:o.value,estNombre:o.dataset.nombre||'',salon:o.dataset.salon||''}))};
+      }
     }
   });
   if(!isConfirmed||!value)return;
   try{
-    await apiFin('/pagos',{method:'POST',body:JSON.stringify({...value,anoPago:String(new Date().getFullYear())})});
-    sw('success','Pago registrado','',1800);finLoadPagos();
+    if(value.mode==='single'){
+      await apiFin('/pagos',{method:'POST',body:JSON.stringify(value.pago)});
+      sw('success','Pago registrado','',1800);
+    } else {
+      sw('info',`Creando ${value.pagos.length} pagos…`,'',0);
+      let ok=0,err=0;
+      for(const p of value.pagos){
+        try{ await apiFin('/pagos',{method:'POST',body:JSON.stringify(p)}); ok++; }
+        catch(e){ err++; }
+      }
+      Swal.close();
+      if(err) sw('warning',`${ok} pagos creados, ${err} fallaron`,'',2500);
+      else sw('success',`✅ ${ok} pago${ok!==1?'s':''} creado${ok!==1?'s':''}!`,'',2000);
+    }
+    finLoadPagos();
   }catch(e){sw('error','Error: '+e.message);}
+}
+// helpers para el modal de nuevo pago
+function fnSetModo(m){
+  window._fnModo=m;
+  ['ind','mas','grp'].forEach(x=>{
+    const d=gi('modo'+x.charAt(0).toUpperCase()+x.slice(1));
+    const b=gi('modo'+x.charAt(0).toUpperCase()+x.slice(1)+'Btn');
+    if(d) d.style.display=m===x?'':'none';
+    if(b){ b.style.background=m===x?'#3730a3':'transparent'; b.style.color=m===x?'#fff':'var(--sl)'; }
+  });
+}
+function fnPreviewSalon(){
+  const salon=gi('fpSalonMas')?.value;
+  const el=gi('fpSalonPreview'); if(!el) return;
+  if(!salon){el.textContent='';return;}
+  const cnt=(window._fnEstsCache||[]).filter(e=>e.salon===salon).length;
+  el.textContent=`📋 ${cnt} estudiante${cnt!==1?'s':''} en este salón`;
+}
+function fnFilterGrp(){
+  const q=(gi('fpGrpSearch')?.value||'').toLowerCase();
+  const sel=gi('fpEstGrp'); if(!sel) return;
+  Array.from(sel.options).forEach(o=>{ o.style.display=o.text.toLowerCase().includes(q)?'':'none'; });
 }
 async function finEditPago(pid, estadoActual=''){
   // Cargar datos actuales del pago para pre-llenar el formulario
   let pagoActual={};
-  try{ pagoActual=await apiFin(`/pagos/${pid}`); }catch(e){}
+  try{ pagoActual=window._finPagosCache?.[pid]||await apiFin(`/pagos?limit=200&anoPago=${new Date().getFullYear()}`).then(({pagos})=>(pagos||[]).find(p=>p.id===pid)||{}); }catch(e){}
   const est=pagoActual.estado||estadoActual;
   const hoy=new Date().toISOString().slice(0,10);
   const r=await Swal.fire({
