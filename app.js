@@ -10427,112 +10427,206 @@ async function finEliminarPago(pid){
   }catch(e){sw('error','Error: '+e.message);}
 }
 async function finNuevoPago(){
-  const [ests,conceptos,sals]=await Promise.all([apiFin('/estudiantes'),apiFin('/conceptos'),apiFin('/salones')]).catch(()=>[[],[],[]]);
+  const [ests,conceptos,sals]=await Promise.all([
+    apiFin('/estudiantes'),apiFin('/conceptos'),apiFin('/salones')
+  ]).catch(()=>[[],[],[]]);
   const hoy=new Date().toISOString().slice(0,10);
-  const salones=[...new Set(ests.map(e=>e.salon).filter(Boolean))].sort();
-  const salonOpts=salones.map(s=>`<option value="${s}">${esc(s)}</option>`).join('');
+
+  // Agrupar salones por ciclo
+  const salPrimaria  = sals.filter(s=>s.ciclo==='primaria').map(s=>s.nombre);
+  const salBach      = sals.filter(s=>s.ciclo==='bachillerato').map(s=>s.nombre);
+  const cicloOpts = `
+    <option value="todos">👥 Todos los estudiantes</option>
+    <option value="primaria">📚 Primaria (1°–5°)</option>
+    <option value="bachillerato">🎓 Bachillerato (6°–11°)</option>`;
+  const salonOpts = (ciclo='todos') => {
+    const lista = ciclo==='primaria' ? salPrimaria : ciclo==='bachillerato' ? salBach : [...salPrimaria,...salBach];
+    return '<option value="">— Todos los salones —</option>'+lista.sort().map(s=>`<option value="${s}">${s}</option>`).join('');
+  };
+
   const {value,isConfirmed}=await Swal.fire({
-    title:'➕ Registrar Pago',width:620,
-    html:`<div style="text-align:left;font-family:var(--fn);display:flex;flex-direction:column;gap:11px">
-      <!-- Modo: individual o masivo -->
-      <div style="display:flex;gap:8px;background:var(--bg2);border-radius:10px;padding:6px;border:1.5px solid var(--bd)">
+    title:'➕ Registrar Pago',width:660,
+    html:`<div style="text-align:left;font-family:var(--fn);display:flex;flex-direction:column;gap:14px">
+
+      <!-- MODO -->
+      <div style="display:flex;gap:8px;background:#f1f5f9;border-radius:12px;padding:6px">
         <button type="button" id="modoIndBtn" onclick="fnSetModo('ind')"
-          style="flex:1;padding:7px;font-size:12px;font-weight:700;border-radius:7px;border:none;cursor:pointer;background:#3730a3;color:#fff">👤 Individual</button>
+          style="flex:1;padding:10px 6px;font-size:14px;font-weight:700;border-radius:9px;border:none;cursor:pointer;background:#3730a3;color:#fff">
+          👤 Individual</button>
         <button type="button" id="modoMasBtn" onclick="fnSetModo('mas')"
-          style="flex:1;padding:7px;font-size:12px;font-weight:700;border-radius:7px;border:none;cursor:pointer;background:transparent;color:var(--sl)">🏫 Todo un salón</button>
+          style="flex:1;padding:10px 6px;font-size:14px;font-weight:700;border-radius:9px;border:none;cursor:pointer;background:transparent;color:#64748b">
+          🏫 Todo un salón</button>
         <button type="button" id="modoGrpBtn" onclick="fnSetModo('grp')"
-          style="flex:1;padding:7px;font-size:12px;font-weight:700;border-radius:7px;border:none;cursor:pointer;background:transparent;color:var(--sl)">✏️ Varios estudiantes</button>
+          style="flex:1;padding:10px 6px;font-size:14px;font-weight:700;border-radius:9px;border:none;cursor:pointer;background:transparent;color:#64748b">
+          ✏️ Varios</button>
       </div>
-      <!-- Selector individual -->
+
+      <!-- MODO INDIVIDUAL -->
       <div id="modoInd">
-        <label style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--sl);display:block;margin-bottom:4px">Estudiante *</label>
-        <input id="fpEstSearch" placeholder="Escribir nombre para buscar…" autocomplete="off"
-          style="width:100%;padding:9px 12px;font-size:13px;border:1.5px solid var(--bd);border-radius:8px 8px 0 0;background:var(--bg2);color:var(--tx);outline:none;box-sizing:border-box">
-        <select id="fpEstId" size="5" style="width:100%;font-size:13px;border:1.5px solid var(--bd);border-top:none;border-radius:0 0 8px 8px;background:var(--bg2);color:var(--tx);outline:none">
-          ${ests.map(e=>`<option value="${e.id}" data-nombre="${esc(e.nombre)}" data-salon="${esc(e.salon||'')}">${esc(e.nombre)} (${e.salon||'Sin salón'})</option>`).join('')}
-        </select>
+        <label style="font-size:12px;font-weight:800;text-transform:uppercase;color:#475569;display:block;margin-bottom:6px">🔍 Buscar Estudiante</label>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
+          <input id="fpEstSearch" placeholder="✏️ Nombre del estudiante…" autocomplete="off"
+            oninput="fnFilterInd()"
+            style="padding:12px 14px;font-size:15px;border:2px solid #e2e8f0;border-radius:10px;background:#f8fafc;color:#1e293b;outline:none;width:100%;box-sizing:border-box">
+          <input id="fpEstCedula" placeholder="🪪 Cédula / TI…" autocomplete="off"
+            oninput="fnFilterInd()"
+            style="padding:12px 14px;font-size:15px;border:2px solid #e2e8f0;border-radius:10px;background:#f8fafc;color:#1e293b;outline:none;width:100%;box-sizing:border-box">
+        </div>
+        <div id="fpEstCards" style="max-height:200px;overflow-y:auto;display:flex;flex-direction:column;gap:6px;border:2px solid #e2e8f0;border-radius:10px;padding:8px;background:#f8fafc">
+          ${ests.map(e=>`
+            <div class="est-card" data-id="${e.id}" data-nombre="${esc(e.nombre)}" data-salon="${esc(e.salon||'')}" data-ti="${e.ti||''}"
+              onclick="fnSelectEst(this)"
+              style="padding:12px 14px;border-radius:9px;border:2px solid #e2e8f0;background:#fff;cursor:pointer;display:flex;align-items:center;gap:12px;transition:all .15s"
+              onmouseover="this.style.borderColor='#6366f1';this.style.background='#eef2ff'"
+              onmouseout="if(!this.classList.contains('selected')){this.style.borderColor='#e2e8f0';this.style.background='#fff'}">
+              <div style="width:40px;height:40px;border-radius:50%;background:#e0e7ff;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0">🎓</div>
+              <div style="flex:1;min-width:0">
+                <div style="font-size:15px;font-weight:700;color:#1e293b">${esc(e.nombre)}</div>
+                <div style="font-size:12px;color:#64748b">${e.salon||'Sin salón'} ${e.ti?'· CC/TI: '+e.ti:''}</div>
+              </div>
+            </div>`).join('')}
+        </div>
+        <div id="fpEstSelW" style="display:none;margin-top:8px;padding:12px 16px;background:#eef2ff;border:2px solid #6366f1;border-radius:10px;font-size:15px;font-weight:700;color:#3730a3">
+          ✅ <span id="fpEstSelNombre">—</span>
+          <button type="button" onclick="fnDeselEst()" style="float:right;background:none;border:none;cursor:pointer;font-size:20px;color:#94a3b8;line-height:1">×</button>
+        </div>
+        <input type="hidden" id="fpEstId">
+        <input type="hidden" id="fpEstNombre">
+        <input type="hidden" id="fpEstSalon">
       </div>
-      <!-- Selector por salón -->
+
+      <!-- MODO MASIVO POR SALÓN / CICLO -->
       <div id="modoMas" style="display:none">
-        <label style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--sl);display:block;margin-bottom:4px">Salón *</label>
-        <select id="fpSalonMas" onchange="fnPreviewSalon()" style="width:100%;padding:9px 12px;font-size:13px;border:1.5px solid var(--bd);border-radius:8px;background:var(--bg2);color:var(--tx);outline:none">
-          <option value="">— Seleccionar salón —</option>${salonOpts}
-        </select>
-        <div id="fpSalonPreview" style="margin-top:6px;font-size:12px;color:var(--sl3)"></div>
+        <label style="font-size:12px;font-weight:800;text-transform:uppercase;color:#475569;display:block;margin-bottom:6px">🏫 Seleccionar grupo</label>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+          <div>
+            <label style="font-size:12px;color:#64748b;font-weight:600;display:block;margin-bottom:4px">Ciclo</label>
+            <select id="fpCiclo" onchange="fnActualizarSalones()" style="width:100%;padding:12px 14px;font-size:15px;border:2px solid #e2e8f0;border-radius:10px;background:#f8fafc;color:#1e293b;outline:none">
+              ${cicloOpts}
+            </select>
+          </div>
+          <div>
+            <label style="font-size:12px;color:#64748b;font-weight:600;display:block;margin-bottom:4px">Salón (opcional)</label>
+            <select id="fpSalonMas" onchange="fnPreviewSalon()" style="width:100%;padding:12px 14px;font-size:15px;border:2px solid #e2e8f0;border-radius:10px;background:#f8fafc;color:#1e293b;outline:none">
+              ${salonOpts('todos')}
+            </select>
+          </div>
+        </div>
+        <div id="fpSalonPreview" style="margin-top:10px;padding:12px 16px;background:#f0fdf4;border:2px solid #86efac;border-radius:10px;font-size:14px;color:#166534;font-weight:600;display:none"></div>
       </div>
-      <!-- Selector múltiple -->
+
+      <!-- MODO VARIOS -->
       <div id="modoGrp" style="display:none">
-        <label style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--sl);display:block;margin-bottom:4px">Selecciona estudiantes *</label>
-        <input id="fpGrpSearch" placeholder="Filtrar…" autocomplete="off" oninput="fnFilterGrp()"
-          style="width:100%;padding:8px 12px;font-size:13px;border:1.5px solid var(--bd);border-radius:8px 8px 0 0;background:var(--bg2);color:var(--tx);outline:none;box-sizing:border-box">
-        <select id="fpEstGrp" multiple size="7" style="width:100%;font-size:12px;border:1.5px solid var(--bd);border-top:none;border-radius:0 0 8px 8px;background:var(--bg2);color:var(--tx);outline:none">
-          ${ests.map(e=>`<option value="${e.id}" data-nombre="${esc(e.nombre)}" data-salon="${esc(e.salon||'')}">${esc(e.nombre)} (${e.salon||'Sin salón'})</option>`).join('')}
+        <label style="font-size:12px;font-weight:800;text-transform:uppercase;color:#475569;display:block;margin-bottom:6px">✏️ Seleccionar varios estudiantes</label>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
+          <input id="fpGrpSearch" placeholder="✏️ Filtrar por nombre…" oninput="fnFilterGrp()"
+            style="padding:12px 14px;font-size:15px;border:2px solid #e2e8f0;border-radius:10px;background:#f8fafc;color:#1e293b;outline:none;box-sizing:border-box">
+          <select id="fpGrpCiclo" onchange="fnFilterGrp()"
+            style="width:100%;padding:12px 14px;font-size:15px;border:2px solid #e2e8f0;border-radius:10px;background:#f8fafc;color:#1e293b;outline:none">
+            <option value="">Todos los ciclos</option>
+            <option value="primaria">Primaria</option>
+            <option value="bachillerato">Bachillerato</option>
+          </select>
+        </div>
+        <div id="fpEstGrpCards" style="max-height:200px;overflow-y:auto;display:flex;flex-direction:column;gap:5px;border:2px solid #e2e8f0;border-radius:10px;padding:8px;background:#f8fafc">
+          ${ests.map(e=>`
+            <div class="est-grp-card" data-id="${e.id}" data-nombre="${esc(e.nombre)}" data-salon="${esc(e.salon||'')}" data-ciclo="${salPrimaria.includes(e.salon)?'primaria':salBach.includes(e.salon)?'bachillerato':''}"
+              onclick="fnToggleGrp(this)"
+              style="padding:10px 14px;border-radius:9px;border:2px solid #e2e8f0;background:#fff;cursor:pointer;display:flex;align-items:center;gap:10px;transition:all .15s">
+              <div id="chk_${e.id}" style="width:22px;height:22px;border-radius:5px;border:2px solid #cbd5e1;background:#fff;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:14px"></div>
+              <div style="flex:1">
+                <div style="font-size:14px;font-weight:700;color:#1e293b">${esc(e.nombre)}</div>
+                <div style="font-size:12px;color:#64748b">${e.salon||'Sin salón'} ${e.ti?'· '+e.ti:''}</div>
+              </div>
+            </div>`).join('')}
+        </div>
+        <div id="fpGrpCount" style="margin-top:6px;font-size:13px;color:#6366f1;font-weight:700">0 estudiantes seleccionados</div>
+      </div>
+
+      <!-- CONCEPTO -->
+      <div>
+        <label style="font-size:12px;font-weight:800;text-transform:uppercase;color:#475569;display:block;margin-bottom:6px">📋 Concepto de Cobro *</label>
+        <select id="fpConId" style="width:100%;padding:12px 14px;font-size:15px;border:2px solid #e2e8f0;border-radius:10px;background:#f8fafc;color:#1e293b;outline:none">
+          <option value="">— Seleccionar —</option>
+          ${conceptos.map(c=>`<option value="${c.id}" data-valor="${c.valor}">${esc(c.nombre)} — $${c.valor.toLocaleString('es-CO')}</option>`).join('')}
         </select>
-        <div style="font-size:11px;color:var(--sl3);margin-top:3px">Ctrl+clic o Cmd+clic para seleccionar varios</div>
       </div>
-      <!-- Concepto -->
-      <div><label style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--sl);display:block;margin-bottom:4px">Concepto *</label>
-        <select id="fpConId" onchange="(()=>{const o=this.options[this.selectedIndex];const v=o?.dataset?.valor;if(v){document.getElementById('fpValorReal').value=v;}})()"
-          style="width:100%;padding:9px 12px;font-size:13px;border:1.5px solid var(--bd);border-radius:8px;background:var(--bg2);color:var(--tx);outline:none">
-          <option value="">— Seleccionar —</option>${conceptos.map(c=>`<option value="${c.id}" data-valor="${c.valor}">${esc(c.nombre)} — $${c.valor.toLocaleString('es-CO')}</option>`).join('')}
-        </select></div>
-      <input type="hidden" id="fpValorReal">
+
+      <!-- ESTADO Y FECHA -->
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-        <div><label style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--sl);display:block;margin-bottom:4px">Estado inicial</label>
-          <select id="fpEst" style="width:100%;padding:9px 12px;font-size:13px;border:1.5px solid var(--bd);border-radius:8px;background:var(--bg2);color:var(--tx);outline:none">
-            <option value="pendiente">⏳ Pendiente</option><option value="pagado">✅ Pagado</option>
-          </select></div>
-        <div><label style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--sl);display:block;margin-bottom:4px">Fecha vencimiento</label>
+        <div>
+          <label style="font-size:12px;font-weight:800;text-transform:uppercase;color:#475569;display:block;margin-bottom:6px">Estado inicial</label>
+          <select id="fpEstado" style="width:100%;padding:12px 14px;font-size:15px;border:2px solid #e2e8f0;border-radius:10px;background:#f8fafc;color:#1e293b;outline:none">
+            <option value="pendiente">⏳ Pendiente</option>
+            <option value="pagado">✅ Pagado</option>
+          </select>
+        </div>
+        <div>
+          <label style="font-size:12px;font-weight:800;text-transform:uppercase;color:#475569;display:block;margin-bottom:6px">Fecha vencimiento</label>
           <input type="date" id="fpFVence" value="${hoy}"
-            style="width:100%;padding:9px 12px;font-size:13px;border:1.5px solid var(--bd);border-radius:8px;background:var(--bg2);color:var(--tx);outline:none;box-sizing:border-box"></div>
+            style="width:100%;padding:12px 14px;font-size:15px;border:2px solid #e2e8f0;border-radius:10px;background:#f8fafc;color:#1e293b;outline:none;box-sizing:border-box">
+        </div>
       </div>
+
+      <!-- MÉTODO Y OBSERVACIÓN -->
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-        <div><label style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--sl);display:block;margin-bottom:4px">Método de pago</label>
-          <select id="fpMet" style="width:100%;padding:9px 12px;font-size:13px;border:1.5px solid var(--bd);border-radius:8px;background:var(--bg2);color:var(--tx);outline:none">
+        <div>
+          <label style="font-size:12px;font-weight:800;text-transform:uppercase;color:#475569;display:block;margin-bottom:6px">Método de pago</label>
+          <select id="fpMet" style="width:100%;padding:12px 14px;font-size:15px;border:2px solid #e2e8f0;border-radius:10px;background:#f8fafc;color:#1e293b;outline:none">
             <option value="">—</option><option>Efectivo</option><option>Transferencia</option><option>Tarjeta</option>
-          </select></div>
-        <div><label style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--sl);display:block;margin-bottom:4px">Observación</label>
-          <input id="fpObs" style="width:100%;padding:9px 12px;font-size:13px;border:1.5px solid var(--bd);border-radius:8px;background:var(--bg2);color:var(--tx);outline:none;box-sizing:border-box"></div>
+          </select>
+        </div>
+        <div>
+          <label style="font-size:12px;font-weight:800;text-transform:uppercase;color:#475569;display:block;margin-bottom:6px">Observación</label>
+          <input id="fpObs" placeholder="Opcional…"
+            style="width:100%;padding:12px 14px;font-size:15px;border:2px solid #e2e8f0;border-radius:10px;background:#f8fafc;color:#1e293b;outline:none;box-sizing:border-box">
+        </div>
       </div>
     </div>`,
     didOpen:()=>{
       window._fnEstsCache=ests;
+      window._fnSalPrimaria=salPrimaria;
+      window._fnSalBach=salBach;
       window._fnModo='ind';
-      const searchEl=document.getElementById('fpEstSearch');
-      const selEl=document.getElementById('fpEstId');
-      if(searchEl&&selEl){
-        searchEl.addEventListener('input',()=>{
-          const q=searchEl.value.toLowerCase();
-          Array.from(selEl.options).forEach(o=>{ o.style.display=o.text.toLowerCase().includes(q)?'':'none'; });
-        });
-      }
+      window._fnGrpSelected=new Set();
     },
-    showCancelButton:true,confirmButtonText:'Guardar Pago',cancelButtonText:'Cancelar',
+    showCancelButton:true,
+    confirmButtonText:'💾 Guardar Pago',
+    cancelButtonText:'Cancelar',
+    confirmButtonColor:'#3730a3',
     preConfirm:()=>{
       const conEl=gi('fpConId');
-      if(!conEl.value){Swal.showValidationMessage('Selecciona un concepto');return false;}
+      if(!conEl.value){Swal.showValidationMessage('⚠️ Selecciona un concepto');return false;}
       const modo=window._fnModo||'ind';
       const ano=String(new Date().getFullYear());
-      const base={conceptoId:conEl.value,estado:gi('fpEst').value,metodoPago:gi('fpMet').value,
-        fechaVence:gi('fpFVence').value,observacion:gi('fpObs').value,anoPago:ano};
+      const base={
+        conceptoId: conEl.value,
+        estado:     gi('fpEstado').value,
+        metodoPago: gi('fpMet').value,
+        fechaVence: gi('fpFVence').value,
+        observacion:gi('fpObs').value,
+        anoPago:    ano
+      };
       if(modo==='ind'){
-        const estEl=gi('fpEstId');
-        if(!estEl.value){Swal.showValidationMessage('Selecciona un estudiante');return false;}
-        const estOpt=estEl.options[estEl.selectedIndex];
-        return{mode:'single',pago:{...base,estId:estEl.value,estNombre:estOpt?.dataset?.nombre||'',salon:estOpt?.dataset?.salon||''}};
+        const estId=gi('fpEstId')?.value;
+        if(!estId){Swal.showValidationMessage('⚠️ Selecciona un estudiante');return false;}
+        return{mode:'single',pago:{...base,estId,estNombre:gi('fpEstNombre')?.value||'',salon:gi('fpEstSalon')?.value||''}};
       }
       if(modo==='mas'){
-        const salon=gi('fpSalonMas')?.value;
-        if(!salon){Swal.showValidationMessage('Selecciona un salón');return false;}
-        const arr=(window._fnEstsCache||[]).filter(e=>e.salon===salon);
-        if(!arr.length){Swal.showValidationMessage('Ese salón no tiene estudiantes');return false;}
+        const ciclo=gi('fpCiclo')?.value||'todos';
+        const salon=gi('fpSalonMas')?.value||'';
+        let arr=window._fnEstsCache||[];
+        if(salon) arr=arr.filter(e=>e.salon===salon);
+        else if(ciclo==='primaria') arr=arr.filter(e=>(window._fnSalPrimaria||[]).includes(e.salon));
+        else if(ciclo==='bachillerato') arr=arr.filter(e=>(window._fnSalBach||[]).includes(e.salon));
+        if(!arr.length){Swal.showValidationMessage('⚠️ No hay estudiantes con ese filtro');return false;}
         return{mode:'bulk',pagos:arr.map(e=>({...base,estId:e.id,estNombre:e.nombre,salon:e.salon||''}))};
       }
       if(modo==='grp'){
-        const grpEl=gi('fpEstGrp');
-        const sel=Array.from(grpEl.selectedOptions);
-        if(!sel.length){Swal.showValidationMessage('Selecciona al menos un estudiante');return false;}
-        return{mode:'bulk',pagos:sel.map(o=>({...base,estId:o.value,estNombre:o.dataset.nombre||'',salon:o.dataset.salon||''}))};
+        const sel=window._fnGrpSelected||new Set();
+        if(!sel.size){Swal.showValidationMessage('⚠️ Selecciona al menos un estudiante');return false;}
+        const arr=(window._fnEstsCache||[]).filter(e=>sel.has(e.id));
+        return{mode:'bulk',pagos:arr.map(e=>({...base,estId:e.id,estNombre:e.nombre,salon:e.salon||''}))};
       }
     }
   });
@@ -10540,9 +10634,10 @@ async function finNuevoPago(){
   try{
     if(value.mode==='single'){
       await apiFin('/pagos',{method:'POST',body:JSON.stringify(value.pago)});
-      sw('success','Pago registrado','',1800);
+      sw('success','✅ Pago registrado','',1800);
     } else {
-      sw('info',`Creando ${value.pagos.length} pagos…`,'',0);
+      const tot=value.pagos.length;
+      sw('info',`⏳ Creando ${tot} pago${tot!==1?'s':''}…`,'',0);
       let ok=0,err=0;
       for(const p of value.pagos){
         try{ await apiFin('/pagos',{method:'POST',body:JSON.stringify(p)}); ok++; }
@@ -10550,12 +10645,112 @@ async function finNuevoPago(){
       }
       Swal.close();
       if(err) sw('warning',`${ok} pagos creados, ${err} fallaron`,'',2500);
-      else sw('success',`✅ ${ok} pago${ok!==1?'s':''} creado${ok!==1?'s':''}!`,'',2000);
+      else sw('success',`✅ ${ok} pago${ok!==1?'s':''} registrado${ok!==1?'s':''}!`,'',2000);
     }
     finLoadPagos();
   }catch(e){sw('error','Error: '+e.message);}
 }
-// helpers para el modal de nuevo pago
+
+// ── Helpers del modal de pago ────────────────────────────────────────────────
+function fnSetModo(m){
+  window._fnModo=m;
+  const conf={ind:'Ind',mas:'Mas',grp:'Grp'};
+  Object.entries(conf).forEach(([key,cap])=>{
+    const d=gi('modo'+cap); const b=gi('modo'+cap+'Btn');
+    if(d) d.style.display=m===key?'':'none';
+    if(b){ b.style.background=m===key?'#3730a3':'transparent'; b.style.color=m===key?'#fff':'#64748b'; }
+  });
+}
+
+function fnSelectEst(card){
+  // Deseleccionar el anterior
+  document.querySelectorAll('.est-card.selected').forEach(c=>{
+    c.classList.remove('selected');
+    c.style.borderColor='#e2e8f0'; c.style.background='#fff';
+  });
+  card.classList.add('selected');
+  card.style.borderColor='#6366f1'; card.style.background='#eef2ff';
+  const id=card.dataset.id, nombre=card.dataset.nombre, salon=card.dataset.salon;
+  gi('fpEstId').value=id;
+  gi('fpEstNombre').value=nombre;
+  gi('fpEstSalon').value=salon;
+  const selW=gi('fpEstSelW'), selN=gi('fpEstSelNombre');
+  if(selW) selW.style.display='block';
+  if(selN) selN.textContent=nombre+' ('+salon+')';
+}
+
+function fnDeselEst(){
+  document.querySelectorAll('.est-card.selected').forEach(c=>{
+    c.classList.remove('selected'); c.style.borderColor='#e2e8f0'; c.style.background='#fff';
+  });
+  gi('fpEstId').value=''; gi('fpEstNombre').value=''; gi('fpEstSalon').value='';
+  const selW=gi('fpEstSelW'); if(selW) selW.style.display='none';
+}
+
+function fnFilterInd(){
+  const q=(gi('fpEstSearch')?.value||'').toLowerCase().trim();
+  const ced=(gi('fpEstCedula')?.value||'').toLowerCase().trim();
+  document.querySelectorAll('.est-card').forEach(c=>{
+    const nombre=c.dataset.nombre.toLowerCase();
+    const ti=(c.dataset.ti||'').toLowerCase();
+    const matchN=!q||nombre.includes(q);
+    const matchC=!ced||ti.includes(ced);
+    c.style.display=(matchN&&matchC)?'flex':'none';
+  });
+}
+
+function fnActualizarSalones(){
+  const ciclo=gi('fpCiclo')?.value||'todos';
+  const sel=gi('fpSalonMas'); if(!sel) return;
+  const primaria=window._fnSalPrimaria||[];
+  const bach=window._fnSalBach||[];
+  const lista=ciclo==='primaria'?primaria:ciclo==='bachillerato'?bach:[...primaria,...bach];
+  sel.innerHTML='<option value="">— Todos los salones —</option>'+lista.sort().map(s=>`<option value="${s}">${s}</option>`).join('');
+  fnPreviewSalon();
+}
+
+function fnPreviewSalon(){
+  const ciclo=gi('fpCiclo')?.value||'todos';
+  const salon=gi('fpSalonMas')?.value||'';
+  const el=gi('fpSalonPreview'); if(!el) return;
+  let arr=window._fnEstsCache||[];
+  if(salon) arr=arr.filter(e=>e.salon===salon);
+  else if(ciclo==='primaria') arr=arr.filter(e=>(window._fnSalPrimaria||[]).includes(e.salon));
+  else if(ciclo==='bachillerato') arr=arr.filter(e=>(window._fnSalBach||[]).includes(e.salon));
+  if(!arr.length){ el.style.display='none'; return; }
+  el.style.display='block';
+  el.textContent=`📋 Se registrará pago para ${arr.length} estudiante${arr.length!==1?'s':''}`+(salon?` del salón ${salon}`:'');
+}
+
+function fnToggleGrp(card){
+  const id=card.dataset.id;
+  if(!window._fnGrpSelected) window._fnGrpSelected=new Set();
+  const sel=window._fnGrpSelected;
+  const chk=gi('chk_'+id);
+  if(sel.has(id)){
+    sel.delete(id);
+    card.style.borderColor='#e2e8f0'; card.style.background='#fff';
+    if(chk){ chk.style.background='#fff'; chk.style.borderColor='#cbd5e1'; chk.textContent=''; }
+  } else {
+    sel.add(id);
+    card.style.borderColor='#6366f1'; card.style.background='#eef2ff';
+    if(chk){ chk.style.background='#6366f1'; chk.style.borderColor='#6366f1'; chk.textContent='✓'; chk.style.color='#fff'; }
+  }
+  const cnt=gi('fpGrpCount'); if(cnt) cnt.textContent=sel.size+' estudiante'+(sel.size!==1?'s':'')+' seleccionado'+(sel.size!==1?'s':'');
+}
+
+function fnFilterGrp(){
+  const q=(gi('fpGrpSearch')?.value||'').toLowerCase().trim();
+  const ciclo=(gi('fpGrpCiclo')?.value||'').toLowerCase();
+  document.querySelectorAll('.est-grp-card').forEach(c=>{
+    const nombre=c.dataset.nombre.toLowerCase();
+    const cardCiclo=(c.dataset.ciclo||'');
+    const matchN=!q||nombre.includes(q);
+    const matchC=!ciclo||cardCiclo===ciclo;
+    c.style.display=(matchN&&matchC)?'flex':'none';
+  });
+}
+
 function fnSetModo(m){
   window._fnModo=m;
   ['ind','mas','grp'].forEach(x=>{
