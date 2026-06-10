@@ -10217,117 +10217,9 @@ function pgFinDash(){
         <p style="margin:4px 0 0;font-size:13px;color:var(--sl2)">${esc(CU.colegioNombre)} · ${rol} · Año ${ano}</p></div>
       <button onclick="initFinDash()" style="padding:8px 14px;font-size:13px;background:var(--bg2);border:1.5px solid var(--bd);border-radius:8px;cursor:pointer">🔄 Actualizar</button>
     </div></div>
-
-  <!-- BUSCADOR DE RECIBOS EN EL PANEL -->
-  <div class="card" style="padding:14px;margin-bottom:16px">
-    <div style="font-size:13px;font-weight:800;color:var(--nv);margin-bottom:10px">🔍 Buscar recibo de un estudiante</div>
-    <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end">
-      <div style="flex:2;min-width:200px">
-        <label style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--sl);display:block;margin-bottom:4px">Nombre / Cédula / TI</label>
-        <input id="fdBusq" placeholder="Ej: Yosueth, o CC/TI del estudiante…" oninput="finDashBuscar()"
-          style="width:100%;padding:9px 12px;font-size:13px;border:1.5px solid var(--bd);border-radius:8px;background:var(--bg2);color:var(--tx);outline:none;box-sizing:border-box">
-      </div>
-      <div style="flex:1;min-width:140px">
-        <label style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--sl);display:block;margin-bottom:4px">Estado</label>
-        <select id="fdEstado" onchange="finDashBuscar()" style="width:100%;padding:9px 12px;font-size:13px;border:1.5px solid var(--bd);border-radius:8px;background:var(--bg2);color:var(--tx);outline:none">
-          <option value="">Todos</option>
-          <option value="pendiente">⏳ Pendiente</option>
-          <option value="pagado">✅ Pagado</option>
-          <option value="vencido">🚨 Vencido</option>
-          <option value="anulado">❌ Anulado</option>
-        </select>
-      </div>
-      <div style="flex:1;min-width:140px">
-        <label style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--sl);display:block;margin-bottom:4px">Concepto</label>
-        <select id="fdConcepto" onchange="finDashBuscar()" style="width:100%;padding:9px 12px;font-size:13px;border:1.5px solid var(--bd);border-radius:8px;background:var(--bg2);color:var(--tx);outline:none">
-          <option value="">Todos</option>
-        </select>
-      </div>
-      <div>
-        <button onclick="finDashLimpiar()" style="padding:9px 13px;font-size:13px;background:var(--bg2);color:var(--sl);border:1.5px solid var(--bd);border-radius:8px;cursor:pointer" title="Limpiar">🧹</button>
-      </div>
-    </div>
-    <div id="fdResultados" style="margin-top:12px"></div>
-  </div>
-
   <div id="finDashW"><div class="mty"><div class="ei">📊</div><p>Cargando...</p></div></div>`;
 }
-
-window._fdBusqTimer=null;
-async function finDashBuscar(){
-  clearTimeout(window._fdBusqTimer);
-  window._fdBusqTimer=setTimeout(async()=>{
-    const el=gi('fdResultados'); if(!el) return;
-    const q=(gi('fdBusq')?.value||'').trim();
-    const estado=gi('fdEstado')?.value||'';
-    const conceptoId=gi('fdConcepto')?.value||'';
-    if(!q && !estado && !conceptoId){ el.innerHTML=''; return; }
-    el.innerHTML='<div style="font-size:12px;color:var(--sl3);padding:6px 0">⏳ Buscando...</div>';
-    try{
-      const ano=new Date().getFullYear();
-      let qs=`anoPago=${ano}&limit=50`;
-      if(q)          qs+=`&q=${encodeURIComponent(q)}`;
-      if(estado)     qs+=`&estado=${encodeURIComponent(estado)}`;
-      if(conceptoId) qs+=`&conceptoId=${encodeURIComponent(conceptoId)}`;
-      const {pagos}=await apiFin(`/pagos?${qs}`);
-      if(!pagos||!pagos.length){
-        el.innerHTML='<div style="font-size:13px;color:var(--sl3);padding:8px 0;text-align:center">🔍 Sin resultados</div>';
-        return;
-      }
-      const fmt=v=>`$${(v||0).toLocaleString('es-CO')}`;
-      const stBadge=s=>({pagado:'bgr',pendiente:'bgy',vencido:'bred',anulado:'bgy'}[s]||'bgy');
-      // Agrupar por estudiante
-      const porEst={};
-      pagos.forEach(p=>{
-        if(!porEst[p.estId]) porEst[p.estId]={nombre:p.estNombre,salon:p.salon,pagos:[]};
-        porEst[p.estId].pagos.push(p);
-      });
-      const filas=Object.values(porEst).map(est=>{
-        const totalPagado=est.pagos.filter(p=>p.estado==='pagado').reduce((s,p)=>s+(p.valorFinal||0),0);
-        const totalPendiente=est.pagos.filter(p=>['pendiente','vencido'].includes(p.estado)).reduce((s,p)=>s+(p.valorFinal||0),0);
-        const recibos=est.pagos.map(p=>`
-          <div style="display:flex;align-items:center;justify-content:space-between;padding:5px 10px;border-radius:7px;background:var(--bg2);margin-bottom:4px;font-size:12px">
-            <span style="color:var(--sl2)">${esc(p.conceptoNombre||'—')}</span>
-            <span style="font-weight:700;color:var(--nv)">${fmt(p.valorFinal)}</span>
-            <span class="bdg ${stBadge(p.estado)}" style="font-size:10px">${p.estado}</span>
-            <span style="color:var(--sl3);font-size:11px">${p.fechaPago||p.fechaVence||'—'}</span>
-            ${CU.role==='finAdmin'?`<button onclick="finEditPago('${p.id}','${esc(p.estado)}')" style="padding:2px 8px;font-size:11px;background:#e0e7ff;color:#3730a3;border:1.5px solid #a5b4fc;border-radius:5px;cursor:pointer">✏️</button>`:''}
-          </div>`).join('');
-        return`<div style="border:1.5px solid var(--bd);border-radius:10px;overflow:hidden;margin-bottom:8px">
-          <div style="padding:10px 14px;background:var(--bg2);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
-            <div>
-              <div style="font-weight:800;font-size:14px;color:var(--nv)">${esc(est.nombre)}</div>
-              <div style="font-size:12px;color:var(--sl2)">Salón: ${esc(est.salon||'—')} · ${est.pagos.length} recibo${est.pagos.length!==1?'s':''}</div>
-            </div>
-            <div style="display:flex;gap:10px;font-size:12px;font-weight:700">
-              ${totalPagado?`<span style="color:#166534">✅ Pagado: ${fmt(totalPagado)}</span>`:''}
-              ${totalPendiente?`<span style="color:#b91c1c">⏳ Pendiente: ${fmt(totalPendiente)}</span>`:''}
-              <button onclick="nav('finpagos');setTimeout(()=>{const i=gi('fpEstNombre');if(i){i.value='${esc(est.nombre)}';finLoadPagos();}},400)"
-                style="padding:4px 10px;font-size:11px;font-weight:700;background:#e0e7ff;color:#3730a3;border:1.5px solid #a5b4fc;border-radius:6px;cursor:pointer">Ver todos →</button>
-            </div>
-          </div>
-          <div style="padding:10px 14px">${recibos}</div>
-        </div>`;
-      }).join('');
-      el.innerHTML=`<div style="font-size:12px;color:var(--sl3);margin-bottom:8px">${pagos.length} recibo${pagos.length!==1?'s':''} encontrado${pagos.length!==1?'s':''}</div>${filas}`;
-    }catch(e){ el.innerHTML=`<div style="font-size:12px;color:#b91c1c">Error: ${esc(e.message)}</div>`; }
-  },320);
-}
-function finDashLimpiar(){
-  const ids=['fdBusq','fdEstado','fdConcepto'];
-  ids.forEach(id=>{const el=gi(id);if(el)el.value='';});
-  const el=gi('fdResultados');if(el)el.innerHTML='';
-}
-
 async function initFinDash(){
-  // Cargar conceptos en el selector del buscador del dashboard
-  try{
-    const conceptos=await apiFin('/conceptos').catch(()=>[]);
-    const selCon=gi('fdConcepto');
-    if(selCon && conceptos.length){
-      selCon.innerHTML='<option value="">Todos</option>'+conceptos.map(c=>`<option value="${c.id}">${esc(c.nombre)}</option>`).join('');
-    }
-  }catch(e){}
 
   const el=gi('finDashW'); if(!el) return;
   el.innerHTML='<div style="text-align:center;padding:24px;color:var(--sl3)">⏳ Cargando resumen...</div>';
@@ -10471,7 +10363,25 @@ async function finLoadPagos(){
       }
       if(!pagos.length){el.innerHTML='<div class="mty"><div class="ei">🔍</div><p>Sin resultados con estos filtros</p></div>';return;}
       const fmt=v=>`$${(v||0).toLocaleString('es-CO')}`;
-      const stBadge=s=>({pagado:'bgr',pendiente:'bgy',vencido:'bred',anulado:'bgy'}[s]||'bgy');
+      const stColors={
+        pagado:  {bg:'#dcfce7',color:'#166534',border:'#86efac'},
+        pendiente:{bg:'#fef9c3',color:'#854d0e',border:'#fde047'},
+        vencido: {bg:'#fee2e2',color:'#b91c1c',border:'#fca5a5'},
+        anulado: {bg:'#f3f4f6',color:'#6b7280',border:'#d1d5db'},
+      };
+      const stSelect=(p)=>{
+        const sc=stColors[p.estado]||stColors.anulado;
+        if(CU.role!=='finAdmin'){
+          return`<span style="display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;background:${sc.bg};color:${sc.color};border:1px solid ${sc.border}">${p.estado}</span>`;
+        }
+        return`<select onchange="finCambioRapidoEstado('${p.id}',this)"
+          style="padding:3px 10px;font-size:12px;font-weight:700;border-radius:20px;border:1.5px solid ${sc.border};background:${sc.bg};color:${sc.color};cursor:pointer;outline:none">
+          <option value="pendiente"${p.estado==='pendiente'?' selected':''}>⏳ pendiente</option>
+          <option value="pagado"${p.estado==='pagado'?' selected':''}>✅ pagado</option>
+          <option value="vencido"${p.estado==='vencido'?' selected':''}>🚨 vencido</option>
+          <option value="anulado"${p.estado==='anulado'?' selected':''}>❌ anulado</option>
+        </select>`;
+      };
       el.innerHTML=`<div class="tw"><table>
         <thead><tr><th>Estudiante</th><th>Salón</th><th>Concepto</th><th>Valor</th><th>Estado</th><th>Fecha</th>${CU.role==='finAdmin'?'<th></th>':''}</tr></thead>
         <tbody>${pagos.map(p=>`<tr>
@@ -10479,7 +10389,7 @@ async function finLoadPagos(){
           <td>${esc(p.salon||'—')}</td>
           <td style="font-size:12px">${esc(p.conceptoNombre)}</td>
           <td style="font-weight:700">${fmt(p.valorFinal)}</td>
-          <td><span class="bdg ${stBadge(p.estado)}" style="font-size:11px">${p.estado}</span></td>
+          <td>${stSelect(p)}</td>
           <td style="font-size:11px;color:var(--sl3)">${p.fechaPago||p.fechaVence||'—'}</td>
           ${CU.role==='finAdmin'?`<td><div style="display:flex;gap:5px">
             <button onclick="finEditPago('${p.id}','${esc(p.estado)}')" style="padding:4px 9px;font-size:11px;background:#e0e7ff;color:#3730a3;border:1.5px solid #a5b4fc;border-radius:6px;cursor:pointer" title="Editar">✏️</button>
@@ -10535,6 +10445,33 @@ async function finEliminarPago(pid){
     sw('success','Pago anulado','',1600);finLoadPagos();
   }catch(e){sw('error','Error: '+e.message);}
 }
+async function finCambioRapidoEstado(pid, sel){
+  const nuevoEstado=sel.value;
+  const stColors={
+    pagado:  {bg:'#dcfce7',color:'#166534',border:'#86efac'},
+    pendiente:{bg:'#fef9c3',color:'#854d0e',border:'#fde047'},
+    vencido: {bg:'#fee2e2',color:'#b91c1c',border:'#fca5a5'},
+    anulado: {bg:'#f3f4f6',color:'#6b7280',border:'#d1d5db'},
+  };
+  // Actualizar color del select de inmediato para feedback visual
+  const sc=stColors[nuevoEstado]||stColors.anulado;
+  sel.style.background=sc.bg; sel.style.color=sc.color; sel.style.borderColor=sc.border;
+  try{
+    const hoy=new Date().toISOString().slice(0,10);
+    const upd={estado:nuevoEstado};
+    if(nuevoEstado==='pagado') upd.fechaPago=hoy;
+    await apiFin(`/pagos/${pid}`,{method:'PUT',body:JSON.stringify(upd)});
+    if(window._finPagosCache?.[pid]) window._finPagosCache[pid].estado=nuevoEstado;
+    sw('success',`Estado → ${nuevoEstado}`,'',1200);
+    // Recargar la tabla para reflejar totales actualizados
+    setTimeout(finLoadPagos,500);
+  }catch(e){
+    sw('error','Error al cambiar estado: '+e.message);
+    // Revertir el select si falló
+    finLoadPagos();
+  }
+}
+
 async function finNuevoPago(){
   const [ests,conceptos,sals]=await Promise.all([
     apiFin('/estudiantes'),apiFin('/conceptos'),apiFin('/salones')
