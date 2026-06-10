@@ -215,7 +215,7 @@ router.delete('/conceptos/:id', finAuth, requireFinRole('finAdmin'), async (req,
 // PAGOS
 // ══════════════════════════════════════════════════════════════════════════════
 
-// GET /api/fin/pagos?anoPago=&estId=&estado=&salon=&page=&limit=
+// GET /api/fin/pagos?anoPago=&estId=&estado=&salon=&page=&limit=&excluirPagados=1
 router.get('/pagos', finAuth, async (req, res) => {
   try {
     const filter = { colegioId: req.colegioId };
@@ -224,6 +224,10 @@ router.get('/pagos', finAuth, async (req, res) => {
     if (req.query.estado)     filter.estado     = req.query.estado;
     if (req.query.salon)      filter.salon      = req.query.salon;
     if (req.query.conceptoId) filter.conceptoId = req.query.conceptoId;
+    // Excluir pagados del listado por defecto (solo cuando no hay filtro de estado)
+    if (req.query.excluirPagados === '1' && !req.query.estado) {
+      filter.estado = { $ne: 'pagado' };
+    }
 
     const page  = Math.max(1, parseInt(req.query.page  || '1'));
     const limit = Math.min(200, parseInt(req.query.limit || '100'));
@@ -289,6 +293,11 @@ router.put('/pagos/:id', finAuth, async (req, res) => {
   try {
     if (req.finUser.role !== 'finAdmin')
       return res.status(403).json({ error: 'Solo finAdmin puede editar pagos' });
+    // Bloquear modificación de pagos ya confirmados
+    const actual = await Pago.findOne({ id: req.params.id, colegioId: req.colegioId }).lean();
+    if (!actual) return res.status(404).json({ error: 'Pago no encontrado' });
+    if (actual.estado === 'pagado')
+      return res.status(403).json({ error: 'Un pago confirmado no puede modificarse. Solo editable desde la base de datos.' });
     const allowed = ['estado','metodoPago','comprobante','observaciones','observacion',
                      'valorFinal','descuento','mesPago','periodoStr','fechaVence','fechaPago','valor'];
     const upd = {};
@@ -315,6 +324,10 @@ router.put('/pagos/:id', finAuth, async (req, res) => {
 // DELETE /api/fin/pagos/:id — anular pago (no borrar físicamente)
 router.delete('/pagos/:id', finAuth, requireFinRole('finAdmin'), async (req, res) => {
   try {
+    const existing = await Pago.findOne({ id: req.params.id, colegioId: req.colegioId }).lean();
+    if (!existing) return res.status(404).json({ error: 'Pago no encontrado' });
+    if (existing.estado === 'pagado')
+      return res.status(403).json({ error: 'Un pago confirmado no puede eliminarse. Solo editable desde la base de datos.' });
     const pago = await Pago.findOneAndUpdate(
       { id: req.params.id, colegioId: req.colegioId },
       { estado: 'anulado' }, { new: true }

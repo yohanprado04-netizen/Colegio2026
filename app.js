@@ -10343,10 +10343,13 @@ async function finLoadPagos(){
     const conceptoId=gi('fpConcepto')?.value||'';
     const nombreQ=(gi('fpEstNombre')?.value||'').trim();
     const ano=gi('fpAno')?.value||String(new Date().getFullYear());
+    // Si no hay filtro de estado activo, excluir pagados por defecto
+    const estadoEfectivo = estado || 'pendiente-vencido';
     try{
       let qs=`anoPago=${ano}`;
       if(salon)      qs+=`&salon=${encodeURIComponent(salon)}`;
       if(estado)     qs+=`&estado=${encodeURIComponent(estado)}`;
+      else           qs+=`&excluirPagados=1`;
       if(conceptoId) qs+=`&conceptoId=${encodeURIComponent(conceptoId)}`;
       if(nombreQ)    qs+=`&q=${encodeURIComponent(nombreQ)}`;
       const {pagos}=await apiFin(`/pagos?${qs}`);
@@ -10371,13 +10374,16 @@ async function finLoadPagos(){
       };
       const stSelect=(p)=>{
         const sc=stColors[p.estado]||stColors.anulado;
+        // Pagado: badge fijo, nunca editable
+        if(p.estado==='pagado'){
+          return`<span style="display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;background:${sc.bg};color:${sc.color};border:1px solid ${sc.border};user-select:none" title="Pago confirmado — no se puede modificar">✅ pagado</span>`;
+        }
         if(CU.role!=='finAdmin'){
           return`<span style="display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;background:${sc.bg};color:${sc.color};border:1px solid ${sc.border}">${p.estado}</span>`;
         }
         return`<select onchange="finCambioRapidoEstado('${p.id}',this)"
           style="padding:3px 10px;font-size:12px;font-weight:700;border-radius:20px;border:1.5px solid ${sc.border};background:${sc.bg};color:${sc.color};cursor:pointer;outline:none">
           <option value="pendiente"${p.estado==='pendiente'?' selected':''}>⏳ pendiente</option>
-          <option value="pagado"${p.estado==='pagado'?' selected':''}>✅ pagado</option>
           <option value="vencido"${p.estado==='vencido'?' selected':''}>🚨 vencido</option>
           <option value="anulado"${p.estado==='anulado'?' selected':''}>❌ anulado</option>
         </select>`;
@@ -10392,9 +10398,9 @@ async function finLoadPagos(){
           <td>${stSelect(p)}</td>
           <td style="font-size:11px;color:var(--sl3)">${p.fechaPago||p.fechaVence||'—'}</td>
           ${CU.role==='finAdmin'?`<td><div style="display:flex;gap:5px">
-            <button onclick="finEditPago('${p.id}','${esc(p.estado)}')" style="padding:4px 9px;font-size:11px;background:#e0e7ff;color:#3730a3;border:1.5px solid #a5b4fc;border-radius:6px;cursor:pointer" title="Editar">✏️</button>
+            ${p.estado!=='pagado'?`<button onclick="finEditPago('${p.id}','${esc(p.estado)}')" style="padding:4px 9px;font-size:11px;background:#e0e7ff;color:#3730a3;border:1.5px solid #a5b4fc;border-radius:6px;cursor:pointer" title="Editar">✏️</button>`:'<span style="width:30px;display:inline-block"></span>'}
             <button onclick="finVerDetalle('${p.id}')" style="padding:4px 9px;font-size:11px;background:#f0f9ff;color:#0369a1;border:1.5px solid #7dd3fc;border-radius:6px;cursor:pointer" title="Ver detalle">👁</button>
-            <button onclick="finEliminarPago('${p.id}')" style="padding:4px 9px;font-size:11px;background:#fee2e2;color:#b91c1c;border:1.5px solid #fca5a5;border-radius:6px;cursor:pointer" title="Anular">🗑</button>
+            ${p.estado!=='pagado'?`<button onclick="finEliminarPago('${p.id}')" style="padding:4px 9px;font-size:11px;background:#fee2e2;color:#b91c1c;border:1.5px solid #fca5a5;border-radius:6px;cursor:pointer" title="Anular">🗑</button>`:'<span style="width:30px;display:inline-block" title="Los pagos confirmados no se pueden eliminar desde aquí">🔒</span>'}
           </div></td>`:''}
         </tr>`).join('')}</tbody>
       </table></div>`;
