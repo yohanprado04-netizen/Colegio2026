@@ -10478,7 +10478,8 @@ function _generarHtmlRecibo(p){
   <div>
     <div class="recibo">
       <div class="header">
-        <h1>🏫 ${esc(DB?.colegioNombre||'Colegio')}</h1>
+        ${(DB?.colegioLogo)?`<img src="${DB.colegioLogo}" alt="Logo" style="height:64px;width:auto;max-width:140px;object-fit:contain;border-radius:8px;background:rgba(255,255,255,.15);padding:5px;margin-bottom:10px;display:block;margin-left:auto;margin-right:auto">`:''}
+        <h1>${esc(DB?.colegioNombre||'Colegio')}</h1>
         <p>Recibo de Pago</p>
         <div class="estado-badge">${p.estado?.toUpperCase()||'—'}</div>
       </div>
