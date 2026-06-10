@@ -226,6 +226,7 @@ router.post('/fin/login', async (req, res) => {
     );
 
     const safe = { ...u }; delete safe.password; delete safe._id; delete safe.__v;
+    safe.finRole = u.role;  // alias esperado por _bootFinanzas() en api-layer.js
     res.json({ token, user: safe });
   } catch (e) {
     console.error('[fin/login] Error:', e.message);
