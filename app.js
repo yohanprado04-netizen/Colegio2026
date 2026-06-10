@@ -7769,6 +7769,7 @@ async function initECuen(){
     // Usar apiFetch con el token normal del estudiante
     const data=await apiFetch(`/api/fin/cuenta/${CU.id}`);
     const pagos=data.pagos||[];
+    window._estPagosCache=pagos;
     const fmt=v=>`$${(v||0).toLocaleString('es-CO')}`;
 
     const pendientes=pagos.filter(p=>p.estado==='pendiente'||p.estado==='vencido');
@@ -7829,12 +7830,13 @@ async function initECuen(){
           📄 Historial de cobros
         </div>
         <div class="tw"><table>
-          <thead><tr><th>Concepto</th><th>Valor</th><th>Estado</th><th>Fecha</th></tr></thead>
+          <thead><tr><th>Concepto</th><th>Valor</th><th>Estado</th><th>Fecha</th><th></th></tr></thead>
           <tbody>${pagos.map(p=>`<tr>
             <td style="font-weight:700">${esc(p.conceptoNombre)}</td>
             <td>${fmt(p.valorFinal)}</td>
             <td><span class="bdg ${stBadge(p.estado)}" style="font-size:11px">${stLabel(p.estado)}</span></td>
             <td style="font-size:11px;color:var(--sl3)">${p.fechaPago||p.fechaVence||'—'}</td>
+            <td><button onclick="finVerReciboEst('${p.id}')" style="padding:4px 9px;font-size:11px;background:#f0f9ff;color:#0369a1;border:1.5px solid #7dd3fc;border-radius:6px;cursor:pointer" title="Ver recibo">👁</button></td>
           </tr>`).join('')}</tbody>
         </table></div>
       </div>`
@@ -10386,6 +10388,7 @@ async function finLoadPagos(){
           <option value="pendiente"${p.estado==='pendiente'?' selected':''}>⏳ pendiente</option>
           <option value="vencido"${p.estado==='vencido'?' selected':''}>🚨 vencido</option>
           <option value="anulado"${p.estado==='anulado'?' selected':''}>❌ anulado</option>
+          <option value="pagado">✅ marcar como pagado</option>
         </select>`;
       };
       el.innerHTML=`<div class="tw"><table>
@@ -10433,10 +10436,110 @@ async function finVerDetalle(pid){
           .map(([k,v])=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--bd)"><span style="color:var(--sl);min-width:120px">${k}</span><span>${v}</span></div>`).join('')}
       </div>`,
       showCancelButton:false,confirmButtonText:'Cerrar',
-      footer:CU.role==='finAdmin'?`<button onclick="Swal.close();finEliminarPago('${pid}')" style="background:#fee2e2;color:#b91c1c;border:1.5px solid #fca5a5;border-radius:6px;padding:6px 14px;font-size:12px;font-weight:700;cursor:pointer">🗑 Eliminar / Anular pago</button>`:''
+      footer:CU.role==='finAdmin'?`
+        <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center">
+          <button onclick="finDescargarRecibo('${pid}')" style="background:#dcfce7;color:#166534;border:1.5px solid #86efac;border-radius:6px;padding:6px 14px;font-size:12px;font-weight:700;cursor:pointer">📄 Descargar recibo</button>
+          ${p.estado!=='pagado'?`<button onclick="Swal.close();finEliminarPago('${pid}')" style="background:#fee2e2;color:#b91c1c;border:1.5px solid #fca5a5;border-radius:6px;padding:6px 14px;font-size:12px;font-weight:700;cursor:pointer">🗑 Eliminar / Anular pago</button>`:''}
+        </div>`:''
     });
   }catch(e){sw('error','Error al cargar detalle: '+e.message);}
 }
+function _generarHtmlRecibo(p){
+  const fmt=v=>`$${(v||0).toLocaleString('es-CO')}`;
+  const hoy=new Date().toLocaleDateString('es-CO',{year:'numeric',month:'long',day:'numeric'});
+  const stColor={pagado:'#166534',pendiente:'#854d0e',vencido:'#b91c1c',anulado:'#6b7280'};
+  const stBg={pagado:'#dcfce7',pendiente:'#fef9c3',vencido:'#fee2e2',anulado:'#f3f4f6'};
+  const col=stColor[p.estado]||'#333';
+  const bg=stBg[p.estado]||'#f9f9f9';
+  return`<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8">
+  <title>Recibo de Pago — ${p.estNombre||''}</title>
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:'Segoe UI',Arial,sans-serif;background:#f4f6f9;display:flex;justify-content:center;align-items:flex-start;min-height:100vh;padding:30px 16px}
+    .recibo{background:#fff;border-radius:14px;box-shadow:0 4px 24px rgba(0,0,0,.10);width:100%;max-width:480px;overflow:hidden}
+    .header{background:linear-gradient(135deg,#1e3a5f,#2563eb);color:#fff;padding:24px 28px;text-align:center}
+    .header h1{font-size:20px;font-weight:800;letter-spacing:.5px}
+    .header p{font-size:12px;opacity:.8;margin-top:4px}
+    .estado-badge{display:inline-block;padding:4px 16px;border-radius:20px;font-size:12px;font-weight:800;text-transform:uppercase;background:${bg};color:${col};border:1.5px solid ${col};margin-top:12px}
+    .body{padding:24px 28px}
+    .row{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid #f0f0f0;font-size:13px}
+    .row:last-child{border-bottom:none}
+    .lbl{color:#64748b;font-weight:500}
+    .val{font-weight:700;color:#1e293b;text-align:right;max-width:60%}
+    .total-row{background:#f0fdf4;border-radius:10px;padding:14px 18px;margin-top:16px;display:flex;justify-content:space-between;align-items:center}
+    .total-row .lbl{font-size:14px;font-weight:700;color:#166534}
+    .total-row .val{font-size:22px;font-weight:900;color:#166534}
+    .footer{background:#f8fafc;border-top:1px solid #e2e8f0;padding:14px 28px;text-align:center;font-size:11px;color:#94a3b8}
+    .no-print{text-align:center;margin-top:18px}
+    .btn-print{background:#2563eb;color:#fff;border:none;border-radius:8px;padding:10px 28px;font-size:14px;font-weight:700;cursor:pointer}
+    .btn-print:hover{background:#1d4ed8}
+    @media print{body{background:#fff;padding:0}.no-print{display:none}.recibo{box-shadow:none;border-radius:0;max-width:100%}}
+  </style></head><body>
+  <div>
+    <div class="recibo">
+      <div class="header">
+        <h1>🏫 ${esc(DB?.colegioNombre||'Colegio')}</h1>
+        <p>Recibo de Pago</p>
+        <div class="estado-badge">${p.estado?.toUpperCase()||'—'}</div>
+      </div>
+      <div class="body">
+        <div class="row"><span class="lbl">Estudiante</span><span class="val">${esc(p.estNombre||'—')}</span></div>
+        <div class="row"><span class="lbl">Salón</span><span class="val">${esc(p.salon||'—')}</span></div>
+        <div class="row"><span class="lbl">Concepto</span><span class="val">${esc(p.conceptoNombre||p.concepto||'—')}</span></div>
+        <div class="row"><span class="lbl">Año</span><span class="val">${esc(p.anoPago||new Date().getFullYear())}</span></div>
+        ${p.metodoPago?`<div class="row"><span class="lbl">Método de pago</span><span class="val">${esc(p.metodoPago)}</span></div>`:''}
+        ${p.fechaPago?`<div class="row"><span class="lbl">Fecha de pago</span><span class="val">${esc(p.fechaPago)}</span></div>`:''}
+        ${p.fechaVence?`<div class="row"><span class="lbl">Fecha de vencimiento</span><span class="val">${esc(p.fechaVence)}</span></div>`:''}
+        ${p.observacion||p.observaciones?`<div class="row"><span class="lbl">Observación</span><span class="val">${esc(p.observacion||p.observaciones)}</span></div>`:''}
+        <div class="total-row">
+          <span class="lbl">Total</span>
+          <span class="val">${fmt(p.valorFinal)}</span>
+        </div>
+      </div>
+      <div class="footer">Generado el ${hoy} · ${esc(DB?.colegioNombre||'Colegio')}</div>
+    </div>
+    <div class="no-print">
+      <button class="btn-print" onclick="window.print()">🖨️ Imprimir / Guardar PDF</button>
+    </div>
+  </div>
+</body></html>`;
+}
+
+async function finDescargarRecibo(pid){
+  let p=window._finPagosCache?.[pid];
+  if(!p){
+    try{
+      const ano=gi('fpAno')?.value||String(new Date().getFullYear());
+      const {pagos}=await apiFin(`/pagos?limit=200&anoPago=${ano}&estado=pagado`);
+      (pagos||[]).forEach(x=>{window._finPagosCache[x.id]=x;});
+      p=window._finPagosCache[pid];
+    }catch(e){}
+  }
+  if(!p){sw('error','No se encontró el pago');return;}
+  const html=_generarHtmlRecibo(p);
+  const win=window.open('','_blank','width=560,height=720');
+  if(win){win.document.write(html);win.document.close();}
+  else sw('warning','Permite ventanas emergentes para ver el recibo','',2500);
+}
+
+async function finVerReciboEst(pid){
+  // Buscar el pago en la data ya cargada del estudiante
+  const all=window._estPagosCache||[];
+  let p=all.find(x=>x.id===pid);
+  if(!p){
+    try{
+      const data=await apiFetch(`/api/fin/cuenta/${CU.id}`);
+      window._estPagosCache=data.pagos||[];
+      p=window._estPagosCache.find(x=>x.id===pid);
+    }catch(e){}
+  }
+  if(!p){sw('error','No se encontró el recibo');return;}
+  const html=_generarHtmlRecibo(p);
+  const win=window.open('','_blank','width=560,height=720');
+  if(win){win.document.write(html);win.document.close();}
+  else sw('warning','Permite ventanas emergentes para ver el recibo','',2500);
+}
+
 async function finEliminarPago(pid){
   const r=await Swal.fire({
     icon:'warning',title:'¿Eliminar este pago?',
