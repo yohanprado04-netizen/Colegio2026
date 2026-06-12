@@ -351,6 +351,30 @@ const ConceptoCobroSchema = new Schema({
   creadoPor:   { type: String, default: '' },
 }, { timestamps: true, collection: 'fin_conceptos' });
 
+const ComprobanteSchema = new Schema({
+  id:            { type: String, required: true, unique: true },
+  colegioId:     { type: String, required: true, index: true },
+  pagoId:        { type: String, required: true, index: true },
+  estId:         { type: String, required: true },
+  estNombre:     { type: String, default: '' },
+  salon:         { type: String, default: '' },
+  conceptoNombre:{ type: String, default: '' },
+  valorFinal:    { type: Number, default: 0 },
+  anoPago:       { type: String, default: '' },
+  // Estados: 'solicitado' → 'enviado' → 'aprobado' | 'rechazado'
+  estado:        { type: String, enum: ['solicitado','enviado','aprobado','rechazado'], default: 'solicitado' },
+  dataUrl:       { type: String, default: '' },   // base64 del comprobante
+  fileType:      { type: String, default: '' },   // image/png, application/pdf, etc
+  fileName:      { type: String, default: '' },
+  motivoRechazo: { type: String, default: '' },
+  solicitadoTs:  { type: String, default: '' },
+  enviadoTs:     { type: String, default: '' },
+  revisadoTs:    { type: String, default: '' },
+  revisadoPor:   { type: String, default: '' },
+}, { timestamps: true, collection: 'fin_comprobantes' });
+ComprobanteSchema.index({ colegioId: 1, estId: 1 });
+ComprobanteSchema.index({ colegioId: 1, estado: 1 });
+
 const PagoSchema = new Schema({
   id:             { type: String, required: true, unique: true },
   colegioId:      { type: String, required: true, index: true },
@@ -413,5 +437,6 @@ module.exports = {
   FinUsuario:    mongoose.model('FinUsuario',    FinUsuarioSchema),
   ConceptoCobro: mongoose.model('ConceptoCobro', ConceptoCobroSchema),
   Pago:          mongoose.model('Pago',          PagoSchema),
+  Comprobante:   mongoose.model('Comprobante',   ComprobanteSchema),
   FinComunicado: mongoose.model('FinComunicado', FinComunicadoSchema),
 };

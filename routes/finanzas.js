@@ -6,7 +6,7 @@ const router  = require('express').Router();
 const bcrypt  = require('bcryptjs');
 const jwt     = require('jsonwebtoken');
 const {
-  Usuario, Colegio, FinUsuario, ConceptoCobro, Pago, FinComunicado, Bloqueo, Comunicado
+  Usuario, Colegio, FinUsuario, ConceptoCobro, Pago, FinComunicado, Bloqueo, Comunicado, Comprobante
 } = require('../models');
 
 const JWT_SECRET  = process.env.JWT_SECRET  || 'dev_only_secret_cambiar_en_produccion';
@@ -297,8 +297,7 @@ router.put('/pagos/:id', finAuth, async (req, res) => {
     const actual = await Pago.findOne({ id: req.params.id, colegioId: req.colegioId }).lean();
     if (!actual) return res.status(404).json({ error: 'Pago no encontrado' });
     if (actual.estado === 'pagado')
-      return res.status(403).json({ error: 'Un pago confirmado no puede modificarse. Solo editable desde la base de datos.' });
-    const allowed = ['estado','metodoPago','comprobante','observaciones','observacion',
+      return res.status(403).json({ error: 'Un pago confirmado no puede modificarse. Solo editable desde la base de datos.' });    const allowed = ['estado','metodoPago','comprobante','observaciones','observacion',
                      'valorFinal','descuento','mesPago','periodoStr','fechaVence','fechaPago','valor'];
     const upd = {};
     allowed.forEach(f => { if (req.body[f] !== undefined) upd[f] = req.body[f]; });
@@ -702,6 +701,123 @@ router.get('/reporte/resumen', finAuth, async (req, res) => {
       }},
     ]);
     res.json(resumen || { totalPagado:0, totalPendiente:0, totalAnulado:0, cantPagado:0, cantPendiente:0 });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+
+// ═══════════════════════════════════════════════════
+// COMPROBANTES DE PAGO
+// ═══════════════════════════════════════════════════
+
+// POST /api/fin/comprobantes/solicitar
+router.post('/comprobantes/solicitar', finAuth, async (req, res) => {
+  try {
+    if (req.finUser.role !== 'finAdmin')
+      return res.status(403).json({ error: 'Solo finAdmin puede solicitar comprobantes' });
+    const { pagoId } = req.body;
+    const pago = await Pago.findOne({ id: pagoId, colegioId: req.colegioId }).lean();
+    if (!pago) return res.status(404).json({ error: 'Pago no encontrado' });
+    if (pago.estado === 'pagado') return res.status(400).json({ error: 'Este pago ya está confirmado' });
+    const existe = await Comprobante.findOne({ pagoId, colegioId: req.colegioId, estado: { $in: ['solicitado','enviado'] } }).lean();
+    if (existe) return res.status(400).json({ error: 'Ya hay una solicitud activa para este pago', comprobante: existe });
+    const uid = require('crypto').randomUUID();
+    const comp = await Comprobante.create({
+      id: uid, colegioId: req.colegioId, pagoId,
+      estId: pago.estId, estNombre: pago.estNombre,
+      salon: pago.salon, conceptoNombre: pago.conceptoNombre,
+      valorFinal: pago.valorFinal, anoPago: pago.anoPago,
+      estado: 'solicitado', solicitadoTs: new Date().toISOString().slice(0,10),
+    });
+    res.status(201).json(comp);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// GET /api/fin/comprobantes
+router.get('/comprobantes', finAuth, async (req, res) => {
+  try {
+    const filter = { colegioId: req.colegioId };
+    if (req.query.estId)  filter.estId  = req.query.estId;
+    if (req.query.estado) filter.estado = req.query.estado;
+    if (req.query.pagoId) filter.pagoId = req.query.pagoId;
+    const list = await Comprobante.find(filter, '-dataUrl').sort({ createdAt: -1 }).limit(200).lean();
+    res.json(list);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// GET /api/fin/comprobantes/est/:estId — para el estudiante (token normal)
+router.get('/comprobantes/est/:estId', async (req, res) => {
+  try {
+    const authH = req.headers.authorization || '';
+    const token = authH.startsWith('Bearer ') ? authH.slice(7) : '';
+    if (!token) return res.status(401).json({ error: 'Sin token' });
+    const jwt2 = require('jsonwebtoken');
+    const payload = jwt2.verify(token, process.env.JWT_SECRET || 'secret');
+    if (payload.id !== req.params.estId) return res.status(403).json({ error: 'Sin permiso' });
+    const list = await Comprobante.find({ estId: req.params.estId }, '-dataUrl').sort({ createdAt: -1 }).lean();
+    res.json(list);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// PUT /api/fin/comprobantes/:id/enviar — estudiante sube archivo
+router.put('/comprobantes/:id/enviar', async (req, res) => {
+  try {
+    const authH = req.headers.authorization || '';
+    const token = authH.startsWith('Bearer ') ? authH.slice(7) : '';
+    if (!token) return res.status(401).json({ error: 'Sin token' });
+    const jwt2 = require('jsonwebtoken');
+    const payload = jwt2.verify(token, process.env.JWT_SECRET || 'secret');
+    const comp = await Comprobante.findOne({ id: req.params.id }).lean();
+    if (!comp) return res.status(404).json({ error: 'No encontrado' });
+    if (comp.estId !== payload.id) return res.status(403).json({ error: 'Sin permiso' });
+    if (!['solicitado','rechazado'].includes(comp.estado))
+      return res.status(400).json({ error: 'No puedes subir comprobante en este estado' });
+    const { dataUrl, fileType, fileName } = req.body;
+    if (!dataUrl) return res.status(400).json({ error: 'Falta el archivo' });
+    const updated = await Comprobante.findOneAndUpdate(
+      { id: req.params.id },
+      { estado: 'enviado', dataUrl, fileType: fileType||'', fileName: fileName||'comprobante',
+        enviadoTs: new Date().toISOString().slice(0,10), motivoRechazo: '' },
+      { new: true, select: '-dataUrl' }
+    );
+    res.json(updated);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// PUT /api/fin/comprobantes/:id/revisar — finAdmin aprueba o rechaza
+router.put('/comprobantes/:id/revisar', finAuth, async (req, res) => {
+  try {
+    if (req.finUser.role !== 'finAdmin')
+      return res.status(403).json({ error: 'Solo finAdmin puede revisar comprobantes' });
+    const { accion, motivoRechazo } = req.body;
+    const comp = await Comprobante.findOne({ id: req.params.id, colegioId: req.colegioId }).lean();
+    if (!comp) return res.status(404).json({ error: 'No encontrado' });
+    if (comp.estado !== 'enviado') return res.status(400).json({ error: 'Solo puedes revisar comprobantes enviados' });
+    const hoy = new Date().toISOString().slice(0,10);
+    if (accion === 'aprobar') {
+      await Comprobante.findOneAndUpdate({ id: comp.id },
+        { estado: 'aprobado', revisadoTs: hoy, revisadoPor: req.finUser.nombre || req.finUser.email });
+      await Pago.findOneAndUpdate({ id: comp.pagoId, colegioId: req.colegioId },
+        { estado: 'pagado', fechaPago: hoy, metodoPago: 'Transferencia / comprobante',
+          registradoPor: req.finUser.nombre || req.finUser.email });
+      return res.json({ ok: true, accion: 'aprobado' });
+    }
+    if (accion === 'rechazar') {
+      if (!motivoRechazo) return res.status(400).json({ error: 'Debes indicar el motivo del rechazo' });
+      await Comprobante.findOneAndUpdate({ id: comp.id },
+        { estado: 'rechazado', motivoRechazo, revisadoTs: hoy,
+          revisadoPor: req.finUser.nombre || req.finUser.email, dataUrl: '' });
+      return res.json({ ok: true, accion: 'rechazado' });
+    }
+    res.status(400).json({ error: 'Acción inválida' });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// GET /api/fin/comprobantes/:id/archivo
+router.get('/comprobantes/:id/archivo', finAuth, async (req, res) => {
+  try {
+    const comp = await Comprobante.findOne({ id: req.params.id, colegioId: req.colegioId }, 'dataUrl fileType').lean();
+    if (!comp) return res.status(404).json({ error: 'No encontrado' });
+    res.json({ dataUrl: comp.dataUrl, fileType: comp.fileType });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
