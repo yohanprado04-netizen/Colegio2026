@@ -968,23 +968,6 @@ async function saveExt() {
   } catch (e2) { sw('error', 'Error: ' + e2.message); }
 }
 
-// ═══════════════════════════════════════════════════════════════════
-// saveExcHorario() — Admin guarda el horario permitido para excusas
-// ═══════════════════════════════════════════════════════════════════
-async function saveExcHorario() {
-  const ini = parseInt(gi('excHorIni')?.value ?? 18, 10);
-  const fin  = parseInt(gi('excHorFin')?.value ?? 7,  10);
-  if (isNaN(ini) || ini < 0 || ini > 23 || isNaN(fin) || fin < 0 || fin > 23) {
-    sw('error', 'Hora inválida', 'Ingresa valores entre 0 y 23'); return;
-  }
-  DB.excHorario = { ini, fin };
-  try {
-    await apiFetch('/api/config/excHorario', { method: 'PUT', body: JSON.stringify({ value: DB.excHorario }) });
-    sw('success', `Horario actualizado: ${ini}:00 – ${fin}:00`, '', 1800);
-    goto('afec');
-  } catch (e) { sw('error', 'Error: ' + e.message); }
-}
-
 async function archivarYLimpiarRecuperacion() {
   const periodoLabel = `${DB.ext.s} → ${DB.ext.e}`;
   const archivedAt   = new Date().toLocaleDateString('es-CO');
@@ -1191,6 +1174,23 @@ async function saveDRPer(key, per) {
     await apiFetch('/api/config/drPer', { method: 'PUT', body: JSON.stringify({ value: DB.drPer }) });
     sw('success', `Periodo "${per}" guardado`, '', 1400);
   } catch (e2) { sw('error', 'Error: ' + e2.message); }
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// saveExcHorario() — Admin guarda el horario de excusas
+// ═══════════════════════════════════════════════════════════════════
+async function saveExcHorario() {
+  const ini = parseInt(gi('excHorIni')?.value ?? 18, 10);
+  const fin  = parseInt(gi('excHorFin')?.value ?? 7,  10);
+  if (isNaN(ini)||ini<0||ini>23||isNaN(fin)||fin<0||fin>23) {
+    sw('error','Hora inválida','Ingresa valores entre 0 y 23'); return;
+  }
+  DB.excHorario = { ini, fin };
+  try {
+    await apiFetch('/api/config/excHorario', { method:'PUT', body:JSON.stringify({ value: DB.excHorario }) });
+    sw('success',`Horario actualizado: ${ini}:00 – ${fin}:00`,'',1800);
+    goto('afec');
+  } catch(e) { sw('error','Error: '+e.message); }
 }
 
 // ═══════════════════════════════════════════════════════════════════

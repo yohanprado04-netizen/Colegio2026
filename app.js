@@ -84,9 +84,12 @@
    se recomienda subir los archivos a un storage separado
    (Firebase Storage, S3, Cloudinary) y guardar solo la URL.
    ============================================================ */
-// DBK, DB, CU, FA, COLEGIOS_PRIM_BACH_LOGIC ya declarados en el bloque de bachillerato — se reutilizan
-// (no se redeclaran para evitar SyntaxError en navegadores)
-// Solo se redefinen las funciones de UI de primaria a continuación.
+const DBK='edusistema_v5'; // Solo usado en modo offline (sin api-layer.js)
+let DB={},CU=null;
+const FA={};
+
+// ── Colegios cuya PRIMARIA usa lógica de bachillerato (múltiples salones + salonMaterias) ──
+const COLEGIOS_PRIM_BACH_LOGIC = ['col_1780002622502'];
 function isBachLogic(ciclo){
   if(ciclo==='bachillerato') return true;
   return ciclo==='primaria' && COLEGIOS_PRIM_BACH_LOGIC.includes(CU?.colegioId||'');
@@ -673,14 +676,14 @@ function notasOk(per){
   const dr=DB.dr||{};const{s,e}=dr;if(!s||!e) return true;
   return t>=s&&t<=e;
 }
-/* Excusas window: configurable por admin en DB.excHorario = {ini:HH, fin:HH} */
+/* Excusas window: configurable por admin en DB.excHorario={ini,fin} */
 function excusasOk(){
   const cfg=DB.excHorario||{};
   const ini=parseInt(cfg.ini??18,10);
   const fin=parseInt(cfg.fin??7,10);
   const h=new Date().getHours();
-  if(ini>fin) return h>=ini||h<fin;   // rango cruza medianoche (ej 18–07)
-  return h>=ini&&h<fin;               // rango dentro del mismo día
+  if(ini>fin) return h>=ini||h<fin;
+  return h>=ini&&h<fin;
 }
 function ebySalon(salon){
   return DB.ests.filter(e=>e.salon===salon).sort((a,b)=>a.nombre.localeCompare(b.nombre,'es'));
@@ -752,7 +755,7 @@ function esc(str){
     .replace(/"/g,'&quot;').replace(/'/g,'&#39;').replace(/`/g,'&#96;');
 }
 /* Hash de contraseña con sal estática de instancia — migración transparente */
-// SALT ya declarado en bloque bachillerato
+const SALT='EduSistema_v5_2026';
 async function hashPwd(raw){
   if(!raw) return '';
   /* Ya hasheado (64 hex chars) → retornar sin cambio */
@@ -784,8 +787,8 @@ async function migratePasswords(){
 }
 
 /* ---- Sesión con inactividad ---- */
-// _sessionTimer ya declarado
-// SESSION_TIMEOUT ya declarado en bloque bachillerato
+let _sessionTimer=null;
+const SESSION_TIMEOUT=20*60*1000; /* 20 minutos */
 function resetSessionTimer(){
   clearTimeout(_sessionTimer);
   if(!CU) return;
@@ -802,7 +805,14 @@ function resetSessionTimer(){
 ['click','keydown','mousemove','touchstart'].forEach(ev=>
   document.addEventListener(ev,()=>{if(CU)resetSessionTimer();},{passive:true}));
 /* ── 1. AGREGAR EN ROLE_MAP (reemplaza la línea de ROLE_MAP completa) ── */
-// ROLE_MAP ya declarado
+const ROLE_MAP={
+  superadmin:new Set(['sadash','sacolegios','saestadisticas','saauditoria','samantenimiento','sasug','sacom','safin']),
+  finAdmin:  new Set(['findash','finpagos','finconceptos','finmorosos','fincom','finbloqueos','fincomprobantes']),
+  finUser:   new Set(['findash','finpagos','finmorosos']),
+  admin:new Set(['dash','asal','apri','abac','aprf','amat','anot','areh','afec','ablk','aaud','aexp','aexc','avcl','ahist','asug','acom','ahor']),
+  profe:new Set(['ph','pnot','past','pvir','ptar','prec','phist','psug','pcom']),
+  est:new Set(['eb','east','etare','eexc','eprof','evir','ereh','ehist','esug','eicfes','ecom','ecuen'])
+};
 /* ── 2. REEMPLAZA canAccess ── */
 function canAccess(pid){
   if(!CU) return false;
@@ -841,7 +851,22 @@ function logAuditAnon(usuario,msg){ /* implementado en api-layer.js */ }
 /* ============================================================
    BOOT & NAVIGATION
 ============================================================ */
-// PL ya declarado
+const PL={
+  sadash:'Panel Global', sacolegios:'Colegios & Admins', saplan:'Plan de Estudios',
+  sacom:'Comunicados Globales', safin:'Módulo Financiero',
+  findash:'Panel Financiero', finpagos:'Pagos & Cobros', finconceptos:'Conceptos de Cobro',
+  finmorosos:'Reporte de Morosos', fincom:'Comunicados', finbloqueos:'Bloqueos', fincomprobantes:'Comprobantes de Pago',
+  saestadisticas:'Estadísticas Globales', saauditoria:'Auditoría Global',
+  samantenimiento:'Mantenimiento', sasug:'Sugerencias Recibidas',
+  dash:'Panel General',asal:'Salones & Grados',apri:'Primaria (1°-5°)',abac:'Bachillerato (6°-11°)',
+  aprf:'Profesores',ahor:'Horarios',amat:'Materias & Periodos',anot:'Gestión de Notas',areh:'Recuperaciones',
+  afec:'Control de Fechas',ablk:'Usuarios Bloqueados',aaud:'Auditoría',aexp:'Exportar',ahist:'Historial Estudiantes',
+  aexc:'Excusas (Admin)',avcl:'Clases Virtuales (Admin)',acom:'Comunicados',pcom:'Comunicados',ecom:'Comunicados',asug:'Sugerencias',
+  ph:'Mi Panel',pnot:'Ingresar Notas',past:'Asistencias',pvir:'Clases Virtuales',ptar:'Tareas Recibidas',prec:'Recuperaciones',phist:'Historial Recuperaciones',psug:'Sugerencias',
+  eb:'Mi Boletín',east:'Mi Asistencia',etare:'Tareas & Talleres',
+  eexc:'Excusas',eprof:'Mis Profesores',ereh:'Mi Recuperación',evir:'Mis Clases Virtuales',
+  ehist:'Historial Recuperaciones',esug:'Sugerencias',ecuen:'Mi Cuenta'
+};
 
 
 /* ============================================================
@@ -3023,7 +3048,7 @@ function pgAFec(){
       </div>
     </div>`:''}
   </div>
-  <div class="card" style="border:2px solid #bee3f8">
+  <div class="card" style="border:2px solid #bee3f8;margin-top:16px">
     <div class="chd"><span class="cti">⏰ Horario de Excusas</span></div>
     <div class="al alb" style="margin-bottom:14px;font-size:12px">
       Define el rango horario en que los estudiantes pueden enviar excusas.<br>
@@ -3045,7 +3070,7 @@ function pgAFec(){
       </div>
     </div>
     <div style="margin-top:10px;font-size:12px;color:var(--sl3)">
-      💡 Si el horario cruza medianoche (ej: inicio 18, fin 7) el sistema lo detecta automáticamente.
+      💡 Si el rango cruza medianoche (ej: inicio 18, fin 7) el sistema lo detecta automáticamente.
     </div>
   </div>`;
 }
@@ -3072,7 +3097,57 @@ function extExpirado(){
 /* ============================================================
    SISTEMA DE AYUDA CONTEXTUAL
 ============================================================ */
-// HELP ya declarado
+const HELP={
+  ph:`<b>📊 Panel Principal</b><br>Resumen de tus salones, materias y estado del periodo activo. Usa el menú lateral para navegar a cada sección.`,
+  pnot:`<b>📝 Ingresar Notas</b><br>1. Selecciona el <b>Salón</b> y el <b>Periodo</b>.<br>2. Haz clic en <b>Cargar</b>.<br>3. Ingresa: <b>Aptitud (60%)</b>, <b>Actitud (20%)</b> y <b>Responsabilidad (20%)</b>.<br>La definitiva se calcula automáticamente.<br>⚠️ Solo puedes ingresar notas durante el rango de fechas configurado para ese periodo.`,
+  past:`<b>✅ Pasar Asistencia</b><br>Selecciona el salón y la fecha, marca ✓ a los presentes y ✗ a los ausentes. Guarda al terminar.`,
+  pvir:`<b>💻 Clases Virtuales</b><br>Publica enlaces de reuniones (Meet, Zoom, Teams) para tus salones. Los estudiantes ven el enlace activo en su sección.`,
+  ptar:`<b>📂 Tareas Recibidas</b><br>Archivos que los estudiantes te enviaron. Ábrelos y márcalos como <b>✓ Revisado</b>. Solo puedes eliminar los ya revisados; los intentos de eliminar sin revisar quedan en Auditoría.`,
+  prec:`<b>🔄 Recuperaciones</b><br>Activo durante el Periodo Extraordinario.<br>1. Envía un Plan de Recuperación al salón o individual.<br>2. Los estudiantes responden antes de la fecha límite.<br>3. Revisa sus respuestas aquí y márcalas como revisadas.<br>Puedes exportar el historial de planes en Excel.`,
+  phist:`<b>📚 Historial Recuperaciones</b><br>Recuperaciones de periodos anteriores. Usa el buscador para filtrar por nombre de archivo, estudiante o materia. Puedes abrir cualquier archivo archivado.`,
+  eb:`<b>📋 Mi Boletín</b><br>Tus notas de todos los periodos y materias. Descárgalo en PDF con el botón correspondiente.`,
+  east:`<b>📆 Mi Asistencia</b><br>Historial de asistencia: días presentes, ausentes y con excusa presentada.`,
+  etare:`<b>📎 Tareas & Talleres</b><br>1. Selecciona materia, periodo y docente.<br>2. Escribe una descripción breve.<br>3. Adjunta el archivo (PDF, Word, Excel — máx 5 MB) y haz clic en Subir.<br>En <em>Mis Archivos Enviados</em> verás si el docente ya lo revisó. Puedes eliminar los revisados.`,
+  eexc:`<b>✉️ Excusas</b><br>Envía una excusa cuando faltaste. Solo en horario permitido (6:00 PM – 7:00 AM). Selecciona el motivo y el docente destinatario.`,
+  ereh:`<b>🔄 Mi Recuperación</b><br>Disponible cuando tienes 1–2 materias perdidas y el Periodo Extraordinario está activo.<br>Cada plan de tu docente aparece aquí. Respóndelo adjuntando tu trabajo antes de la fecha límite.<br>Una vez que el docente lo revise, el formulario se bloquea y puedes eliminar el registro.`,
+  ehist:`<b>📚 Historial Recuperaciones</b><br>Todos los trabajos de recuperación que enviaste en periodos anteriores, con su estado de revisión.`,
+  afec:`<b>📅 Control de Fechas</b><br><b>Rangos por Periodo:</b> define cuándo puede cada periodo recibir notas. Si no se configura, el periodo permanece siempre abierto.<br><b>Periodo Ext.:</b> a qué periodo van las notas de recuperación.<br><b>Rango Global:</b> aplica cuando un periodo no tiene rango propio.<br>Al cerrar el rango de un periodo, el Periodo Extraordinario se activa automáticamente si tiene fechas.`,
+  anot:`<b>📊 Gestión de Notas (Admin)</b><br>Ve y edita notas de cualquier salón y periodo sin restricción de fechas.`,
+  aaud:`<b>🔍 Auditoría</b><br>Registro automático de acciones sensibles: intentos de eliminar talleres sin revisar, cambios críticos. Solo visible para el administrador.`,
+  dash:`<b>🏠 Panel General</b><br>Resumen estadístico del colegio: total de estudiantes, profesores, salones y materias.<br>Muestra el ranking de los mejores estudiantes por salón y las últimas acciones registradas en auditoría.<br>Usa el menú lateral para navegar a cualquier sección del sistema.`,
+  asal:`<b>🏫 Salones & Grados</b><br>Crea y gestiona los salones del colegio separados por ciclo (Primaria y Bachillerato).<br>1. Escribe el nombre del salón (ej: 6A), selecciona ciclo y jornada, y haz clic en <b>Agregar</b>.<br>2. Desde cada salón puedes editar sus materias o eliminarlo si no tiene estudiantes activos.`,
+  apri:`<b>🎓 Estudiantes — Primaria</b><br>Gestiona los estudiantes de primaria (1°–5°).<br>Puedes agregar estudiantes uno a uno o hacer <b>Carga Masiva CSV</b>.<br>Edita datos como nombre, T.I., salón y contraseña. Usa el buscador para filtrar por nombre o salón.<br>Al final del año puedes usar <b>Promover Año</b> para avanzar automáticamente a los estudiantes según sus resultados.`,
+  abac:`<b>🎓 Estudiantes — Bachillerato</b><br>Gestiona los estudiantes de bachillerato (6°–11°).<br>Puedes agregar estudiantes uno a uno o hacer <b>Carga Masiva CSV</b>.<br>Edita datos como nombre, T.I., salón y contraseña. Usa el buscador para filtrar por nombre o salón.<br>Al final del año puedes usar <b>Promover Año</b> para avanzar automáticamente a los estudiantes según sus resultados.`,
+  aprf:`<b>👩‍🏫 Profesores</b><br>Crea y administra los docentes del colegio por ciclo (Primaria / Bachillerato).<br>Al crear un profesor asigna sus <b>salones</b> y las <b>materias</b> que imparte en cada salón.<br>Puedes hacer carga masiva desde un archivo CSV. Edita o elimina profesores en cualquier momento.`,
+  amat:`<b>📖 Áreas & Materias</b><br>Define las áreas académicas y las materias que las componen para cada ciclo.<br>Las áreas agrupan materias y determinan si el estudiante aprueba, recupera o pierde el año.<br>Configura también los porcentajes de calificación (Aptitud, Actitud, Responsabilidad) y el año lectivo que aparecerá en los boletines.`,
+  areh:`<b>🔄 Recuperaciones (Admin)</b><br>Vista global de todos los estudiantes en periodo de recuperación.<br>Muestra quién tiene materias pendidas y en qué materias. El docente correspondiente envía el plan de recuperación desde su panel.<br>Al cerrar el periodo puedes archivar todos los registros.`,
+  ablk:`<b>🔒 Usuarios Bloqueados</b><br>Lista de usuarios que han sido bloqueados por intentos fallidos de inicio de sesión.<br>Haz clic en <b>Desbloquear</b> para permitir que el usuario vuelva a ingresar al sistema.`,
+  aexp:`<b>📤 Exportar Datos</b><br>Descarga información del sistema en formato <b>Excel</b> o genera <b>Boletines PDF</b>.<br>• <b>Excel:</b> exporta notas consolidadas, asistencia o datos de estudiantes por salón.<br>• <b>Boletín individual:</b> selecciona un estudiante y descarga su reporte académico.<br>• <b>Boletines por salón:</b> genera todos los boletines de un grupo en un solo clic.`,
+  ahist:`<b>📚 Historial de Estudiantes</b><br>Registro de todos los estudiantes que alguna vez fueron dados de alta en el sistema, incluso los ya eliminados.<br>Puedes buscar por nombre o documento. El historial mantiene el año y salón en que estuvieron matriculados.`,
+  pcom:`<b>📢 Comunicados del Colegio</b><br>
+Aquí aparecen todos los avisos y anuncios activos publicados por el administrador.<br><br>
+Los comunicados se muestran automáticamente al iniciar sesión y también puedes consultarlos aquí en cualquier momento.<br><br>
+Cada comunicado indica su <b>fecha de vigencia</b> — al vencer desaparece automáticamente.`,
+  ecom:`<b>📢 Comunicados del Colegio</b><br>
+Aquí aparecen todos los avisos y anuncios activos que el colegio tiene para ti.<br><br>
+Los comunicados se muestran automáticamente al iniciar sesión y también puedes consultarlos aquí en cualquier momento.<br><br>
+Cada comunicado indica su <b>fecha de vigencia</b> — al vencer desaparece automáticamente.`,
+  acom:`<b>📢 Comunicados</b><br>
+Crea avisos o anuncios que profesores y/o estudiantes verán al iniciar sesión.<br><br>
+<b>Para crear un comunicado:</b><br>
+1. Escribe el <b>título</b> y el <b>mensaje</b>.<br>
+2. Selecciona a quién va dirigido: <b>Todos</b>, solo <b>Profesores</b> o solo <b>Estudiantes</b>.<br>
+3. Elige un <b>color</b> para destacar el tipo de aviso.<br>
+4. Define las fechas de <b>inicio</b> y <b>fin</b> — el comunicado solo se muestra en ese rango.<br>
+5. Haz clic en <b>Publicar</b>.<br><br>
+Los destinatarios verán el comunicado automáticamente en una pantalla de bienvenida al hacer login, y también podrán consultarlo en el menú.<br><br>
+Puedes <b>activar/desactivar</b> o <b>eliminar</b> cualquier comunicado en cualquier momento.`,
+
+  aexc:`<b>✉️ Excusas Recibidas</b><br>Bandeja de excusas enviadas por los estudiantes (horario permitido: 18:00 – 07:00).<br>Haz clic en una excusa para leerla y escribir una <b>respuesta</b> al estudiante.<br>Las excusas respondidas quedan marcadas y el estudiante puede verlas en su módulo.`,
+  avcl:`<b>💻 Clases Virtuales (Admin)</b><br>Vista general de todos los enlaces de clases virtuales publicados por los docentes.<br>Cada tarjeta muestra el salón, la fecha, el docente y el enlace de la reunión (Meet, Zoom, Teams).<br>Los estudiantes ven estos enlaces activos en su sección de Clases Virtuales.`,
+  eprof:`<b>👩‍🏫 Mis Profesores</b><br>Lista de todos los docentes asignados a tu salón con sus materias y datos de contacto.<br>Consulta aquí el nombre y materias de cada profesor para saber a quién dirigirte.`,
+  evir:`<b>💻 Mis Clases Virtuales</b><br>Aquí aparecen los enlaces de reuniones (Meet, Zoom, Teams) que tus docentes han publicado para tu salón.<br>Haz clic en el enlace para unirte a la clase virtual en el horario indicado.`,
+};
 function showHelp(panel){
   const txt=HELP[panel]||'Sin ayuda disponible para esta sección.';
   Swal.fire({title:'❓ Ayuda',html:`<div style="text-align:left;font-size:14px;line-height:1.8">${txt}</div>`,
@@ -3706,7 +3781,7 @@ async function editarComunicado(id,d){ /* implementado en api-layer.js */ }
 async function eliminarComunicado(id){ /* implementado en api-layer.js */ }
 async function cargarTodosComunicados(){ /* implementado en api-layer.js */ }
 
-function pgAExc(){const _eh=DB.excHorario||{};return`<div class="ph"><h2>Excusas Recibidas</h2><p>Horario de envío: ${_eh.ini??18}:00 – ${_eh.fin??7}:00</p><button class="btn xs bg" onclick="showHelp('aexc')" style="margin-top:6px">❓ Ayuda</button></div><div id="aexcB"></div>`;}
+function pgAExc(){return`<div class="ph"><h2>Excusas Recibidas</h2><p>Horario de envío: ${(DB.excHorario?.ini??18)}:00 – ${(DB.excHorario?.fin??7)}:00</p><button class="btn xs bg" onclick="showHelp('aexc')" style="margin-top:6px">❓ Ayuda</button></div><div id="aexcB"></div>`;}
 function initAExc(){
   const el=gi('aexcB');if(!el)return;
   const list=(DB.exc||[]).slice().reverse();
@@ -6061,22 +6136,13 @@ function pgETare(){
 function onFPick(inp){
   if(inp.files[0]) gi('utfn').textContent='📎 '+inp.files[0].name;
 }
-/* Actualiza el dropdown de materias según el profesor seleccionado en Talleres */
 function onProfChangeTaller(){
   const profId=gi('utprof')?.value;
   const matSel=gi('utm');
   if(!matSel) return;
-  if(!profId){
-    matSel.innerHTML='<option value="">Primero elige un profesor</option>';
-    matSel.disabled=true;
-    return;
-  }
+  if(!profId){ matSel.innerHTML='<option value="">Primero elige un profesor</option>'; matSel.disabled=true; return; }
   const mats=getProfMatsSalon(profId,CU.salon);
-  if(!mats.length){
-    matSel.innerHTML='<option value="">Sin materias asignadas</option>';
-    matSel.disabled=true;
-    return;
-  }
+  if(!mats.length){ matSel.innerHTML='<option value="">Sin materias asignadas</option>'; matSel.disabled=true; return; }
   matSel.disabled=false;
   matSel.innerHTML='<option value="">Seleccionar materia...</option>'+mats.map(m=>`<option>${m}</option>`).join('');
 }
@@ -6090,7 +6156,8 @@ async function eliminarTallerEst(upId){ /* implementado en api-layer.js */ }
 async function eliminarRecEst(recId){ /* implementado en api-layer.js */ }
 
 
-// CAUSAS ya declarado en bloque bachillerato
+const CAUSAS=['Enfermedad / malestar','Cita médica','Duelo familiar','Problemas de transporte',
+  'Emergencia en el hogar','Diligencia personal','Problema con internet','Otro motivo'];
 function pgEExc(){
   const e=CU;
   const prfsDelSalon=profsInSalon(e.salon);
@@ -7758,23 +7825,32 @@ async function initECuen(){
     const compByPago={};
     comps.forEach(c=>{ compByPago[c.pagoId]=c; });
     const renderComp=(p)=>{
+      // Si el pago ya está pagado/anulado no mostrar nada de comprobante
+      if(p.estado==='pagado'||p.estado==='anulado') return '';
       const c=compByPago[p.id];
-      if(!c) return '';
-      if(c.estado==='aprobado') return `
-        <div style="margin-top:8px;padding:8px 12px;border-radius:8px;background:#dcfce7;border:1.5px solid #86efac;font-size:12px;color:#166534">
-          ✅ <strong>Comprobante aprobado</strong> el ${c.revisadoTs||'—'}</div>`;
-      if(c.estado==='rechazado') return `
-        <div style="margin-top:8px;padding:8px 12px;border-radius:8px;background:#fee2e2;border:1.5px solid #fca5a5;font-size:12px;color:#b91c1c">
-          ❌ <strong>Comprobante rechazado:</strong> ${esc(c.motivoRechazo||'—')}<br>
-          <button onclick="estSubirComprobante('${c.id}')" style="margin-top:6px;padding:5px 12px;font-size:11px;font-weight:700;background:#b91c1c;color:#fff;border:none;border-radius:6px;cursor:pointer">🔄 Volver a subir</button></div>`;
-      if(c.estado==='enviado') return `
-        <div style="margin-top:8px;padding:8px 12px;border-radius:8px;background:#dbeafe;border:1.5px solid #93c5fd;font-size:12px;color:#1e40af">
-          📬 <strong>Comprobante enviado</strong> — En revisión por el financiero.</div>`;
-      if(c.estado==='solicitado') return `
-        <div style="margin-top:8px;padding:8px 12px;border-radius:8px;background:#fef9c3;border:1.5px solid #fde68a;font-size:12px;color:#854d0e">
-          📎 <strong>El financiero solicita tu comprobante de pago.</strong><br>
-          <button onclick="estSubirComprobante('${c.id}')" style="margin-top:6px;padding:5px 14px;font-size:12px;font-weight:700;background:#854d0e;color:#fff;border:none;border-radius:6px;cursor:pointer">📤 Subir comprobante</button></div>`;
-      return '';
+      if(c){
+        if(c.estado==='aprobado') return `
+          <div style="margin-top:8px;padding:8px 12px;border-radius:8px;background:#dcfce7;border:1.5px solid #86efac;font-size:12px;color:#166534">
+            ✅ <strong>Comprobante aprobado</strong> el ${c.revisadoTs||'—'}</div>`;
+        if(c.estado==='rechazado') return `
+          <div style="margin-top:8px;padding:8px 12px;border-radius:8px;background:#fee2e2;border:1.5px solid #fca5a5;font-size:12px;color:#b91c1c">
+            ❌ <strong>Comprobante rechazado:</strong> ${esc(c.motivoRechazo||'—')}<br>
+            <small style="display:block;margin-top:4px;opacity:.8">Debes subir nuevamente tu comprobante corregido.</small>
+            <button onclick="estSubirComprobante('${c.id}',null)" style="margin-top:6px;padding:5px 12px;font-size:11px;font-weight:700;background:#b91c1c;color:#fff;border:none;border-radius:6px;cursor:pointer">🔄 Volver a subir</button></div>`;
+        if(c.estado==='enviado') return `
+          <div style="margin-top:8px;padding:8px 12px;border-radius:8px;background:#dbeafe;border:1.5px solid #93c5fd;font-size:12px;color:#1e40af">
+            📬 <strong>Comprobante enviado</strong> — En revisión por el financiero.</div>`;
+        if(c.estado==='solicitado') return `
+          <div style="margin-top:8px;padding:8px 12px;border-radius:8px;background:#fef9c3;border:1.5px solid #fde68a;font-size:12px;color:#854d0e">
+            📎 El financiero solicita tu comprobante.<br>
+            <button onclick="estSubirComprobante('${c.id}',null)" style="margin-top:6px;padding:5px 14px;font-size:12px;font-weight:700;background:#854d0e;color:#fff;border:none;border-radius:6px;cursor:pointer">📤 Subir comprobante</button></div>`;
+      }
+      // Sin comprobante — mostrar botón para subir directamente
+      return `
+        <div style="margin-top:8px;padding:8px 12px;border-radius:8px;background:#f8fafc;border:1.5px dashed #94a3b8;font-size:12px;color:#475569">
+          📂 ¿Ya realizaste el pago? Adjunta tu comprobante para que el financiero lo verifique.<br>
+          <button onclick="estSubirComprobante(null,'${p.id}')" style="margin-top:6px;padding:5px 14px;font-size:12px;font-weight:700;background:#2563eb;color:#fff;border:none;border-radius:6px;cursor:pointer">📤 Subir comprobante</button>
+        </div>`;
     };
     el.innerHTML=`
       <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:20px">
@@ -7834,14 +7910,18 @@ async function initECuen(){
   }
 }
 
-async function estSubirComprobante(compId){
+async function estSubirComprobante(compId, pagoId){
+  // compId: ID de comprobante existente (para re-enviar)
+  // pagoId: ID del pago (para crear comprobante nuevo)
   const {value:file}=await Swal.fire({
-    title:'📤 Subir comprobante',
-    html:`<p style="font-size:13px;color:#64748b;margin-bottom:12px">Sube la foto o PDF de tu comprobante de transferencia.</p>
+    title:'📤 Subir comprobante de pago',
+    html:`<p style="font-size:13px;color:#64748b;margin-bottom:12px">
+      Adjunta la foto o PDF de tu transferencia/recibo de pago.<br>
+      <small style="color:#94a3b8">Máximo 5 MB · JPG, PNG o PDF</small></p>
       <input type="file" id="swalCompFile" accept="image/*,application/pdf"
         style="width:100%;padding:8px;border:1.5px dashed #94a3b8;border-radius:8px;font-size:13px;cursor:pointer">`,
     showCancelButton:true, confirmButtonText:'📤 Enviar', cancelButtonText:'Cancelar',
-    confirmButtonColor:'#854d0e',
+    confirmButtonColor:'#2563eb',
     preConfirm:()=>{
       const f=document.getElementById('swalCompFile')?.files?.[0];
       if(!f){ Swal.showValidationMessage('Selecciona un archivo'); return false; }
@@ -7850,14 +7930,22 @@ async function estSubirComprobante(compId){
     }
   });
   if(!file) return;
-  const dataUrl=await new Promise((res,rej)=>{
-    const r=new FileReader(); r.onload=()=>res(r.result); r.onerror=()=>rej(new Error('Error leyendo archivo'));
-    r.readAsDataURL(file);
-  });
   try{
-    await apiFetch(`/api/fin/comprobantes/${compId}/enviar`,{
-      method:'PUT', body:JSON.stringify({dataUrl,fileType:file.type,fileName:file.name})
+    const dataUrl=await new Promise((res,rej)=>{
+      const r=new FileReader(); r.onload=()=>res(r.result); r.onerror=()=>rej(new Error('Error leyendo archivo'));
+      r.readAsDataURL(file);
     });
+    if(compId){
+      // Re-enviar comprobante existente (rechazado o solicitado)
+      await apiFetch(`/api/fin/comprobantes/${compId}/enviar`,{
+        method:'PUT', body:JSON.stringify({dataUrl,fileType:file.type,fileName:file.name})
+      });
+    } else {
+      // Crear comprobante nuevo para el pago
+      await apiFetch(`/api/fin/comprobantes/crear`,{
+        method:'POST', body:JSON.stringify({pagoId,dataUrl,fileType:file.type,fileName:file.name,estId:CU.id})
+      });
+    }
     sw('success','✅ Comprobante enviado. El financiero lo revisará pronto.','',2500);
     initECuen();
   }catch(e){ sw('error','Error al enviar: '+e.message); }
@@ -7949,9 +8037,7 @@ async function estSubirComprobante(compId){
    se recomienda subir los archivos a un storage separado
    (Firebase Storage, S3, Cloudinary) y guardar solo la URL.
    ============================================================ */
-// DBK, DB, CU, FA, COLEGIOS_PRIM_BACH_LOGIC ya declarados en el bloque de bachillerato — se reutilizan
-// (no se redeclaran para evitar SyntaxError en navegadores)
-// Solo se redefinen las funciones de UI de primaria a continuación.
+// DBK, DB, FA, COLEGIOS_PRIM_BACH_LOGIC: ya declarados en bloque 1 — se comparten
 function isBachLogic(ciclo){
   if(ciclo==='bachillerato') return true;
   return ciclo==='primaria' && COLEGIOS_PRIM_BACH_LOGIC.includes(CU?.colegioId||'');
@@ -8538,14 +8624,14 @@ function notasOk(per){
   const dr=DB.dr||{};const{s,e}=dr;if(!s||!e) return true;
   return t>=s&&t<=e;
 }
-/* Excusas window: configurable por admin en DB.excHorario = {ini:HH, fin:HH} */
+/* Excusas window: configurable por admin en DB.excHorario={ini,fin} */
 function excusasOk(){
   const cfg=DB.excHorario||{};
   const ini=parseInt(cfg.ini??18,10);
   const fin=parseInt(cfg.fin??7,10);
   const h=new Date().getHours();
-  if(ini>fin) return h>=ini||h<fin;   // rango cruza medianoche (ej 18–07)
-  return h>=ini&&h<fin;               // rango dentro del mismo día
+  if(ini>fin) return h>=ini||h<fin;
+  return h>=ini&&h<fin;
 }
 function ebySalon(salon){
   return DB.ests.filter(e=>e.salon===salon).sort((a,b)=>a.nombre.localeCompare(b.nombre,'es'));
@@ -8617,7 +8703,7 @@ function esc(str){
     .replace(/"/g,'&quot;').replace(/'/g,'&#39;').replace(/`/g,'&#96;');
 }
 /* Hash de contraseña con sal estática de instancia — migración transparente */
-const SALT='EduSistema_v5_2026';
+// SALT ya declarado en bloque 1
 async function hashPwd(raw){
   if(!raw) return '';
   /* Ya hasheado (64 hex chars) → retornar sin cambio */
@@ -8649,8 +8735,9 @@ async function migratePasswords(){
 }
 
 /* ---- Sesión con inactividad ---- */
-let _sessionTimer=null;
-const SESSION_TIMEOUT=20*60*1000; /* 20 minutos */
+// _sessionTimer ya declarado en bloque 1
+// SESSION_TIMEOUT ya declarado en bloque 1
+ /* 20 minutos */
 function resetSessionTimer(){
   clearTimeout(_sessionTimer);
   if(!CU) return;
@@ -8667,14 +8754,7 @@ function resetSessionTimer(){
 ['click','keydown','mousemove','touchstart'].forEach(ev=>
   document.addEventListener(ev,()=>{if(CU)resetSessionTimer();},{passive:true}));
 /* ── 1. AGREGAR EN ROLE_MAP (reemplaza la línea de ROLE_MAP completa) ── */
-const ROLE_MAP={
-  superadmin:new Set(['sadash','sacolegios','saestadisticas','saauditoria','samantenimiento','sasug','sacom','safin']),
-  finAdmin:  new Set(['findash','finpagos','finconceptos','finmorosos','fincom','finbloqueos','fincomprobantes']),
-  finUser:   new Set(['findash','finpagos','finmorosos']),
-  admin:new Set(['dash','asal','apri','abac','aprf','amat','anot','areh','afec','ablk','aaud','aexp','aexc','avcl','ahist','asug','acom','ahor']),
-  profe:new Set(['ph','pnot','past','pvir','ptar','prec','phist','psug','pcom']),
-  est:new Set(['eb','east','etare','eexc','eprof','evir','ereh','ehist','esug','eicfes','ecom','ecuen'])
-};
+// ROLE_MAP ya declarado en bloque 1
 /* ── 2. REEMPLAZA canAccess ── */
 function canAccess(pid){
   if(!CU) return false;
@@ -8713,22 +8793,7 @@ function logAuditAnon(usuario,msg){ /* implementado en api-layer.js */ }
 /* ============================================================
    BOOT & NAVIGATION
 ============================================================ */
-const PL={
-  sadash:'Panel Global', sacolegios:'Colegios & Admins', saplan:'Plan de Estudios',
-  sacom:'Comunicados Globales', safin:'Módulo Financiero',
-  findash:'Panel Financiero', finpagos:'Pagos & Cobros', finconceptos:'Conceptos de Cobro',
-  finmorosos:'Reporte de Morosos', fincom:'Comunicados', finbloqueos:'Bloqueos', fincomprobantes:'Comprobantes de Pago',
-  saestadisticas:'Estadísticas Globales', saauditoria:'Auditoría Global',
-  samantenimiento:'Mantenimiento', sasug:'Sugerencias Recibidas',
-  dash:'Panel General',asal:'Salones & Grados',apri:'Primaria (1°-5°)',abac:'Bachillerato (6°-11°)',
-  aprf:'Profesores',ahor:'Horarios',amat:'Materias & Periodos',anot:'Gestión de Notas',areh:'Recuperaciones',
-  afec:'Control de Fechas',ablk:'Usuarios Bloqueados',aaud:'Auditoría',aexp:'Exportar',ahist:'Historial Estudiantes',
-  aexc:'Excusas (Admin)',avcl:'Clases Virtuales (Admin)',acom:'Comunicados',pcom:'Comunicados',ecom:'Comunicados',asug:'Sugerencias',
-  ph:'Mi Panel',pnot:'Ingresar Notas',past:'Asistencias',pvir:'Clases Virtuales',ptar:'Tareas Recibidas',prec:'Recuperaciones',phist:'Historial Recuperaciones',psug:'Sugerencias',
-  eb:'Mi Boletín',east:'Mi Asistencia',etare:'Tareas & Talleres',
-  eexc:'Excusas',eprof:'Mis Profesores',ereh:'Mi Recuperación',evir:'Mis Clases Virtuales',
-  ehist:'Historial Recuperaciones',esug:'Sugerencias',ecuen:'Mi Cuenta'
-};
+// PL ya declarado en bloque 1
 
 
 /* ============================================================
@@ -10470,7 +10535,7 @@ async function delPer(p){
 /* ============================================================
    ADMIN — GESTIÓN DE NOTAS (tripartita)
 ============================================================ */
-// _anE ya declarado
+// _anE ya declarado en bloque 1
 function pgANot(){
   const sO=DB.sals.map(s=>`<option value="${s.nombre}">${s.nombre}</option>`).join('');
   const pO=DB.pers.map(p=>`<option value="${p}">${p}</option>`).join('');
@@ -10910,7 +10975,7 @@ function pgAFec(){
       </div>
     </div>`:''}
   </div>
-  <div class="card" style="border:2px solid #bee3f8">
+  <div class="card" style="border:2px solid #bee3f8;margin-top:16px">
     <div class="chd"><span class="cti">⏰ Horario de Excusas</span></div>
     <div class="al alb" style="margin-bottom:14px;font-size:12px">
       Define el rango horario en que los estudiantes pueden enviar excusas.<br>
@@ -10932,7 +10997,7 @@ function pgAFec(){
       </div>
     </div>
     <div style="margin-top:10px;font-size:12px;color:var(--sl3)">
-      💡 Si el horario cruza medianoche (ej: inicio 18, fin 7) el sistema lo detecta automáticamente.
+      💡 Si el rango cruza medianoche (ej: inicio 18, fin 7) el sistema lo detecta automáticamente.
     </div>
   </div>`;
 }
@@ -10959,57 +11024,7 @@ function extExpirado(){
 /* ============================================================
    SISTEMA DE AYUDA CONTEXTUAL
 ============================================================ */
-const HELP={
-  ph:`<b>📊 Panel Principal</b><br>Resumen de tus salones, materias y estado del periodo activo. Usa el menú lateral para navegar a cada sección.`,
-  pnot:`<b>📝 Ingresar Notas</b><br>1. Selecciona el <b>Salón</b> y el <b>Periodo</b>.<br>2. Haz clic en <b>Cargar</b>.<br>3. Ingresa: <b>Aptitud (60%)</b>, <b>Actitud (20%)</b> y <b>Responsabilidad (20%)</b>.<br>La definitiva se calcula automáticamente.<br>⚠️ Solo puedes ingresar notas durante el rango de fechas configurado para ese periodo.`,
-  past:`<b>✅ Pasar Asistencia</b><br>Selecciona el salón y la fecha, marca ✓ a los presentes y ✗ a los ausentes. Guarda al terminar.`,
-  pvir:`<b>💻 Clases Virtuales</b><br>Publica enlaces de reuniones (Meet, Zoom, Teams) para tus salones. Los estudiantes ven el enlace activo en su sección.`,
-  ptar:`<b>📂 Tareas Recibidas</b><br>Archivos que los estudiantes te enviaron. Ábrelos y márcalos como <b>✓ Revisado</b>. Solo puedes eliminar los ya revisados; los intentos de eliminar sin revisar quedan en Auditoría.`,
-  prec:`<b>🔄 Recuperaciones</b><br>Activo durante el Periodo Extraordinario.<br>1. Envía un Plan de Recuperación al salón o individual.<br>2. Los estudiantes responden antes de la fecha límite.<br>3. Revisa sus respuestas aquí y márcalas como revisadas.<br>Puedes exportar el historial de planes en Excel.`,
-  phist:`<b>📚 Historial Recuperaciones</b><br>Recuperaciones de periodos anteriores. Usa el buscador para filtrar por nombre de archivo, estudiante o materia. Puedes abrir cualquier archivo archivado.`,
-  eb:`<b>📋 Mi Boletín</b><br>Tus notas de todos los periodos y materias. Descárgalo en PDF con el botón correspondiente.`,
-  east:`<b>📆 Mi Asistencia</b><br>Historial de asistencia: días presentes, ausentes y con excusa presentada.`,
-  etare:`<b>📎 Tareas & Talleres</b><br>1. Selecciona materia, periodo y docente.<br>2. Escribe una descripción breve.<br>3. Adjunta el archivo (PDF, Word, Excel — máx 5 MB) y haz clic en Subir.<br>En <em>Mis Archivos Enviados</em> verás si el docente ya lo revisó. Puedes eliminar los revisados.`,
-  eexc:`<b>✉️ Excusas</b><br>Envía una excusa cuando faltaste. Solo en horario permitido (6:00 PM – 7:00 AM). Selecciona el motivo y el docente destinatario.`,
-  ereh:`<b>🔄 Mi Recuperación</b><br>Disponible cuando tienes 1–2 materias perdidas y el Periodo Extraordinario está activo.<br>Cada plan de tu docente aparece aquí. Respóndelo adjuntando tu trabajo antes de la fecha límite.<br>Una vez que el docente lo revise, el formulario se bloquea y puedes eliminar el registro.`,
-  ehist:`<b>📚 Historial Recuperaciones</b><br>Todos los trabajos de recuperación que enviaste en periodos anteriores, con su estado de revisión.`,
-  afec:`<b>📅 Control de Fechas</b><br><b>Rangos por Periodo:</b> define cuándo puede cada periodo recibir notas. Si no se configura, el periodo permanece siempre abierto.<br><b>Periodo Ext.:</b> a qué periodo van las notas de recuperación.<br><b>Rango Global:</b> aplica cuando un periodo no tiene rango propio.<br>Al cerrar el rango de un periodo, el Periodo Extraordinario se activa automáticamente si tiene fechas.`,
-  anot:`<b>📊 Gestión de Notas (Admin)</b><br>Ve y edita notas de cualquier salón y periodo sin restricción de fechas.`,
-  aaud:`<b>🔍 Auditoría</b><br>Registro automático de acciones sensibles: intentos de eliminar talleres sin revisar, cambios críticos. Solo visible para el administrador.`,
-  dash:`<b>🏠 Panel General</b><br>Resumen estadístico del colegio: total de estudiantes, profesores, salones y materias.<br>Muestra el ranking de los mejores estudiantes por salón y las últimas acciones registradas en auditoría.<br>Usa el menú lateral para navegar a cualquier sección del sistema.`,
-  asal:`<b>🏫 Salones & Grados</b><br>Crea y gestiona los salones del colegio separados por ciclo (Primaria y Bachillerato).<br>1. Escribe el nombre del salón (ej: 6A), selecciona ciclo y jornada, y haz clic en <b>Agregar</b>.<br>2. Desde cada salón puedes editar sus materias o eliminarlo si no tiene estudiantes activos.`,
-  apri:`<b>🎓 Estudiantes — Primaria</b><br>Gestiona los estudiantes de primaria (1°–5°).<br>Puedes agregar estudiantes uno a uno o hacer <b>Carga Masiva CSV</b>.<br>Edita datos como nombre, T.I., salón y contraseña. Usa el buscador para filtrar por nombre o salón.<br>Al final del año puedes usar <b>Promover Año</b> para avanzar automáticamente a los estudiantes según sus resultados.`,
-  abac:`<b>🎓 Estudiantes — Bachillerato</b><br>Gestiona los estudiantes de bachillerato (6°–11°).<br>Puedes agregar estudiantes uno a uno o hacer <b>Carga Masiva CSV</b>.<br>Edita datos como nombre, T.I., salón y contraseña. Usa el buscador para filtrar por nombre o salón.<br>Al final del año puedes usar <b>Promover Año</b> para avanzar automáticamente a los estudiantes según sus resultados.`,
-  aprf:`<b>👩‍🏫 Profesores</b><br>Crea y administra los docentes del colegio por ciclo (Primaria / Bachillerato).<br>Al crear un profesor asigna sus <b>salones</b> y las <b>materias</b> que imparte en cada salón.<br>Puedes hacer carga masiva desde un archivo CSV. Edita o elimina profesores en cualquier momento.`,
-  amat:`<b>📖 Áreas & Materias</b><br>Define las áreas académicas y las materias que las componen para cada ciclo.<br>Las áreas agrupan materias y determinan si el estudiante aprueba, recupera o pierde el año.<br>Configura también los porcentajes de calificación (Aptitud, Actitud, Responsabilidad) y el año lectivo que aparecerá en los boletines.`,
-  areh:`<b>🔄 Recuperaciones (Admin)</b><br>Vista global de todos los estudiantes en periodo de recuperación.<br>Muestra quién tiene materias pendidas y en qué materias. El docente correspondiente envía el plan de recuperación desde su panel.<br>Al cerrar el periodo puedes archivar todos los registros.`,
-  ablk:`<b>🔒 Usuarios Bloqueados</b><br>Lista de usuarios que han sido bloqueados por intentos fallidos de inicio de sesión.<br>Haz clic en <b>Desbloquear</b> para permitir que el usuario vuelva a ingresar al sistema.`,
-  aexp:`<b>📤 Exportar Datos</b><br>Descarga información del sistema en formato <b>Excel</b> o genera <b>Boletines PDF</b>.<br>• <b>Excel:</b> exporta notas consolidadas, asistencia o datos de estudiantes por salón.<br>• <b>Boletín individual:</b> selecciona un estudiante y descarga su reporte académico.<br>• <b>Boletines por salón:</b> genera todos los boletines de un grupo en un solo clic.`,
-  ahist:`<b>📚 Historial de Estudiantes</b><br>Registro de todos los estudiantes que alguna vez fueron dados de alta en el sistema, incluso los ya eliminados.<br>Puedes buscar por nombre o documento. El historial mantiene el año y salón en que estuvieron matriculados.`,
-  pcom:`<b>📢 Comunicados del Colegio</b><br>
-Aquí aparecen todos los avisos y anuncios activos publicados por el administrador.<br><br>
-Los comunicados se muestran automáticamente al iniciar sesión y también puedes consultarlos aquí en cualquier momento.<br><br>
-Cada comunicado indica su <b>fecha de vigencia</b> — al vencer desaparece automáticamente.`,
-  ecom:`<b>📢 Comunicados del Colegio</b><br>
-Aquí aparecen todos los avisos y anuncios activos que el colegio tiene para ti.<br><br>
-Los comunicados se muestran automáticamente al iniciar sesión y también puedes consultarlos aquí en cualquier momento.<br><br>
-Cada comunicado indica su <b>fecha de vigencia</b> — al vencer desaparece automáticamente.`,
-  acom:`<b>📢 Comunicados</b><br>
-Crea avisos o anuncios que profesores y/o estudiantes verán al iniciar sesión.<br><br>
-<b>Para crear un comunicado:</b><br>
-1. Escribe el <b>título</b> y el <b>mensaje</b>.<br>
-2. Selecciona a quién va dirigido: <b>Todos</b>, solo <b>Profesores</b> o solo <b>Estudiantes</b>.<br>
-3. Elige un <b>color</b> para destacar el tipo de aviso.<br>
-4. Define las fechas de <b>inicio</b> y <b>fin</b> — el comunicado solo se muestra en ese rango.<br>
-5. Haz clic en <b>Publicar</b>.<br><br>
-Los destinatarios verán el comunicado automáticamente en una pantalla de bienvenida al hacer login, y también podrán consultarlo en el menú.<br><br>
-Puedes <b>activar/desactivar</b> o <b>eliminar</b> cualquier comunicado en cualquier momento.`,
-
-  aexc:`<b>✉️ Excusas Recibidas</b><br>Bandeja de excusas enviadas por los estudiantes (horario permitido: 18:00 – 07:00).<br>Haz clic en una excusa para leerla y escribir una <b>respuesta</b> al estudiante.<br>Las excusas respondidas quedan marcadas y el estudiante puede verlas en su módulo.`,
-  avcl:`<b>💻 Clases Virtuales (Admin)</b><br>Vista general de todos los enlaces de clases virtuales publicados por los docentes.<br>Cada tarjeta muestra el salón, la fecha, el docente y el enlace de la reunión (Meet, Zoom, Teams).<br>Los estudiantes ven estos enlaces activos en su sección de Clases Virtuales.`,
-  eprof:`<b>👩‍🏫 Mis Profesores</b><br>Lista de todos los docentes asignados a tu salón con sus materias y datos de contacto.<br>Consulta aquí el nombre y materias de cada profesor para saber a quién dirigirte.`,
-  evir:`<b>💻 Mis Clases Virtuales</b><br>Aquí aparecen los enlaces de reuniones (Meet, Zoom, Teams) que tus docentes han publicado para tu salón.<br>Haz clic en el enlace para unirte a la clase virtual en el horario indicado.`,
-};
+// HELP ya declarado en bloque 1
 function showHelp(panel){
   const txt=HELP[panel]||'Sin ayuda disponible para esta sección.';
   Swal.fire({title:'❓ Ayuda',html:`<div style="text-align:left;font-size:14px;line-height:1.8">${txt}</div>`,
@@ -11466,7 +11481,7 @@ function verHistAcademico(eid){
     showCloseButton:true
   });
 }
-// _histSnap ya declarado
+// _histSnap ya declarado en bloque 1
 function _dlHistBol(eid,perFilter){
   const anno=gi('haAnno')?.value||String(DB.anoActual||new Date().getFullYear());
   const raw=_histSnap[eid];
@@ -11643,7 +11658,7 @@ async function editarComunicado(id,d){ /* implementado en api-layer.js */ }
 async function eliminarComunicado(id){ /* implementado en api-layer.js */ }
 async function cargarTodosComunicados(){ /* implementado en api-layer.js */ }
 
-function pgAExc(){const _eh=DB.excHorario||{};return`<div class="ph"><h2>Excusas Recibidas</h2><p>Horario de envío: ${_eh.ini??18}:00 – ${_eh.fin??7}:00</p><button class="btn xs bg" onclick="showHelp('aexc')" style="margin-top:6px">❓ Ayuda</button></div><div id="aexcB"></div>`;}
+function pgAExc(){return`<div class="ph"><h2>Excusas Recibidas</h2><p>Horario de envío: ${(DB.excHorario?.ini??18)}:00 – ${(DB.excHorario?.fin??7)}:00</p><button class="btn xs bg" onclick="showHelp('aexc')" style="margin-top:6px">❓ Ayuda</button></div><div id="aexcB"></div>`;}
 function initAExc(){
   const el=gi('aexcB');if(!el)return;
   const list=(DB.exc||[]).slice().reverse();
@@ -13998,22 +14013,13 @@ function pgETare(){
 function onFPick(inp){
   if(inp.files[0]) gi('utfn').textContent='📎 '+inp.files[0].name;
 }
-/* Actualiza el dropdown de materias según el profesor seleccionado en Talleres */
 function onProfChangeTaller(){
   const profId=gi('utprof')?.value;
   const matSel=gi('utm');
   if(!matSel) return;
-  if(!profId){
-    matSel.innerHTML='<option value="">Primero elige un profesor</option>';
-    matSel.disabled=true;
-    return;
-  }
+  if(!profId){ matSel.innerHTML='<option value="">Primero elige un profesor</option>'; matSel.disabled=true; return; }
   const mats=getProfMatsSalon(profId,CU.salon);
-  if(!mats.length){
-    matSel.innerHTML='<option value="">Sin materias asignadas</option>';
-    matSel.disabled=true;
-    return;
-  }
+  if(!mats.length){ matSel.innerHTML='<option value="">Sin materias asignadas</option>'; matSel.disabled=true; return; }
   matSel.disabled=false;
   matSel.innerHTML='<option value="">Seleccionar materia...</option>'+mats.map(m=>`<option>${m}</option>`).join('');
 }
@@ -14027,8 +14033,7 @@ async function eliminarTallerEst(upId){ /* implementado en api-layer.js */ }
 async function eliminarRecEst(recId){ /* implementado en api-layer.js */ }
 
 
-const CAUSAS=['Enfermedad / malestar','Cita médica','Duelo familiar','Problemas de transporte',
-  'Emergencia en el hogar','Diligencia personal','Problema con internet','Otro motivo'];
+// CAUSAS ya declarado en bloque 1
 function pgEExc(){
   const e=CU;
   const prfsDelSalon=profsInSalon(e.salon);
@@ -15249,7 +15254,7 @@ function dlBoletin(estId,perFilter,anno,snapData){
 ============================================================ */
 
 // ─── Base de preguntas ICFES (pruebas colombianas 2023-2025) ────────────────
-// ICFES_PREGUNTAS ya declarado en bloque bachillerato
+// ICFES_PREGUNTAS ya declarado en bloque 1
 
 // ─── Estado del simulacro (en memoria + localStorage) ──────────────────────
 function icfesKey(){ return 'icfes_' + CU.id; }
