@@ -18472,7 +18472,7 @@ async function finVerComprobante(cid){
           im.parentElement.style.cursor=ns>1?'zoom-out':'zoom-in';
         });
       },80);
-    } } else if(fileType==='application/pdf'){
+    } else if(fileType==='application/pdf'){
       // PDF: mostrar con iframe inline
       el.innerHTML=`
         <div style="text-align:center">
