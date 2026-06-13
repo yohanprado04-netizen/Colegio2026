@@ -851,14 +851,14 @@ router.put('/comprobantes/:id/revisar', finAuth, async (req, res) => {
       await Pago.findOneAndUpdate({ id: comp.pagoId, colegioId: req.colegioId },
         { estado: 'pagado', fechaPago: hoy, metodoPago: 'Transferencia / comprobante',
           registradoPor: req.finUser.nombre || req.finUser.email });
-      return res.json({ ok: true, accion: 'aprobado' });
+      return res.json({ ok: true, accion: 'aprobado', pagoId: comp.pagoId });
     }
     if (accion === 'rechazar') {
       if (!motivoRechazo) return res.status(400).json({ error: 'Debes indicar el motivo del rechazo' });
       await Comprobante.findOneAndUpdate({ id: comp.id },
         { estado: 'rechazado', motivoRechazo, revisadoTs: hoy,
           revisadoPor: req.finUser.nombre || req.finUser.email, dataUrl: '' });
-      return res.json({ ok: true, accion: 'rechazado' });
+      return res.json({ ok: true, accion: 'rechazado', pagoId: comp.pagoId });
     }
     res.status(400).json({ error: 'Acción inválida' });
   } catch (e) { res.status(500).json({ error: e.message }); }

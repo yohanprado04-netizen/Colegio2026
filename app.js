@@ -6119,7 +6119,18 @@ function pgETare(){
       </select></div>
       <div class="fld"><label>Materia</label><select id="utm" disabled><option value="">Primero elige un profesor</option></select></div>
       <div class="fld"><label>Periodo</label><select id="utp"><option value="">Seleccionar</option>
-        ${DB.pers.map(p=>`<option>${p}</option>`).join('')}</select></div>
+        ${(()=>{
+          const hoy=today();
+          return DB.pers.filter(p=>{
+            // Periodo abierto: tiene rango propio dentro de fecha, o rango global activo
+            const dp=DB.drPer?.[p];
+            if(dp?.s&&dp?.e) return hoy>=dp.s&&hoy<=dp.e;
+            // Sin rango propio → usar rango global
+            const dr=DB.dr||{};
+            if(dr.s&&dr.e) return hoy>=dr.s&&hoy<=dr.e;
+            return true; // sin ningún rango configurado → todos abiertos
+          }).map(p=>`<option>${p}</option>`).join('');
+        })()}</select></div>
     </div>
     <div class="fld"><label>Título / Descripción</label><input id="utd" placeholder="Taller unidad 3 — Descripción breve..."></div>
     <div class="uzone" onclick="gi('utf').click()">
@@ -14016,7 +14027,18 @@ function pgETare(){
       </select></div>
       <div class="fld"><label>Materia</label><select id="utm" disabled><option value="">Primero elige un profesor</option></select></div>
       <div class="fld"><label>Periodo</label><select id="utp"><option value="">Seleccionar</option>
-        ${DB.pers.map(p=>`<option>${p}</option>`).join('')}</select></div>
+        ${(()=>{
+          const hoy=today();
+          return DB.pers.filter(p=>{
+            // Periodo abierto: tiene rango propio dentro de fecha, o rango global activo
+            const dp=DB.drPer?.[p];
+            if(dp?.s&&dp?.e) return hoy>=dp.s&&hoy<=dp.e;
+            // Sin rango propio → usar rango global
+            const dr=DB.dr||{};
+            if(dr.s&&dr.e) return hoy>=dr.s&&hoy<=dr.e;
+            return true; // sin ningún rango configurado → todos abiertos
+          }).map(p=>`<option>${p}</option>`).join('');
+        })()}</select></div>
     </div>
     <div class="fld"><label>Título / Descripción</label><input id="utd" placeholder="Taller unidad 3 — Descripción breve..."></div>
     <div class="uzone" onclick="gi('utf').click()">
@@ -18146,12 +18168,12 @@ async function finLoadPagos(){
       };
       el.innerHTML=`<div class="tw"><table>
         <thead><tr><th>Estudiante</th><th>Salón</th><th>Concepto</th><th>Valor</th><th>Estado</th><th>Fecha</th>${CU.role==='finAdmin'?'<th></th>':''}</tr></thead>
-        <tbody>${pagos.map(p=>`<tr>
+        <tbody>${pagos.map(p=>`<tr data-pago-id="${p.id}">
           <td style="font-weight:700">${esc(p.estNombre)}</td>
           <td>${esc(p.salon||'—')}</td>
           <td style="font-size:12px">${esc(p.conceptoNombre)}</td>
           <td style="font-weight:700">${fmt(p.valorFinal)}</td>
-          <td>${stSelect(p)}</td>
+          <td class="pago-estado-cell">${stSelect(p)}</td>
           <td style="font-size:11px;color:var(--sl3)">${p.fechaPago||p.fechaVence||'—'}</td>
           ${CU.role==='finAdmin'?`<td><div style="display:flex;gap:5px">
             ${p.estado!=='pagado'?`<button onclick="finEditPago('${p.id}','${esc(p.estado)}')" style="padding:4px 9px;font-size:11px;background:#e0e7ff;color:#3730a3;border:1.5px solid #a5b4fc;border-radius:6px;cursor:pointer" title="Editar">✏️</button>`:'<span style="width:30px;display:inline-block"></span>'}
@@ -18415,18 +18437,42 @@ async function finVerComprobante(cid){
     const {dataUrl,fileType}=await apiFin(`/comprobantes/${cid}/archivo`);
     if(!dataUrl){ el.innerHTML='<p style="color:#b91c1c;text-align:center">Archivo no disponible.</p>'; return; }
     if(fileType?.startsWith('image')){
-      // Imagen: mostrar directamente
+      // Imagen: zoom interactivo
+      const uid='zimg_'+Date.now();
       el.innerHTML=`
-        <div style="text-align:center">
-          <img src="${dataUrl}" style="max-width:100%;max-height:75vh;border-radius:10px;object-fit:contain;box-shadow:0 4px 20px rgba(0,0,0,.15)">
-          <div style="margin-top:10px">
-            <a href="${dataUrl}" download="comprobante" target="_blank"
-              style="font-size:12px;color:#2563eb;text-decoration:none;font-weight:600">
-              📥 Descargar imagen
-            </a>
+        <div style="text-align:center;user-select:none">
+          <div id="${uid}_wrap" style="overflow:hidden;border-radius:10px;background:#0a0a0a;position:relative;cursor:zoom-in;max-height:70vh;display:flex;align-items:center;justify-content:center">
+            <img id="${uid}" src="${dataUrl}"
+              style="max-width:100%;max-height:70vh;object-fit:contain;transition:transform .18s;transform-origin:center center;display:block">
           </div>
+          <div style="margin-top:8px;display:flex;align-items:center;justify-content:center;gap:12px">
+            <button onclick="(()=>{const i=gi('${uid}');const s=parseFloat(i.dataset.z||'1');const ns=Math.min(s+.5,4);i.style.transform='scale('+ns+')';i.dataset.z=ns;i.parentElement.style.cursor=ns>1?'zoom-out':'zoom-in';})()" style="padding:4px 12px;font-size:13px;border:1.5px solid #cbd5e1;border-radius:6px;background:#f8fafc;cursor:pointer;font-weight:800">🔍+</button>
+            <button onclick="(()=>{const i=gi('${uid}');i.style.transform='scale(1)';i.dataset.z='1';i.parentElement.style.cursor='zoom-in';})()" style="padding:4px 12px;font-size:13px;border:1.5px solid #cbd5e1;border-radius:6px;background:#f8fafc;cursor:pointer;font-weight:700">↩</button>
+            <button onclick="(()=>{const i=gi('${uid}');const s=parseFloat(i.dataset.z||'1');const ns=Math.max(s-.5,.5);i.style.transform='scale('+ns+')';i.dataset.z=ns;i.parentElement.style.cursor=ns>1?'zoom-out':'zoom-in';})()" style="padding:4px 12px;font-size:13px;border:1.5px solid #cbd5e1;border-radius:6px;background:#f8fafc;cursor:pointer;font-weight:800">🔍−</button>
+            <a href="${dataUrl}" download="comprobante" target="_blank" style="font-size:12px;color:#2563eb;font-weight:600;text-decoration:none">📥 Descargar</a>
+          </div>
+          <p style="font-size:11px;color:#94a3b8;margin-top:4px;margin-bottom:0">Scroll o botones para zoom · Click en imagen para zoom x2</p>
         </div>`;
-    } else if(fileType==='application/pdf'){
+      setTimeout(()=>{
+        const im=document.getElementById(uid);
+        if(!im) return;
+        im.parentElement.addEventListener('wheel',ev=>{
+          ev.preventDefault();
+          const s=parseFloat(im.dataset.z||'1');
+          const ns=Math.min(Math.max(s+(ev.deltaY<0?.3:-.3),.5),4);
+          im.style.transform='scale('+ns+')';
+          im.dataset.z=String(ns);
+          im.parentElement.style.cursor=ns>1?'zoom-out':'zoom-in';
+        },{passive:false});
+        im.addEventListener('click',()=>{
+          const s=parseFloat(im.dataset.z||'1');
+          const ns=s>1?1:2;
+          im.style.transform='scale('+ns+')';
+          im.dataset.z=String(ns);
+          im.parentElement.style.cursor=ns>1?'zoom-out':'zoom-in';
+        });
+      },80);
+    } } else if(fileType==='application/pdf'){
       // PDF: mostrar con iframe inline
       el.innerHTML=`
         <div style="text-align:center">
@@ -18462,8 +18508,10 @@ async function finAprobarComp(cid){
   });
   if(!r.isConfirmed) return;
   try{
-    await apiFin(`/comprobantes/${cid}/revisar`,{method:'PUT',body:JSON.stringify({accion:'aprobar'})});
+    const res=await apiFin(`/comprobantes/${cid}/revisar`,{method:'PUT',body:JSON.stringify({accion:'aprobar'})});
     sw('success','✅ Comprobante aprobado. Pago confirmado.','',2000);
+    // Actualizar fila en la tabla de pagos si está visible
+    if(res.pagoId) _actualizarFilaPago(res.pagoId,'pagado');
     initFinComprobantes();
     actualizarBadgeComprobantes();
   }catch(e){ sw('error','Error: '+e.message); }
@@ -18482,11 +18530,39 @@ async function finRechazarComp(cid){
   });
   if(!r.isConfirmed) return;
   try{
-    await apiFin(`/comprobantes/${cid}/revisar`,{method:'PUT',body:JSON.stringify({accion:'rechazar',motivoRechazo:r.value})});
+    const res=await apiFin(`/comprobantes/${cid}/revisar`,{method:'PUT',body:JSON.stringify({accion:'rechazar',motivoRechazo:r.value})});
     sw('success','Comprobante rechazado. El estudiante fue notificado.','',2200);
     initFinComprobantes();
     actualizarBadgeComprobantes();
   }catch(e){ sw('error','Error: '+e.message); }
+}
+
+// Actualiza una fila específica en la tabla de pagos sin recargar todo
+function _actualizarFilaPago(pagoId, nuevoEstado){
+  const row=document.querySelector(`tr[data-pago-id="${pagoId}"]`);
+  if(!row) return;
+  const stCell=row.querySelector('.pago-estado-cell');
+  if(!stCell) return;
+  const esCfg={
+    pagado:  {lbl:'✅ pagado',  bg:'#dcfce7',c:'#166534',bd:'#86efac'},
+    pendiente:{lbl:'⏳ pendiente',bg:'#fef9c3',c:'#854d0e',bd:'#fde68a'},
+    vencido: {lbl:'⚠️ vencido', bg:'#fee2e2',c:'#b91c1c',bd:'#fca5a5'},
+    anulado: {lbl:'🚫 anulado', bg:'#f1f5f9',c:'#64748b',bd:'#cbd5e1'},
+  };
+  const cfg=esCfg[nuevoEstado]||esCfg.pendiente;
+  // Mantener el select pero actualizar su valor y colores
+  const sel=stCell.querySelector('select');
+  if(sel){
+    sel.value=nuevoEstado;
+    sel.style.background=cfg.bg;
+    sel.style.color=cfg.c;
+    sel.style.borderColor=cfg.bd;
+    sel.disabled=nuevoEstado==='pagado';
+  }
+  // Deshabilitar botones de acción para pagos ya pagados
+  if(nuevoEstado==='pagado'){
+    row.querySelectorAll('button').forEach(b=>{b.disabled=true;b.style.opacity='.4';b.style.cursor='default';});
+  }
 }
 
 async function actualizarBadgeComprobantes(){
