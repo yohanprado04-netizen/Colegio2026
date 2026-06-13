@@ -84,12 +84,9 @@
    se recomienda subir los archivos a un storage separado
    (Firebase Storage, S3, Cloudinary) y guardar solo la URL.
    ============================================================ */
-const DBK='edusistema_v5'; // Solo usado en modo offline (sin api-layer.js)
-let DB={},CU=null;
-const FA={};
-
-// ── Colegios cuya PRIMARIA usa lógica de bachillerato (múltiples salones + salonMaterias) ──
-const COLEGIOS_PRIM_BACH_LOGIC = ['col_1780002622502'];
+// DBK, DB, CU, FA, COLEGIOS_PRIM_BACH_LOGIC ya declarados en el bloque de bachillerato — se reutilizan
+// (no se redeclaran para evitar SyntaxError en navegadores)
+// Solo se redefinen las funciones de UI de primaria a continuación.
 function isBachLogic(ciclo){
   if(ciclo==='bachillerato') return true;
   return ciclo==='primaria' && COLEGIOS_PRIM_BACH_LOGIC.includes(CU?.colegioId||'');
@@ -676,10 +673,14 @@ function notasOk(per){
   const dr=DB.dr||{};const{s,e}=dr;if(!s||!e) return true;
   return t>=s&&t<=e;
 }
-/* Excusas window: open 18:00–07:00 */
+/* Excusas window: configurable por admin en DB.excHorario = {ini:HH, fin:HH} */
 function excusasOk(){
+  const cfg=DB.excHorario||{};
+  const ini=parseInt(cfg.ini??18,10);
+  const fin=parseInt(cfg.fin??7,10);
   const h=new Date().getHours();
-  return h>=18||h<7;
+  if(ini>fin) return h>=ini||h<fin;   // rango cruza medianoche (ej 18–07)
+  return h>=ini&&h<fin;               // rango dentro del mismo día
 }
 function ebySalon(salon){
   return DB.ests.filter(e=>e.salon===salon).sort((a,b)=>a.nombre.localeCompare(b.nombre,'es'));
@@ -751,7 +752,7 @@ function esc(str){
     .replace(/"/g,'&quot;').replace(/'/g,'&#39;').replace(/`/g,'&#96;');
 }
 /* Hash de contraseña con sal estática de instancia — migración transparente */
-const SALT='EduSistema_v5_2026';
+// SALT ya declarado en bloque bachillerato
 async function hashPwd(raw){
   if(!raw) return '';
   /* Ya hasheado (64 hex chars) → retornar sin cambio */
@@ -783,8 +784,8 @@ async function migratePasswords(){
 }
 
 /* ---- Sesión con inactividad ---- */
-let _sessionTimer=null;
-const SESSION_TIMEOUT=20*60*1000; /* 20 minutos */
+// _sessionTimer ya declarado
+// SESSION_TIMEOUT ya declarado en bloque bachillerato
 function resetSessionTimer(){
   clearTimeout(_sessionTimer);
   if(!CU) return;
@@ -801,14 +802,7 @@ function resetSessionTimer(){
 ['click','keydown','mousemove','touchstart'].forEach(ev=>
   document.addEventListener(ev,()=>{if(CU)resetSessionTimer();},{passive:true}));
 /* ── 1. AGREGAR EN ROLE_MAP (reemplaza la línea de ROLE_MAP completa) ── */
-const ROLE_MAP={
-  superadmin:new Set(['sadash','sacolegios','saestadisticas','saauditoria','samantenimiento','sasug','sacom','safin']),
-  finAdmin:  new Set(['findash','finpagos','finconceptos','finmorosos','fincom','finbloqueos','fincomprobantes']),
-  finUser:   new Set(['findash','finpagos','finmorosos']),
-  admin:new Set(['dash','asal','apri','abac','aprf','amat','anot','areh','afec','ablk','aaud','aexp','aexc','avcl','ahist','asug','acom','ahor']),
-  profe:new Set(['ph','pnot','past','pvir','ptar','prec','phist','psug','pcom']),
-  est:new Set(['eb','east','etare','eexc','eprof','evir','ereh','ehist','esug','eicfes','ecom','ecuen'])
-};
+// ROLE_MAP ya declarado
 /* ── 2. REEMPLAZA canAccess ── */
 function canAccess(pid){
   if(!CU) return false;
@@ -847,22 +841,7 @@ function logAuditAnon(usuario,msg){ /* implementado en api-layer.js */ }
 /* ============================================================
    BOOT & NAVIGATION
 ============================================================ */
-const PL={
-  sadash:'Panel Global', sacolegios:'Colegios & Admins', saplan:'Plan de Estudios',
-  sacom:'Comunicados Globales', safin:'Módulo Financiero',
-  findash:'Panel Financiero', finpagos:'Pagos & Cobros', finconceptos:'Conceptos de Cobro',
-  finmorosos:'Reporte de Morosos', fincom:'Comunicados', finbloqueos:'Bloqueos', fincomprobantes:'Comprobantes de Pago',
-  saestadisticas:'Estadísticas Globales', saauditoria:'Auditoría Global',
-  samantenimiento:'Mantenimiento', sasug:'Sugerencias Recibidas',
-  dash:'Panel General',asal:'Salones & Grados',apri:'Primaria (1°-5°)',abac:'Bachillerato (6°-11°)',
-  aprf:'Profesores',ahor:'Horarios',amat:'Materias & Periodos',anot:'Gestión de Notas',areh:'Recuperaciones',
-  afec:'Control de Fechas',ablk:'Usuarios Bloqueados',aaud:'Auditoría',aexp:'Exportar',ahist:'Historial Estudiantes',
-  aexc:'Excusas (Admin)',avcl:'Clases Virtuales (Admin)',acom:'Comunicados',pcom:'Comunicados',ecom:'Comunicados',asug:'Sugerencias',
-  ph:'Mi Panel',pnot:'Ingresar Notas',past:'Asistencias',pvir:'Clases Virtuales',ptar:'Tareas Recibidas',prec:'Recuperaciones',phist:'Historial Recuperaciones',psug:'Sugerencias',
-  eb:'Mi Boletín',east:'Mi Asistencia',etare:'Tareas & Talleres',
-  eexc:'Excusas',eprof:'Mis Profesores',ereh:'Mi Recuperación',evir:'Mis Clases Virtuales',
-  ehist:'Historial Recuperaciones',esug:'Sugerencias',ecuen:'Mi Cuenta'
-};
+// PL ya declarado
 
 
 /* ============================================================
@@ -3043,6 +3022,31 @@ function pgAFec(){
         <div style="font-size:16px;font-weight:800;color:${DB.ext.on?'var(--grn)':'var(--sl2)'}">${DB.ext.on?'🟢 Activo':'⚫ Inactivo'}</div>
       </div>
     </div>`:''}
+  </div>
+  <div class="card" style="border:2px solid #bee3f8">
+    <div class="chd"><span class="cti">⏰ Horario de Excusas</span></div>
+    <div class="al alb" style="margin-bottom:14px;font-size:12px">
+      Define el rango horario en que los estudiantes pueden enviar excusas.<br>
+      Actualmente: <strong>${DB.excHorario?.ini??18}:00 – ${DB.excHorario?.fin??7}:00</strong>
+    </div>
+    <div style="display:flex;align-items:center;gap:20px;flex-wrap:wrap">
+      <div>
+        <label style="font-size:11px;font-weight:800;text-transform:uppercase;color:var(--sl);display:block;margin-bottom:5px">Hora inicio (0–23)</label>
+        <input type="number" id="excHorIni" value="${DB.excHorario?.ini??18}" min="0" max="23"
+          style="width:90px;padding:8px 12px;border:1.5px solid var(--bd);border-radius:var(--r);font-size:15px;font-weight:800;text-align:center">
+      </div>
+      <div>
+        <label style="font-size:11px;font-weight:800;text-transform:uppercase;color:var(--sl);display:block;margin-bottom:5px">Hora fin (0–23)</label>
+        <input type="number" id="excHorFin" value="${DB.excHorario?.fin??7}" min="0" max="23"
+          style="width:90px;padding:8px 12px;border:1.5px solid var(--bd);border-radius:var(--r);font-size:15px;font-weight:800;text-align:center">
+      </div>
+      <div style="padding-top:18px">
+        <button class="btn bn" onclick="saveExcHorario()">💾 Guardar Horario</button>
+      </div>
+    </div>
+    <div style="margin-top:10px;font-size:12px;color:var(--sl3)">
+      💡 Si el horario cruza medianoche (ej: inicio 18, fin 7) el sistema lo detecta automáticamente.
+    </div>
   </div>`;
 }
 /* ── SOBREESCRITA por api-layer.js ── */
@@ -3053,6 +3057,8 @@ async function saveDRPer(key,per){ /* implementado en api-layer.js */ }
 async function saveDR(){ /* implementado en api-layer.js */ }
 /* ── SOBREESCRITA por api-layer.js ── */
 async function saveExt(){ /* implementado en api-layer.js */ }
+/* ── SOBREESCRITA por api-layer.js ── */
+async function saveExcHorario(){ /* implementado en api-layer.js */ }
 /* Archive all current recovery data into history, then wipe active */
 /* ── SOBREESCRITA por api-layer.js ── */
 async function archivarYLimpiarRecuperacion(){ /* implementado en api-layer.js */ }
@@ -3066,57 +3072,7 @@ function extExpirado(){
 /* ============================================================
    SISTEMA DE AYUDA CONTEXTUAL
 ============================================================ */
-const HELP={
-  ph:`<b>📊 Panel Principal</b><br>Resumen de tus salones, materias y estado del periodo activo. Usa el menú lateral para navegar a cada sección.`,
-  pnot:`<b>📝 Ingresar Notas</b><br>1. Selecciona el <b>Salón</b> y el <b>Periodo</b>.<br>2. Haz clic en <b>Cargar</b>.<br>3. Ingresa: <b>Aptitud (60%)</b>, <b>Actitud (20%)</b> y <b>Responsabilidad (20%)</b>.<br>La definitiva se calcula automáticamente.<br>⚠️ Solo puedes ingresar notas durante el rango de fechas configurado para ese periodo.`,
-  past:`<b>✅ Pasar Asistencia</b><br>Selecciona el salón y la fecha, marca ✓ a los presentes y ✗ a los ausentes. Guarda al terminar.`,
-  pvir:`<b>💻 Clases Virtuales</b><br>Publica enlaces de reuniones (Meet, Zoom, Teams) para tus salones. Los estudiantes ven el enlace activo en su sección.`,
-  ptar:`<b>📂 Tareas Recibidas</b><br>Archivos que los estudiantes te enviaron. Ábrelos y márcalos como <b>✓ Revisado</b>. Solo puedes eliminar los ya revisados; los intentos de eliminar sin revisar quedan en Auditoría.`,
-  prec:`<b>🔄 Recuperaciones</b><br>Activo durante el Periodo Extraordinario.<br>1. Envía un Plan de Recuperación al salón o individual.<br>2. Los estudiantes responden antes de la fecha límite.<br>3. Revisa sus respuestas aquí y márcalas como revisadas.<br>Puedes exportar el historial de planes en Excel.`,
-  phist:`<b>📚 Historial Recuperaciones</b><br>Recuperaciones de periodos anteriores. Usa el buscador para filtrar por nombre de archivo, estudiante o materia. Puedes abrir cualquier archivo archivado.`,
-  eb:`<b>📋 Mi Boletín</b><br>Tus notas de todos los periodos y materias. Descárgalo en PDF con el botón correspondiente.`,
-  east:`<b>📆 Mi Asistencia</b><br>Historial de asistencia: días presentes, ausentes y con excusa presentada.`,
-  etare:`<b>📎 Tareas & Talleres</b><br>1. Selecciona materia, periodo y docente.<br>2. Escribe una descripción breve.<br>3. Adjunta el archivo (PDF, Word, Excel — máx 5 MB) y haz clic en Subir.<br>En <em>Mis Archivos Enviados</em> verás si el docente ya lo revisó. Puedes eliminar los revisados.`,
-  eexc:`<b>✉️ Excusas</b><br>Envía una excusa cuando faltaste. Solo en horario permitido (6:00 PM – 7:00 AM). Selecciona el motivo y el docente destinatario.`,
-  ereh:`<b>🔄 Mi Recuperación</b><br>Disponible cuando tienes 1–2 materias perdidas y el Periodo Extraordinario está activo.<br>Cada plan de tu docente aparece aquí. Respóndelo adjuntando tu trabajo antes de la fecha límite.<br>Una vez que el docente lo revise, el formulario se bloquea y puedes eliminar el registro.`,
-  ehist:`<b>📚 Historial Recuperaciones</b><br>Todos los trabajos de recuperación que enviaste en periodos anteriores, con su estado de revisión.`,
-  afec:`<b>📅 Control de Fechas</b><br><b>Rangos por Periodo:</b> define cuándo puede cada periodo recibir notas. Si no se configura, el periodo permanece siempre abierto.<br><b>Periodo Ext.:</b> a qué periodo van las notas de recuperación.<br><b>Rango Global:</b> aplica cuando un periodo no tiene rango propio.<br>Al cerrar el rango de un periodo, el Periodo Extraordinario se activa automáticamente si tiene fechas.`,
-  anot:`<b>📊 Gestión de Notas (Admin)</b><br>Ve y edita notas de cualquier salón y periodo sin restricción de fechas.`,
-  aaud:`<b>🔍 Auditoría</b><br>Registro automático de acciones sensibles: intentos de eliminar talleres sin revisar, cambios críticos. Solo visible para el administrador.`,
-  dash:`<b>🏠 Panel General</b><br>Resumen estadístico del colegio: total de estudiantes, profesores, salones y materias.<br>Muestra el ranking de los mejores estudiantes por salón y las últimas acciones registradas en auditoría.<br>Usa el menú lateral para navegar a cualquier sección del sistema.`,
-  asal:`<b>🏫 Salones & Grados</b><br>Crea y gestiona los salones del colegio separados por ciclo (Primaria y Bachillerato).<br>1. Escribe el nombre del salón (ej: 6A), selecciona ciclo y jornada, y haz clic en <b>Agregar</b>.<br>2. Desde cada salón puedes editar sus materias o eliminarlo si no tiene estudiantes activos.`,
-  apri:`<b>🎓 Estudiantes — Primaria</b><br>Gestiona los estudiantes de primaria (1°–5°).<br>Puedes agregar estudiantes uno a uno o hacer <b>Carga Masiva CSV</b>.<br>Edita datos como nombre, T.I., salón y contraseña. Usa el buscador para filtrar por nombre o salón.<br>Al final del año puedes usar <b>Promover Año</b> para avanzar automáticamente a los estudiantes según sus resultados.`,
-  abac:`<b>🎓 Estudiantes — Bachillerato</b><br>Gestiona los estudiantes de bachillerato (6°–11°).<br>Puedes agregar estudiantes uno a uno o hacer <b>Carga Masiva CSV</b>.<br>Edita datos como nombre, T.I., salón y contraseña. Usa el buscador para filtrar por nombre o salón.<br>Al final del año puedes usar <b>Promover Año</b> para avanzar automáticamente a los estudiantes según sus resultados.`,
-  aprf:`<b>👩‍🏫 Profesores</b><br>Crea y administra los docentes del colegio por ciclo (Primaria / Bachillerato).<br>Al crear un profesor asigna sus <b>salones</b> y las <b>materias</b> que imparte en cada salón.<br>Puedes hacer carga masiva desde un archivo CSV. Edita o elimina profesores en cualquier momento.`,
-  amat:`<b>📖 Áreas & Materias</b><br>Define las áreas académicas y las materias que las componen para cada ciclo.<br>Las áreas agrupan materias y determinan si el estudiante aprueba, recupera o pierde el año.<br>Configura también los porcentajes de calificación (Aptitud, Actitud, Responsabilidad) y el año lectivo que aparecerá en los boletines.`,
-  areh:`<b>🔄 Recuperaciones (Admin)</b><br>Vista global de todos los estudiantes en periodo de recuperación.<br>Muestra quién tiene materias pendidas y en qué materias. El docente correspondiente envía el plan de recuperación desde su panel.<br>Al cerrar el periodo puedes archivar todos los registros.`,
-  ablk:`<b>🔒 Usuarios Bloqueados</b><br>Lista de usuarios que han sido bloqueados por intentos fallidos de inicio de sesión.<br>Haz clic en <b>Desbloquear</b> para permitir que el usuario vuelva a ingresar al sistema.`,
-  aexp:`<b>📤 Exportar Datos</b><br>Descarga información del sistema en formato <b>Excel</b> o genera <b>Boletines PDF</b>.<br>• <b>Excel:</b> exporta notas consolidadas, asistencia o datos de estudiantes por salón.<br>• <b>Boletín individual:</b> selecciona un estudiante y descarga su reporte académico.<br>• <b>Boletines por salón:</b> genera todos los boletines de un grupo en un solo clic.`,
-  ahist:`<b>📚 Historial de Estudiantes</b><br>Registro de todos los estudiantes que alguna vez fueron dados de alta en el sistema, incluso los ya eliminados.<br>Puedes buscar por nombre o documento. El historial mantiene el año y salón en que estuvieron matriculados.`,
-  pcom:`<b>📢 Comunicados del Colegio</b><br>
-Aquí aparecen todos los avisos y anuncios activos publicados por el administrador.<br><br>
-Los comunicados se muestran automáticamente al iniciar sesión y también puedes consultarlos aquí en cualquier momento.<br><br>
-Cada comunicado indica su <b>fecha de vigencia</b> — al vencer desaparece automáticamente.`,
-  ecom:`<b>📢 Comunicados del Colegio</b><br>
-Aquí aparecen todos los avisos y anuncios activos que el colegio tiene para ti.<br><br>
-Los comunicados se muestran automáticamente al iniciar sesión y también puedes consultarlos aquí en cualquier momento.<br><br>
-Cada comunicado indica su <b>fecha de vigencia</b> — al vencer desaparece automáticamente.`,
-  acom:`<b>📢 Comunicados</b><br>
-Crea avisos o anuncios que profesores y/o estudiantes verán al iniciar sesión.<br><br>
-<b>Para crear un comunicado:</b><br>
-1. Escribe el <b>título</b> y el <b>mensaje</b>.<br>
-2. Selecciona a quién va dirigido: <b>Todos</b>, solo <b>Profesores</b> o solo <b>Estudiantes</b>.<br>
-3. Elige un <b>color</b> para destacar el tipo de aviso.<br>
-4. Define las fechas de <b>inicio</b> y <b>fin</b> — el comunicado solo se muestra en ese rango.<br>
-5. Haz clic en <b>Publicar</b>.<br><br>
-Los destinatarios verán el comunicado automáticamente en una pantalla de bienvenida al hacer login, y también podrán consultarlo en el menú.<br><br>
-Puedes <b>activar/desactivar</b> o <b>eliminar</b> cualquier comunicado en cualquier momento.`,
-
-  aexc:`<b>✉️ Excusas Recibidas</b><br>Bandeja de excusas enviadas por los estudiantes (horario permitido: 18:00 – 07:00).<br>Haz clic en una excusa para leerla y escribir una <b>respuesta</b> al estudiante.<br>Las excusas respondidas quedan marcadas y el estudiante puede verlas en su módulo.`,
-  avcl:`<b>💻 Clases Virtuales (Admin)</b><br>Vista general de todos los enlaces de clases virtuales publicados por los docentes.<br>Cada tarjeta muestra el salón, la fecha, el docente y el enlace de la reunión (Meet, Zoom, Teams).<br>Los estudiantes ven estos enlaces activos en su sección de Clases Virtuales.`,
-  eprof:`<b>👩‍🏫 Mis Profesores</b><br>Lista de todos los docentes asignados a tu salón con sus materias y datos de contacto.<br>Consulta aquí el nombre y materias de cada profesor para saber a quién dirigirte.`,
-  evir:`<b>💻 Mis Clases Virtuales</b><br>Aquí aparecen los enlaces de reuniones (Meet, Zoom, Teams) que tus docentes han publicado para tu salón.<br>Haz clic en el enlace para unirte a la clase virtual en el horario indicado.`,
-};
+// HELP ya declarado
 function showHelp(panel){
   const txt=HELP[panel]||'Sin ayuda disponible para esta sección.';
   Swal.fire({title:'❓ Ayuda',html:`<div style="text-align:left;font-size:14px;line-height:1.8">${txt}</div>`,
@@ -3750,7 +3706,7 @@ async function editarComunicado(id,d){ /* implementado en api-layer.js */ }
 async function eliminarComunicado(id){ /* implementado en api-layer.js */ }
 async function cargarTodosComunicados(){ /* implementado en api-layer.js */ }
 
-function pgAExc(){return`<div class="ph"><h2>Excusas Recibidas</h2><p>Horario de envío: 18:00 – 07:00</p><button class="btn xs bg" onclick="showHelp('aexc')" style="margin-top:6px">❓ Ayuda</button></div><div id="aexcB"></div>`;}
+function pgAExc(){const _eh=DB.excHorario||{};return`<div class="ph"><h2>Excusas Recibidas</h2><p>Horario de envío: ${_eh.ini??18}:00 – ${_eh.fin??7}:00</p><button class="btn xs bg" onclick="showHelp('aexc')" style="margin-top:6px">❓ Ayuda</button></div><div id="aexcB"></div>`;}
 function initAExc(){
   const el=gi('aexcB');if(!el)return;
   const list=(DB.exc||[]).slice().reverse();
@@ -6057,19 +6013,18 @@ function pgETare(){
   const e=CU;
   const prfsDelSalon=profsInSalon(e.salon);
   const profOpts=prfsDelSalon.length
-    ?prfsDelSalon.map(p=>`<option value="${p.id}">${esc(p.nombre)}${p.materias?.length?' ('+p.materias.join(', ')+')':''}</option>`).join('')
+    ?prfsDelSalon.map(p=>`<option value="${p.id}">${esc(p.nombre)}</option>`).join('')
     :'<option value="">Sin profesores asignados</option>';
   const mis=(DB.ups[e.id]||[]).slice().reverse();
   return`<div class="ph"><h2>Tareas & Talleres</h2><button class="btn xs bg" onclick="showHelp('etare')">❓ Ayuda</button></div>
   <div class="card"><div class="chd"><span class="cti">📎 Subir Archivo</span></div>
     <div class="fg">
-      <div class="fld"><label>Materia</label><select id="utm"><option value="">Seleccionar</option>
-        ${getMats(e.id).map(m=>`<option>${m}</option>`).join('')}</select></div>
-      <div class="fld"><label>Periodo</label><select id="utp"><option value="">Seleccionar</option>
-        ${DB.pers.map(p=>`<option>${p}</option>`).join('')}</select></div>
-      <div class="fld"><label>Dirigido al Profesor</label><select id="utprof">
+      <div class="fld"><label>Profesor</label><select id="utprof" onchange="onProfChangeTaller()">
         <option value="">Seleccionar profesor...</option>${profOpts}
       </select></div>
+      <div class="fld"><label>Materia</label><select id="utm" disabled><option value="">Primero elige un profesor</option></select></div>
+      <div class="fld"><label>Periodo</label><select id="utp"><option value="">Seleccionar</option>
+        ${DB.pers.map(p=>`<option>${p}</option>`).join('')}</select></div>
     </div>
     <div class="fld"><label>Título / Descripción</label><input id="utd" placeholder="Taller unidad 3 — Descripción breve..."></div>
     <div class="uzone" onclick="gi('utf').click()">
@@ -6106,6 +6061,25 @@ function pgETare(){
 function onFPick(inp){
   if(inp.files[0]) gi('utfn').textContent='📎 '+inp.files[0].name;
 }
+/* Actualiza el dropdown de materias según el profesor seleccionado en Talleres */
+function onProfChangeTaller(){
+  const profId=gi('utprof')?.value;
+  const matSel=gi('utm');
+  if(!matSel) return;
+  if(!profId){
+    matSel.innerHTML='<option value="">Primero elige un profesor</option>';
+    matSel.disabled=true;
+    return;
+  }
+  const mats=getProfMatsSalon(profId,CU.salon);
+  if(!mats.length){
+    matSel.innerHTML='<option value="">Sin materias asignadas</option>';
+    matSel.disabled=true;
+    return;
+  }
+  matSel.disabled=false;
+  matSel.innerHTML='<option value="">Seleccionar materia...</option>'+mats.map(m=>`<option>${m}</option>`).join('');
+}
 /* ── SOBREESCRITA por api-layer.js ── */
 async function subirTarea(){ /* implementado en api-layer.js */ }
 /* Student: delete a taller — only if revisado */
@@ -6116,8 +6090,7 @@ async function eliminarTallerEst(upId){ /* implementado en api-layer.js */ }
 async function eliminarRecEst(recId){ /* implementado en api-layer.js */ }
 
 
-const CAUSAS=['Enfermedad / malestar','Cita médica','Duelo familiar','Problemas de transporte',
-  'Emergencia en el hogar','Diligencia personal','Problema con internet','Otro motivo'];
+// CAUSAS ya declarado en bloque bachillerato
 function pgEExc(){
   const e=CU;
   const prfsDelSalon=profsInSalon(e.salon);
@@ -6134,10 +6107,10 @@ function pgEExc(){
   const mis=DB.exc.filter(x=>x.estId===e.id||x.eid===e.id).slice().reverse();
   const ventanaOk=excusasOk();
   return`<div class="ph"><h2>Módulo de Excusas</h2>
-    <p>Horario de envío: 18:00 – 07:00 ${ventanaOk?'<span class="bdg bgr">✓ Abierto</span>':'<span class="bdg brd">✗ Cerrado</span>'}</p>
+    <p>Horario de envío: ${(DB.excHorario?.ini??18)}:00 – ${(DB.excHorario?.fin??7)}:00 ${ventanaOk?'<span class="bdg bgr">✓ Abierto</span>':'<span class="bdg brd">✗ Cerrado</span>'}</p>
     <button class="btn xs bg" onclick="showHelp('eexc')" style="margin-top:6px">❓ Ayuda</button>
   </div>
-  ${!ventanaOk?`<div class="al aly">⚠️ Las excusas solo pueden enviarse entre las 18:00 y las 07:00.</div>`:''}
+  ${!ventanaOk?`<div class="al aly">⚠️ Las excusas solo pueden enviarse entre las ${DB.excHorario?.ini??18}:00 y las ${DB.excHorario?.fin??7}:00.</div>`:''}
   <div class="card"><div class="chd"><span class="cti">✉️ Redactar Excusa</span></div>
     <div class="fg">
       <div class="fld"><label>Fecha de la ausencia</label><input type="date" id="exd" value="${today()}"></div>
@@ -7976,12 +7949,9 @@ async function estSubirComprobante(compId){
    se recomienda subir los archivos a un storage separado
    (Firebase Storage, S3, Cloudinary) y guardar solo la URL.
    ============================================================ */
-const DBK='edusistema_v5'; // Solo usado en modo offline (sin api-layer.js)
-let DB={},CU=null;
-const FA={};
-
-// ── Colegios cuya PRIMARIA usa lógica de bachillerato (múltiples salones + salonMaterias) ──
-const COLEGIOS_PRIM_BACH_LOGIC = ['col_1780002622502'];
+// DBK, DB, CU, FA, COLEGIOS_PRIM_BACH_LOGIC ya declarados en el bloque de bachillerato — se reutilizan
+// (no se redeclaran para evitar SyntaxError en navegadores)
+// Solo se redefinen las funciones de UI de primaria a continuación.
 function isBachLogic(ciclo){
   if(ciclo==='bachillerato') return true;
   return ciclo==='primaria' && COLEGIOS_PRIM_BACH_LOGIC.includes(CU?.colegioId||'');
@@ -8568,10 +8538,14 @@ function notasOk(per){
   const dr=DB.dr||{};const{s,e}=dr;if(!s||!e) return true;
   return t>=s&&t<=e;
 }
-/* Excusas window: open 18:00–07:00 */
+/* Excusas window: configurable por admin en DB.excHorario = {ini:HH, fin:HH} */
 function excusasOk(){
+  const cfg=DB.excHorario||{};
+  const ini=parseInt(cfg.ini??18,10);
+  const fin=parseInt(cfg.fin??7,10);
   const h=new Date().getHours();
-  return h>=18||h<7;
+  if(ini>fin) return h>=ini||h<fin;   // rango cruza medianoche (ej 18–07)
+  return h>=ini&&h<fin;               // rango dentro del mismo día
 }
 function ebySalon(salon){
   return DB.ests.filter(e=>e.salon===salon).sort((a,b)=>a.nombre.localeCompare(b.nombre,'es'));
@@ -10496,7 +10470,7 @@ async function delPer(p){
 /* ============================================================
    ADMIN — GESTIÓN DE NOTAS (tripartita)
 ============================================================ */
-let _anE=[];
+// _anE ya declarado
 function pgANot(){
   const sO=DB.sals.map(s=>`<option value="${s.nombre}">${s.nombre}</option>`).join('');
   const pO=DB.pers.map(p=>`<option value="${p}">${p}</option>`).join('');
@@ -10935,6 +10909,31 @@ function pgAFec(){
         <div style="font-size:16px;font-weight:800;color:${DB.ext.on?'var(--grn)':'var(--sl2)'}">${DB.ext.on?'🟢 Activo':'⚫ Inactivo'}</div>
       </div>
     </div>`:''}
+  </div>
+  <div class="card" style="border:2px solid #bee3f8">
+    <div class="chd"><span class="cti">⏰ Horario de Excusas</span></div>
+    <div class="al alb" style="margin-bottom:14px;font-size:12px">
+      Define el rango horario en que los estudiantes pueden enviar excusas.<br>
+      Actualmente: <strong>${DB.excHorario?.ini??18}:00 – ${DB.excHorario?.fin??7}:00</strong>
+    </div>
+    <div style="display:flex;align-items:center;gap:20px;flex-wrap:wrap">
+      <div>
+        <label style="font-size:11px;font-weight:800;text-transform:uppercase;color:var(--sl);display:block;margin-bottom:5px">Hora inicio (0–23)</label>
+        <input type="number" id="excHorIni" value="${DB.excHorario?.ini??18}" min="0" max="23"
+          style="width:90px;padding:8px 12px;border:1.5px solid var(--bd);border-radius:var(--r);font-size:15px;font-weight:800;text-align:center">
+      </div>
+      <div>
+        <label style="font-size:11px;font-weight:800;text-transform:uppercase;color:var(--sl);display:block;margin-bottom:5px">Hora fin (0–23)</label>
+        <input type="number" id="excHorFin" value="${DB.excHorario?.fin??7}" min="0" max="23"
+          style="width:90px;padding:8px 12px;border:1.5px solid var(--bd);border-radius:var(--r);font-size:15px;font-weight:800;text-align:center">
+      </div>
+      <div style="padding-top:18px">
+        <button class="btn bn" onclick="saveExcHorario()">💾 Guardar Horario</button>
+      </div>
+    </div>
+    <div style="margin-top:10px;font-size:12px;color:var(--sl3)">
+      💡 Si el horario cruza medianoche (ej: inicio 18, fin 7) el sistema lo detecta automáticamente.
+    </div>
   </div>`;
 }
 /* ── SOBREESCRITA por api-layer.js ── */
@@ -10945,6 +10944,8 @@ async function saveDRPer(key,per){ /* implementado en api-layer.js */ }
 async function saveDR(){ /* implementado en api-layer.js */ }
 /* ── SOBREESCRITA por api-layer.js ── */
 async function saveExt(){ /* implementado en api-layer.js */ }
+/* ── SOBREESCRITA por api-layer.js ── */
+async function saveExcHorario(){ /* implementado en api-layer.js */ }
 /* Archive all current recovery data into history, then wipe active */
 /* ── SOBREESCRITA por api-layer.js ── */
 async function archivarYLimpiarRecuperacion(){ /* implementado en api-layer.js */ }
@@ -11465,7 +11466,7 @@ function verHistAcademico(eid){
     showCloseButton:true
   });
 }
-const _histSnap={};
+// _histSnap ya declarado
 function _dlHistBol(eid,perFilter){
   const anno=gi('haAnno')?.value||String(DB.anoActual||new Date().getFullYear());
   const raw=_histSnap[eid];
@@ -11642,7 +11643,7 @@ async function editarComunicado(id,d){ /* implementado en api-layer.js */ }
 async function eliminarComunicado(id){ /* implementado en api-layer.js */ }
 async function cargarTodosComunicados(){ /* implementado en api-layer.js */ }
 
-function pgAExc(){return`<div class="ph"><h2>Excusas Recibidas</h2><p>Horario de envío: 18:00 – 07:00</p><button class="btn xs bg" onclick="showHelp('aexc')" style="margin-top:6px">❓ Ayuda</button></div><div id="aexcB"></div>`;}
+function pgAExc(){const _eh=DB.excHorario||{};return`<div class="ph"><h2>Excusas Recibidas</h2><p>Horario de envío: ${_eh.ini??18}:00 – ${_eh.fin??7}:00</p><button class="btn xs bg" onclick="showHelp('aexc')" style="margin-top:6px">❓ Ayuda</button></div><div id="aexcB"></div>`;}
 function initAExc(){
   const el=gi('aexcB');if(!el)return;
   const list=(DB.exc||[]).slice().reverse();
@@ -13949,19 +13950,18 @@ function pgETare(){
   const e=CU;
   const prfsDelSalon=profsInSalon(e.salon);
   const profOpts=prfsDelSalon.length
-    ?prfsDelSalon.map(p=>`<option value="${p.id}">${esc(p.nombre)}${p.materias?.length?' ('+p.materias.join(', ')+')':''}</option>`).join('')
+    ?prfsDelSalon.map(p=>`<option value="${p.id}">${esc(p.nombre)}</option>`).join('')
     :'<option value="">Sin profesores asignados</option>';
   const mis=(DB.ups[e.id]||[]).slice().reverse();
   return`<div class="ph"><h2>Tareas & Talleres</h2><button class="btn xs bg" onclick="showHelp('etare')">❓ Ayuda</button></div>
   <div class="card"><div class="chd"><span class="cti">📎 Subir Archivo</span></div>
     <div class="fg">
-      <div class="fld"><label>Materia</label><select id="utm"><option value="">Seleccionar</option>
-        ${getMats(e.id).map(m=>`<option>${m}</option>`).join('')}</select></div>
-      <div class="fld"><label>Periodo</label><select id="utp"><option value="">Seleccionar</option>
-        ${DB.pers.map(p=>`<option>${p}</option>`).join('')}</select></div>
-      <div class="fld"><label>Dirigido al Profesor</label><select id="utprof">
+      <div class="fld"><label>Profesor</label><select id="utprof" onchange="onProfChangeTaller()">
         <option value="">Seleccionar profesor...</option>${profOpts}
       </select></div>
+      <div class="fld"><label>Materia</label><select id="utm" disabled><option value="">Primero elige un profesor</option></select></div>
+      <div class="fld"><label>Periodo</label><select id="utp"><option value="">Seleccionar</option>
+        ${DB.pers.map(p=>`<option>${p}</option>`).join('')}</select></div>
     </div>
     <div class="fld"><label>Título / Descripción</label><input id="utd" placeholder="Taller unidad 3 — Descripción breve..."></div>
     <div class="uzone" onclick="gi('utf').click()">
@@ -13998,6 +13998,25 @@ function pgETare(){
 function onFPick(inp){
   if(inp.files[0]) gi('utfn').textContent='📎 '+inp.files[0].name;
 }
+/* Actualiza el dropdown de materias según el profesor seleccionado en Talleres */
+function onProfChangeTaller(){
+  const profId=gi('utprof')?.value;
+  const matSel=gi('utm');
+  if(!matSel) return;
+  if(!profId){
+    matSel.innerHTML='<option value="">Primero elige un profesor</option>';
+    matSel.disabled=true;
+    return;
+  }
+  const mats=getProfMatsSalon(profId,CU.salon);
+  if(!mats.length){
+    matSel.innerHTML='<option value="">Sin materias asignadas</option>';
+    matSel.disabled=true;
+    return;
+  }
+  matSel.disabled=false;
+  matSel.innerHTML='<option value="">Seleccionar materia...</option>'+mats.map(m=>`<option>${m}</option>`).join('');
+}
 /* ── SOBREESCRITA por api-layer.js ── */
 async function subirTarea(){ /* implementado en api-layer.js */ }
 /* Student: delete a taller — only if revisado */
@@ -14026,10 +14045,10 @@ function pgEExc(){
   const mis=DB.exc.filter(x=>x.estId===e.id||x.eid===e.id).slice().reverse();
   const ventanaOk=excusasOk();
   return`<div class="ph"><h2>Módulo de Excusas</h2>
-    <p>Horario de envío: 18:00 – 07:00 ${ventanaOk?'<span class="bdg bgr">✓ Abierto</span>':'<span class="bdg brd">✗ Cerrado</span>'}</p>
+    <p>Horario de envío: ${(DB.excHorario?.ini??18)}:00 – ${(DB.excHorario?.fin??7)}:00 ${ventanaOk?'<span class="bdg bgr">✓ Abierto</span>':'<span class="bdg brd">✗ Cerrado</span>'}</p>
     <button class="btn xs bg" onclick="showHelp('eexc')" style="margin-top:6px">❓ Ayuda</button>
   </div>
-  ${!ventanaOk?`<div class="al aly">⚠️ Las excusas solo pueden enviarse entre las 18:00 y las 07:00.</div>`:''}
+  ${!ventanaOk?`<div class="al aly">⚠️ Las excusas solo pueden enviarse entre las ${DB.excHorario?.ini??18}:00 y las ${DB.excHorario?.fin??7}:00.</div>`:''}
   <div class="card"><div class="chd"><span class="cti">✉️ Redactar Excusa</span></div>
     <div class="fg">
       <div class="fld"><label>Fecha de la ausencia</label><input type="date" id="exd" value="${today()}"></div>
@@ -15230,123 +15249,7 @@ function dlBoletin(estId,perFilter,anno,snapData){
 ============================================================ */
 
 // ─── Base de preguntas ICFES (pruebas colombianas 2023-2025) ────────────────
-const ICFES_PREGUNTAS = {
-
-'Lectura Crítica': [
-  {p:"Lee el siguiente fragmento: «El hombre es el único animal que tropieza dos veces con la misma piedra.» ¿Cuál es la intención comunicativa principal de este enunciado?",o:["A) Describir el comportamiento animal","B) Criticar la capacidad reflexiva humana","C) Explicar un fenómeno natural","D) Narrar una anécdota histórica"],r:"B"},
-  {p:"En el texto «La soledad de América Latina» de Gabriel García Márquez, el autor afirma que América Latina ha sido incomprendida por Europa. ¿Qué recurso argumentativo utiliza principalmente?",o:["A) La analogía con Asia","B) Datos estadísticos comparativos","C) Ejemplos históricos y literarios propios de la región","D) Testimonios de líderes políticos europeos"],r:"C"},
-  {p:"¿Cuál de las siguientes opciones representa mejor el propósito de un texto expositivo?",o:["A) Persuadir al lector de adoptar una postura","B) Entretener mediante una narración ficticia","C) Informar y explicar un tema de manera objetiva","D) Expresar los sentimientos del autor"],r:"C"},
-  {p:"Un texto argumentativo es aquel que busca principalmente:",o:["A) Describir personajes y ambientes","B) Convencer al lector mediante razones y evidencias","C) Narrar hechos en orden cronológico","D) Presentar instrucciones paso a paso"],r:"B"},
-  {p:"Lee: «El río baja cantando entre las piedras.» ¿Qué figura literaria se emplea?",o:["A) Hipérbole","B) Antítesis","C) Personificación","D) Metáfora"],r:"C"},
-  {p:"¿Cuál de los siguientes enunciados corresponde a una opinión y no a un hecho?",o:["A) Colombia tiene 32 departamentos","B) El río Amazonas nace en Perú","C) La educación pública es más valiosa que la privada","D) La Constitución colombiana fue promulgada en 1991"],r:"C"},
-  {p:"En el poema «Veinte poemas de amor» de Pablo Neruda, el verso «Puedo escribir los versos más tristes esta noche» expresa principalmente:",o:["A) Una orden al lector","B) Un estado emocional del yo poético","C) Una descripción objetiva del entorno","D) Una predicción sobre el futuro"],r:"B"},
-  {p:"¿Qué tipo de narrador es aquel que participa como personaje dentro de la historia?",o:["A) Narrador omnisciente","B) Narrador en tercera persona","C) Narrador en primera persona (protagonista)","D) Narrador testigo externo"],r:"C"},
-  {p:"Una inferencia textual es:",o:["A) Copiar literalmente información del texto","B) Resumir el texto con palabras propias","C) Deducir información implícita a partir de lo que dice el texto","D) Identificar el tema central del texto"],r:"C"},
-  {p:"Lee: «No era un hombre ordinario; era, en todo el sentido de la palabra, un genio.» ¿Qué conectivo lógico se utiliza?",o:["A) Adversativo","B) Causal","C) Consecutivo","D) Concesivo"],r:"A"},
-  {p:"El párrafo de cierre de un texto argumentativo generalmente:",o:["A) Presenta nuevos argumentos","B) Introduce el tema por primera vez","C) Sintetiza las ideas y reafirma la tesis","D) Contradice los argumentos del desarrollo"],r:"C"},
-  {p:"¿Cuál es la función del lenguaje predominante en los textos publicitarios?",o:["A) Referencial","B) Emotiva","C) Metalingüística","D) Apelativa o conativa"],r:"D"},
-  {p:"En la frase «Sus ojos eran dos luceros brillantes», ¿qué figura literaria se utiliza?",o:["A) Hipérbole","B) Comparación (símil)","C) Metáfora","D) Ironía"],r:"C"},
-  {p:"¿Cuál de los siguientes textos tiene estructura de problema-solución?",o:["A) Una biografía de Simón Bolívar","B) Un informe sobre causas del desempleo juvenil y políticas para reducirlo","C) Un poema sobre la naturaleza","D) Una fábula con moraleja"],r:"B"},
-  {p:"La coherencia en un texto se refiere a:",o:["A) El uso correcto de signos de puntuación","B) La unidad temática y lógica entre las ideas del texto","C) La variedad de vocabulario empleado","D) El número de párrafos del escrito"],r:"B"},
-  {p:"¿Qué es una tesis en un texto argumentativo?",o:["A) Un ejemplo que apoya una idea","B) La conclusión final del texto","C) La postura o afirmación central que el autor defiende","D) Un resumen de otros autores"],r:"C"},
-  {p:"Lee: «Aunque llovía a cántaros, decidió salir sin paraguas.» La relación lógica entre las dos partes de la oración es:",o:["A) Causal","B) Consecutiva","C) Concesiva","D) Condicional"],r:"C"},
-  {p:"Un texto con intención satírica busca principalmente:",o:["A) Informar sobre hechos históricos","B) Criticar o ridiculizar algo usando el humor","C) Describir ambientes naturales","D) Instruir al lector en alguna habilidad"],r:"B"},
-  {p:"¿Qué es el contexto de enunciación en un texto?",o:["A) El vocabulario técnico utilizado","B) Las condiciones de tiempo, lugar y situación en que se produce el mensaje","C) El número de palabras del texto","D) El formato visual del documento"],r:"B"},
-  {p:"En el cuento «El coronel no tiene quien le escriba» de García Márquez, la espera prolongada simboliza principalmente:",o:["A) La puntualidad del protagonista","B) La indiferencia del Estado y la esperanza que se niega a morir","C) La vagancia del coronel","D) Un problema logístico de correos"],r:"B"},
-],
-
-'Matemáticas': [
-  {p:"Si f(x) = 2x² – 3x + 1, ¿cuál es el valor de f(2)?",o:["A) 3","B) 5","C) 7","D) 9"],r:"A"},
-  {p:"¿Cuál es el conjunto solución de la inecuación 3x – 7 > 2?",o:["A) x > 3","B) x < 3","C) x > –3","D) x < –3"],r:"A"},
-  {p:"En un triángulo rectángulo, si los catetos miden 3 y 4 cm, ¿cuánto mide la hipotenusa?",o:["A) 6 cm","B) 5 cm","C) 7 cm","D) 4,5 cm"],r:"B"},
-  {p:"¿Cuánto es el 15% de 240?",o:["A) 24","B) 36","C) 30","D) 48"],r:"B"},
-  {p:"La expresión algebraica que representa «el triple de un número disminuido en 4» es:",o:["A) 3 + x – 4","B) 3(x – 4)","C) 3x – 4","D) x/3 – 4"],r:"C"},
-  {p:"¿Cuál es la pendiente de la recta que pasa por los puntos (1, 2) y (3, 8)?",o:["A) 2","B) 3","C) 4","D) 5"],r:"B"},
-  {p:"Si un rectángulo tiene perímetro de 36 cm y su largo es el doble de su ancho, ¿cuánto mide el ancho?",o:["A) 4 cm","B) 6 cm","C) 8 cm","D) 12 cm"],r:"B"},
-  {p:"¿Cuál es la mediana del siguiente conjunto de datos: {5, 8, 12, 3, 9}?",o:["A) 8","B) 9","C) 7,4","D) 5"],r:"A"},
-  {p:"Simplifica la expresión: (x² – 4) / (x – 2)",o:["A) x + 2","B) x – 2","C) x²","D) 2x"],r:"A"},
-  {p:"Un móvil recorre 120 km en 2 horas. ¿Cuál es su velocidad media?",o:["A) 240 km/h","B) 60 km/h","C) 30 km/h","D) 80 km/h"],r:"B"},
-  {p:"¿Cuántos ejes de simetría tiene un cuadrado?",o:["A) 2","B) 3","C) 4","D) 6"],r:"C"},
-  {p:"El volumen de un cubo de arista 4 cm es:",o:["A) 16 cm³","B) 48 cm³","C) 64 cm³","D) 96 cm³"],r:"C"},
-  {p:"¿Cuál es el resultado de: log₂(8)?",o:["A) 2","B) 3","C) 4","D) 8"],r:"B"},
-  {p:"Si se lanza una moneda dos veces, ¿cuál es la probabilidad de obtener cara dos veces?",o:["A) 1/2","B) 1/3","C) 1/4","D) 1/8"],r:"C"},
-  {p:"¿Cuál es la solución del sistema: x + y = 5 y x – y = 1?",o:["A) x=3, y=2","B) x=2, y=3","C) x=4, y=1","D) x=1, y=4"],r:"A"},
-  {p:"La gráfica de y = x² es:",o:["A) Una recta","B) Una parábola que abre hacia arriba","C) Una circunferencia","D) Una hipérbola"],r:"B"},
-  {p:"¿Cuánto es 2³ × 2⁴?",o:["A) 2⁷","B) 4⁷","C) 2¹²","D) 6⁷"],r:"A"},
-  {p:"El ángulo suplementario de 65° mide:",o:["A) 25°","B) 115°","C) 295°","D) 90°"],r:"B"},
-  {p:"¿Cuál es el mínimo común múltiplo de 6 y 9?",o:["A) 3","B) 18","C) 36","D) 54"],r:"B"},
-  {p:"Un artículo cuesta $80.000 y tiene un descuento del 25%. ¿Cuánto se paga?",o:["A) $55.000","B) $60.000","C) $65.000","D) $70.000"],r:"B"},
-],
-
-'Sociales y Ciudadanas': [
-  {p:"¿En qué año se promulgó la Constitución Política de Colombia actualmente vigente?",o:["A) 1886","B) 1948","C) 1991","D) 2001"],r:"C"},
-  {p:"¿Cuál es el órgano legislativo en Colombia?",o:["A) La Presidencia de la República","B) El Congreso de la República","C) La Corte Constitucional","D) El Ministerio de Justicia"],r:"B"},
-  {p:"La Declaración Universal de los Derechos Humanos fue adoptada por la ONU en:",o:["A) 1945","B) 1948","C) 1960","D) 1975"],r:"B"},
-  {p:"¿Qué es el Derecho Internacional Humanitario (DIH)?",o:["A) Las leyes que regulan el comercio entre países","B) Las normas que protegen a las personas en conflictos armados","C) Los acuerdos climáticos internacionales","D) Las reglas del deporte olímpico"],r:"B"},
-  {p:"¿Cuál de los siguientes es un mecanismo de participación ciudadana en Colombia?",o:["A) El habeas corpus","B) La tutela","C) El referendo","D) La acción popular"],r:"C"},
-  {p:"El fenómeno de la globalización se caracteriza principalmente por:",o:["A) El aislamiento de las economías nacionales","B) La integración económica, cultural y política entre países","C) El aumento de las guerras entre naciones","D) La desaparición de los estados"],r:"B"},
-  {p:"¿Qué fue la Independencia de Colombia el 20 de julio de 1810?",o:["A) La firma del tratado con España","B) El inicio del proceso que llevaría a la independencia de la Nueva Granada","C) La batalla definitiva contra el ejército español","D) La creación de la primera Constitución colombiana"],r:"B"},
-  {p:"¿Cuál es la función principal del Banco de la República de Colombia?",o:["A) Otorgar créditos a empresas privadas","B) Regular la moneda y velar por la estabilidad económica del país","C) Administrar los impuestos nacionales","D) Financiar los programas sociales del gobierno"],r:"B"},
-  {p:"El concepto de «soberanía popular» significa que:",o:["A) El presidente tiene poderes ilimitados","B) El poder del Estado reside en el pueblo","C) Solo los partidos políticos gobiernan","D) Las leyes provienen de la tradición religiosa"],r:"B"},
-  {p:"¿Qué causa principal generó la Primera Guerra Mundial?",o:["A) La invasión de Polonia por Alemania","B) El atentado al archiduque Francisco Fernando de Austria en Sarajevo","C) La revolución bolchevique en Rusia","D) La crisis económica de 1929"],r:"B"},
-  {p:"¿A qué se denomina «Estado Social de Derecho»?",o:["A) Un estado donde solo rige la ley sin importar la justicia social","B) Un estado que garantiza derechos individuales y promueve la igualdad y el bienestar social","C) Un estado gobernado exclusivamente por militares","D) Un estado sin separación de poderes"],r:"B"},
-  {p:"Los Acuerdos de Paz de Colombia (2016) se firmaron entre el gobierno colombiano y:",o:["A) El ELN","B) Las AUC","C) Las FARC-EP","D) El M-19"],r:"C"},
-  {p:"¿Cuál es la principal característica del sistema democrático?",o:["A) El poder es hereditario","B) Un solo partido controla el Estado","C) Los ciudadanos eligen a sus gobernantes mediante el voto","D) Las decisiones las toma un grupo de expertos sin elecciones"],r:"C"},
-  {p:"La Corte Constitucional de Colombia tiene como función principal:",o:["A) Juzgar delitos comunes","B) Administrar los recursos del Estado","C) Guardar la integridad y supremacía de la Constitución","D) Dirigir la política exterior"],r:"C"},
-  {p:"¿Qué es el desplazamiento forzado?",o:["A) La migración voluntaria por trabajo","B) El traslado obligado de personas de su lugar de origen por amenazas o violencia","C) El turismo interno en Colombia","D) Los programas de movilidad estudiantil"],r:"B"},
-  {p:"El Producto Interno Bruto (PIB) mide:",o:["A) El valor de las importaciones de un país","B) El nivel de desempleo de una nación","C) El valor total de bienes y servicios producidos en un país en un período","D) La deuda externa de un Estado"],r:"C"},
-  {p:"¿Cuál fue el principal objetivo del Plan Marshall después de la Segunda Guerra Mundial?",o:["A) Juzgar a los criminales de guerra nazis","B) Reconstruir económicamente a Europa Occidental","C) Crear la OTAN","D) Dividir Alemania en dos estados"],r:"B"},
-  {p:"La acción de tutela en Colombia protege principalmente:",o:["A) Los derechos colectivos","B) Los derechos económicos","C) Los derechos fundamentales de los ciudadanos","D) El patrimonio del Estado"],r:"C"},
-  {p:"¿Qué es la corrupción en el ámbito público?",o:["A) El mal uso del presupuesto familiar","B) El abuso del poder público para obtener beneficios personales o de terceros","C) La crítica legítima al gobierno","D) La competencia desleal entre empresas privadas"],r:"B"},
-  {p:"¿Cuál fue la causa principal del conflicto armado colombiano del siglo XX?",o:["A) Diferencias religiosas entre católicos y protestantes","B) Disputas territoriales con Venezuela","C) La desigualdad social, política y económica, junto con el surgimiento de grupos guerrilleros","D) La invasión extranjera al territorio colombiano"],r:"C"},
-],
-
-'Ciencias Naturales': [
-  {p:"¿Cuál es la unidad básica de la vida?",o:["A) El tejido","B) El órgano","C) La célula","D) El organismo"],r:"C"},
-  {p:"El ADN (ácido desoxirribonucleico) se encuentra principalmente en:",o:["A) La membrana celular","B) El citoplasma","C) El núcleo de la célula","D) Las mitocondrias"],r:"C"},
-  {p:"¿Cuál de los siguientes es un proceso de la fotosíntesis?",o:["A) Transformación de glucosa en CO₂ y H₂O","B) Conversión de energía lumínica en energía química","C) Descomposición de proteínas","D) Producción de calor a partir de grasas"],r:"B"},
-  {p:"La Ley de Newton que establece que «a toda acción corresponde una reacción igual y contraria» es:",o:["A) Primera Ley","B) Segunda Ley","C) Tercera Ley","D) Ley de la Gravedad"],r:"C"},
-  {p:"¿Qué tipo de energía posee un objeto en movimiento?",o:["A) Energía potencial gravitatoria","B) Energía cinética","C) Energía química","D) Energía nuclear"],r:"B"},
-  {p:"El número atómico de un elemento indica:",o:["A) La masa del átomo","B) El número de neutrones en el núcleo","C) El número de protones en el núcleo","D) El número de electrones en la última capa"],r:"C"},
-  {p:"¿Cuál de los siguientes procesos libera energía en los organismos vivos?",o:["A) La fotosíntesis","B) La respiración celular","C) La síntesis de proteínas","D) La mitosis"],r:"B"},
-  {p:"¿Qué capa de la atmósfera protege la Tierra de la radiación ultravioleta del Sol?",o:["A) Tropósfera","B) Mesósfera","C) Termósfera","D) Estratósfera (capa de ozono)"],r:"D"},
-  {p:"En la tabla periódica, los elementos de un mismo grupo comparten:",o:["A) El mismo número de neutrones","B) La misma masa atómica","C) El mismo número de electrones en su capa de valencia","D) El mismo estado de agregación"],r:"C"},
-  {p:"¿Cuál es el producto de la fermentación alcohólica realizada por las levaduras?",o:["A) Ácido láctico y CO₂","B) Etanol y CO₂","C) Glucosa y H₂O","D) Oxígeno y ATP"],r:"B"},
-  {p:"¿Qué tipo de reproducción genera organismos genéticamente idénticos al progenitor?",o:["A) Reproducción sexual","B) Reproducción asexual","C) Fecundación cruzada","D) Meiosis"],r:"B"},
-  {p:"La velocidad de la luz en el vacío es aproximadamente:",o:["A) 300.000 km/s","B) 30.000 km/s","C) 3.000 km/s","D) 300 km/s"],r:"A"},
-  {p:"¿Cuál es la función principal de los glóbulos rojos (eritrocitos)?",o:["A) Combatir infecciones","B) Producir anticuerpos","C) Transportar oxígeno a los tejidos","D) Regular la temperatura corporal"],r:"C"},
-  {p:"¿Qué gas es producido principalmente por la combustión de combustibles fósiles y contribuye al efecto invernadero?",o:["A) Oxígeno (O₂)","B) Nitrógeno (N₂)","C) Dióxido de carbono (CO₂)","D) Hidrógeno (H₂)"],r:"C"},
-  {p:"El pH neutro corresponde al valor:",o:["A) 0","B) 7","C) 14","D) 5"],r:"B"},
-  {p:"¿Cuál es la diferencia entre mitosis y meiosis?",o:["A) La mitosis ocurre solo en animales","B) La meiosis produce 4 células haploides; la mitosis produce 2 células diploides idénticas","C) La mitosis solo ocurre en células reproductivas","D) La meiosis produce células somáticas"],r:"B"},
-  {p:"Un ecosistema se define como:",o:["A) Solo el conjunto de seres vivos de una región","B) La interacción entre comunidades bióticas y factores abióticos de un lugar","C) Únicamente el suelo y el agua de un lugar","D) El conjunto de plantas de una región"],r:"B"},
-  {p:"¿Qué es la teoría de la evolución propuesta por Charles Darwin?",o:["A) Los organismos cambian de forma aleatoria sin ningún patrón","B) Las especies evolucionan por selección natural: los más aptos sobreviven y se reproducen","C) Los organismos adquieren características durante su vida y las transmiten","D) Las especies son inmutables desde su creación"],r:"B"},
-  {p:"¿Cuál es la fórmula química del agua?",o:["A) H₂O₂","B) HO","C) H₂O","D) H₃O"],r:"C"},
-  {p:"El tejido nervioso está compuesto principalmente por:",o:["A) Osteocitos","B) Neuronas y células gliales","C) Eritrocitos","D) Adipocitos"],r:"B"},
-],
-
-'Inglés': [
-  {p:"Choose the correct option to complete the sentence: 'She ___ to school every day.'",o:["A) go","B) goes","C) going","D) gone"],r:"B"},
-  {p:"What is the past tense of the verb 'write'?",o:["A) writed","B) written","C) wrote","D) writ"],r:"C"},
-  {p:"Select the sentence in the present perfect tense:",o:["A) She will travel to London","B) She traveled to London","C) She has traveled to London","D) She was traveling to London"],r:"C"},
-  {p:"What does the word 'although' express?",o:["A) A cause","B) A contrast or concession","C) A consequence","D) A condition"],r:"B"},
-  {p:"Read: 'If I had studied more, I would have passed the exam.' This sentence is in:",o:["A) First conditional","B) Second conditional","C) Third conditional","D) Zero conditional"],r:"C"},
-  {p:"Choose the correct question tag: 'She doesn't like coffee, ___?'",o:["A) does she","B) doesn't she","C) is she","D) isn't she"],r:"A"},
-  {p:"Which sentence is written in passive voice?",o:["A) The teacher explained the lesson","B) The students were reading the book","C) The letter was written by Maria","D) They will visit the museum"],r:"C"},
-  {p:"What is the meaning of the word 'acknowledge'?",o:["A) To ignore","B) To recognize or accept something","C) To forget","D) To refuse"],r:"B"},
-  {p:"Choose the correct option: 'This is the city ___ I was born.'",o:["A) who","B) which","C) where","D) when"],r:"C"},
-  {p:"Which is the correct plural form of 'child'?",o:["A) childs","B) childes","C) children","D) childrens"],r:"C"},
-  {p:"Read: 'He said he was tired.' This is an example of:",o:["A) Direct speech","B) Reported speech","C) Passive voice","D) Conditional"],r:"B"},
-  {p:"What does 'despite' mean in English?",o:["A) Because of","B) In order to","C) In spite of / even though","D) So that"],r:"C"},
-  {p:"Choose the correct sentence:",o:["A) She is more taller than her sister","B) She is the most tallest girl","C) She is taller than her sister","D) She is tall than her sister"],r:"C"},
-  {p:"The word 'however' is used to:",o:["A) Add information","B) Introduce a result","C) Show contrast between ideas","D) Express a condition"],r:"C"},
-  {p:"Read: 'The movie was so boring that I fell asleep.' What type of clause is 'that I fell asleep'?",o:["A) Relative clause","B) Conditional clause","C) Result clause (so...that)","D) Purpose clause"],r:"C"},
-  {p:"Which sentence uses the modal verb 'should' correctly?",o:["A) You should to exercise more","B) You should exercising more","C) You should exercise more","D) You should exercises more"],r:"C"},
-  {p:"What is the meaning of the idiom 'break the ice'?",o:["A) To break something frozen","B) To start a conversation and reduce tension","C) To stop working","D) To solve a difficult problem"],r:"B"},
-  {p:"Choose the correct preposition: 'She is interested ___ learning new languages.'",o:["A) at","B) for","C) in","D) on"],r:"C"},
-  {p:"Which is NOT a linking word to show cause?",o:["A) because","B) since","C) however","D) due to"],r:"C"},
-  {p:"Read: 'By the time they arrived, we had already eaten.' The verb 'had eaten' is in the:",o:["A) Simple past","B) Past perfect","C) Present perfect","D) Future perfect"],r:"B"},
-]
-};
+// ICFES_PREGUNTAS ya declarado en bloque bachillerato
 
 // ─── Estado del simulacro (en memoria + localStorage) ──────────────────────
 function icfesKey(){ return 'icfes_' + CU.id; }

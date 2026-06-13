@@ -151,6 +151,7 @@ async function dbLoad() {
       DB.dr         = DB.dr         || { s: '', e: '' };
       DB.drPer      = DB.drPer      || {};
       DB.ext        = DB.ext        || { on: false, s: '', e: '' };
+      DB.excHorario = DB.excHorario || { ini: 18, fin: 7 };
       DB.ups        = DB.ups        || {};
       DB.asist      = DB.asist      || {};
       DB.exc        = DB.exc        || [];
@@ -649,7 +650,7 @@ async function saveAst(key) {
 // envExcusa()
 // ═══════════════════════════════════════════════════════════════════
 async function envExcusa() {
-  if (!excusasOk()) { sw('error', 'Fuera del horario de excusas (18:00–07:00)'); return; }
+  if (!excusasOk()) { const _eh=DB.excHorario||{}; sw('error', `Fuera del horario de excusas (${_eh.ini??18}:00–${_eh.fin??7}:00)`); return; }
   const d    = gi('exd')?.value;
   const dest = gi('exdst')?.value;
   const c    = gi('exc2')?.value;
@@ -779,6 +780,7 @@ async function subirTarea() {
   const d      = gi('utd')?.value.trim();
   const profId = gi('utprof')?.value;
   const f      = gi('utf')?.files[0];
+  if (!profId) { sw('warning', 'Selecciona un profesor'); return; }
   if (!m || !p) { sw('warning', 'Selecciona materia y periodo'); return; }
   if (!f) { sw('warning', 'Selecciona un archivo'); return; }
   if (f.size > 5 * 1024 * 1024) { sw('error', 'Archivo muy grande (máx 5 MB)'); return; }
@@ -964,6 +966,23 @@ async function saveExt() {
       sw('success', 'Guardado', '', 1400);
     }
   } catch (e2) { sw('error', 'Error: ' + e2.message); }
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// saveExcHorario() — Admin guarda el horario permitido para excusas
+// ═══════════════════════════════════════════════════════════════════
+async function saveExcHorario() {
+  const ini = parseInt(gi('excHorIni')?.value ?? 18, 10);
+  const fin  = parseInt(gi('excHorFin')?.value ?? 7,  10);
+  if (isNaN(ini) || ini < 0 || ini > 23 || isNaN(fin) || fin < 0 || fin > 23) {
+    sw('error', 'Hora inválida', 'Ingresa valores entre 0 y 23'); return;
+  }
+  DB.excHorario = { ini, fin };
+  try {
+    await apiFetch('/api/config/excHorario', { method: 'PUT', body: JSON.stringify({ value: DB.excHorario }) });
+    sw('success', `Horario actualizado: ${ini}:00 – ${fin}:00`, '', 1800);
+    goto('afec');
+  } catch (e) { sw('error', 'Error: ' + e.message); }
 }
 
 async function archivarYLimpiarRecuperacion() {
@@ -2316,6 +2335,7 @@ document.addEventListener('DOMContentLoaded', async () => {
           DB.dr         = DB.dr         || { s: '', e: '' };
           DB.drPer      = DB.drPer      || {};
           DB.ext        = DB.ext        || { on: false, s: '', e: '' };
+      DB.excHorario = DB.excHorario || { ini: 18, fin: 7 };
           DB.ups        = DB.ups        || {};
           DB.asist      = DB.asist      || {};
           DB.exc        = DB.exc        || [];
