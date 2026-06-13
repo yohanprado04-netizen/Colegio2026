@@ -18437,134 +18437,129 @@ async function finVerComprobante(cid){
     const {dataUrl,fileType}=await apiFin(`/comprobantes/${cid}/archivo`);
     if(!dataUrl){ el.innerHTML='<p style="color:#b91c1c;text-align:center">Archivo no disponible.</p>'; return; }
     if(fileType?.startsWith('image')){
-      // Imagen: zoom hacia el cursor + pan con drag
-      const uid='zimg_'+Date.now();
-      el.innerHTML=`
-        <div style="user-select:none">
-          <div id="${uid}_wrap" style="overflow:hidden;border-radius:10px;background:#111;position:relative;height:68vh;cursor:grab;touch-action:none">
-            <img id="${uid}" src="${dataUrl}" draggable="false"
-              style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%) scale(1);transform-origin:0 0;will-change:transform;max-width:none;max-height:none;display:block;pointer-events:none">
-          </div>
-          <div style="margin-top:8px;display:flex;align-items:center;justify-content:center;gap:10px;flex-wrap:wrap">
-            <button id="${uid}_zin"  style="padding:5px 14px;font-size:14px;border:1.5px solid #cbd5e1;border-radius:7px;background:#f8fafc;cursor:pointer;font-weight:800;line-height:1">🔍+</button>
-            <button id="${uid}_res"  style="padding:5px 14px;font-size:13px;border:1.5px solid #cbd5e1;border-radius:7px;background:#f8fafc;cursor:pointer;font-weight:700;line-height:1">↩ Reset</button>
-            <button id="${uid}_zout" style="padding:5px 14px;font-size:14px;border:1.5px solid #cbd5e1;border-radius:7px;background:#f8fafc;cursor:pointer;font-weight:800;line-height:1">🔍−</button>
-            <a href="${dataUrl}" download="comprobante" target="_blank" style="padding:5px 14px;font-size:12px;color:#2563eb;font-weight:700;text-decoration:none;border:1.5px solid #93c5fd;border-radius:7px;background:#eff6ff">📥 Descargar</a>
-          </div>
-          <p style="font-size:11px;color:#94a3b8;margin-top:5px;margin-bottom:0;text-align:center">
-            🖱️ Scroll para zoom hacia el cursor · Arrastra para mover · Doble clic para resetear
-          </p>
-        </div>`;
+      // Viewer: imagen completa visible + zoom hacia el cursor + pan
+      const uid='zv'+Date.now();
+      el.innerHTML=`<div id="${uid}_root" style="user-select:none;-webkit-user-select:none">
+        <div id="${uid}_box" style="width:100%;height:62vh;overflow:hidden;background:#111;border-radius:10px;cursor:grab;position:relative">
+          <img id="${uid}_img" src="${dataUrl}" draggable="false"
+            style="position:absolute;top:0;left:0;width:100%;height:100%;object-fit:contain;pointer-events:none;will-change:transform">
+        </div>
+        <div style="display:flex;align-items:center;justify-content:center;gap:10px;margin-top:8px;flex-wrap:wrap">
+          <button id="${uid}_zi" style="padding:5px 16px;font-size:15px;font-weight:800;border:1.5px solid #94a3b8;border-radius:7px;background:#f1f5f9;cursor:pointer">+</button>
+          <button id="${uid}_zr" style="padding:5px 14px;font-size:12px;font-weight:700;border:1.5px solid #94a3b8;border-radius:7px;background:#f1f5f9;cursor:pointer">Reset</button>
+          <button id="${uid}_zo" style="padding:5px 16px;font-size:15px;font-weight:800;border:1.5px solid #94a3b8;border-radius:7px;background:#f1f5f9;cursor:pointer">−</button>
+          <a href="${dataUrl}" download="comprobante" target="_blank" style="padding:5px 14px;font-size:12px;font-weight:700;color:#2563eb;border:1.5px solid #93c5fd;border-radius:7px;background:#eff6ff;text-decoration:none">📥 Descargar</a>
+        </div>
+        <p style="text-align:center;font-size:11px;color:#94a3b8;margin:5px 0 0">Scroll para zoom · Arrastra para mover · Doble clic para resetear</p>
+      </div>`;
       setTimeout(()=>{
-        const wrap=document.getElementById('${uid}_wrap');
-        const im=document.getElementById('${uid}');
-        if(!wrap||!im) return;
+        const box = document.getElementById(uid+'_box');
+        const img = document.getElementById(uid+'_img');
+        if(!box||!img) return;
 
-        // Estado: escala + traslación
-        let sc=1, tx=0, ty=0;
-        let dragging=false, lastX=0, lastY=0;
+        // Estado interno: escala y traslación en píxeles desde el centro
+        let z=1, px=0, py=0;
 
-        function applyTransform(anim){
-          im.style.transition=anim?'transform .15s':'none';
-          im.style.transform=`translate(calc(-50% + ${tx}px), calc(-50% + ${ty}px)) scale(${sc})`;
-          im.style.transformOrigin='50% 50%';
-          wrap.style.cursor=sc>1?(dragging?'grabbing':'grab'):'grab';
+        function render(smooth){
+          img.style.transition = smooth ? 'transform .12s' : 'none';
+          // Aplicamos la transformación relativa al centro del box
+          const hw = box.clientWidth/2;
+          const hh = box.clientHeight/2;
+          img.style.transformOrigin = '0 0';
+          img.style.transform = `translate(${hw + px - (hw)*z}px, ${hh + py - (hh)*z}px) scale(${z})`;
         }
 
-        function clampTx(){
-          // Limitar pan para que la imagen no se aleje demasiado
-          const iw=im.naturalWidth||im.offsetWidth;
-          const ih=im.naturalHeight||im.offsetHeight;
-          const maxX=Math.max(0,(iw*sc-wrap.clientWidth)/2+40);
-          const maxY=Math.max(0,(ih*sc-wrap.clientHeight)/2+40);
-          tx=Math.min(maxX,Math.max(-maxX,tx));
-          ty=Math.min(maxY,Math.max(-maxY,ty));
+        function clamp(){
+          const iw = box.clientWidth * z;
+          const ih = box.clientHeight * z;
+          const mx = Math.max(0, (iw - box.clientWidth)/2 + 60);
+          const my = Math.max(0, (ih - box.clientHeight)/2 + 60);
+          px = Math.min(mx, Math.max(-mx, px));
+          py = Math.min(my, Math.max(-my, py));
         }
 
-        function zoomAt(cx,cy,delta){
-          // cx,cy: coordenadas relativas al wrap (punto de zoom)
-          const prev=sc;
-          sc=Math.min(Math.max(sc*delta,.5),6);
-          // Ajustar traslación para que el punto bajo el cursor no se mueva
-          const factor=sc/prev-1;
-          // cx relativo al centro del wrap
-          const relX=cx-wrap.clientWidth/2;
-          const relY=cy-wrap.clientHeight/2;
-          tx-=relX*factor;
-          ty-=relY*factor;
-          clampTx();
-          applyTransform(true);
+        function zoomAt(cx, cy, factor){
+          // cx,cy relativas al centro del box
+          const prev = z;
+          z = Math.min(Math.max(z * factor, 0.5), 8);
+          const ratio = z/prev - 1;
+          px -= cx * ratio;
+          py -= cy * ratio;
+          clamp();
+          render(true);
         }
 
-        // Scroll del mouse → zoom hacia el cursor
-        wrap.addEventListener('wheel',ev=>{
+        // Inicializar
+        render(false);
+
+        // Scroll → zoom hacia cursor
+        box.addEventListener('wheel', ev => {
           ev.preventDefault();
-          const rect=wrap.getBoundingClientRect();
-          const cx=ev.clientX-rect.left;
-          const cy=ev.clientY-rect.top;
-          const delta=ev.deltaY<0?1.18:.85;
-          zoomAt(cx,cy,delta);
-        },{passive:false});
+          const r = box.getBoundingClientRect();
+          const cx = ev.clientX - r.left - box.clientWidth/2;
+          const cy = ev.clientY - r.top  - box.clientHeight/2;
+          zoomAt(cx, cy, ev.deltaY < 0 ? 1.2 : 1/1.2);
+        }, {passive:false});
 
         // Doble clic → reset
-        wrap.addEventListener('dblclick',()=>{ sc=1;tx=0;ty=0;applyTransform(true); });
+        box.addEventListener('dblclick', () => { z=1; px=0; py=0; render(true); });
 
-        // Drag para pan
-        wrap.addEventListener('mousedown',ev=>{
+        // Mouse drag
+        let drag=false, mx0=0, my0=0, px0=0, py0=0;
+        box.addEventListener('mousedown', ev => {
           if(ev.button!==0) return;
-          dragging=true; lastX=ev.clientX; lastY=ev.clientY;
-          wrap.style.cursor='grabbing'; ev.preventDefault();
+          drag=true; mx0=ev.clientX; my0=ev.clientY; px0=px; py0=py;
+          box.style.cursor='grabbing'; ev.preventDefault();
         });
-        window.addEventListener('mousemove',ev=>{
-          if(!dragging) return;
-          tx+=ev.clientX-lastX; ty+=ev.clientY-lastY;
-          lastX=ev.clientX; lastY=ev.clientY;
-          clampTx(); applyTransform(false);
+        document.addEventListener('mousemove', ev => {
+          if(!drag) return;
+          px = px0 + (ev.clientX-mx0);
+          py = py0 + (ev.clientY-my0);
+          clamp(); render(false);
         });
-        window.addEventListener('mouseup',()=>{ if(dragging){dragging=false;applyTransform(false);} });
+        document.addEventListener('mouseup', () => {
+          if(drag){ drag=false; box.style.cursor=z>1?'grab':'default'; }
+        });
 
-        // Touch: pinch para zoom + drag
-        let pt=null, pinchDist0=0, sc0=1, tx0=0, ty0=0;
-        wrap.addEventListener('touchstart',ev=>{
+        // Touch: 1 dedo pan, 2 dedos pinch
+        let t0=null, pd0=0, pz0=1, ppx0=0, ppy0=0;
+        box.addEventListener('touchstart', ev => {
           ev.preventDefault();
           if(ev.touches.length===1){
-            pt={x:ev.touches[0].clientX,y:ev.touches[0].clientY};
+            t0={x:ev.touches[0].clientX, y:ev.touches[0].clientY, px, py};
           } else if(ev.touches.length===2){
             const dx=ev.touches[0].clientX-ev.touches[1].clientX;
             const dy=ev.touches[0].clientY-ev.touches[1].clientY;
-            pinchDist0=Math.hypot(dx,dy); sc0=sc; tx0=tx; ty0=ty;
+            pd0=Math.hypot(dx,dy); pz0=z; ppx0=px; ppy0=py;
           }
         },{passive:false});
-        wrap.addEventListener('touchmove',ev=>{
+        box.addEventListener('touchmove', ev => {
           ev.preventDefault();
-          if(ev.touches.length===1&&pt){
-            const dx=ev.touches[0].clientX-pt.x;
-            const dy=ev.touches[0].clientY-pt.y;
-            tx+=dx; ty+=dy; pt={x:ev.touches[0].clientX,y:ev.touches[0].clientY};
-            clampTx(); applyTransform(false);
+          if(ev.touches.length===1 && t0){
+            px = t0.px + (ev.touches[0].clientX - t0.x);
+            py = t0.py + (ev.touches[0].clientY - t0.y);
+            clamp(); render(false);
           } else if(ev.touches.length===2){
             const dx=ev.touches[0].clientX-ev.touches[1].clientX;
             const dy=ev.touches[0].clientY-ev.touches[1].clientY;
-            const dist=Math.hypot(dx,dy);
-            sc=Math.min(Math.max(sc0*(dist/pinchDist0),.5),6);
-            tx=tx0; ty=ty0; clampTx(); applyTransform(false);
+            const d=Math.hypot(dx,dy);
+            z = Math.min(Math.max(pz0*(d/pd0), 0.5), 8);
+            px=ppx0; py=ppy0; clamp(); render(false);
           }
         },{passive:false});
-        wrap.addEventListener('touchend',()=>{ pt=null; });
+        box.addEventListener('touchend', () => { t0=null; });
 
         // Botones
-        document.getElementById('${uid}_zin').onclick=()=>{
-          const rect=wrap.getBoundingClientRect();
-          zoomAt(rect.width/2,rect.height/2,1.4);
+        document.getElementById(uid+'_zi').onclick = () => {
+          zoomAt(0, 0, 1.4);
         };
-        document.getElementById('${uid}_zout').onclick=()=>{
-          const rect=wrap.getBoundingClientRect();
-          zoomAt(rect.width/2,rect.height/2,1/1.4);
+        document.getElementById(uid+'_zo').onclick = () => {
+          zoomAt(0, 0, 1/1.4);
         };
-        document.getElementById('${uid}_res').onclick=()=>{ sc=1;tx=0;ty=0;applyTransform(true); };
-
-        applyTransform(false);
-      },80);
+        document.getElementById(uid+'_zr').onclick = () => {
+          z=1; px=0; py=0; render(true);
+        };
+      }, 100);
     } else if(fileType==='application/pdf'){
       // PDF: mostrar con iframe inline
       el.innerHTML=`
