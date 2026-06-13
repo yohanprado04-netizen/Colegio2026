@@ -667,60 +667,7 @@ router.get('/reporte/cartera', finAuth, async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-// POST /api/fin/comprobantes/crear — estudiante sube comprobante sin esperar solicitud del financiero
-router.post('/comprobantes/crear', async (req, res) => {
-  try {
-    const authH = req.headers.authorization || '';
-    const token = authH.startsWith('Bearer ') ? authH.slice(7) : '';
-    if (!token) return res.status(401).json({ error: 'Sin token' });
-    const jwt2 = require('jsonwebtoken');
-    let payload;
-    try { payload = jwt2.verify(token, process.env.JWT_SECRET || 'secret'); }
-    catch { return res.status(401).json({ error: 'Token inválido' }); }
 
-    const { pagoId, dataUrl, fileType, fileName } = req.body;
-    if (!pagoId || !dataUrl) return res.status(400).json({ error: 'Faltan pagoId o dataUrl' });
-
-    const pago = await Pago.findOne({ id: pagoId }).lean();
-    if (!pago) return res.status(404).json({ error: 'Pago no encontrado' });
-    if (pago.estId !== payload.id) return res.status(403).json({ error: 'Sin permiso sobre este pago' });
-    if (pago.estado === 'pagado') return res.status(400).json({ error: 'Este pago ya está confirmado como pagado' });
-    if (pago.estado === 'anulado') return res.status(400).json({ error: 'Este pago está anulado' });
-
-    // Rechazar si ya hay un comprobante activo (solicitado, enviado o aprobado)
-    const existe = await Comprobante.findOne({
-      pagoId, estado: { $in: ['solicitado', 'enviado', 'aprobado'] }
-    }).lean();
-    if (existe) {
-      return res.status(400).json({ error: 'Ya hay un comprobante activo para este pago', comprobante: existe });
-    }
-
-    const hoy = new Date().toISOString().slice(0, 10);
-    const comp = await Comprobante.create({
-      id:             require('crypto').randomUUID(),
-      colegioId:      pago.colegioId,
-      pagoId,
-      estId:          pago.estId,
-      estNombre:      pago.estNombre,
-      salon:          pago.salon,
-      conceptoNombre: pago.conceptoNombre,
-      valorFinal:     pago.valorFinal,
-      anoPago:        pago.anoPago,
-      estado:         'enviado',
-      dataUrl,
-      fileType:       fileType || '',
-      fileName:       fileName || 'comprobante',
-      solicitadoTs:   hoy,
-      enviadoTs:      hoy,
-    });
-
-    // Devolver sin el dataUrl para ahorrar ancho de banda
-    const { dataUrl: _skip, ...compSafe } = comp.toObject();
-    res.status(201).json(compSafe);
-  } catch (e) { res.status(500).json({ error: e.message }); }
-});
-
-module.exports = router;
 
 // ══════════════════════════════════════════════════════════════════════════════
 // USUARIOS FINANCIEROS (lectura para finAdmin del propio colegio)
@@ -808,6 +755,58 @@ router.get('/comprobantes/est/:estId', async (req, res) => {
     if (payload.id !== req.params.estId) return res.status(403).json({ error: 'Sin permiso' });
     const list = await Comprobante.find({ estId: req.params.estId }, '-dataUrl').sort({ createdAt: -1 }).lean();
     res.json(list);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// POST /api/fin/comprobantes/crear — estudiante sube comprobante sin esperar solicitud del financiero
+// IMPORTANTE: esta ruta debe estar ANTES de /comprobantes/:id/... para que Express no confunda 'crear' como id
+router.post('/comprobantes/crear', async (req, res) => {
+  try {
+    const authH = req.headers.authorization || '';
+    const token = authH.startsWith('Bearer ') ? authH.slice(7) : '';
+    if (!token) return res.status(401).json({ error: 'Sin token' });
+    const jwt2 = require('jsonwebtoken');
+    let payload;
+    try { payload = jwt2.verify(token, process.env.JWT_SECRET || 'secret'); }
+    catch { return res.status(401).json({ error: 'Token inválido' }); }
+
+    const { pagoId, dataUrl, fileType, fileName } = req.body;
+    if (!pagoId || !dataUrl) return res.status(400).json({ error: 'Faltan pagoId o dataUrl' });
+
+    const pago = await Pago.findOne({ id: pagoId }).lean();
+    if (!pago) return res.status(404).json({ error: 'Pago no encontrado' });
+    if (pago.estId !== payload.id) return res.status(403).json({ error: 'Sin permiso sobre este pago' });
+    if (pago.estado === 'pagado') return res.status(400).json({ error: 'Este pago ya está confirmado como pagado' });
+    if (pago.estado === 'anulado') return res.status(400).json({ error: 'Este pago está anulado' });
+
+    const existe = await Comprobante.findOne({
+      pagoId, estado: { $in: ['solicitado', 'enviado', 'aprobado'] }
+    }).lean();
+    if (existe) {
+      return res.status(400).json({ error: 'Ya hay un comprobante activo para este pago', comprobante: existe });
+    }
+
+    const hoy = new Date().toISOString().slice(0, 10);
+    const comp = await Comprobante.create({
+      id:             require('crypto').randomUUID(),
+      colegioId:      pago.colegioId,
+      pagoId,
+      estId:          pago.estId,
+      estNombre:      pago.estNombre,
+      salon:          pago.salon,
+      conceptoNombre: pago.conceptoNombre,
+      valorFinal:     pago.valorFinal,
+      anoPago:        pago.anoPago,
+      estado:         'enviado',
+      dataUrl,
+      fileType:       fileType || '',
+      fileName:       fileName || 'comprobante',
+      solicitadoTs:   hoy,
+      enviadoTs:      hoy,
+    });
+
+    const { dataUrl: _skip, ...compSafe } = comp.toObject();
+    res.status(201).json(compSafe);
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 

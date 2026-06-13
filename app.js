@@ -1243,6 +1243,26 @@ function buildNav(){
     }
   }
 
+  /* Badge de comprobantes pendientes para finAdmin */
+  if(CU.role==='finAdmin'){
+    (async()=>{
+      try{
+        const lista=await apiFin('/comprobantes?limit=200&estado=enviado').catch(()=>[]);
+        const n=Array.isArray(lista)?lista.length:0;
+        if(n>0){
+          const btn=gi('ni_fincomprobantes');
+          if(btn&&!btn.querySelector('.comp-badge')){
+            const badge=document.createElement('span');
+            badge.className='comp-badge';
+            badge.style.cssText='display:inline-flex;align-items:center;justify-content:center;background:#e53e3e;color:#fff;border-radius:20px;padding:1px 7px;font-size:10px;font-weight:800;margin-left:auto;min-width:18px';
+            badge.textContent=n;
+            btn.appendChild(badge);
+          }
+        }
+      }catch(_){}
+    })();
+  }
+
   /* Add notification dots after nav is built */
   if(CU.role==='profe'&&DB.ext.on){
     const pendRec=(DB.recs||[]).filter(r=>r.profId===CU.id&&!r.revisado).length;
@@ -9168,6 +9188,26 @@ function buildNav(){
         comBtn.appendChild(badge);
       }
     }
+  }
+
+  /* Badge de comprobantes pendientes para finAdmin */
+  if(CU.role==='finAdmin'){
+    (async()=>{
+      try{
+        const lista=await apiFin('/comprobantes?limit=200&estado=enviado').catch(()=>[]);
+        const n=Array.isArray(lista)?lista.length:0;
+        if(n>0){
+          const btn=gi('ni_fincomprobantes');
+          if(btn&&!btn.querySelector('.comp-badge')){
+            const badge=document.createElement('span');
+            badge.className='comp-badge';
+            badge.style.cssText='display:inline-flex;align-items:center;justify-content:center;background:#e53e3e;color:#fff;border-radius:20px;padding:1px 7px;font-size:10px;font-weight:800;margin-left:auto;min-width:18px';
+            badge.textContent=n;
+            btn.appendChild(badge);
+          }
+        }
+      }catch(_){}
+    })();
   }
 
   /* Add notification dots after nav is built */
@@ -18349,24 +18389,67 @@ async function initFinComprobantes(){
         </div>`:''}
       </div>`;
     }).join('');
-    // Highlight active filter button
-    finCompFiltro(estado);
+    // Highlight active filter button (sin llamar initFinComprobantes de nuevo)
+    ['todos','solicitado','enviado','aprobado','rechazado'].forEach(s=>{
+      const btn=gi('fcfBtn_'+s);
+      if(!btn) return;
+      btn.style.background=s===estado?'var(--nv)':'var(--bg2)';
+      btn.style.color=s===estado?'#fff':'var(--tx)';
+      btn.style.borderColor=s===estado?'var(--nv)':'var(--bd)';
+    });
   }catch(e){ el.innerHTML=`<div class="al aly">Error: ${esc(e.message)}</div>`; }
 }
 
 async function finVerComprobante(cid){
   const el=document.createElement('div');
-  el.innerHTML='<div style="text-align:center;padding:16px;color:var(--sl3)">⏳ Cargando archivo...</div>';
-  Swal.fire({ title:'📎 Comprobante', html:el, showConfirmButton:false, showCloseButton:true, width:600 });
+  el.innerHTML='<div style="text-align:center;padding:24px;color:var(--sl3)">⏳ Cargando archivo...</div>';
+  Swal.fire({
+    title:'📎 Comprobante de Pago',
+    html:el,
+    showConfirmButton:false,
+    showCloseButton:true,
+    width:'min(700px,95vw)',
+    padding:'16px'
+  });
   try{
     const {dataUrl,fileType}=await apiFin(`/comprobantes/${cid}/archivo`);
-    if(!dataUrl){ el.innerHTML='<p style="color:#b91c1c">Archivo no disponible.</p>'; return; }
+    if(!dataUrl){ el.innerHTML='<p style="color:#b91c1c;text-align:center">Archivo no disponible.</p>'; return; }
     if(fileType?.startsWith('image')){
-      el.innerHTML=`<img src="${dataUrl}" style="max-width:100%;max-height:70vh;border-radius:8px;object-fit:contain">`;
+      // Imagen: mostrar directamente
+      el.innerHTML=`
+        <div style="text-align:center">
+          <img src="${dataUrl}" style="max-width:100%;max-height:75vh;border-radius:10px;object-fit:contain;box-shadow:0 4px 20px rgba(0,0,0,.15)">
+          <div style="margin-top:10px">
+            <a href="${dataUrl}" download="comprobante" target="_blank"
+              style="font-size:12px;color:#2563eb;text-decoration:none;font-weight:600">
+              📥 Descargar imagen
+            </a>
+          </div>
+        </div>`;
+    } else if(fileType==='application/pdf'){
+      // PDF: mostrar con iframe inline
+      el.innerHTML=`
+        <div style="text-align:center">
+          <iframe src="${dataUrl}" style="width:100%;height:65vh;border:none;border-radius:8px;background:#f8fafc"></iframe>
+          <div style="margin-top:8px">
+            <a href="${dataUrl}" download="comprobante.pdf" target="_blank"
+              style="font-size:12px;color:#2563eb;text-decoration:none;font-weight:600">
+              📥 Descargar PDF
+            </a>
+          </div>
+        </div>`;
     } else {
-      el.innerHTML=`<a href="${dataUrl}" download="comprobante" style="display:inline-block;padding:10px 20px;background:#2563eb;color:#fff;border-radius:8px;font-weight:700;text-decoration:none">📥 Descargar PDF</a>`;
+      // Tipo desconocido: botón de descarga
+      el.innerHTML=`
+        <div style="text-align:center;padding:20px">
+          <div style="font-size:40px;margin-bottom:10px">📄</div>
+          <a href="${dataUrl}" download="comprobante" target="_blank"
+            style="display:inline-block;padding:10px 24px;background:#2563eb;color:#fff;border-radius:8px;font-weight:700;text-decoration:none">
+            📥 Descargar archivo
+          </a>
+        </div>`;
     }
-  }catch(e){ el.innerHTML=`<p style="color:#b91c1c">Error: ${esc(e.message)}</p>`; }
+  }catch(e){ el.innerHTML=`<p style="color:#b91c1c;text-align:center">Error: ${esc(e.message)}</p>`; }
 }
 
 async function finAprobarComp(cid){
@@ -18382,6 +18465,7 @@ async function finAprobarComp(cid){
     await apiFin(`/comprobantes/${cid}/revisar`,{method:'PUT',body:JSON.stringify({accion:'aprobar'})});
     sw('success','✅ Comprobante aprobado. Pago confirmado.','',2000);
     initFinComprobantes();
+    actualizarBadgeComprobantes();
   }catch(e){ sw('error','Error: '+e.message); }
 }
 
@@ -18401,7 +18485,30 @@ async function finRechazarComp(cid){
     await apiFin(`/comprobantes/${cid}/revisar`,{method:'PUT',body:JSON.stringify({accion:'rechazar',motivoRechazo:r.value})});
     sw('success','Comprobante rechazado. El estudiante fue notificado.','',2200);
     initFinComprobantes();
+    actualizarBadgeComprobantes();
   }catch(e){ sw('error','Error: '+e.message); }
+}
+
+async function actualizarBadgeComprobantes(){
+  try{
+    const lista=await apiFin('/comprobantes?limit=200&estado=enviado').catch(()=>[]);
+    const n=Array.isArray(lista)?lista.length:0;
+    const btn=gi('ni_fincomprobantes');
+    if(!btn) return;
+    const existing=btn.querySelector('.comp-badge');
+    if(n>0){
+      if(existing){ existing.textContent=n; }
+      else{
+        const badge=document.createElement('span');
+        badge.className='comp-badge';
+        badge.style.cssText='display:inline-flex;align-items:center;justify-content:center;background:#e53e3e;color:#fff;border-radius:20px;padding:1px 7px;font-size:10px;font-weight:800;margin-left:auto;min-width:18px';
+        badge.textContent=n;
+        btn.appendChild(badge);
+      }
+    } else {
+      if(existing) existing.remove();
+    }
+  }catch(_){}
 }
 
 async function finEliminarPago(pid){
