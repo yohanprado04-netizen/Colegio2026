@@ -1243,6 +1243,27 @@ function buildNav(){
     }
   }
 
+  /* Badge de clase virtual activa para estudiantes */
+  if (CU.role === 'est') {
+    const ahora = new Date();
+    const claseViva = (DB.vclases || []).some(c => {
+      if (c.salon !== CU.salon) return false;
+      const claseTs = new Date(c.fecha + 'T' + c.hora);
+      const diffMin = (ahora - claseTs) / 60000;
+      return diffMin >= -10 && diffMin <= 120;
+    });
+    if (claseViva) {
+      const virBtn = gi('ni_evir');
+      if (virBtn && !virBtn.querySelector('.vir-badge')) {
+        const badge = document.createElement('span');
+        badge.className = 'vir-badge';
+        badge.style.cssText = 'display:inline-flex;align-items:center;justify-content:center;background:#10b981;color:#fff;border-radius:20px;padding:1px 8px;font-size:10px;font-weight:800;margin-left:auto;min-width:18px;animation:pulse-dot 1.5s ease infinite';
+        badge.textContent = '🟢 En vivo';
+        virBtn.appendChild(badge);
+      }
+    }
+  }
+
   /* Badge de comprobantes pendientes para finAdmin */
   if(CU.role==='finAdmin'){
     (async()=>{
@@ -5408,28 +5429,24 @@ let _jitsiAPI = null;
 function abrirSalaJitsi(roomId, titulo, esProfesor) {
   if (!roomId) { sw('error','ID de sala no válido'); return; }
 
-  // Aviso previo SOLO para el profesor/moderador
-  if (esProfesor) {
-    Swal.fire({
-      title: '💻 Iniciando clase',
-      html: `<div style="text-align:left;font-size:14px;line-height:1.7">
-        <p>La sala se abrirá ahora.</p>
-        <div style="background:#fef9c3;border:1px solid #fde047;border-radius:8px;padding:10px 14px;margin-top:10px;font-size:13px">
-          ⚠️ <strong>Aviso de Jitsi:</strong> Al entrar puede aparecer un mensaje que dice
-          <em>"Embedding is only meant for demo purposes"</em>.<br><br>
-          Solo haz clic en <strong>Aceptar</strong> y la clase continuará sin interrupciones.
-        </div>
-      </div>`,
-      confirmButtonText: 'Entrar a la clase →',
-      showCancelButton: true,
-      cancelButtonText: 'Cancelar',
-      icon: null,
-    }).then(r => {
-      if (r.isConfirmed) _abrirOverlayJitsi(roomId, titulo, esProfesor);
-    });
-  } else {
-    _abrirOverlayJitsi(roomId, titulo, esProfesor);
-  }
+  // Aviso previo para TODOS (profesor y estudiante)
+  Swal.fire({
+    title: '💻 ' + (esProfesor ? 'Iniciando clase' : 'Unirse a la clase'),
+    html: `<div style="text-align:left;font-size:14px;line-height:1.7">
+      <p>${esProfesor ? 'La sala se abrirá ahora.' : 'Vas a entrar a la clase virtual.'}</p>
+      <div style="background:#fef9c3;border:1px solid #fde047;border-radius:8px;padding:10px 14px;margin-top:10px;font-size:13px">
+        ⚠️ <strong>Aviso:</strong> Al entrar puede aparecer un mensaje de Jitsi que dice
+        <em>"Embedding is only meant for demo purposes"</em>.<br><br>
+        Solo haz clic en <strong>Aceptar</strong> y la clase continuará sin interrupciones.
+      </div>
+    </div>`,
+    confirmButtonText: esProfesor ? 'Iniciar clase →' : 'Entrar a la clase →',
+    showCancelButton: true,
+    cancelButtonText: 'Cancelar',
+    icon: null,
+  }).then(r => {
+    if (r.isConfirmed) _abrirOverlayJitsi(roomId, titulo, esProfesor);
+  });
 }
 
 function _abrirOverlayJitsi(roomId, titulo, esProfesor) {
@@ -5524,26 +5541,19 @@ function _lanzarJitsi(roomId, titulo, esProfesor, container) {
     _jitsiAPI.addEventListener('readyToClose',        () => cerrarSalaJitsi());
     _jitsiAPI.addEventListener('videoConferenceLeft', () => cerrarSalaJitsi());
 
-    // Corregir espejo del video local inyectando CSS en el iframe
-    // Jitsi aplica scaleX(-1) inline — lo revertimos al cargar
+    // ── Corregir espejo ────────────────────────────────────────────
+    // meet.jit.si es cross-origin: no podemos tocar el DOM del iframe.
+    // Jitsi External API tiene el comando 'toggleVideoQuality' pero no
+    // expone flip. La solución es usar CSS en el CONTENEDOR del iframe
+    // con pointer-events preservados — aplicamos scaleX(-1) al iframe
+    // entero para invertir el espejo que Jitsi aplica internamente.
+    // Resultado: el video se ve sin espejo para el usuario local.
     _jitsiAPI.addEventListener('videoConferenceJoined', () => {
-      try {
-        const iframe = container.querySelector('iframe');
-        if (!iframe || !iframe.contentDocument) return;
-        const style = iframe.contentDocument.createElement('style');
-        style.textContent = `
-          .flipVideoX, video.flipVideoX,
-          .localVideoContainer video,
-          #localVideo video,
-          .videocontainer.localVideoContainer video {
-            transform: scaleX(1) !important;
-            -webkit-transform: scaleX(1) !important;
-          }
-        `;
-        iframe.contentDocument.head.appendChild(style);
-      } catch(e) {
-        // Si hay restricción CORS, el navegador bloquea — no crítico
-        console.warn('No se pudo inyectar CSS anti-espejo (CORS):', e.message);
+      const iframe = container.querySelector('iframe');
+      if (iframe) {
+        // El iframe completo se invierte — cancela el espejo interno de Jitsi
+        iframe.style.transform = 'scaleX(-1)';
+        iframe.style.webkitTransform = 'scaleX(-1)';
       }
     });
   } catch(err) {
