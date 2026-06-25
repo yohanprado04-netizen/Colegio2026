@@ -5501,7 +5501,7 @@ function _lanzarJitsi(roomId, titulo, esProfesor, container) {
   const safeRoom = colegioSlug + '-' + roomId.replace(/[^a-z0-9]/gi,'-').toLowerCase();
 
   try {
-    _jitsiAPI = new JitsiMeetExternalAPI('meet.jit.si', {
+    _jitsiAPI = new JitsiMeetExternalAPI('jitsi.riot.im', {
       roomName: safeRoom,
       width: '100%',
       height: '100%',
