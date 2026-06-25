@@ -156,9 +156,11 @@ const VClaseSchema = new Schema({
   salon:      { type: String, required: true },
   fecha:      { type: String, required: true },
   hora:       { type: String, required: true },
-  link:       { type: String, required: true },
+  link:       { type: String, default: '' },   // Legacy: URL externa (Meet/Zoom). Ya no requerida.
+  roomId:     { type: String, default: '' },   // ID sala Jitsi embebida
   desc:       { type: String, default: '' },
   ts:         { type: String, default: '' },
+  activa:     { type: Boolean, default: false },
   colegioId:  { type: String, default: '', index: true },
 }, { timestamps: true, collection: 'vclases' });
 

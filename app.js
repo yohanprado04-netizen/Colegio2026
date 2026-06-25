@@ -3121,7 +3121,7 @@ const HELP={
   ph:`<b>📊 Panel Principal</b><br>Resumen de tus salones, materias y estado del periodo activo. Usa el menú lateral para navegar a cada sección.`,
   pnot:`<b>📝 Ingresar Notas</b><br>1. Selecciona el <b>Salón</b> y el <b>Periodo</b>.<br>2. Haz clic en <b>Cargar</b>.<br>3. Ingresa: <b>Aptitud (60%)</b>, <b>Actitud (20%)</b> y <b>Responsabilidad (20%)</b>.<br>La definitiva se calcula automáticamente.<br>⚠️ Solo puedes ingresar notas durante el rango de fechas configurado para ese periodo.`,
   past:`<b>✅ Pasar Asistencia</b><br>Selecciona el salón y la fecha, marca ✓ a los presentes y ✗ a los ausentes. Guarda al terminar.`,
-  pvir:`<b>💻 Clases Virtuales</b><br>Publica enlaces de reuniones (Meet, Zoom, Teams) para tus salones. Los estudiantes ven el enlace activo en su sección.`,
+  pvir:`<b>💻 Clases Virtuales</b><br>Programa clases en vivo directamente desde la plataforma usando videoconferencia integrada (sin salir de la página).<br>1. Selecciona el salón, la fecha y la hora.<br>2. Escribe el tema de la clase.<br>3. Haz clic en <b>Programar Clase</b>.<br>Cuando sea el momento, entra con <b>🎥 Iniciar Clase</b> — la sala se abre aquí mismo. Los estudiantes verán el botón <b>🎥 Unirse</b> en su panel.`,
   ptar:`<b>📂 Tareas Recibidas</b><br>Archivos que los estudiantes te enviaron. Ábrelos y márcalos como <b>✓ Revisado</b>. Solo puedes eliminar los ya revisados; los intentos de eliminar sin revisar quedan en Auditoría.`,
   prec:`<b>🔄 Recuperaciones</b><br>Activo durante el Periodo Extraordinario.<br>1. Envía un Plan de Recuperación al salón o individual.<br>2. Los estudiantes responden antes de la fecha límite.<br>3. Revisa sus respuestas aquí y márcalas como revisadas.<br>Puedes exportar el historial de planes en Excel.`,
   phist:`<b>📚 Historial Recuperaciones</b><br>Recuperaciones de periodos anteriores. Usa el buscador para filtrar por nombre de archivo, estudiante o materia. Puedes abrir cualquier archivo archivado.`,
@@ -3164,9 +3164,9 @@ Los destinatarios verán el comunicado automáticamente en una pantalla de bienv
 Puedes <b>activar/desactivar</b> o <b>eliminar</b> cualquier comunicado en cualquier momento.`,
 
   aexc:`<b>✉️ Excusas Recibidas</b><br>Bandeja de excusas enviadas por los estudiantes (horario permitido: 18:00 – 07:00).<br>Haz clic en una excusa para leerla y escribir una <b>respuesta</b> al estudiante.<br>Las excusas respondidas quedan marcadas y el estudiante puede verlas en su módulo.`,
-  avcl:`<b>💻 Clases Virtuales (Admin)</b><br>Vista general de todos los enlaces de clases virtuales publicados por los docentes.<br>Cada tarjeta muestra el salón, la fecha, el docente y el enlace de la reunión (Meet, Zoom, Teams).<br>Los estudiantes ven estos enlaces activos en su sección de Clases Virtuales.`,
+  avcl:`<b>💻 Clases Virtuales (Admin)</b><br>Vista general de todas las clases virtuales programadas por los docentes.<br>Cada tarjeta muestra el salón, la fecha, el docente y el estado de la clase.<br>Las clases se realizan integradas en la plataforma — sin salir de la página.`,
   eprof:`<b>👩‍🏫 Mis Profesores</b><br>Lista de todos los docentes asignados a tu salón con sus materias y datos de contacto.<br>Consulta aquí el nombre y materias de cada profesor para saber a quién dirigirte.`,
-  evir:`<b>💻 Mis Clases Virtuales</b><br>Aquí aparecen los enlaces de reuniones (Meet, Zoom, Teams) que tus docentes han publicado para tu salón.<br>Haz clic en el enlace para unirte a la clase virtual en el horario indicado.`,
+  evir:`<b>💻 Mis Clases Virtuales</b><br>Aquí aparecen las clases virtuales que tus docentes han programado para tu salón.<br>Cuando el docente inicie la clase, aparecerá el botón <b>🎥 Unirse a la clase</b>.<br>La videoconferencia se abre aquí mismo, sin salir de la plataforma. ¡Sin necesidad de instalar nada!`,
 };
 function showHelp(panel){
   const txt=HELP[panel]||'Sin ayuda disponible para esta sección.';
@@ -3930,22 +3930,32 @@ async function responderExcusa(excId){
 /* ============================================================
    ADMIN — CLASES VIRTUALES
 ============================================================ */
-function pgAVcl(){return`<div class="ph"><h2>Clases Virtuales</h2><button class="btn xs bg" onclick="showHelp('avcl')" style="margin-top:6px">❓ Ayuda</button></div><div id="avcB"></div>`;}
+function pgAVcl(){return`<div class="ph"><h2>💻 Clases Virtuales</h2><button class="btn xs bg" onclick="showHelp('avcl')" style="margin-top:6px">❓ Ayuda</button></div><div id="avcB"></div>`;}
 function initAVcl(){
   const el=gi('avcB');if(!el)return;
   const clases=(DB.vclases||[]).slice().reverse();
   el.innerHTML=`<div class="card"><div class="chd"><span class="cti">📅 Clases Programadas (${clases.length})</span></div>
   ${clases.length?`<div class="tw"><table><thead>
-    <tr><th>Salón</th><th>Profesor</th><th>Materias del Prof.</th><th>Fecha</th><th>Hora</th><th>Enlace</th><th>Descripción</th></tr></thead>
-    <tbody>${clases.map(c=>`<tr>
-      <td><span class="bdg bgy">${c.salon}</span></td>
-      <td>${c.profNombre||'—'}</td>
-      <td style="font-size:11px;color:var(--sl2)">${c.materias||'—'}</td>
-      <td style="font-family:var(--mn);font-size:12px">${c.fecha}</td>
-      <td style="font-family:var(--mn);font-size:12px">${c.hora}</td>
-      <td><a href="${c.link}" target="_blank" class="btn xs bb">🔗 Abrir</a></td>
-      <td style="font-size:12px;color:var(--sl2)">${c.desc||'—'}</td>
-    </tr>`).join('')}</tbody></table></div>`
+    <tr><th>Salón</th><th>Profesor</th><th>Fecha</th><th>Hora</th><th>Tema</th><th>Estado</th></tr></thead>
+    <tbody>${clases.map(c=>{
+      const ahora=new Date();
+      const claseTs=new Date(c.fecha+'T'+c.hora);
+      const diffMin=(ahora-claseTs)/60000;
+      const activa = c.activa || (diffMin>=-10 && diffMin<=120);
+      const estado = activa
+        ? `<span class="bdg" style="background:#d1fae5;color:#065f46;border:1px solid #6ee7b7">🟢 En vivo</span>`
+        : diffMin>120
+          ? `<span class="bdg bgy">Finalizada</span>`
+          : `<span class="bdg" style="background:#eff6ff;color:#1e40af;border:1px solid #bfdbfe">📅 Programada</span>`;
+      return`<tr>
+        <td><span class="bdg bgy">${c.salon}</span></td>
+        <td>${c.profNombre||'—'}</td>
+        <td style="font-family:var(--mn);font-size:12px">${c.fecha}</td>
+        <td style="font-family:var(--mn);font-size:12px">${c.hora}</td>
+        <td style="font-size:12px">${c.desc||'—'}</td>
+        <td>${estado}</td>
+      </tr>`;
+    }).join('')}</tbody></table></div>`
     :'<div class="mty"><div class="ei">💻</div><p>Sin clases programadas</p></div>'}
   </div>`;
 }
@@ -5346,33 +5356,161 @@ async function saveAst(key){ /* implementado en api-layer.js */ }
 function pgPVir(){
   const sO=(CU.salones||[]).map(s=>`<option value="${s}">${s}</option>`).join('');
   const mis=(DB.vclases||[]).filter(c=>c.profId===CU.id).slice().reverse();
-  return`<div class="ph"><h2>Clases Virtuales</h2><button class="btn xs bg" onclick="showHelp('pvir')" style="margin-top:6px">❓ Ayuda</button></div>
-  <div class="card"><div class="chd"><span class="cti">📅 Programar Clase Virtual</span></div>
+  return`<div class="ph"><h2>💻 Clases Virtuales</h2><button class="btn xs bg" onclick="showHelp('pvir')" style="margin-top:6px">❓ Ayuda</button></div>
+  <div class="card"><div class="chd"><span class="cti">📅 Programar Clase</span></div>
     <div class="fg">
       <div class="fld"><label>Salón</label><select id="vcs">${sO||'<option value="">Sin salones asignados</option>'}</select></div>
       <div class="fld"><label>Fecha</label><input type="date" id="vcf" value="${today()}"></div>
       <div class="fld"><label>Hora</label><input type="time" id="vch" value="08:00"></div>
     </div>
-    <div class="fld"><label>Enlace de la Clase (Meet, Zoom, Teams, etc.)</label>
-      <input id="vcl" placeholder="https://meet.google.com/abc-def-ghi"></div>
     <div class="fld"><label>Tema / Descripción</label>
-      <input id="vcd" placeholder="Clase sobre..."></div>
-    <button class="btn bn" onclick="addVClase()">📅 Programar</button>
+      <input id="vcd" placeholder="Ej: Clase de matemáticas — fracciones"></div>
+    <button class="btn bn" onclick="addVClase()">📅 Programar Clase</button>
   </div>
-  <div class="card"><div class="chd"><span class="cti">📋 Mis Clases Programadas (${mis.length})</span></div>
-  ${mis.length?`<div class="tw"><table><thead>
-    <tr><th>Salón</th><th>Fecha</th><th>Hora</th><th>Enlace</th><th>Descripción</th><th></th></tr></thead>
-    <tbody>${mis.map(c=>`<tr>
-      <td><span class="bdg bgy">${c.salon}</span></td>
-      <td style="font-family:var(--mn);font-size:12px">${c.fecha}</td>
-      <td style="font-family:var(--mn);font-size:12px">${c.hora}</td>
-      <td><a href="${c.link}" target="_blank" class="btn xs bb">🔗 Enlace</a></td>
-      <td style="font-size:12px;color:var(--sl2)">${c.desc||'—'}</td>
-      <td><button class="btn xs bd" onclick="delVClase('${c.id}')">🗑</button></td>
-    </tr>`).join('')}</tbody></table></div>`
-    :'<div class="mty"><div class="ei">💻</div><p>Sin clases programadas aún</p></div>'}
+  <div class="card"><div class="chd"><span class="cti">📋 Mis Clases (${mis.length})</span></div>
+  ${mis.length?mis.map(c=>{
+    const ahora=new Date();
+    const claseTs=new Date(c.fecha+'T'+c.hora);
+    const diffMin=(ahora-claseTs)/60000;
+    const activa=(diffMin>=-10&&diffMin<=120);
+    const pasada=diffMin>120;
+    return`<div class="vc-card" style="flex-direction:column;align-items:stretch;gap:12px">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:8px">
+        <div>
+          <div style="font-size:15px;font-weight:800">💻 ${c.desc||'Clase Virtual'}</div>
+          <div style="font-size:11px;opacity:.7;margin-top:3px">Salón ${c.salon} · ${c.fecha} a las ${c.hora}</div>
+        </div>
+        ${pasada
+          ? `<span class="bdg bgy" style="font-size:11px">Finalizada</span>`
+          : activa
+            ? `<span class="bdg" style="background:#d1fae5;color:#065f46;border:1px solid #6ee7b7;font-size:11px">🟢 En vivo</span>`
+            : `<span class="bdg" style="background:rgba(255,255,255,.15);color:#fff;border:1px solid rgba(255,255,255,.25);font-size:11px">📅 Programada</span>`
+        }
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        ${!pasada?`<button class="btn sm bs" onclick="abrirSalaJitsi('${c.roomId}','${(c.desc||'Clase Virtual').replace(/'/g,"\'")}',true)">🎥 Iniciar clase</button>`:''}
+        <button class="btn sm bd" onclick="delVClase('${c.id}')">🗑 Eliminar</button>
+      </div>
+    </div>`;
+  }).join('')
+  :'<div class="mty"><div class="ei">💻</div><p>Sin clases programadas aún</p></div>'}
   </div>`;
 }
+
+/* ============================================================
+   JITSI MEET — Videoconferencia embebida
+   Usa meet.jit.si (100% gratuito, sin cuenta, sin límite)
+============================================================ */
+let _jitsiAPI = null;
+
+function abrirSalaJitsi(roomId, titulo, esProfesor) {
+  if (!roomId) { sw('error','ID de sala no válido'); return; }
+
+  // Crear overlay modal de sala
+  let overlay = document.getElementById('jitsiOverlay');
+  if (!overlay) {
+    overlay = document.createElement('div');
+    overlay.id = 'jitsiOverlay';
+    overlay.innerHTML = `
+      <div class="jitsi-modal">
+        <div class="jitsi-header">
+          <div class="jitsi-title">
+            <span style="font-size:20px">💻</span>
+            <span id="jitsiTitulo">Clase Virtual</span>
+          </div>
+          <button class="jitsi-close" onclick="cerrarSalaJitsi()" title="Salir de la clase">✕ Salir</button>
+        </div>
+        <div id="jitsiContainer"></div>
+      </div>`;
+    document.body.appendChild(overlay);
+  }
+
+  document.getElementById('jitsiTitulo').textContent = titulo || 'Clase Virtual';
+  overlay.classList.add('active');
+  document.body.style.overflow = 'hidden';
+
+  const container = document.getElementById('jitsiContainer');
+  container.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:#fff;font-size:15px;gap:12px"><div class="jitsi-spinner"></div>Conectando a la sala…</div>';
+
+  // Esperar a que la API de Jitsi esté lista, luego lanzar
+  _esperarJitsiAPI(() => _lanzarJitsi(roomId, titulo, esProfesor, container));
+}
+
+function _esperarJitsiAPI(cb, intentos) {
+  intentos = intentos || 0;
+  if (typeof JitsiMeetExternalAPI !== 'undefined') { cb(); return; }
+  if (intentos > 30) { sw('error','No se pudo cargar Jitsi. Verifica tu conexión.'); return; }
+  setTimeout(() => _esperarJitsiAPI(cb, intentos + 1), 400);
+}
+
+function _lanzarJitsi(roomId, titulo, esProfesor, container) {
+  // Limpiar instancia anterior si existe
+  if (_jitsiAPI) { try { _jitsiAPI.dispose(); } catch(e){} _jitsiAPI = null; }
+
+  container.innerHTML = '';
+
+  const nombre = (CU && CU.nombre) ? CU.nombre : (esProfesor ? 'Docente' : 'Estudiante');
+  const email  = (CU && CU.usuario) ? CU.usuario + '@edusistema.edu' : '';
+  const colegio = (CU && CU.colegioNombre) ? CU.colegioNombre : 'EduSistema';
+
+  // roomId ya viene sanitizado del servidor; asegurar que sea URL-safe
+  const safeRoom = 'edu-' + roomId.replace(/[^a-z0-9]/gi, '-').toLowerCase();
+
+  const config = {
+    startWithAudioMuted: !esProfesor,
+    startWithVideoMuted: !esProfesor,
+    disableDeepLinking: true,
+    prejoinPageEnabled: false,
+    disableInviteFunctions: true,
+    toolbarButtons: [
+      'microphone','camera','desktop','chat','raisehand',
+      'tileview','participants-pane','fullscreen',
+      ...(esProfesor ? ['mute-everyone','kick','recording'] : [])
+    ],
+    subject: titulo || 'Clase Virtual',
+    defaultLocalDisplayName: nombre,
+  };
+
+  try {
+    _jitsiAPI = new JitsiMeetExternalAPI('meet.jit.si', {
+      roomName: safeRoom,
+      width: '100%',
+      height: '100%',
+      parentNode: container,
+      configOverwrite: config,
+      interfaceConfigOverwrite: {
+        SHOW_JITSI_WATERMARK: false,
+        SHOW_BRAND_WATERMARK: false,
+        SHOW_POWERED_BY: false,
+        TOOLBAR_ALWAYS_VISIBLE: true,
+        DEFAULT_BACKGROUND: '#0f1f35',
+        APP_NAME: colegio,
+        NATIVE_APP_NAME: colegio,
+        LANG_DETECTION: false,
+      },
+      userInfo: { displayName: nombre, email: email },
+    });
+
+    _jitsiAPI.addEventListener('readyToClose', () => cerrarSalaJitsi());
+    _jitsiAPI.addEventListener('videoConferenceLeft', () => cerrarSalaJitsi());
+  } catch(err) {
+    container.innerHTML = `<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;color:#fff;gap:16px">
+      <div style="font-size:48px">⚠️</div>
+      <div style="font-size:16px;font-weight:700">No se pudo iniciar la sala</div>
+      <div style="font-size:13px;opacity:.7;text-align:center;max-width:320px">Verifica tu conexión a internet e inténtalo de nuevo.</div>
+      <button class="btn bn" onclick="cerrarSalaJitsi()">Cerrar</button>
+    </div>`;
+    console.error('Jitsi error:', err);
+  }
+}
+
+function cerrarSalaJitsi() {
+  if (_jitsiAPI) { try { _jitsiAPI.dispose(); } catch(e){} _jitsiAPI = null; }
+  const overlay = document.getElementById('jitsiOverlay');
+  if (overlay) overlay.classList.remove('active');
+  document.body.style.overflow = '';
+}
+
 /* ── SOBREESCRITA por api-layer.js ── */
 async function addVClase(){ /* implementado en api-layer.js */ }
 /* ── SOBREESCRITA por api-layer.js ── */
@@ -6326,17 +6464,35 @@ function pgEProf(){
 function pgEVir(){
   const e=CU;
   const clases=(DB.vclases||[]).filter(c=>c.salon===e.salon)
-    .sort((a,b)=>b.fecha.localeCompare(a.fecha));
-  return`<div class="ph"><h2>Mis Clases Virtuales</h2><p>Salón: <strong>${e.salon||'Sin salón'}</strong></p><button class="btn xs bg" onclick="showHelp('evir')" style="margin-top:6px">❓ Ayuda</button></div>
-  ${clases.length?clases.map(c=>`
-    <div class="vc-card">
-      <div>
-        <h4>💻 Clase Virtual — Salón ${c.salon}</h4>
-        <small>${c.fecha} a las ${c.hora} · Prof. ${c.profNombre||'—'}${c.materias&&c.materias!=='—'?' · '+c.materias:''}</small>
-        ${c.desc?`<p style="font-size:12px;margin-top:5px;opacity:.8">${c.desc}</p>`:''}
+    .sort((a,b)=>b.fecha.localeCompare(a.fecha)||b.hora.localeCompare(a.hora));
+  return`<div class="ph"><h2>💻 Mis Clases Virtuales</h2><p>Salón: <strong>${e.salon||'Sin salón'}</strong></p><button class="btn xs bg" onclick="showHelp('evir')" style="margin-top:6px">❓ Ayuda</button></div>
+  ${clases.length?clases.map(c=>{
+    const ahora=new Date();
+    const claseTs=new Date(c.fecha+'T'+c.hora);
+    const diffMin=(ahora-claseTs)/60000;
+    const activa=(diffMin>=-10&&diffMin<=120);
+    const pasada=diffMin>120;
+    return`<div class="vc-card" style="flex-direction:column;align-items:stretch;gap:12px">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:8px">
+        <div>
+          <h4>💻 ${c.desc||'Clase Virtual'}</h4>
+          <small>Salón ${c.salon} · ${c.fecha} a las ${c.hora} · Prof. ${c.profNombre||'—'}</small>
+        </div>
+        ${pasada
+          ? `<span class="bdg bgy" style="font-size:11px">Finalizada</span>`
+          : activa
+            ? `<span class="bdg" style="background:#d1fae5;color:#065f46;border:1px solid #6ee7b7;font-size:11px">🟢 En vivo</span>`
+            : `<span class="bdg" style="background:rgba(255,255,255,.15);color:#fff;border:1px solid rgba(255,255,255,.25);font-size:11px">📅 Programada</span>`
+        }
       </div>
-      <a href="${c.link}" target="_blank" class="btn bb sm">🔗 Unirse</a>
-    </div>`).join('')
+      ${activa
+        ? `<button class="btn sm bs" onclick="abrirSalaJitsi('${c.roomId}','${(c.desc||'Clase Virtual').replace(/'/g,"\'")}',false)" style="align-self:flex-start">🎥 Unirse a la clase</button>`
+        : pasada
+          ? `<span style="font-size:12px;opacity:.7">Esta clase ya finalizó</span>`
+          : `<span style="font-size:12px;opacity:.7">La clase aún no ha comenzado. Vuelve el ${c.fecha} a las ${c.hora}.</span>`
+      }
+    </div>`;
+  }).join('')
   :`<div class="card"><div class="mty"><div class="ei">💻</div><p>Sin clases programadas para tu salón</p></div></div>`}`;
 }
 
@@ -11838,22 +11994,32 @@ async function responderExcusa(excId){
 /* ============================================================
    ADMIN — CLASES VIRTUALES
 ============================================================ */
-function pgAVcl(){return`<div class="ph"><h2>Clases Virtuales</h2><button class="btn xs bg" onclick="showHelp('avcl')" style="margin-top:6px">❓ Ayuda</button></div><div id="avcB"></div>`;}
+function pgAVcl(){return`<div class="ph"><h2>💻 Clases Virtuales</h2><button class="btn xs bg" onclick="showHelp('avcl')" style="margin-top:6px">❓ Ayuda</button></div><div id="avcB"></div>`;}
 function initAVcl(){
   const el=gi('avcB');if(!el)return;
   const clases=(DB.vclases||[]).slice().reverse();
   el.innerHTML=`<div class="card"><div class="chd"><span class="cti">📅 Clases Programadas (${clases.length})</span></div>
   ${clases.length?`<div class="tw"><table><thead>
-    <tr><th>Salón</th><th>Profesor</th><th>Materias del Prof.</th><th>Fecha</th><th>Hora</th><th>Enlace</th><th>Descripción</th></tr></thead>
-    <tbody>${clases.map(c=>`<tr>
-      <td><span class="bdg bgy">${c.salon}</span></td>
-      <td>${c.profNombre||'—'}</td>
-      <td style="font-size:11px;color:var(--sl2)">${c.materias||'—'}</td>
-      <td style="font-family:var(--mn);font-size:12px">${c.fecha}</td>
-      <td style="font-family:var(--mn);font-size:12px">${c.hora}</td>
-      <td><a href="${c.link}" target="_blank" class="btn xs bb">🔗 Abrir</a></td>
-      <td style="font-size:12px;color:var(--sl2)">${c.desc||'—'}</td>
-    </tr>`).join('')}</tbody></table></div>`
+    <tr><th>Salón</th><th>Profesor</th><th>Fecha</th><th>Hora</th><th>Tema</th><th>Estado</th></tr></thead>
+    <tbody>${clases.map(c=>{
+      const ahora=new Date();
+      const claseTs=new Date(c.fecha+'T'+c.hora);
+      const diffMin=(ahora-claseTs)/60000;
+      const activa = c.activa || (diffMin>=-10 && diffMin<=120);
+      const estado = activa
+        ? `<span class="bdg" style="background:#d1fae5;color:#065f46;border:1px solid #6ee7b7">🟢 En vivo</span>`
+        : diffMin>120
+          ? `<span class="bdg bgy">Finalizada</span>`
+          : `<span class="bdg" style="background:#eff6ff;color:#1e40af;border:1px solid #bfdbfe">📅 Programada</span>`;
+      return`<tr>
+        <td><span class="bdg bgy">${c.salon}</span></td>
+        <td>${c.profNombre||'—'}</td>
+        <td style="font-family:var(--mn);font-size:12px">${c.fecha}</td>
+        <td style="font-family:var(--mn);font-size:12px">${c.hora}</td>
+        <td style="font-size:12px">${c.desc||'—'}</td>
+        <td>${estado}</td>
+      </tr>`;
+    }).join('')}</tbody></table></div>`
     :'<div class="mty"><div class="ei">💻</div><p>Sin clases programadas</p></div>'}
   </div>`;
 }
@@ -13254,31 +13420,44 @@ async function saveAst(key){ /* implementado en api-layer.js */ }
 function pgPVir(){
   const sO=(CU.salones||[]).map(s=>`<option value="${s}">${s}</option>`).join('');
   const mis=(DB.vclases||[]).filter(c=>c.profId===CU.id).slice().reverse();
-  return`<div class="ph"><h2>Clases Virtuales</h2><button class="btn xs bg" onclick="showHelp('pvir')" style="margin-top:6px">❓ Ayuda</button></div>
-  <div class="card"><div class="chd"><span class="cti">📅 Programar Clase Virtual</span></div>
+  return`<div class="ph"><h2>💻 Clases Virtuales</h2><button class="btn xs bg" onclick="showHelp('pvir')" style="margin-top:6px">❓ Ayuda</button></div>
+  <div class="card"><div class="chd"><span class="cti">📅 Programar Clase</span></div>
     <div class="fg">
       <div class="fld"><label>Salón</label><select id="vcs">${sO||'<option value="">Sin salones asignados</option>'}</select></div>
       <div class="fld"><label>Fecha</label><input type="date" id="vcf" value="${today()}"></div>
       <div class="fld"><label>Hora</label><input type="time" id="vch" value="08:00"></div>
     </div>
-    <div class="fld"><label>Enlace de la Clase (Meet, Zoom, Teams, etc.)</label>
-      <input id="vcl" placeholder="https://meet.google.com/abc-def-ghi"></div>
     <div class="fld"><label>Tema / Descripción</label>
-      <input id="vcd" placeholder="Clase sobre..."></div>
-    <button class="btn bn" onclick="addVClase()">📅 Programar</button>
+      <input id="vcd" placeholder="Ej: Clase de matemáticas — fracciones"></div>
+    <button class="btn bn" onclick="addVClase()">📅 Programar Clase</button>
   </div>
-  <div class="card"><div class="chd"><span class="cti">📋 Mis Clases Programadas (${mis.length})</span></div>
-  ${mis.length?`<div class="tw"><table><thead>
-    <tr><th>Salón</th><th>Fecha</th><th>Hora</th><th>Enlace</th><th>Descripción</th><th></th></tr></thead>
-    <tbody>${mis.map(c=>`<tr>
-      <td><span class="bdg bgy">${c.salon}</span></td>
-      <td style="font-family:var(--mn);font-size:12px">${c.fecha}</td>
-      <td style="font-family:var(--mn);font-size:12px">${c.hora}</td>
-      <td><a href="${c.link}" target="_blank" class="btn xs bb">🔗 Enlace</a></td>
-      <td style="font-size:12px;color:var(--sl2)">${c.desc||'—'}</td>
-      <td><button class="btn xs bd" onclick="delVClase('${c.id}')">🗑</button></td>
-    </tr>`).join('')}</tbody></table></div>`
-    :'<div class="mty"><div class="ei">💻</div><p>Sin clases programadas aún</p></div>'}
+  <div class="card"><div class="chd"><span class="cti">📋 Mis Clases (${mis.length})</span></div>
+  ${mis.length?mis.map(c=>{
+    const ahora=new Date();
+    const claseTs=new Date(c.fecha+'T'+c.hora);
+    const diffMin=(ahora-claseTs)/60000;
+    const activa=(diffMin>=-10&&diffMin<=120);
+    const pasada=diffMin>120;
+    return`<div class="vc-card" style="flex-direction:column;align-items:stretch;gap:12px">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:8px">
+        <div>
+          <div style="font-size:15px;font-weight:800">💻 ${c.desc||'Clase Virtual'}</div>
+          <div style="font-size:11px;opacity:.7;margin-top:3px">Salón ${c.salon} · ${c.fecha} a las ${c.hora}</div>
+        </div>
+        ${pasada
+          ? `<span class="bdg bgy" style="font-size:11px">Finalizada</span>`
+          : activa
+            ? `<span class="bdg" style="background:#d1fae5;color:#065f46;border:1px solid #6ee7b7;font-size:11px">🟢 En vivo</span>`
+            : `<span class="bdg" style="background:rgba(255,255,255,.15);color:#fff;border:1px solid rgba(255,255,255,.25);font-size:11px">📅 Programada</span>`
+        }
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        ${!pasada?`<button class="btn sm bs" onclick="abrirSalaJitsi('${c.roomId}','${(c.desc||'Clase Virtual').replace(/'/g,"\'")}',true)">🎥 Iniciar clase</button>`:''}
+        <button class="btn sm bd" onclick="delVClase('${c.id}')">🗑 Eliminar</button>
+      </div>
+    </div>`;
+  }).join('')
+  :'<div class="mty"><div class="ei">💻</div><p>Sin clases programadas aún</p></div>'}
   </div>`;
 }
 /* ── SOBREESCRITA por api-layer.js ── */
@@ -14233,17 +14412,35 @@ function pgEProf(){
 function pgEVir(){
   const e=CU;
   const clases=(DB.vclases||[]).filter(c=>c.salon===e.salon)
-    .sort((a,b)=>b.fecha.localeCompare(a.fecha));
-  return`<div class="ph"><h2>Mis Clases Virtuales</h2><p>Salón: <strong>${e.salon||'Sin salón'}</strong></p><button class="btn xs bg" onclick="showHelp('evir')" style="margin-top:6px">❓ Ayuda</button></div>
-  ${clases.length?clases.map(c=>`
-    <div class="vc-card">
-      <div>
-        <h4>💻 Clase Virtual — Salón ${c.salon}</h4>
-        <small>${c.fecha} a las ${c.hora} · Prof. ${c.profNombre||'—'}${c.materias&&c.materias!=='—'?' · '+c.materias:''}</small>
-        ${c.desc?`<p style="font-size:12px;margin-top:5px;opacity:.8">${c.desc}</p>`:''}
+    .sort((a,b)=>b.fecha.localeCompare(a.fecha)||b.hora.localeCompare(a.hora));
+  return`<div class="ph"><h2>💻 Mis Clases Virtuales</h2><p>Salón: <strong>${e.salon||'Sin salón'}</strong></p><button class="btn xs bg" onclick="showHelp('evir')" style="margin-top:6px">❓ Ayuda</button></div>
+  ${clases.length?clases.map(c=>{
+    const ahora=new Date();
+    const claseTs=new Date(c.fecha+'T'+c.hora);
+    const diffMin=(ahora-claseTs)/60000;
+    const activa=(diffMin>=-10&&diffMin<=120);
+    const pasada=diffMin>120;
+    return`<div class="vc-card" style="flex-direction:column;align-items:stretch;gap:12px">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:8px">
+        <div>
+          <h4>💻 ${c.desc||'Clase Virtual'}</h4>
+          <small>Salón ${c.salon} · ${c.fecha} a las ${c.hora} · Prof. ${c.profNombre||'—'}</small>
+        </div>
+        ${pasada
+          ? `<span class="bdg bgy" style="font-size:11px">Finalizada</span>`
+          : activa
+            ? `<span class="bdg" style="background:#d1fae5;color:#065f46;border:1px solid #6ee7b7;font-size:11px">🟢 En vivo</span>`
+            : `<span class="bdg" style="background:rgba(255,255,255,.15);color:#fff;border:1px solid rgba(255,255,255,.25);font-size:11px">📅 Programada</span>`
+        }
       </div>
-      <a href="${c.link}" target="_blank" class="btn bb sm">🔗 Unirse</a>
-    </div>`).join('')
+      ${activa
+        ? `<button class="btn sm bs" onclick="abrirSalaJitsi('${c.roomId}','${(c.desc||'Clase Virtual').replace(/'/g,"\'")}',false)" style="align-self:flex-start">🎥 Unirse a la clase</button>`
+        : pasada
+          ? `<span style="font-size:12px;opacity:.7">Esta clase ya finalizó</span>`
+          : `<span style="font-size:12px;opacity:.7">La clase aún no ha comenzado. Vuelve el ${c.fecha} a las ${c.hora}.</span>`
+      }
+    </div>`;
+  }).join('')
   :`<div class="card"><div class="mty"><div class="ei">💻</div><p>Sin clases programadas para tu salón</p></div></div>`}`;
 }
 

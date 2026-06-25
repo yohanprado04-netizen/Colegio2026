@@ -781,8 +781,17 @@ router.get('/vclases', authMiddleware, async (req, res) => {
 
 router.post('/vclases', authMiddleware, requireRole('profe', 'admin', 'superadmin'), async (req, res) => {
   try {
+    const { id, salon, fecha, hora, roomId, desc, ts } = req.body;
+    if (!salon || !fecha || !hora) return res.status(400).json({ error: 'salon, fecha y hora son requeridos' });
     const v = await VClase.create({
-      ...req.body, profId: req.user.id, profNombre: req.user.nombre,
+      id: id || ('vc_' + Date.now()),
+      salon, fecha, hora,
+      roomId: roomId || ('vc' + Date.now()),
+      desc: desc || '',
+      link: req.body.link || '',
+      ts: ts || new Date().toISOString(),
+      profId: req.user.id,
+      profNombre: req.user.nombre,
       colegioId: tenantId(req) || req.user.colegioId || ''
     });
     res.status(201).json(v);

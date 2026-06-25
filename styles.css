@@ -946,3 +946,61 @@ hr{border:none;border-top:1px solid var(--bd);margin:20px 0}
   box-shadow: 0 4px 18px rgba(21,128,61,.35);
   animation: pnSaved2 2s ease forwards;
 }
+/* ════════════════════════════════════
+   JITSI MEET — Modal de videoconferencia
+════════════════════════════════════ */
+#jitsiOverlay{
+  display:none;position:fixed;inset:0;z-index:9999;
+  background:rgba(10,18,35,.96);
+  animation:jitsiIn .2s ease;
+}
+#jitsiOverlay.active{display:flex;align-items:stretch;justify-content:center}
+@keyframes jitsiIn{from{opacity:0;transform:scale(.97)}to{opacity:1;transform:scale(1)}}
+
+.jitsi-modal{
+  display:flex;flex-direction:column;width:100%;height:100%;
+  background:#0f1f35;
+}
+.jitsi-header{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:10px 18px;background:var(--nv);
+  border-bottom:1px solid rgba(255,255,255,.08);
+  flex-shrink:0;
+}
+.jitsi-title{
+  display:flex;align-items:center;gap:10px;
+  font-size:15px;font-weight:700;color:#fff;letter-spacing:-.2px;
+}
+.jitsi-close{
+  background:rgba(255,255,255,.1);color:#fff;
+  border:1px solid rgba(255,255,255,.15);
+  border-radius:8px;padding:6px 14px;
+  font-size:13px;font-weight:600;cursor:pointer;
+  transition:background .15s;
+}
+.jitsi-close:hover{background:rgba(229,66,74,.85);border-color:transparent}
+#jitsiContainer{
+  flex:1;width:100%;overflow:hidden;
+  background:#0f1f35;
+}
+#jitsiContainer iframe{
+  width:100%!important;height:100%!important;border:none!important;
+}
+.jitsi-spinner{
+  width:20px;height:20px;border:3px solid rgba(255,255,255,.2);
+  border-top-color:#fff;border-radius:50%;
+  animation:spin .7s linear infinite;flex-shrink:0;
+}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* Estado "En vivo" pulsante en las tarjetas */
+.vc-live-dot{
+  display:inline-block;width:8px;height:8px;
+  border-radius:50%;background:#10b981;
+  animation:pulse-dot 1.5s ease infinite;
+  margin-right:5px;
+}
+@keyframes pulse-dot{
+  0%,100%{transform:scale(1);opacity:1}
+  50%{transform:scale(1.4);opacity:.6}
+}

@@ -746,17 +746,31 @@ function descargarTallerExcusa(excId, nombreEnc) {
 // ═══════════════════════════════════════════════════════════════════
 async function addVClase() {
   const s = gi('vcs')?.value, f = gi('vcf')?.value,
-        h = gi('vch')?.value, l = gi('vcl')?.value.trim(), d = gi('vcd')?.value.trim();
-  if (!s || !f || !h || !l) { sw('warning', 'Completa los campos: salón, fecha, hora y enlace'); return; }
+        h = gi('vch')?.value, d = gi('vcd')?.value.trim();
+  if (!s || !f || !h) { sw('warning', 'Completa los campos: salón, fecha y hora'); return; }
+  if (!d) { sw('warning', 'Escribe el tema o descripción de la clase'); return; }
+  // Generar ID único y seguro para la sala Jitsi
+  const roomId = 'vc' + Date.now() + Math.random().toString(36).slice(2,7);
   try {
     const vc = await apiFetch('/api/vclases', {
       method: 'POST',
-      body: JSON.stringify({ id: 'vc_' + Date.now(), profId: CU.id, profNombre: CU.nombre, salon: s, fecha: f, hora: h, link: l, desc: d, ts: new Date().toISOString() })
+      body: JSON.stringify({
+        id: 'vc_' + Date.now(),
+        profId: CU.id,
+        profNombre: CU.nombre,
+        salon: s,
+        fecha: f,
+        hora: h,
+        link: '',        // ya no se usa URL externa
+        roomId: roomId,  // ID de sala Jitsi embebida
+        desc: d,
+        ts: new Date().toISOString()
+      })
     });
     DB.vclases.push(vc);
     goto('pvir');
-    sw('success', 'Clase programada', '', 1400);
-  } catch (e) { sw('error', 'Error: ' + e.message); }
+    sw('success', 'Clase programada', `Salón ${s} · ${f} ${h}`, 2000);
+  } catch (e) { sw('error', 'Error al programar: ' + e.message); }
 }
 
 function delVClase(id) {
