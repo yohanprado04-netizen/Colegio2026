@@ -5399,14 +5399,15 @@ function pgPVir(){
 
 /* ============================================================
    JITSI MEET — Videoconferencia embebida
-   Usa meet.jit.si (100% gratuito, sin cuenta, sin límite)
+   Usa 8x8.vc — servidor Jitsi oficial para producción
+   100% gratuito, sin cuenta, sin límite de tiempo
 ============================================================ */
 let _jitsiAPI = null;
 
 function abrirSalaJitsi(roomId, titulo, esProfesor) {
   if (!roomId) { sw('error','ID de sala no válido'); return; }
 
-  // Crear overlay modal de sala
+  // Crear overlay modal de sala (solo una vez en el DOM)
   let overlay = document.getElementById('jitsiOverlay');
   if (!overlay) {
     overlay = document.createElement('div');
@@ -5432,52 +5433,60 @@ function abrirSalaJitsi(roomId, titulo, esProfesor) {
   const container = document.getElementById('jitsiContainer');
   container.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:#fff;font-size:15px;gap:12px"><div class="jitsi-spinner"></div>Conectando a la sala…</div>';
 
-  // Esperar a que la API de Jitsi esté lista, luego lanzar
   _esperarJitsiAPI(() => _lanzarJitsi(roomId, titulo, esProfesor, container));
 }
 
 function _esperarJitsiAPI(cb, intentos) {
   intentos = intentos || 0;
   if (typeof JitsiMeetExternalAPI !== 'undefined') { cb(); return; }
-  if (intentos > 30) { sw('error','No se pudo cargar Jitsi. Verifica tu conexión.'); return; }
+  if (intentos > 40) {
+    sw('error','No se pudo cargar Jitsi. Verifica tu conexión a internet.');
+    cerrarSalaJitsi();
+    return;
+  }
   setTimeout(() => _esperarJitsiAPI(cb, intentos + 1), 400);
 }
 
 function _lanzarJitsi(roomId, titulo, esProfesor, container) {
-  // Limpiar instancia anterior si existe
   if (_jitsiAPI) { try { _jitsiAPI.dispose(); } catch(e){} _jitsiAPI = null; }
-
   container.innerHTML = '';
 
-  const nombre = (CU && CU.nombre) ? CU.nombre : (esProfesor ? 'Docente' : 'Estudiante');
-  const email  = (CU && CU.usuario) ? CU.usuario + '@edusistema.edu' : '';
+  const nombre  = (CU && CU.nombre)        ? CU.nombre        : (esProfesor ? 'Docente' : 'Estudiante');
+  const email   = (CU && CU.usuario)       ? CU.usuario + '@edusistema.edu' : '';
   const colegio = (CU && CU.colegioNombre) ? CU.colegioNombre : 'EduSistema';
 
-  // roomId ya viene sanitizado del servidor; asegurar que sea URL-safe
-  const safeRoom = 'edu-' + roomId.replace(/[^a-z0-9]/gi, '-').toLowerCase();
-
-  const config = {
-    startWithAudioMuted: !esProfesor,
-    startWithVideoMuted: !esProfesor,
-    disableDeepLinking: true,
-    prejoinPageEnabled: false,
-    disableInviteFunctions: true,
-    toolbarButtons: [
-      'microphone','camera','desktop','chat','raisehand',
-      'tileview','participants-pane','fullscreen',
-      ...(esProfesor ? ['mute-everyone','kick','recording'] : [])
-    ],
-    subject: titulo || 'Clase Virtual',
-    defaultLocalDisplayName: nombre,
-  };
+  // Sala URL-safe con prefijo del colegio para evitar colisiones
+  const colegioSlug = colegio.toLowerCase().replace(/[^a-z0-9]/g,'-').slice(0,20);
+  const safeRoom = colegioSlug + '-' + roomId.replace(/[^a-z0-9]/gi,'-').toLowerCase();
 
   try {
-    _jitsiAPI = new JitsiMeetExternalAPI('meet.jit.si', {
+    _jitsiAPI = new JitsiMeetExternalAPI('8x8.vc', {
       roomName: safeRoom,
       width: '100%',
       height: '100%',
       parentNode: container,
-      configOverwrite: config,
+      configOverwrite: {
+        // ── Cámara ──────────────────────────────────────────────
+        localFlipX: false,           // ← corrige el espejo en la cámara local
+        doNotFlipLocalVideo: true,   // refuerzo para versiones antiguas
+        // ── Inicio ──────────────────────────────────────────────
+        startWithAudioMuted: !esProfesor,
+        startWithVideoMuted: !esProfesor,
+        // ── UX ──────────────────────────────────────────────────
+        prejoinPageEnabled: false,
+        disableDeepLinking: true,
+        disableInviteFunctions: true,
+        enableWelcomePage: false,
+        subject: titulo || 'Clase Virtual',
+        defaultLocalDisplayName: nombre,
+        defaultLanguage: 'es',
+        // ── Toolbar según rol ────────────────────────────────────
+        toolbarButtons: [
+          'microphone','camera','desktop','chat','raisehand',
+          'tileview','participants-pane','fullscreen',
+          ...(esProfesor ? ['mute-everyone','security'] : [])
+        ],
+      },
       interfaceConfigOverwrite: {
         SHOW_JITSI_WATERMARK: false,
         SHOW_BRAND_WATERMARK: false,
@@ -5487,11 +5496,12 @@ function _lanzarJitsi(roomId, titulo, esProfesor, container) {
         APP_NAME: colegio,
         NATIVE_APP_NAME: colegio,
         LANG_DETECTION: false,
+        DISABLE_FOCUS_INDICATOR: true,
       },
       userInfo: { displayName: nombre, email: email },
     });
 
-    _jitsiAPI.addEventListener('readyToClose', () => cerrarSalaJitsi());
+    _jitsiAPI.addEventListener('readyToClose',        () => cerrarSalaJitsi());
     _jitsiAPI.addEventListener('videoConferenceLeft', () => cerrarSalaJitsi());
   } catch(err) {
     container.innerHTML = `<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;color:#fff;gap:16px">
