@@ -5399,15 +5399,40 @@ function pgPVir(){
 
 /* ============================================================
    JITSI MEET — Videoconferencia embebida
-   Usa 8x8.vc — servidor Jitsi oficial para producción
-   100% gratuito, sin cuenta, sin límite de tiempo
+   Servidor: meet.jit.si (gratuito, sin cuenta, sin login)
+   NOTA para moderadores: aparece un aviso de Jitsi la primera
+   vez — solo hay que cerrarlo con "Aceptar", la clase NO se corta.
 ============================================================ */
 let _jitsiAPI = null;
 
 function abrirSalaJitsi(roomId, titulo, esProfesor) {
   if (!roomId) { sw('error','ID de sala no válido'); return; }
 
-  // Crear overlay modal de sala (solo una vez en el DOM)
+  // Aviso previo SOLO para el profesor/moderador
+  if (esProfesor) {
+    Swal.fire({
+      title: '💻 Iniciando clase',
+      html: `<div style="text-align:left;font-size:14px;line-height:1.7">
+        <p>La sala se abrirá ahora.</p>
+        <div style="background:#fef9c3;border:1px solid #fde047;border-radius:8px;padding:10px 14px;margin-top:10px;font-size:13px">
+          ⚠️ <strong>Aviso de Jitsi:</strong> Al entrar puede aparecer un mensaje que dice
+          <em>"Embedding is only meant for demo purposes"</em>.<br><br>
+          Solo haz clic en <strong>Aceptar</strong> y la clase continuará sin interrupciones.
+        </div>
+      </div>`,
+      confirmButtonText: 'Entrar a la clase →',
+      showCancelButton: true,
+      cancelButtonText: 'Cancelar',
+      icon: null,
+    }).then(r => {
+      if (r.isConfirmed) _abrirOverlayJitsi(roomId, titulo, esProfesor);
+    });
+  } else {
+    _abrirOverlayJitsi(roomId, titulo, esProfesor);
+  }
+}
+
+function _abrirOverlayJitsi(roomId, titulo, esProfesor) {
   let overlay = document.getElementById('jitsiOverlay');
   if (!overlay) {
     overlay = document.createElement('div');
@@ -5455,24 +5480,20 @@ function _lanzarJitsi(roomId, titulo, esProfesor, container) {
   const email   = (CU && CU.usuario)       ? CU.usuario + '@edusistema.edu' : '';
   const colegio = (CU && CU.colegioNombre) ? CU.colegioNombre : 'EduSistema';
 
-  // Sala URL-safe con prefijo del colegio para evitar colisiones
   const colegioSlug = colegio.toLowerCase().replace(/[^a-z0-9]/g,'-').slice(0,20);
   const safeRoom = colegioSlug + '-' + roomId.replace(/[^a-z0-9]/gi,'-').toLowerCase();
 
   try {
-    _jitsiAPI = new JitsiMeetExternalAPI('8x8.vc', {
+    _jitsiAPI = new JitsiMeetExternalAPI('meet.jit.si', {
       roomName: safeRoom,
       width: '100%',
       height: '100%',
       parentNode: container,
       configOverwrite: {
-        // ── Cámara ──────────────────────────────────────────────
-        localFlipX: false,           // ← corrige el espejo en la cámara local
-        doNotFlipLocalVideo: true,   // refuerzo para versiones antiguas
-        // ── Inicio ──────────────────────────────────────────────
+        localFlipX: false,
+        doNotFlipLocalVideo: true,
         startWithAudioMuted: !esProfesor,
         startWithVideoMuted: !esProfesor,
-        // ── UX ──────────────────────────────────────────────────
         prejoinPageEnabled: false,
         disableDeepLinking: true,
         disableInviteFunctions: true,
@@ -5480,7 +5501,6 @@ function _lanzarJitsi(roomId, titulo, esProfesor, container) {
         subject: titulo || 'Clase Virtual',
         defaultLocalDisplayName: nombre,
         defaultLanguage: 'es',
-        // ── Toolbar según rol ────────────────────────────────────
         toolbarButtons: [
           'microphone','camera','desktop','chat','raisehand',
           'tileview','participants-pane','fullscreen',
@@ -5503,6 +5523,29 @@ function _lanzarJitsi(roomId, titulo, esProfesor, container) {
 
     _jitsiAPI.addEventListener('readyToClose',        () => cerrarSalaJitsi());
     _jitsiAPI.addEventListener('videoConferenceLeft', () => cerrarSalaJitsi());
+
+    // Corregir espejo del video local inyectando CSS en el iframe
+    // Jitsi aplica scaleX(-1) inline — lo revertimos al cargar
+    _jitsiAPI.addEventListener('videoConferenceJoined', () => {
+      try {
+        const iframe = container.querySelector('iframe');
+        if (!iframe || !iframe.contentDocument) return;
+        const style = iframe.contentDocument.createElement('style');
+        style.textContent = `
+          .flipVideoX, video.flipVideoX,
+          .localVideoContainer video,
+          #localVideo video,
+          .videocontainer.localVideoContainer video {
+            transform: scaleX(1) !important;
+            -webkit-transform: scaleX(1) !important;
+          }
+        `;
+        iframe.contentDocument.head.appendChild(style);
+      } catch(e) {
+        // Si hay restricción CORS, el navegador bloquea — no crítico
+        console.warn('No se pudo inyectar CSS anti-espejo (CORS):', e.message);
+      }
+    });
   } catch(err) {
     container.innerHTML = `<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;color:#fff;gap:16px">
       <div style="font-size:48px">⚠️</div>

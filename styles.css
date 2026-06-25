@@ -985,6 +985,11 @@ hr{border:none;border-top:1px solid var(--bd);margin:20px 0}
 }
 #jitsiContainer iframe{
   width:100%!important;height:100%!important;border:none!important;
+  transform:scaleX(1)!important;   /* sin espejo en el iframe completo */
+}
+/* Corregir espejo en el video local dentro del iframe via CSS injection */
+#jitsiContainer video{
+  transform:scaleX(1)!important;
 }
 .jitsi-spinner{
   width:20px;height:20px;border:3px solid rgba(255,255,255,.2);
