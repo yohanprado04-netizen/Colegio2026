@@ -9323,6 +9323,7 @@ function defPg(){
 function navItems(){
   if(CU.role==='superadmin') return[
     {s:'Super Admin'},{id:'sadash',ic:'🌐',lb:'Panel Global'},
+    {id:'sacolegios',ic:'🏫',lb:'Colegios & Admins'},
     {s:'Supervisión'},{id:'saestadisticas',ic:'📊',lb:'Estadísticas'},
     {id:'saauditoria',ic:'🔍',lb:'Auditoría Global'},
     {s:'Comunicación'},{id:'sacom',ic:'📢',lb:'Comunicados Globales'},
