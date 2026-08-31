@@ -914,7 +914,7 @@ function mostrarComunicadosLogin(){
   Swal.fire({
     title: titulo,
     html:`<div style="max-height:65vh;overflow-y:auto;padding-right:4px;margin-top:8px">${htmlComs}</div>`,
-    confirmButtonText:'Entendido <i class="fas fa-check"></i>',
+    confirmButtonText:'Entendido',
     confirmButtonColor:'#2b6cb0',
     width:'min(620px,95vw)',
     showClass:{popup:'swal2-show'},
@@ -928,8 +928,8 @@ function bootApp(){
   if(_tbDate) _tbDate.textContent=new Date().toLocaleDateString('es-CO',{weekday:'short',year:'numeric',month:'short',day:'numeric'});
   const st=gi('tbStatus');
   if(st){
-    if(notasOk()){st.className='tbst tbop';st.textContent='<i class="fas fa-check"></i> Notas Abiertas';}
-    else{st.className='tbst tbcl';st.textContent='<i class="fas fa-xmark"></i> Notas Cerradas';}
+    if(notasOk()){st.className='tbst tbop';st.innerHTML='<i class="fas fa-check"></i> Notas Abiertas';}
+    else{st.className='tbst tbcl';st.innerHTML='<i class="fas fa-xmark"></i> Notas Cerradas';}
   }
   const _sbUser=gi('sbUser');
   if(_sbUser) _sbUser.innerHTML=`<div class="sbav">${(CU.nombre||'?')[0].toUpperCase()}</div>
@@ -1000,7 +1000,7 @@ async function notifDeudaEstudiante(){
     sessionStorage.setItem('deudaNotifShown','1');
     await Swal.fire({
       icon:'warning',
-      title:'<i class="fas fa-triangle-exclamation"></i> Tienes cobros pendientes',
+      title:'Tienes cobros pendientes',
       html:`<div style="font-family:var(--fn);font-size:14px">
         <p>Tienes <strong>${pendientes.length} cobro${pendientes.length!==1?'s':''}</strong> pendiente${pendientes.length!==1?'s':''} por un total de <strong style="color:#b91c1c">${fmt(total)}</strong>.</p>
         <p style="font-size:12px;color:var(--sl3);margin-top:8px">Dirígete a <strong><i class="fas fa-credit-card"></i> Mi Cuenta</strong> para ver el detalle.</p>
@@ -1021,7 +1021,7 @@ async function notifRespuestasExcusas(){
     if(!noLeidas.length) return;
     await Swal.fire({
       icon:'info',
-      title:`<i class="fas fa-envelope"></i> Tienes ${noLeidas.length} respuesta${noLeidas.length>1?'s':''} de excusa${noLeidas.length>1?'s':''} sin leer`,
+      title:`Tienes ${noLeidas.length} respuesta${noLeidas.length>1?'s':''} de excusa${noLeidas.length>1?'s':''} sin leer`,
       html:`<div style="font-family:var(--fn);text-align:left">
         ${noLeidas.map(x=>`
           <div style="background:#e6fffa;border-radius:8px;padding:10px;margin-bottom:8px;border:1px solid #9ae6b4">
@@ -1033,7 +1033,7 @@ async function notifRespuestasExcusas(){
           <i class="fas fa-triangle-exclamation"></i> Debes enviar el trabajo en <strong>Talleres y Tareas</strong> dentro del tiempo estipulado. Después de la fecha límite <strong>no se calificará</strong>.
         </div>
       </div>`,
-      confirmButtonText:'<i class="fas fa-envelope-circle-check"></i> Ver mis excusas',
+      confirmButtonText:'Ver mis excusas',
       confirmButtonColor:'#2b6cb0',
       showCancelButton:true,
       cancelButtonText:'Cerrar'
@@ -1063,7 +1063,7 @@ function notifyExtPeriod(){
   if(abrioAhora){
     Swal.fire({
       icon:'warning',
-      title:'<i class="fas fa-arrows-rotate"></i> ¡Periodo de Recuperación Abierto!',
+      title:'¡Periodo de Recuperación Abierto!',
       html:`<div style="font-family:var(--fn);text-align:left">
         <p>Tienes <strong style="color:#c53030">${mp.length}</strong> materia(s) en recuperación:</p>
         <div style="margin:10px 0">${mp.map(m=>`<span class="bdg brd" style="margin:3px">${m}</span>`).join('')}</div>
@@ -1079,7 +1079,7 @@ function notifyExtPeriod(){
   } else if(cerroAhora){
     Swal.fire({
       icon:'info',
-      title:'<i class="fas fa-lock"></i> Periodo de Recuperación Cerrado',
+      title:'Periodo de Recuperación Cerrado',
       html:`<div style="font-family:var(--fn)">
         <p>El periodo extraordinario de recuperación <strong>ha finalizado</strong>.</p>
         <p style="font-size:13px;color:#718096">Si tienes dudas sobre tu estado, consulta con tu docente o el administrador.</p>
@@ -1089,7 +1089,7 @@ function notifyExtPeriod(){
   } else if(fechasCambiaron){
     Swal.fire({
       icon:'info',
-      title:'<i class="fas fa-calendar-days"></i> Fechas de Recuperación Actualizadas',
+      title:'Fechas de Recuperación Actualizadas',
       html:`<div style="font-family:var(--fn);text-align:left">
         <p>Las fechas del periodo de recuperación cambiaron:</p>
         <p><i class="fas fa-calendar-days"></i> Nuevo rango: <strong>${curr.s}</strong> → <strong>${curr.e}</strong></p>
@@ -1109,7 +1109,7 @@ function notifyExtPeriod(){
       /* Show alert for new plan */
       Swal.fire({
         icon:'success',
-        title:'<i class="fas fa-clipboard-list"></i> ¡Tu docente envió un Plan de Recuperación!',
+        title:'¡Tu docente envió un Plan de Recuperación!',
         html:`<div style="font-family:var(--fn);text-align:left">
           <p>Tienes <strong>${planesNuevos.length}</strong> plan(es) nuevo(s) de recuperación:</p>
           <div style="margin:10px 0">${matsMostrar.map(mat=>{
@@ -1259,7 +1259,7 @@ function buildNav(){
         const badge = document.createElement('span');
         badge.className = 'vir-badge';
         badge.style.cssText = 'display:inline-flex;align-items:center;justify-content:center;background:#10b981;color:#fff;border-radius:20px;padding:1px 8px;font-size:10px;font-weight:800;margin-left:auto;min-width:18px;animation:pulse-dot 1.5s ease infinite';
-        badge.textContent = '<i class="fas fa-circle"></i> En vivo';
+        badge.innerHTML = '<i class="fas fa-circle"></i> En vivo';
         virBtn.appendChild(badge);
       }
     }
@@ -1376,7 +1376,7 @@ function initDash(){
   gi('dSt').innerHTML=[{v:DB.ests.length,l:'Estudiantes',i:'<i class="fas fa-graduation-cap"></i>'},
     {v:DB.profs.length,l:'Profesores',i:'<i class="fas fa-chalkboard-user"></i>'},{v:DB.sals.length,l:'Salones',i:'<i class="fas fa-school"></i>'},
     {v:DB.mB.length+DB.mP.length,l:'Materias',i:'<i class="fas fa-book-open"></i>'}]
-    .map(s=>`<div class="scc" data-i="${s.i}"><div class="sv">${s.v}</div><div class="sl">${s.l}</div><div class="bar"></div></div>`).join('');
+    .map(s=>`<div class="scc"><div class="scc-ic">${s.i}</div><div class="sv">${s.v}</div><div class="sl">${s.l}</div><div class="bar"></div></div>`).join('');
 
   // Widget estudiantes sin salón
   const sinSalon = DB.ests.filter(e=>!e.salon||!DB.sals.find(s=>s.nombre===e.salon));
@@ -1549,7 +1549,7 @@ function delSal(n){ /* implementado en api-layer.js */ }
 async function editSalJornada(sname){
   const sal=DB.sals.find(s=>s.nombre===sname);if(!sal)return;
   const {value:jornada}=await Swal.fire({
-    title:`<i class="fas fa-clock"></i> Jornada del Salón ${sname}`,
+    title:`Jornada del Salón ${sname}`,
     html:`<div style="text-align:left;font-family:var(--fn)">
       <label style="font-size:13px;font-weight:600;display:block;margin-bottom:8px">Selecciona la jornada:</label>
       <select id="sj_sel" style="width:100%;padding:10px 14px;font-size:14px;border:1.5px solid var(--bd);border-radius:8px;outline:none">
@@ -1599,7 +1599,7 @@ function editSalMats(sname){
     </label>`).join('');
 
   Swal.fire({
-    title:`<i class="fas fa-bullseye"></i> Materias del Salón ${sname}`,
+    title:`Materias del Salón ${sname}`,
     width:600,
     html:`<div style="text-align:left;font-family:var(--fn)">
       <div class="al alb" style="margin-bottom:10px;font-size:12px">
@@ -1728,7 +1728,7 @@ async function editSalAreas(sname){
   }).join('');
 
   const r=await Swal.fire({
-    title:`<i class="fas fa-folder-open"></i> Áreas del Salón ${sname}`,
+    title:`Áreas del Salón ${sname}`,
     width:560,
     html:`<div style="text-align:left;font-family:var(--fn)">
       <div class="al alb" style="margin-bottom:12px;font-size:12px">
@@ -1772,7 +1772,7 @@ async function editSalAreas(sname){
     }).join('');
 
     const r2=await Swal.fire({
-      title:`<i class="fas fa-bullseye"></i> Materias por Área — Salón ${sname}`,
+      title:`Materias por Área — Salón ${sname}`,
       width:620,
       html:`<div style="text-align:left;font-family:var(--fn)">
         <div class="al alb" style="margin-bottom:14px;font-size:12px">
@@ -1894,7 +1894,7 @@ async function asignarSalonEst(estId, ciclo){
   if(!sals.length){ sw('info','Sin salones','Crea salones primero en Salones & Grados.'); return; }
   const opts = sals.map(s=>`<option value="${s.nombre}">${esc(s.nombre)} (${s.ciclo})</option>`).join('');
   const {value:salon, isConfirmed} = await Swal.fire({
-    title:`<i class="fas fa-thumbtack"></i> Asignar salón a ${esc(e.nombre)}`,
+    title:`Asignar salón a ${esc(e.nombre)}`,
     html:`<div style="text-align:left;font-family:var(--fn)">
       <label style="font-size:11px;font-weight:800;text-transform:uppercase;color:var(--sl);display:block;margin-bottom:6px">Selecciona el salón</label>
       <select id="aseSel" style="width:100%;padding:10px 12px;border:1.5px solid var(--bd);border-radius:8px;font-size:14px">
@@ -2021,7 +2021,7 @@ function openAddEstSalon(salon, ciclo){
   // We show a compact Swal matching pgAEst add form
   const sOpts = DB.sals.filter(s=>s.ciclo===ciclo).map(s=>`<option value="${s.nombre}"${s.nombre===salon?' selected':''}>${s.nombre}</option>`).join('');
   Swal.fire({
-    title:`<i class="fas fa-plus"></i> Agregar Estudiante — ${salon}`, width:520,
+    title:`Agregar Estudiante — ${salon}`, width:520,
     html:`<div style="text-align:left;font-family:var(--fn)">
       <div style="display:flex;flex-direction:column;gap:10px">
         <div class="fld" style="margin:0"><label>Nombre completo *</label><input id="nen" placeholder="Juan Pérez Gómez" class="inp"></div>
@@ -2036,7 +2036,7 @@ function openAddEstSalon(salon, ciclo){
         </div>
       </div>
     </div>`,
-    showCancelButton:true, confirmButtonText:'<i class="fas fa-plus"></i> Agregar', confirmButtonColor:'var(--nv)', cancelButtonText:'Cancelar',
+    showCancelButton:true, confirmButtonText:'Agregar', confirmButtonColor:'var(--nv)', cancelButtonText:'Cancelar',
     preConfirm:()=>{ return {}; } // handled by addEst()
   }).then(r=>{
     if(r.isConfirmed) addEst(ciclo).then(()=>abrirSalon(salon,ciclo));
@@ -3192,7 +3192,7 @@ Puedes <b>activar/desactivar</b> o <b>eliminar</b> cualquier comunicado en cualq
 };
 function showHelp(panel){
   const txt=HELP[panel]||'Sin ayuda disponible para esta sección.';
-  Swal.fire({title:'<i class="fas fa-circle-question"></i> Ayuda',html:`<div style="text-align:left;font-size:14px;line-height:1.8">${txt}</div>`,
+  Swal.fire({title:'Ayuda',html:`<div style="text-align:left;font-size:14px;line-height:1.8">${txt}</div>`,
     confirmButtonText:'Entendido',icon:'info'});
 }
 /* Log audit entry */
@@ -3445,7 +3445,7 @@ function pgAHist(){
       <span class="cti"><i class="fas fa-book"></i> Registro Histórico (${(DB.estHist||[]).length})</span>
     </div>
     <div style="display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap">
-      <input id="histQ" placeholder="<i class="fas fa-magnifying-glass"></i> Buscar por nombre, T.I. o salón..." style="flex:1;min-width:220px;padding:9px 14px;border:1.5px solid var(--bd);border-radius:var(--r);font-size:14px;outline:none" oninput="filtrarHist()">
+      <input id="histQ" placeholder="Buscar por nombre, T.I. o salón..." style="flex:1;min-width:220px;padding:9px 14px;border:1.5px solid var(--bd);border-radius:var(--r);font-size:14px;outline:none" oninput="filtrarHist()">
       <select id="histFiltro" style="padding:9px 12px;border:1.5px solid var(--bd);border-radius:var(--r);font-size:13px;outline:none" onchange="filtrarHist()">
         <option value="todos">Todos</option>
         <option value="activo">Solo Activos</option>
@@ -3609,7 +3609,7 @@ function verHistAcademico(eid){
       </div>`;
 
   Swal.fire({
-    title:`<i class="fas fa-chart-column"></i> Historial Académico`,
+    title:`Historial Académico`,
     width:700,
     html:`<div style="text-align:left;font-family:var(--fn);max-height:70vh;overflow-y:auto;padding-right:4px">
       <!-- Header info -->
@@ -3888,8 +3888,8 @@ async function responderExcusa(excId){
     </div>
   </div>`;
   const res=await Swal.fire({
-    title:'<i class="fas fa-envelope"></i> Responder Excusa',width:520,html,showCancelButton:true,
-    confirmButtonText:'<i class="fas fa-circle-check"></i> Enviar respuesta',cancelButtonText:'Cancelar',
+    title:'Responder Excusa',width:520,html,showCancelButton:true,
+    confirmButtonText:'Enviar respuesta',cancelButtonText:'Cancelar',
     confirmButtonColor:'#2b6cb0',
     preConfirm:async()=>{
       const resp=gi('rpResp')?.value.trim();
@@ -3930,7 +3930,7 @@ async function responderExcusa(excId){
     // Mostrar confirmación con resumen de lo enviado
     await Swal.fire({
       icon:'success',
-      title:'<i class="fas fa-circle-check"></i> Respuesta enviada',
+      title:'Respuesta enviada',
       html:`<div style="text-align:left;font-family:var(--fn);font-size:13px">
         <div style="background:#f0fff4;border-radius:8px;padding:10px;margin-bottom:10px">
           <strong>Estudiante:</strong> ${exc.enombre}<br>
@@ -4114,13 +4114,13 @@ function pgPH(){
 
   <!-- STATS ROW -->
   <div class="sr" style="margin-bottom:18px">
-    <div class="scc" data-i="<i class="fas fa-school"></i>"><div class="sv">${sals.length}</div><div class="sl">Salones</div><div class="bar"></div></div>
-    <div class="scc" data-i="<i class="fas fa-book"></i>"><div class="sv">${matCards.length||sals.reduce((t,s)=>t+getProfMatsSalon(p.id,s).length,0)||'—'}</div><div class="sl">Materias</div><div class="bar"></div></div>
-    <div class="scc" data-i="<i class="fas fa-envelope"></i>" style="cursor:pointer" onclick="goto('ph');setTimeout(()=>{const t=gi('phTabExc');if(t)t.click();},100)">
+    <div class="scc"><div class="scc-ic"><i class="fas fa-school"></i></div><div class="sv">${sals.length}</div><div class="sl">Salones</div><div class="bar"></div></div>
+    <div class="scc"><div class="scc-ic"><i class="fas fa-book"></i></div><div class="sv">${matCards.length||sals.reduce((t,s)=>t+getProfMatsSalon(p.id,s).length,0)||'—'}</div><div class="sl">Materias</div><div class="bar"></div></div>
+    <div class="scc" style="cursor:pointer" onclick="goto('ph');setTimeout(()=>{const t=gi('phTabExc');if(t)t.click();},100)"><div class="scc-ic"><i class="fas fa-envelope"></i></div>
       <div class="sv" style="color:${excPend>0?'var(--red)':'var(--grn)'}">${excPend>0?excPend:'<i class="fas fa-check"></i>'}</div>
       <div class="sl">${excPend>0?'Excusas pend.':'Sin pendientes'}</div><div class="bar"></div>
     </div>
-    ${pendRec?`<div class="scc" data-i="<i class="fas fa-arrows-rotate"></i>" style="cursor:pointer" onclick="goto('prec')">
+    ${pendRec?`<div class="scc" style="cursor:pointer" onclick="goto('prec')"><div class="scc-ic"><i class="fas fa-arrows-rotate"></i></div>
       <div class="sv" style="color:var(--ora)">${pendRec}</div><div class="sl">Recup. pend.</div><div class="bar"></div>
     </div>`:''}
   </div>
@@ -4248,7 +4248,7 @@ function renderPhSalonTab(sal){
 
   <!-- Buscador + tabla de estudiantes -->
   <div style="display:flex;gap:8px;margin-bottom:10px;align-items:center">
-    <input id="phBusq_${sal}" placeholder="<i class="fas fa-magnifying-glass"></i> Buscar estudiante en ${sal}…"
+    <input id="phBusq_${sal}" placeholder="Buscar estudiante en ${sal}…"
       style="flex:1;padding:8px 12px;border:1px solid var(--bd);border-radius:8px;font-size:13px;font-family:var(--fn)"
       oninput="filtrarPhEsts('${sal}')">
     <span id="phCount_${sal}" style="font-size:12px;color:var(--sl2);white-space:nowrap">${ests.length} est.</span>
@@ -5018,7 +5018,7 @@ function loadPN(){
     if(badge)badge.remove();
     badge=document.createElement('div');
     badge.className='pn-saved2';
-    badge.textContent='<i class="fas fa-check"></i> Guardado';
+    badge.innerHTML='<i class="fas fa-check"></i> Guardado';
     document.body.appendChild(badge);
     setTimeout(()=>{if(badge.parentNode)badge.parentNode.removeChild(badge);},2000);
   };
@@ -5109,7 +5109,7 @@ function selRptProf(defaultSalon,defaultPer,tipo){
   const perOpts=DB.pers.map(p=>`<option value="${p}" ${p===defaultPer?'selected':''}>${p}</option>`).join('');
 
   Swal.fire({
-    title:`${tipo==='pdf'?'<i class="fas fa-file-lines"></i> Reporte PDF':'<i class="fas fa-chart-column"></i> Informe Excel'}`,
+    title:`${tipo==='pdf'?'Reporte PDF':'Informe Excel'}`,
     width:440,
     html:`<div style="text-align:left;font-family:var(--fn)">
       <div class="al alb" style="margin-bottom:12px;font-size:12px">
@@ -5138,7 +5138,7 @@ function selRptProf(defaultSalon,defaultPer,tipo){
       </div>
     </div>`,
     showCancelButton:true,
-    confirmButtonText:tipo==='pdf'?'<i class="fas fa-file-lines"></i> Generar PDF':'<i class="fas fa-chart-column"></i> Generar Excel',
+    confirmButtonText:tipo==='pdf'?'Generar PDF':'Generar Excel',
     didOpen:()=>updateRptMats(),
     preConfirm:()=>({salon:gi('rptSalon')?.value,per:gi('rptPer')?.value,mat:gi('rptMat')?.value})
   }).then(r=>{
@@ -5432,7 +5432,7 @@ function abrirSalaJitsi(roomId, titulo, esProfesor) {
 
   // Aviso previo para TODOS (profesor y estudiante)
   Swal.fire({
-    title: '<i class="fas fa-laptop"></i> ' + (esProfesor ? 'Iniciando clase' : 'Unirse a la clase'),
+    title: '' + (esProfesor ? 'Iniciando clase' : 'Unirse a la clase'),
     html: `<div style="text-align:left;font-size:14px;line-height:1.7">
       <p>${esProfesor ? 'La sala se abrirá ahora.' : 'Vas a entrar a la clase virtual.'}</p>
       <div style="background:#fef9c3;border:1px solid #fde047;border-radius:8px;padding:10px 14px;margin-top:10px;font-size:13px">
@@ -5864,7 +5864,7 @@ function _planDialog({titulo='',desc='',archNombre='',archDataUrl='',archType=''
   const fechaLimite=DB.ext.e||'';/* Always locked to admin-defined end date */
   const inputId='planFile_'+Date.now();
   Swal.fire({
-    title:'<i class="fas fa-clipboard-list"></i> Plan de Recuperación',width:600,
+    title:'Plan de Recuperación',width:600,
     html:`<div style="text-align:left;font-family:var(--fn)">
       <div style="background:var(--bg2);border-radius:8px;padding:10px 14px;margin-bottom:12px;font-size:13px">
         ${destinatario}
@@ -5896,7 +5896,7 @@ function _planDialog({titulo='',desc='',archNombre='',archDataUrl='',archType=''
       </div>
     </div>`,
     showCancelButton:true,
-    confirmButtonText:'<i class="fas fa-upload"></i> Enviar Plan',cancelButtonText:'Cancelar',confirmButtonColor:'var(--nv)',
+    confirmButtonText:'Enviar Plan',cancelButtonText:'Cancelar',confirmButtonColor:'var(--nv)',
     didOpen:()=>{/* store ref to file input */window._planFileInput=gi(inputId);},
     preConfirm:()=>{
       const t=gi('planTitulo').value.trim(),d=gi('planDesc').value.trim();
@@ -5918,7 +5918,7 @@ function _planDialog({titulo='',desc='',archNombre='',archDataUrl='',archType=''
   });
 }
 window.onPlanFilePick=function(inp,labelId){
-  const lb=gi(labelId);if(lb&&inp.files[0]) lb.textContent='<i class="fas fa-paperclip"></i> '+inp.files[0].name;
+  const lb=gi(labelId);if(lb&&inp.files[0]) lb.innerHTML='<i class="fas fa-paperclip"></i> '+inp.files[0].name;
 };
 
 /* Send plan to entire salon */
@@ -6182,10 +6182,10 @@ function initEB(){
   }
 
   h+=`<div class="sr">
-    <div class="scc" data-i="<i class="fas fa-chart-column"></i>"><div class="sv" style="color:${scCol(pg)}">${fmt(pg)}</div><div class="sl">Prom. General</div><div class="bar"></div></div>
-    <div class="scc" data-i="<i class="fas fa-trophy"></i>"><div class="sv">${ps}</div><div class="sl">Puesto Salón</div><div class="bar"></div></div>
-    <div class="scc" data-i="<i class="fas fa-school"></i>"><div class="sv" style="font-size:${(e.salon||'—').length>4?'15px':'22px'};margin-top:2px">${e.salon||'—'}</div><div class="sl">Mi Salón</div><div class="bar"></div></div>
-    <div class="scc" data-i="<i class="fas fa-triangle-exclamation"></i>"><div class="sv" style="color:${cantPerdidas>0?'var(--red)':'var(--grn)'}">${cantPerdidas}</div><div class="sl">${labelPerdidas}</div><div class="bar"></div></div>
+    <div class="scc"><div class="scc-ic"><i class="fas fa-chart-column"></i></div><div class="sv" style="color:${scCol(pg)}">${fmt(pg)}</div><div class="sl">Prom. General</div><div class="bar"></div></div>
+    <div class="scc"><div class="scc-ic"><i class="fas fa-trophy"></i></div><div class="sv">${ps}</div><div class="sl">Puesto Salón</div><div class="bar"></div></div>
+    <div class="scc"><div class="scc-ic"><i class="fas fa-school"></i></div><div class="sv" style="font-size:${(e.salon||'—').length>4?'15px':'22px'};margin-top:2px">${e.salon||'—'}</div><div class="sl">Mi Salón</div><div class="bar"></div></div>
+    <div class="scc"><div class="scc-ic"><i class="fas fa-triangle-exclamation"></i></div><div class="sv" style="color:${cantPerdidas>0?'var(--red)':'var(--grn)'}">${cantPerdidas}</div><div class="sl">${labelPerdidas}</div><div class="bar"></div></div>
   </div>`;
 
   const elegible=tieneAreas?(areasP.length>=1&&areasP.length<=2):(mp.length>=1&&mp.length<=2);
@@ -6291,9 +6291,9 @@ function pgEAst(){
   const aus=recs.filter(r=>r.val==='ausente').length;
   return`<div class="ph"><h2>Mi Asistencia</h2><button class="btn xs bg" onclick="showHelp('east')"><i class="fas fa-circle-question"></i> Ayuda</button></div>
   <div class="sr">
-    <div class="scc" data-i="<i class="fas fa-circle-check"></i>"><div class="sv" style="color:var(--grn)">${pres}</div><div class="sl">Presente</div><div class="bar"></div></div>
-    <div class="scc" data-i="<i class="fas fa-circle-xmark"></i>"><div class="sv" style="color:var(--red)">${aus}</div><div class="sl">Ausente</div><div class="bar"></div></div>
-    <div class="scc" data-i="<i class="fas fa-calendar-days"></i>"><div class="sv">${recs.length}</div><div class="sl">Total</div><div class="bar"></div></div>
+    <div class="scc"><div class="scc-ic"><i class="fas fa-circle-check"></i></div><div class="sv" style="color:var(--grn)">${pres}</div><div class="sl">Presente</div><div class="bar"></div></div>
+    <div class="scc"><div class="scc-ic"><i class="fas fa-circle-xmark"></i></div><div class="sv" style="color:var(--red)">${aus}</div><div class="sl">Ausente</div><div class="bar"></div></div>
+    <div class="scc"><div class="scc-ic"><i class="fas fa-calendar-days"></i></div><div class="sv">${recs.length}</div><div class="sl">Total</div><div class="bar"></div></div>
   </div>
   <div class="card"><div class="chd"><span class="cti">Historial</span></div>
   ${recs.length?`<div class="tw"><table><thead><tr><th>Fecha</th><th>Estado</th></tr></thead>
@@ -6367,7 +6367,7 @@ function pgETare(){
   </div>`;
 }
 function onFPick(inp){
-  if(inp.files[0]) gi('utfn').textContent='<i class="fas fa-paperclip"></i> '+inp.files[0].name;
+  if(inp.files[0]) gi('utfn').innerHTML='<i class="fas fa-paperclip"></i> '+inp.files[0].name;
 }
 function onProfChangeTaller(){
   const profId=gi('utprof')?.value;
@@ -6675,7 +6675,7 @@ function pgEReh(){
   ${tarjetas}`;
 }
 
-function onRecFPick(inp,key){if(inp.files[0]) gi(key).textContent='<i class="fas fa-paperclip"></i> '+inp.files[0].name;}
+function onRecFPick(inp,key){if(inp.files[0]) gi(key).innerHTML='<i class="fas fa-paperclip"></i> '+inp.files[0].name;}
 
 /* Submit a reply linked to a specific plan */
 /* ── SOBREESCRITA por api-layer.js ── */
@@ -8165,13 +8165,13 @@ async function estSubirComprobante(compId, pagoId){
   // compId: ID de comprobante existente (para re-enviar)
   // pagoId: ID del pago (para crear comprobante nuevo)
   const {value:file}=await Swal.fire({
-    title:'<i class="fas fa-upload"></i> Subir comprobante de pago',
+    title:'Subir comprobante de pago',
     html:`<p style="font-size:13px;color:#64748b;margin-bottom:12px">
       Adjunta la foto o PDF de tu transferencia/recibo de pago.<br>
       <small style="color:#94a3b8">Máximo 5 MB · JPG, PNG o PDF</small></p>
       <input type="file" id="swalCompFile" accept="image/*,application/pdf"
         style="width:100%;padding:8px;border:1.5px dashed #94a3b8;border-radius:8px;font-size:13px;cursor:pointer">`,
-    showCancelButton:true, confirmButtonText:'<i class="fas fa-upload"></i> Enviar', cancelButtonText:'Cancelar',
+    showCancelButton:true, confirmButtonText:'Enviar', cancelButtonText:'Cancelar',
     confirmButtonColor:'#2563eb',
     preConfirm:()=>{
       const f=document.getElementById('swalCompFile')?.files?.[0];
@@ -9092,7 +9092,7 @@ function mostrarComunicadosLogin(){
   Swal.fire({
     title: titulo,
     html:`<div style="max-height:65vh;overflow-y:auto;padding-right:4px;margin-top:8px">${htmlComs}</div>`,
-    confirmButtonText:'Entendido <i class="fas fa-check"></i>',
+    confirmButtonText:'Entendido',
     confirmButtonColor:'#2b6cb0',
     width:'min(620px,95vw)',
     showClass:{popup:'swal2-show'},
@@ -9106,8 +9106,8 @@ function bootApp(){
   if(_tbDate) _tbDate.textContent=new Date().toLocaleDateString('es-CO',{weekday:'short',year:'numeric',month:'short',day:'numeric'});
   const st=gi('tbStatus');
   if(st){
-    if(notasOk()){st.className='tbst tbop';st.textContent='<i class="fas fa-check"></i> Notas Abiertas';}
-    else{st.className='tbst tbcl';st.textContent='<i class="fas fa-xmark"></i> Notas Cerradas';}
+    if(notasOk()){st.className='tbst tbop';st.innerHTML='<i class="fas fa-check"></i> Notas Abiertas';}
+    else{st.className='tbst tbcl';st.innerHTML='<i class="fas fa-xmark"></i> Notas Cerradas';}
   }
   const _sbUser=gi('sbUser');
   if(_sbUser) _sbUser.innerHTML=`<div class="sbav">${(CU.nombre||'?')[0].toUpperCase()}</div>
@@ -9178,7 +9178,7 @@ async function notifDeudaEstudiante(){
     sessionStorage.setItem('deudaNotifShown','1');
     await Swal.fire({
       icon:'warning',
-      title:'<i class="fas fa-triangle-exclamation"></i> Tienes cobros pendientes',
+      title:'Tienes cobros pendientes',
       html:`<div style="font-family:var(--fn);font-size:14px">
         <p>Tienes <strong>${pendientes.length} cobro${pendientes.length!==1?'s':''}</strong> pendiente${pendientes.length!==1?'s':''} por un total de <strong style="color:#b91c1c">${fmt(total)}</strong>.</p>
         <p style="font-size:12px;color:var(--sl3);margin-top:8px">Dirígete a <strong><i class="fas fa-credit-card"></i> Mi Cuenta</strong> para ver el detalle.</p>
@@ -9199,7 +9199,7 @@ async function notifRespuestasExcusas(){
     if(!noLeidas.length) return;
     await Swal.fire({
       icon:'info',
-      title:`<i class="fas fa-envelope"></i> Tienes ${noLeidas.length} respuesta${noLeidas.length>1?'s':''} de excusa${noLeidas.length>1?'s':''} sin leer`,
+      title:`Tienes ${noLeidas.length} respuesta${noLeidas.length>1?'s':''} de excusa${noLeidas.length>1?'s':''} sin leer`,
       html:`<div style="font-family:var(--fn);text-align:left">
         ${noLeidas.map(x=>`
           <div style="background:#e6fffa;border-radius:8px;padding:10px;margin-bottom:8px;border:1px solid #9ae6b4">
@@ -9211,7 +9211,7 @@ async function notifRespuestasExcusas(){
           <i class="fas fa-triangle-exclamation"></i> Debes enviar el trabajo en <strong>Talleres y Tareas</strong> dentro del tiempo estipulado. Después de la fecha límite <strong>no se calificará</strong>.
         </div>
       </div>`,
-      confirmButtonText:'<i class="fas fa-envelope-circle-check"></i> Ver mis excusas',
+      confirmButtonText:'Ver mis excusas',
       confirmButtonColor:'#2b6cb0',
       showCancelButton:true,
       cancelButtonText:'Cerrar'
@@ -9241,7 +9241,7 @@ function notifyExtPeriod(){
   if(abrioAhora){
     Swal.fire({
       icon:'warning',
-      title:'<i class="fas fa-arrows-rotate"></i> ¡Periodo de Recuperación Abierto!',
+      title:'¡Periodo de Recuperación Abierto!',
       html:`<div style="font-family:var(--fn);text-align:left">
         <p>Tienes <strong style="color:#c53030">${mp.length}</strong> materia(s) en recuperación:</p>
         <div style="margin:10px 0">${mp.map(m=>`<span class="bdg brd" style="margin:3px">${m}</span>`).join('')}</div>
@@ -9257,7 +9257,7 @@ function notifyExtPeriod(){
   } else if(cerroAhora){
     Swal.fire({
       icon:'info',
-      title:'<i class="fas fa-lock"></i> Periodo de Recuperación Cerrado',
+      title:'Periodo de Recuperación Cerrado',
       html:`<div style="font-family:var(--fn)">
         <p>El periodo extraordinario de recuperación <strong>ha finalizado</strong>.</p>
         <p style="font-size:13px;color:#718096">Si tienes dudas sobre tu estado, consulta con tu docente o el administrador.</p>
@@ -9267,7 +9267,7 @@ function notifyExtPeriod(){
   } else if(fechasCambiaron){
     Swal.fire({
       icon:'info',
-      title:'<i class="fas fa-calendar-days"></i> Fechas de Recuperación Actualizadas',
+      title:'Fechas de Recuperación Actualizadas',
       html:`<div style="font-family:var(--fn);text-align:left">
         <p>Las fechas del periodo de recuperación cambiaron:</p>
         <p><i class="fas fa-calendar-days"></i> Nuevo rango: <strong>${curr.s}</strong> → <strong>${curr.e}</strong></p>
@@ -9287,7 +9287,7 @@ function notifyExtPeriod(){
       /* Show alert for new plan */
       Swal.fire({
         icon:'success',
-        title:'<i class="fas fa-clipboard-list"></i> ¡Tu docente envió un Plan de Recuperación!',
+        title:'¡Tu docente envió un Plan de Recuperación!',
         html:`<div style="font-family:var(--fn);text-align:left">
           <p>Tienes <strong>${planesNuevos.length}</strong> plan(es) nuevo(s) de recuperación:</p>
           <div style="margin:10px 0">${matsMostrar.map(mat=>{
@@ -9533,7 +9533,7 @@ function initDash(){
   gi('dSt').innerHTML=[{v:DB.ests.length,l:'Estudiantes',i:'<i class="fas fa-graduation-cap"></i>'},
     {v:DB.profs.length,l:'Profesores',i:'<i class="fas fa-chalkboard-user"></i>'},{v:DB.sals.length,l:'Salones',i:'<i class="fas fa-school"></i>'},
     {v:DB.mB.length+DB.mP.length,l:'Materias',i:'<i class="fas fa-book-open"></i>'}]
-    .map(s=>`<div class="scc" data-i="${s.i}"><div class="sv">${s.v}</div><div class="sl">${s.l}</div><div class="bar"></div></div>`).join('');
+    .map(s=>`<div class="scc"><div class="scc-ic">${s.i}</div><div class="sv">${s.v}</div><div class="sl">${s.l}</div><div class="bar"></div></div>`).join('');
 
   // Widget estudiantes sin salón
   const sinSalon = DB.ests.filter(e=>!e.salon||!DB.sals.find(s=>s.nombre===e.salon));
@@ -9706,7 +9706,7 @@ function delSal(n){ /* implementado en api-layer.js */ }
 async function editSalJornada(sname){
   const sal=DB.sals.find(s=>s.nombre===sname);if(!sal)return;
   const {value:jornada}=await Swal.fire({
-    title:`<i class="fas fa-clock"></i> Jornada del Salón ${sname}`,
+    title:`Jornada del Salón ${sname}`,
     html:`<div style="text-align:left;font-family:var(--fn)">
       <label style="font-size:13px;font-weight:600;display:block;margin-bottom:8px">Selecciona la jornada:</label>
       <select id="sj_sel" style="width:100%;padding:10px 14px;font-size:14px;border:1.5px solid var(--bd);border-radius:8px;outline:none">
@@ -9756,7 +9756,7 @@ function editSalMats(sname){
     </label>`).join('');
 
   Swal.fire({
-    title:`<i class="fas fa-bullseye"></i> Materias del Salón ${sname}`,
+    title:`Materias del Salón ${sname}`,
     width:600,
     html:`<div style="text-align:left;font-family:var(--fn)">
       <div class="al alb" style="margin-bottom:10px;font-size:12px">
@@ -9885,7 +9885,7 @@ async function editSalAreas(sname){
   }).join('');
 
   const r=await Swal.fire({
-    title:`<i class="fas fa-folder-open"></i> Áreas del Salón ${sname}`,
+    title:`Áreas del Salón ${sname}`,
     width:560,
     html:`<div style="text-align:left;font-family:var(--fn)">
       <div class="al alb" style="margin-bottom:12px;font-size:12px">
@@ -9929,7 +9929,7 @@ async function editSalAreas(sname){
     }).join('');
 
     const r2=await Swal.fire({
-      title:`<i class="fas fa-bullseye"></i> Materias por Área — Salón ${sname}`,
+      title:`Materias por Área — Salón ${sname}`,
       width:620,
       html:`<div style="text-align:left;font-family:var(--fn)">
         <div class="al alb" style="margin-bottom:14px;font-size:12px">
@@ -10051,7 +10051,7 @@ async function asignarSalonEst(estId, ciclo){
   if(!sals.length){ sw('info','Sin salones','Crea salones primero en Salones & Grados.'); return; }
   const opts = sals.map(s=>`<option value="${s.nombre}">${esc(s.nombre)} (${s.ciclo})</option>`).join('');
   const {value:salon, isConfirmed} = await Swal.fire({
-    title:`<i class="fas fa-thumbtack"></i> Asignar salón a ${esc(e.nombre)}`,
+    title:`Asignar salón a ${esc(e.nombre)}`,
     html:`<div style="text-align:left;font-family:var(--fn)">
       <label style="font-size:11px;font-weight:800;text-transform:uppercase;color:var(--sl);display:block;margin-bottom:6px">Selecciona el salón</label>
       <select id="aseSel" style="width:100%;padding:10px 12px;border:1.5px solid var(--bd);border-radius:8px;font-size:14px">
@@ -10178,7 +10178,7 @@ function openAddEstSalon(salon, ciclo){
   // We show a compact Swal matching pgAEst add form
   const sOpts = DB.sals.filter(s=>s.ciclo===ciclo).map(s=>`<option value="${s.nombre}"${s.nombre===salon?' selected':''}>${s.nombre}</option>`).join('');
   Swal.fire({
-    title:`<i class="fas fa-plus"></i> Agregar Estudiante — ${salon}`, width:520,
+    title:`Agregar Estudiante — ${salon}`, width:520,
     html:`<div style="text-align:left;font-family:var(--fn)">
       <div style="display:flex;flex-direction:column;gap:10px">
         <div class="fld" style="margin:0"><label>Nombre completo *</label><input id="nen" placeholder="Juan Pérez Gómez" class="inp"></div>
@@ -10193,7 +10193,7 @@ function openAddEstSalon(salon, ciclo){
         </div>
       </div>
     </div>`,
-    showCancelButton:true, confirmButtonText:'<i class="fas fa-plus"></i> Agregar', confirmButtonColor:'var(--nv)', cancelButtonText:'Cancelar',
+    showCancelButton:true, confirmButtonText:'Agregar', confirmButtonColor:'var(--nv)', cancelButtonText:'Cancelar',
     preConfirm:()=>{ return {}; } // handled by addEst()
   }).then(r=>{
     if(r.isConfirmed) addEst(ciclo).then(()=>abrirSalon(salon,ciclo));
@@ -11299,7 +11299,7 @@ function extExpirado(){
 // HELP ya declarado en bloque 1
 function showHelp(panel){
   const txt=HELP[panel]||'Sin ayuda disponible para esta sección.';
-  Swal.fire({title:'<i class="fas fa-circle-question"></i> Ayuda',html:`<div style="text-align:left;font-size:14px;line-height:1.8">${txt}</div>`,
+  Swal.fire({title:'Ayuda',html:`<div style="text-align:left;font-size:14px;line-height:1.8">${txt}</div>`,
     confirmButtonText:'Entendido',icon:'info'});
 }
 /* Log audit entry */
@@ -11552,7 +11552,7 @@ function pgAHist(){
       <span class="cti"><i class="fas fa-book"></i> Registro Histórico (${(DB.estHist||[]).length})</span>
     </div>
     <div style="display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap">
-      <input id="histQ" placeholder="<i class="fas fa-magnifying-glass"></i> Buscar por nombre, T.I. o salón..." style="flex:1;min-width:220px;padding:9px 14px;border:1.5px solid var(--bd);border-radius:var(--r);font-size:14px;outline:none" oninput="filtrarHist()">
+      <input id="histQ" placeholder="Buscar por nombre, T.I. o salón..." style="flex:1;min-width:220px;padding:9px 14px;border:1.5px solid var(--bd);border-radius:var(--r);font-size:14px;outline:none" oninput="filtrarHist()">
       <select id="histFiltro" style="padding:9px 12px;border:1.5px solid var(--bd);border-radius:var(--r);font-size:13px;outline:none" onchange="filtrarHist()">
         <option value="todos">Todos</option>
         <option value="activo">Solo Activos</option>
@@ -11716,7 +11716,7 @@ function verHistAcademico(eid){
       </div>`;
 
   Swal.fire({
-    title:`<i class="fas fa-chart-column"></i> Historial Académico`,
+    title:`Historial Académico`,
     width:700,
     html:`<div style="text-align:left;font-family:var(--fn);max-height:70vh;overflow-y:auto;padding-right:4px">
       <!-- Header info -->
@@ -11995,8 +11995,8 @@ async function responderExcusa(excId){
     </div>
   </div>`;
   const res=await Swal.fire({
-    title:'<i class="fas fa-envelope"></i> Responder Excusa',width:520,html,showCancelButton:true,
-    confirmButtonText:'<i class="fas fa-circle-check"></i> Enviar respuesta',cancelButtonText:'Cancelar',
+    title:'Responder Excusa',width:520,html,showCancelButton:true,
+    confirmButtonText:'Enviar respuesta',cancelButtonText:'Cancelar',
     confirmButtonColor:'#2b6cb0',
     preConfirm:async()=>{
       const resp=gi('rpResp')?.value.trim();
@@ -12037,7 +12037,7 @@ async function responderExcusa(excId){
     // Mostrar confirmación con resumen de lo enviado
     await Swal.fire({
       icon:'success',
-      title:'<i class="fas fa-circle-check"></i> Respuesta enviada',
+      title:'Respuesta enviada',
       html:`<div style="text-align:left;font-family:var(--fn);font-size:13px">
         <div style="background:#f0fff4;border-radius:8px;padding:10px;margin-bottom:10px">
           <strong>Estudiante:</strong> ${exc.enombre}<br>
@@ -12221,13 +12221,13 @@ function pgPH(){
 
   <!-- STATS ROW -->
   <div class="sr" style="margin-bottom:18px">
-    <div class="scc" data-i="<i class="fas fa-school"></i>"><div class="sv">${sals.length}</div><div class="sl">Salones</div><div class="bar"></div></div>
-    <div class="scc" data-i="<i class="fas fa-book"></i>"><div class="sv">${matCards.length||sals.reduce((t,s)=>t+getProfMatsSalon(p.id,s).length,0)||'—'}</div><div class="sl">Materias</div><div class="bar"></div></div>
-    <div class="scc" data-i="<i class="fas fa-envelope"></i>" style="cursor:pointer" onclick="goto('ph');setTimeout(()=>{const t=gi('phTabExc');if(t)t.click();},100)">
+    <div class="scc"><div class="scc-ic"><i class="fas fa-school"></i></div><div class="sv">${sals.length}</div><div class="sl">Salones</div><div class="bar"></div></div>
+    <div class="scc"><div class="scc-ic"><i class="fas fa-book"></i></div><div class="sv">${matCards.length||sals.reduce((t,s)=>t+getProfMatsSalon(p.id,s).length,0)||'—'}</div><div class="sl">Materias</div><div class="bar"></div></div>
+    <div class="scc" style="cursor:pointer" onclick="goto('ph');setTimeout(()=>{const t=gi('phTabExc');if(t)t.click();},100)"><div class="scc-ic"><i class="fas fa-envelope"></i></div>
       <div class="sv" style="color:${excPend>0?'var(--red)':'var(--grn)'}">${excPend>0?excPend:'<i class="fas fa-check"></i>'}</div>
       <div class="sl">${excPend>0?'Excusas pend.':'Sin pendientes'}</div><div class="bar"></div>
     </div>
-    ${pendRec?`<div class="scc" data-i="<i class="fas fa-arrows-rotate"></i>" style="cursor:pointer" onclick="goto('prec')">
+    ${pendRec?`<div class="scc" style="cursor:pointer" onclick="goto('prec')"><div class="scc-ic"><i class="fas fa-arrows-rotate"></i></div>
       <div class="sv" style="color:var(--ora)">${pendRec}</div><div class="sl">Recup. pend.</div><div class="bar"></div>
     </div>`:''}
   </div>
@@ -12355,7 +12355,7 @@ function renderPhSalonTab(sal){
 
   <!-- Buscador + tabla de estudiantes -->
   <div style="display:flex;gap:8px;margin-bottom:10px;align-items:center">
-    <input id="phBusq_${sal}" placeholder="<i class="fas fa-magnifying-glass"></i> Buscar estudiante en ${sal}…"
+    <input id="phBusq_${sal}" placeholder="Buscar estudiante en ${sal}…"
       style="flex:1;padding:8px 12px;border:1px solid var(--bd);border-radius:8px;font-size:13px;font-family:var(--fn)"
       oninput="filtrarPhEsts('${sal}')">
     <span id="phCount_${sal}" style="font-size:12px;color:var(--sl2);white-space:nowrap">${ests.length} est.</span>
@@ -13125,7 +13125,7 @@ function loadPN(){
     if(badge)badge.remove();
     badge=document.createElement('div');
     badge.className='pn-saved2';
-    badge.textContent='<i class="fas fa-check"></i> Guardado';
+    badge.innerHTML='<i class="fas fa-check"></i> Guardado';
     document.body.appendChild(badge);
     setTimeout(()=>{if(badge.parentNode)badge.parentNode.removeChild(badge);},2000);
   };
@@ -13216,7 +13216,7 @@ function selRptProf(defaultSalon,defaultPer,tipo){
   const perOpts=DB.pers.map(p=>`<option value="${p}" ${p===defaultPer?'selected':''}>${p}</option>`).join('');
 
   Swal.fire({
-    title:`${tipo==='pdf'?'<i class="fas fa-file-lines"></i> Reporte PDF':'<i class="fas fa-chart-column"></i> Informe Excel'}`,
+    title:`${tipo==='pdf'?'Reporte PDF':'Informe Excel'}`,
     width:440,
     html:`<div style="text-align:left;font-family:var(--fn)">
       <div class="al alb" style="margin-bottom:12px;font-size:12px">
@@ -13245,7 +13245,7 @@ function selRptProf(defaultSalon,defaultPer,tipo){
       </div>
     </div>`,
     showCancelButton:true,
-    confirmButtonText:tipo==='pdf'?'<i class="fas fa-file-lines"></i> Generar PDF':'<i class="fas fa-chart-column"></i> Generar Excel',
+    confirmButtonText:tipo==='pdf'?'Generar PDF':'Generar Excel',
     didOpen:()=>updateRptMats(),
     preConfirm:()=>({salon:gi('rptSalon')?.value,per:gi('rptPer')?.value,mat:gi('rptMat')?.value})
   }).then(r=>{
@@ -13814,7 +13814,7 @@ function _planDialog({titulo='',desc='',archNombre='',archDataUrl='',archType=''
   const fechaLimite=DB.ext.e||'';/* Always locked to admin-defined end date */
   const inputId='planFile_'+Date.now();
   Swal.fire({
-    title:'<i class="fas fa-clipboard-list"></i> Plan de Recuperación',width:600,
+    title:'Plan de Recuperación',width:600,
     html:`<div style="text-align:left;font-family:var(--fn)">
       <div style="background:var(--bg2);border-radius:8px;padding:10px 14px;margin-bottom:12px;font-size:13px">
         ${destinatario}
@@ -13846,7 +13846,7 @@ function _planDialog({titulo='',desc='',archNombre='',archDataUrl='',archType=''
       </div>
     </div>`,
     showCancelButton:true,
-    confirmButtonText:'<i class="fas fa-upload"></i> Enviar Plan',cancelButtonText:'Cancelar',confirmButtonColor:'var(--nv)',
+    confirmButtonText:'Enviar Plan',cancelButtonText:'Cancelar',confirmButtonColor:'var(--nv)',
     didOpen:()=>{/* store ref to file input */window._planFileInput=gi(inputId);},
     preConfirm:()=>{
       const t=gi('planTitulo').value.trim(),d=gi('planDesc').value.trim();
@@ -13868,7 +13868,7 @@ function _planDialog({titulo='',desc='',archNombre='',archDataUrl='',archType=''
   });
 }
 window.onPlanFilePick=function(inp,labelId){
-  const lb=gi(labelId);if(lb&&inp.files[0]) lb.textContent='<i class="fas fa-paperclip"></i> '+inp.files[0].name;
+  const lb=gi(labelId);if(lb&&inp.files[0]) lb.innerHTML='<i class="fas fa-paperclip"></i> '+inp.files[0].name;
 };
 
 /* Send plan to entire salon */
@@ -14132,10 +14132,10 @@ function initEB(){
   }
 
   h+=`<div class="sr">
-    <div class="scc" data-i="<i class="fas fa-chart-column"></i>"><div class="sv" style="color:${scCol(pg)}">${fmt(pg)}</div><div class="sl">Prom. General</div><div class="bar"></div></div>
-    <div class="scc" data-i="<i class="fas fa-trophy"></i>"><div class="sv">${ps}</div><div class="sl">Puesto Salón</div><div class="bar"></div></div>
-    <div class="scc" data-i="<i class="fas fa-school"></i>"><div class="sv" style="font-size:${(e.salon||'—').length>4?'15px':'22px'};margin-top:2px">${e.salon||'—'}</div><div class="sl">Mi Salón</div><div class="bar"></div></div>
-    <div class="scc" data-i="<i class="fas fa-triangle-exclamation"></i>"><div class="sv" style="color:${cantPerdidas>0?'var(--red)':'var(--grn)'}">${cantPerdidas}</div><div class="sl">${labelPerdidas}</div><div class="bar"></div></div>
+    <div class="scc"><div class="scc-ic"><i class="fas fa-chart-column"></i></div><div class="sv" style="color:${scCol(pg)}">${fmt(pg)}</div><div class="sl">Prom. General</div><div class="bar"></div></div>
+    <div class="scc"><div class="scc-ic"><i class="fas fa-trophy"></i></div><div class="sv">${ps}</div><div class="sl">Puesto Salón</div><div class="bar"></div></div>
+    <div class="scc"><div class="scc-ic"><i class="fas fa-school"></i></div><div class="sv" style="font-size:${(e.salon||'—').length>4?'15px':'22px'};margin-top:2px">${e.salon||'—'}</div><div class="sl">Mi Salón</div><div class="bar"></div></div>
+    <div class="scc"><div class="scc-ic"><i class="fas fa-triangle-exclamation"></i></div><div class="sv" style="color:${cantPerdidas>0?'var(--red)':'var(--grn)'}">${cantPerdidas}</div><div class="sl">${labelPerdidas}</div><div class="bar"></div></div>
   </div>`;
 
   const elegible=tieneAreas?(areasP.length>=1&&areasP.length<=2):(mp.length>=1&&mp.length<=2);
@@ -14241,9 +14241,9 @@ function pgEAst(){
   const aus=recs.filter(r=>r.val==='ausente').length;
   return`<div class="ph"><h2>Mi Asistencia</h2><button class="btn xs bg" onclick="showHelp('east')"><i class="fas fa-circle-question"></i> Ayuda</button></div>
   <div class="sr">
-    <div class="scc" data-i="<i class="fas fa-circle-check"></i>"><div class="sv" style="color:var(--grn)">${pres}</div><div class="sl">Presente</div><div class="bar"></div></div>
-    <div class="scc" data-i="<i class="fas fa-circle-xmark"></i>"><div class="sv" style="color:var(--red)">${aus}</div><div class="sl">Ausente</div><div class="bar"></div></div>
-    <div class="scc" data-i="<i class="fas fa-calendar-days"></i>"><div class="sv">${recs.length}</div><div class="sl">Total</div><div class="bar"></div></div>
+    <div class="scc"><div class="scc-ic"><i class="fas fa-circle-check"></i></div><div class="sv" style="color:var(--grn)">${pres}</div><div class="sl">Presente</div><div class="bar"></div></div>
+    <div class="scc"><div class="scc-ic"><i class="fas fa-circle-xmark"></i></div><div class="sv" style="color:var(--red)">${aus}</div><div class="sl">Ausente</div><div class="bar"></div></div>
+    <div class="scc"><div class="scc-ic"><i class="fas fa-calendar-days"></i></div><div class="sv">${recs.length}</div><div class="sl">Total</div><div class="bar"></div></div>
   </div>
   <div class="card"><div class="chd"><span class="cti">Historial</span></div>
   ${recs.length?`<div class="tw"><table><thead><tr><th>Fecha</th><th>Estado</th></tr></thead>
@@ -14317,7 +14317,7 @@ function pgETare(){
   </div>`;
 }
 function onFPick(inp){
-  if(inp.files[0]) gi('utfn').textContent='<i class="fas fa-paperclip"></i> '+inp.files[0].name;
+  if(inp.files[0]) gi('utfn').innerHTML='<i class="fas fa-paperclip"></i> '+inp.files[0].name;
 }
 function onProfChangeTaller(){
   const profId=gi('utprof')?.value;
@@ -14624,7 +14624,7 @@ function pgEReh(){
   ${tarjetas}`;
 }
 
-function onRecFPick(inp,key){if(inp.files[0]) gi(key).textContent='<i class="fas fa-paperclip"></i> '+inp.files[0].name;}
+function onRecFPick(inp,key){if(inp.files[0]) gi(key).innerHTML='<i class="fas fa-paperclip"></i> '+inp.files[0].name;}
 
 /* Submit a reply linked to a specific plan */
 /* ── SOBREESCRITA por api-layer.js ── */
@@ -16063,7 +16063,7 @@ async function saFinToggleBlocked(uid, block, nombre){
 async function saFinEditUsuario(uid){
   const u = window._saFinUsuarios.find(x=>x.id===uid); if(!u) return;
   const r = await Swal.fire({
-    title:`<i class="fas fa-pen"></i> Editar — ${u.nombre}`,width:440,
+    title:`Editar — ${u.nombre}`,width:440,
     html:`<div style="text-align:left;font-family:var(--fn);display:flex;flex-direction:column;gap:11px">
       <div>
         <label style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--sl);display:block;margin-bottom:4px">Nombre</label>
@@ -16610,7 +16610,7 @@ function renderHorarioGrid(){
 
 function agregarFranja(){
   Swal.fire({
-    title:'<i class="fas fa-plus"></i> Nueva franja horaria',
+    title:'Nueva franja horaria',
     html:`<input id="swalHora" class="swal2-input" placeholder="Ej: 16:15 - 17:10">`,
     focusConfirm:false,
     preConfirm:()=>{ const v=gi('swalHora')?.value?.trim(); if(!v){Swal.showValidationMessage('Ingresa la hora');return false;} return v; },
@@ -16626,7 +16626,7 @@ function agregarFranja(){
 
 function agregarDescanso(){
   Swal.fire({
-    title:'<i class="fas fa-mug-hot"></i> Agregar descanso',
+    title:'Agregar descanso',
     html:`<input id="swalHora" class="swal2-input" placeholder="Ej: 09:45 - 10:00">`,
     focusConfirm:false,
     preConfirm:()=>{ const v=gi('swalHora')?.value?.trim(); if(!v){Swal.showValidationMessage('Ingresa la hora');return false;} return v; },
@@ -16643,7 +16643,7 @@ function agregarDescanso(){
 function editarFranja(fi){
   const f = window._horFranjas?.[fi]; if(!f) return;
   Swal.fire({
-    title:'<i class="fas fa-pen"></i> Editar franja',
+    title:'Editar franja',
     html:`<input id="swalHora" class="swal2-input" value="${f.hora}" placeholder="Ej: 07:00 - 07:55">`,
     focusConfirm:false,
     preConfirm:()=>{ const v=gi('swalHora')?.value?.trim(); if(!v){Swal.showValidationMessage('Ingresa la hora');return false;} return v; },
@@ -16688,7 +16688,7 @@ async function copiarHorarioDesde(){
   if(!profs.length){sw('info','No hay otros profesores');return;}
   const opts = profs.map(p=>`<option value="${p.id}">${esc(p.nombre)}</option>`).join('');
   const r = await Swal.fire({
-    title:'<i class="fas fa-clipboard-list"></i> Copiar horario de otro profesor',
+    title:'Copiar horario de otro profesor',
     html:`<select id="swalCopyProf" class="swal2-input" style="margin:0;width:100%">${opts}</select>`,
     confirmButtonText:'Copiar', showCancelButton:true
   });
@@ -16868,7 +16868,7 @@ function pgSADash() {
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.75rem;flex-wrap:wrap;gap:.5rem">
         <h3 style="margin:0"><i class="fas fa-school"></i> Todas las instituciones</h3>
         <div style="display:flex;gap:.5rem;flex-wrap:wrap">
-          <input id="saDashSearch" style="padding:9px 12px;border:1.5px solid var(--bd);border-radius:var(--r);font-size:13px;background:var(--bg2);color:var(--tx);outline:none;font-family:var(--fn)" style="width:180px;font-size:.85rem" placeholder="<i class="fas fa-magnifying-glass"></i> Buscar…" oninput="renderSADashTable(window._saStatsData||[])">
+          <input id="saDashSearch" style="padding:9px 12px;border:1.5px solid var(--bd);border-radius:var(--r);font-size:13px;background:var(--bg2);color:var(--tx);outline:none;font-family:var(--fn)" style="width:180px;font-size:.85rem" placeholder="Buscar…" oninput="renderSADashTable(window._saStatsData||[])">
           <button class="btn bsec" style="font-size:.8rem" onclick="exportarSADashCSV()"><i class="fas fa-upload"></i> CSV</button>
         </div>
       </div>
@@ -17028,7 +17028,7 @@ async function initSADash() {
     }
     const badge = gi('saSugBadge');
     if (badge && sugCount && sugCount.noLeidas > 0) {
-      badge.textContent = `<i class="fas fa-lightbulb"></i> ${sugCount.noLeidas} nueva${sugCount.noLeidas > 1 ? 's' : ''}`;
+      badge.innerHTML = `<i class="fas fa-lightbulb"></i> ${sugCount.noLeidas} nueva${sugCount.noLeidas > 1 ? 's' : ''}`;
       badge.style.display = 'inline-block';
     }
     // Responsive
@@ -17411,7 +17411,7 @@ async function modalAdmins(colegioId, colegioNombre) {
       </td>
     </tr>`).join('');
     Swal.fire({
-      title: `<i class="fas fa-user"></i> Admins — ${colegioNombre}`,
+      title: `Admins — ${colegioNombre}`,
       html: `<div style="overflow-x:auto"><table class="tbl"><thead><tr><th>Nombre</th><th>Usuario</th><th>Estado</th><th>Acc.</th></tr></thead>
         <tbody>${lista || '<tr><td colspan="4" style="text-align:center;color:#999">Sin administradores</td></tr>'}</tbody></table></div>
         <hr style="margin:.75rem 0">
@@ -17593,7 +17593,7 @@ function pgSAEstadisticas() {
     </div>
     <div class="card" style="margin-bottom:1rem">
       <div style="display:flex;gap:.75rem;flex-wrap:wrap;align-items:center">
-        <input id="saEstSearch" style="padding:9px 12px;border:1.5px solid var(--bd);border-radius:var(--r);font-size:13px;background:var(--bg2);color:var(--tx);outline:none;font-family:var(--fn)" style="width:200px;font-size:.85rem" placeholder="<i class="fas fa-magnifying-glass"></i> Buscar institución…" oninput="renderEstDetalle(window._saEstData||[])">
+        <input id="saEstSearch" style="padding:9px 12px;border:1.5px solid var(--bd);border-radius:var(--r);font-size:13px;background:var(--bg2);color:var(--tx);outline:none;font-family:var(--fn)" style="width:200px;font-size:.85rem" placeholder="Buscar institución…" oninput="renderEstDetalle(window._saEstData||[])">
         <select id="saEstFiltroEstado" style="padding:9px 12px;border:1.5px solid var(--bd);border-radius:var(--r);font-size:13px;background:var(--bg2);color:var(--tx);outline:none;font-family:var(--fn)" style="width:auto;font-size:.85rem" onchange="renderEstDetalle(window._saEstData||[])">
           <option value="">Todos los estados</option>
           <option value="activo">Solo activos</option>
@@ -18462,7 +18462,7 @@ async function finVerDetalle(pid){
     const fmt=v=>`$${(v||0).toLocaleString('es-CO')}`;
     const stBadge=s=>({pagado:'bgr',pendiente:'bgy',vencido:'bred',anulado:'bgy'}[s]||'bgy');
     await Swal.fire({
-      title:'<i class="fas fa-file-lines"></i> Detalle del Pago',width:440,
+      title:'Detalle del Pago',width:440,
       html:`<div style="text-align:left;font-family:var(--fn);font-size:13px;display:flex;flex-direction:column;gap:0">
         ${[['Estudiante',`<strong>${esc(p.estNombre)}</strong>`],['Salón',esc(p.salon||'—')],
            ['Concepto',esc(p.conceptoNombre||p.concepto||'—')],
@@ -18582,7 +18582,7 @@ async function finVerReciboEst(pid){
 // ─── SOLICITAR COMPROBANTE (desde tabla de pagos) ───────────────────
 async function finSolicitarComprobante(pagoId){
   const r=await Swal.fire({
-    title:'<i class="fas fa-paperclip"></i> Solicitar comprobante',
+    title:'Solicitar comprobante',
     text:'Se le notificará al estudiante que debe subir el comprobante de pago.',
     icon:'question', showCancelButton:true,
     confirmButtonText:'Sí, solicitar', cancelButtonText:'Cancelar',
@@ -18688,7 +18688,7 @@ async function finVerComprobante(cid){
   const el=document.createElement('div');
   el.innerHTML='<div style="text-align:center;padding:24px;color:var(--sl3)"><i class="fas fa-hourglass-half"></i> Cargando archivo...</div>';
   Swal.fire({
-    title:'<i class="fas fa-paperclip"></i> Comprobante de Pago',
+    title:'Comprobante de Pago',
     html:el,
     showConfirmButton:false,
     showCloseButton:true,
@@ -18850,7 +18850,7 @@ async function finVerComprobante(cid){
 
 async function finAprobarComp(cid){
   const r=await Swal.fire({
-    title:'<i class="fas fa-circle-check"></i> Aprobar comprobante',
+    title:'Aprobar comprobante',
     text:'El pago se marcará como PAGADO automáticamente.',
     icon:'question', showCancelButton:true,
     confirmButtonText:'Aprobar', cancelButtonText:'Cancelar',
@@ -18869,7 +18869,7 @@ async function finAprobarComp(cid){
 
 async function finRechazarComp(cid){
   const r=await Swal.fire({
-    title:'<i class="fas fa-circle-xmark"></i> Rechazar comprobante',
+    title:'Rechazar comprobante',
     input:'textarea', inputLabel:'Motivo del rechazo',
     inputPlaceholder:'Ej: El monto no corresponde, imagen ilegible...',
     inputAttributes:{'minlength':5},
@@ -18997,7 +18997,7 @@ async function finNuevoPago(){
   };
 
   const {value,isConfirmed}=await Swal.fire({
-    title:'<i class="fas fa-plus"></i> Registrar Pago',width:660,
+    title:'Registrar Pago',width:660,
     html:`<div style="text-align:left;font-family:var(--fn);display:flex;flex-direction:column;gap:14px">
 
       <!-- MODO -->
@@ -19017,10 +19017,10 @@ async function finNuevoPago(){
       <div id="modoInd">
         <label style="font-size:12px;font-weight:800;text-transform:uppercase;color:#475569;display:block;margin-bottom:6px"><i class="fas fa-magnifying-glass"></i> Buscar Estudiante</label>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
-          <input id="fpEstSearch" placeholder="<i class="fas fa-pen"></i> Nombre del estudiante…" autocomplete="off"
+          <input id="fpEstSearch" placeholder="Nombre del estudiante…" autocomplete="off"
             oninput="fnFilterInd()"
             style="padding:12px 14px;font-size:15px;border:2px solid #e2e8f0;border-radius:10px;background:#f8fafc;color:#1e293b;outline:none;width:100%;box-sizing:border-box">
-          <input id="fpEstCedula" placeholder="<i class="fas fa-id-card"></i> Cédula / TI…" autocomplete="off"
+          <input id="fpEstCedula" placeholder="Cédula / TI…" autocomplete="off"
             oninput="fnFilterInd()"
             style="padding:12px 14px;font-size:15px;border:2px solid #e2e8f0;border-radius:10px;background:#f8fafc;color:#1e293b;outline:none;width:100%;box-sizing:border-box">
         </div>
@@ -19071,7 +19071,7 @@ async function finNuevoPago(){
       <div id="modoGrp" style="display:none">
         <label style="font-size:12px;font-weight:800;text-transform:uppercase;color:#475569;display:block;margin-bottom:6px"><i class="fas fa-pen"></i> Seleccionar varios estudiantes</label>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
-          <input id="fpGrpSearch" placeholder="<i class="fas fa-pen"></i> Filtrar por nombre…" oninput="fnFilterGrp()"
+          <input id="fpGrpSearch" placeholder="Filtrar por nombre…" oninput="fnFilterGrp()"
             style="padding:12px 14px;font-size:15px;border:2px solid #e2e8f0;border-radius:10px;background:#f8fafc;color:#1e293b;outline:none;box-sizing:border-box">
           <select id="fpGrpCiclo" onchange="fnFilterGrp()"
             style="width:100%;padding:12px 14px;font-size:15px;border:2px solid #e2e8f0;border-radius:10px;background:#f8fafc;color:#1e293b;outline:none">
@@ -19143,7 +19143,7 @@ async function finNuevoPago(){
       window._fnGrpSelected=new Set();
     },
     showCancelButton:true,
-    confirmButtonText:'<i class="fas fa-floppy-disk"></i> Guardar Pago',
+    confirmButtonText:'Guardar Pago',
     cancelButtonText:'Cancelar',
     confirmButtonColor:'#3730a3',
     preConfirm:()=>{
@@ -19271,7 +19271,7 @@ function fnPreviewSalon(){
   else if(ciclo==='bachillerato') arr=arr.filter(e=>(window._fnSalBach||[]).includes(e.salon));
   if(!arr.length){ el.style.display='none'; return; }
   el.style.display='block';
-  el.textContent=`<i class="fas fa-clipboard-list"></i> Se registrará pago para ${arr.length} estudiante${arr.length!==1?'s':''}`+(salon?` del salón ${salon}`:'');
+  el.innerHTML=`<i class="fas fa-clipboard-list"></i> Se registrará pago para ${arr.length} estudiante${arr.length!==1?'s':''}`+(salon?` del salón ${salon}`:'');
 }
 
 function fnToggleGrp(card){
@@ -19286,7 +19286,7 @@ function fnToggleGrp(card){
   } else {
     sel.add(id);
     card.style.borderColor='#6366f1'; card.style.background='#eef2ff';
-    if(chk){ chk.style.background='#6366f1'; chk.style.borderColor='#6366f1'; chk.textContent='<i class="fas fa-check"></i>'; chk.style.color='#fff'; }
+    if(chk){ chk.style.background='#6366f1'; chk.style.borderColor='#6366f1'; chk.innerHTML='<i class="fas fa-check"></i>'; chk.style.color='#fff'; }
   }
   const cnt=gi('fpGrpCount'); if(cnt) cnt.textContent=sel.size+' estudiante'+(sel.size!==1?'s':'')+' seleccionado'+(sel.size!==1?'s':'');
 }
@@ -19317,7 +19317,7 @@ function fnPreviewSalon(){
   const el=gi('fpSalonPreview'); if(!el) return;
   if(!salon){el.textContent='';return;}
   const cnt=(window._fnEstsCache||[]).filter(e=>e.salon===salon).length;
-  el.textContent=`<i class="fas fa-clipboard-list"></i> ${cnt} estudiante${cnt!==1?'s':''} en este salón`;
+  el.innerHTML=`<i class="fas fa-clipboard-list"></i> ${cnt} estudiante${cnt!==1?'s':''} en este salón`;
 }
 function fnFilterGrp(){
   const q=(gi('fpGrpSearch')?.value||'').toLowerCase();
@@ -19331,7 +19331,7 @@ async function finEditPago(pid, estadoActual=''){
   const est=pagoActual.estado||estadoActual;
   const hoy=new Date().toISOString().slice(0,10);
   const r=await Swal.fire({
-    title:'<i class="fas fa-pen"></i> Editar Pago',width:460,
+    title:'Editar Pago',width:460,
     html:`<div style="text-align:left;font-family:var(--fn);display:flex;flex-direction:column;gap:11px">
       <div style="padding:10px 12px;background:var(--bg2);border-radius:8px;border:1.5px solid var(--bd);font-size:12px">
         <strong>${esc(pagoActual.estNombre||'')}</strong> · ${esc(pagoActual.conceptoNombre||'')}
@@ -19430,7 +19430,7 @@ async function finGenerarCobros(conceptoId, conceptoNombre, valorBase, aplica){
     +sals.map(s=>`<option value="${s.nombre}">${esc(s.nombre)}</option>`).join('');
 
   const {value,isConfirmed}=await Swal.fire({
-    title:'<i class="fas fa-bolt"></i> Cobro Masivo',
+    title:'Cobro Masivo',
     width:540,
     html:`<div style="text-align:left;font-family:var(--fn);display:flex;flex-direction:column;gap:13px">
 
@@ -19478,7 +19478,7 @@ async function finGenerarCobros(conceptoId, conceptoNombre, valorBase, aplica){
     </div>`,
     didOpen:()=>{ finPrevisualizarCobro(); },
     showCancelButton:true,
-    confirmButtonText:'<i class="fas fa-bolt"></i> Generar cobros',
+    confirmButtonText:'Generar cobros',
     cancelButtonText:'Cancelar',
     preConfirm:()=>({
       salon:    document.getElementById('cmSalon').value,
@@ -19505,7 +19505,7 @@ async function finGenerarCobros(conceptoId, conceptoNombre, valorBase, aplica){
 
   // 3. Cargar estudiantes y generar los cobros
   try{
-    Swal.fire({title:'<i class="fas fa-bolt"></i> Generando cobros…',text:'Por favor espera.',allowOutsideClick:false,showConfirmButton:false,
+    Swal.fire({title:'Generando cobros…',text:'Por favor espera.',allowOutsideClick:false,showConfirmButton:false,
       didOpen:()=>Swal.showLoading()});
 
     // Obtener estudiantes filtrados
@@ -19602,7 +19602,7 @@ async function finPrevisualizarCobro(){
 }
 async function finNuevoConcepto(){
   const{value,isConfirmed}=await Swal.fire({
-    title:'<i class="fas fa-plus"></i> Nuevo Concepto de Cobro',width:440,
+    title:'Nuevo Concepto de Cobro',width:440,
     html:`<div style="text-align:left;font-family:var(--fn);display:flex;flex-direction:column;gap:11px">
       <div><label style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--sl);display:block;margin-bottom:4px">Nombre *</label>
         <input id="ncN" placeholder="Ej: Matrícula anual" style="width:100%;padding:9px 12px;font-size:13px;border:1.5px solid var(--bd);border-radius:8px;background:var(--bg2);color:var(--tx);outline:none;box-sizing:border-box"></div>
@@ -19624,7 +19624,7 @@ async function finNuevoConcepto(){
 }
 async function finEditConcepto(cid){
   const r=await Swal.fire({
-    title:'<i class="fas fa-pen"></i> Editar Concepto',width:400,
+    title:'Editar Concepto',width:400,
     html:`<div style="text-align:left;font-family:var(--fn);display:flex;flex-direction:column;gap:11px">
       <div><label style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--sl);display:block;margin-bottom:4px">Nuevo Valor (COP)</label>
         <input id="ecV" type="number" min="0" style="width:100%;padding:9px 12px;font-size:13px;border:1.5px solid var(--bd);border-radius:8px;background:var(--bg2);color:var(--tx);outline:none;box-sizing:border-box"></div>

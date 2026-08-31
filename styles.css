@@ -365,8 +365,8 @@ input,select,textarea,button{font-family:var(--fn)}
   content:'';position:absolute;top:0;left:0;right:0;height:3px;
   background:linear-gradient(90deg,var(--nv3),var(--tl));
 }
-.scc::after{
-  content:attr(data-i);position:absolute;right:16px;top:50%;
+.scc .scc-ic{
+  position:absolute;right:16px;top:50%;
   transform:translateY(-50%);font-size:34px;opacity:.07;pointer-events:none;
 }
 .scc .sv{

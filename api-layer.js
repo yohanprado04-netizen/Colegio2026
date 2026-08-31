@@ -182,7 +182,7 @@ async function dbLoad() {
       if (typeof Swal !== 'undefined') {
         Swal.fire({
           icon: 'warning',
-          title: '<i class="fas fa-hourglass-half"></i> Servidor iniciando',
+          title: 'Servidor iniciando',
           html: `<div style="font-size:14px;line-height:1.7">
             El servidor está despertando (Render free tier).<br>
             <strong>Esto tarda entre 30 y 60 segundos</strong> la primera vez del día.<br><br>
@@ -680,7 +680,7 @@ async function marcarRespLeida(excId) {
     const exc = (DB.exc || []).find(x => x._id === excId || x.id === excId) || updated;
     await Swal.fire({
       icon: 'warning',
-      title: '<i class="fas fa-book"></i> Recuerda entregar el trabajo',
+      title: 'Recuerda entregar el trabajo',
       html: `<div style="font-size:13px;line-height:1.7;text-align:left">
         ${exc.respProf ? `<div style="background:#e6fffa;border-radius:8px;padding:10px;margin-bottom:10px;border:1px solid #9ae6b4">
           <strong>Indicaciones de tu profesor:</strong><br>${exc.respProf}
@@ -693,7 +693,7 @@ async function marcarRespLeida(excId) {
           <span style="color:#c53030">Después de la fecha límite NO se calificará.</span>
         </div>
       </div>`,
-      confirmButtonText: '<i class="fas fa-paperclip"></i> Ir a Talleres y Tareas',
+      confirmButtonText:'Ir a Talleres y Tareas',
       confirmButtonColor: '#2b6cb0',
       showCancelButton: true,
       cancelButtonText: 'Cerrar',
@@ -732,7 +732,7 @@ function descargarTallerExcusa(excId, nombreEnc) {
     // Aviso de envío
     setTimeout(() => {
       Swal.fire({
-        icon: 'warning', title: '<i class="fas fa-triangle-exclamation"></i> Recuerda',
+        icon: 'warning', title: 'Recuerda',
         html: `<div style="font-size:14px">Debes enviar el taller completado en el apartado<br><strong style="color:#2b6cb0"><i class="fas fa-paperclip"></i> Talleres y Tareas</strong></div>`,
         confirmButtonText: 'Ir a Talleres y Tareas', confirmButtonColor: '#2b6cb0',
         showCancelButton: true, cancelButtonText: 'Cerrar',
@@ -1383,7 +1383,7 @@ async function restaurarEst(eid) {
   if (!h) { sw('error', 'No se encontró el registro'); return; }
 
   Swal.fire({
-    title: '<i class="fas fa-recycle"></i> Restaurar estudiante', icon: 'question', width: 480,
+    title: 'Restaurar estudiante', icon: 'question', width: 480,
     html: `<div style="text-align:left;font-family:var(--fn)">
       <div style="background:#eef2f7;padding:12px 16px;border-radius:8px;margin-bottom:14px">
         <div style="font-size:13px;line-height:1.9"><strong>Nombre:</strong> ${esc(h.nombre)}</div>
@@ -1511,7 +1511,7 @@ function abrirCSVEst(ciclo) {
   const salonesDisp = DB.sals.filter(s => s.ciclo === ciclo).map(s => s.nombre);
 
   Swal.fire({
-    title: `<i class="fas fa-folder-open"></i> Carga Masiva — Estudiantes ${ciclo === 'primaria' ? 'Primaria' : 'Bachillerato'}`,
+    title: `Carga Masiva — Estudiantes ${ciclo === 'primaria' ? 'Primaria' : 'Bachillerato'}`,
     width: 620,
     html: `
       <div style="text-align:left;font-family:var(--fn);font-size:13px">
@@ -1543,7 +1543,7 @@ function abrirCSVEst(ciclo) {
       </div>
     `,
     showCancelButton: true,
-    confirmButtonText: '<i class="fas fa-circle-check"></i> Importar',
+    confirmButtonText:'Importar',
     cancelButtonText: 'Cancelar',
     confirmButtonColor: 'var(--nv)',
     preConfirm: () => {
@@ -1690,7 +1690,7 @@ function abrirCSVPrf(ciclo) {
   const salonesDisp = DB.sals.filter(s => s.ciclo === ciclo).map(s => s.nombre);
 
   Swal.fire({
-    title: `<i class="fas fa-folder-open"></i> Carga Masiva — Profesores ${ciclo === 'primaria' ? 'Primaria' : 'Bachillerato'}`,
+    title: `Carga Masiva — Profesores ${ciclo === 'primaria' ? 'Primaria' : 'Bachillerato'}`,
     width: 640,
     html: `
       <div style="text-align:left;font-family:var(--fn);font-size:13px">
@@ -1722,7 +1722,7 @@ function abrirCSVPrf(ciclo) {
       </div>
     `,
     showCancelButton: true,
-    confirmButtonText: '<i class="fas fa-circle-check"></i> Importar',
+    confirmButtonText:'Importar',
     cancelButtonText: 'Cancelar',
     confirmButtonColor: '#805ad5',
     preConfirm: () => {
@@ -1866,7 +1866,7 @@ async function eliminarTodosEsts(ciclo) {
   const lista = DB.ests.filter(e => cicloOf(e.salon) === ciclo);
   if (!lista.length) { sw('info', 'No hay estudiantes en este ciclo'); return; }
   const conf = await Swal.fire({
-    title: `<i class="fas fa-triangle-exclamation"></i> ¿Eliminar TODOS los estudiantes de ${ciclo === 'primaria' ? 'Primaria' : 'Bachillerato'}?`,
+    title: `¿Eliminar TODOS los estudiantes de ${ciclo === 'primaria' ? 'Primaria' : 'Bachillerato'}?`,
     html: `<div style="font-size:14px">
       <p>Se eliminarán <strong>${lista.length} estudiante(s)</strong> permanentemente.</p>
       <p style="color:#c53030">Esta acción no se puede deshacer. Quedarán en el historial.</p>
@@ -1991,7 +1991,7 @@ async function promoverEstudiantes(ciclo) {
   if (faltanPeriodosList.length > 0) {
     await Swal.fire({
       icon: 'warning',
-      title: '<i class="fas fa-triangle-exclamation"></i> Periodos sin calificar',
+      title: 'Periodos sin calificar',
       width: 520,
       html: `<div style="text-align:left;font-size:13px;font-family:var(--fn)">
         <div class="al aly" style="margin-bottom:12px">
@@ -2020,7 +2020,7 @@ async function promoverEstudiantes(ciclo) {
   if (enRecupList.length > 0) {
     await Swal.fire({
       icon: 'warning',
-      title: '<i class="fas fa-lock"></i> Promoción bloqueada',
+      title: 'Promoción bloqueada',
       width: 560,
       html: `<div style="text-align:left;font-size:13px;font-family:var(--fn)">
         <div class="al aly" style="margin-bottom:12px">
@@ -2122,7 +2122,7 @@ async function promoverEstudiantes(ciclo) {
   }).join('');
 
   const conf = await Swal.fire({
-    title: '<i class="fas fa-graduation-cap"></i> Promover año — Resumen',
+    title: 'Promover año — Resumen',
     width: 740,
     html: `<div style="text-align:left;font-size:13px;font-family:var(--fn)">
       <!-- Tarjetas de resumen global -->
@@ -2198,7 +2198,7 @@ async function promoverEstudiantes(ciclo) {
       </div>
     </div>`,
     showCancelButton: true,
-    confirmButtonText: '<i class="fas fa-circle-check"></i> Aplicar cambios',
+    confirmButtonText:'Aplicar cambios',
     confirmButtonColor: 'var(--nv)',
     cancelButtonText: 'Cancelar'
   });
