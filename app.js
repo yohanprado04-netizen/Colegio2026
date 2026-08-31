@@ -570,29 +570,29 @@ function veredictoAnual(eid){
 
     if(areasLost.length===0 && matsSinAreaPerd.length===0){
       resultado='gana';
-      mensaje='🎉 Aprueba el año. Ganó todas las áreas.';
+      mensaje='<i class="fas fa-champagne-glasses"></i> Aprueba el año. Ganó todas las áreas.';
     } else if(areasLost.length<=2 && (areasLost.length+matsSinAreaPerd.length)<=2){
       resultado='recupera';
       const nombresArea=areasLost.map(a=>a.areaNombre);
       const nombresMat=matsSinAreaPerd.map(x=>x.mat);
       const todos=[...nombresArea,...nombresMat];
-      mensaje=`⚠️ Va a recuperación. Perdió ${todos.length} área${todos.length>1?'s':''}: ${todos.join(', ')}.`;
+      mensaje=`<i class="fas fa-triangle-exclamation"></i> Va a recuperación. Perdió ${todos.length} área${todos.length>1?'s':''}: ${todos.join(', ')}.`;
     } else {
       resultado='pierde';
       const nombresArea=areasLost.map(a=>a.areaNombre);
-      mensaje=`❌ Pierde el año. Perdió ${areasLost.length} área${areasLost.length>1?'s':''}: ${nombresArea.join(', ')}.`;
+      mensaje=`<i class="fas fa-circle-xmark"></i> Pierde el año. Perdió ${areasLost.length} área${areasLost.length>1?'s':''}: ${nombresArea.join(', ')}.`;
     }
   } else {
     // Sin áreas: lógica original por materias
     const matsPerdidasFinal = resMateria.filter(x => !x.gana);
     if(matsPerdidasFinal.length===0){
-      resultado='gana'; mensaje='🎉 Aprueba el año. Ganó todas las materias.';
+      resultado='gana'; mensaje='<i class="fas fa-champagne-glasses"></i> Aprueba el año. Ganó todas las materias.';
     } else if(matsPerdidasFinal.length<=2){
       resultado='recupera';
-      mensaje=`⚠️ Va a recuperación. Perdió ${matsPerdidasFinal.length} materia${matsPerdidasFinal.length>1?'s':''}: ${matsPerdidasFinal.map(x=>x.mat).join(', ')}.`;
+      mensaje=`<i class="fas fa-triangle-exclamation"></i> Va a recuperación. Perdió ${matsPerdidasFinal.length} materia${matsPerdidasFinal.length>1?'s':''}: ${matsPerdidasFinal.map(x=>x.mat).join(', ')}.`;
     } else {
       resultado='pierde';
-      mensaje=`❌ Pierde el año. Perdió ${matsPerdidasFinal.length} materias: ${resMateria.filter(x=>!x.gana).map(x=>x.mat).join(', ')}.`;
+      mensaje=`<i class="fas fa-circle-xmark"></i> Pierde el año. Perdió ${matsPerdidasFinal.length} materias: ${resMateria.filter(x=>!x.gana).map(x=>x.mat).join(', ')}.`;
     }
   }
 
@@ -893,28 +893,28 @@ function mostrarComunicadosLogin(){
   if(!coms.length) return;
 
   const colorMap={
-    azul:  {hdr:'#2b6cb0',bg:'#ebf8ff',icon:'🔵'},
-    verde: {hdr:'#276749',bg:'#f0fff4',icon:'🟢'},
-    naranja:{hdr:'#c05621',bg:'#fffaf0',icon:'🟠'},
-    rojo:  {hdr:'#c53030',bg:'#fff5f5',icon:'🔴'},
-    morado:{hdr:'#553c9a',bg:'#faf5ff',icon:'🟣'},
+    azul:  {hdr:'#2b6cb0',bg:'#ebf8ff',icon:'<i class="fas fa-circle"></i>'},
+    verde: {hdr:'#276749',bg:'#f0fff4',icon:'<i class="fas fa-circle"></i>'},
+    naranja:{hdr:'#c05621',bg:'#fffaf0',icon:'<i class="fas fa-circle"></i>'},
+    rojo:  {hdr:'#c53030',bg:'#fff5f5',icon:'<i class="fas fa-circle"></i>'},
+    morado:{hdr:'#553c9a',bg:'#faf5ff',icon:'<i class="fas fa-circle"></i>'},
   };
 
   const htmlComs=coms.map(c=>{
     const cs=colorMap[c.color]||colorMap.azul;
     return`<div style="background:${cs.bg};border-left:4px solid ${cs.hdr};border-radius:0 10px 10px 0;padding:14px 16px;margin-bottom:12px;text-align:left">
-      <div style="font-weight:800;font-size:15px;color:${cs.hdr};margin-bottom:6px">${cs.icon} ${esc(c.titulo)}${c.esSuperAdmin?` <span style="font-size:10px;background:#553c9a;color:#fff;border-radius:4px;padding:1px 6px;vertical-align:middle;font-weight:600">🌐 Plataforma</span>`:''}</div>
+      <div style="font-weight:800;font-size:15px;color:${cs.hdr};margin-bottom:6px">${cs.icon} ${esc(c.titulo)}${c.esSuperAdmin?` <span style="font-size:10px;background:#553c9a;color:#fff;border-radius:4px;padding:1px 6px;vertical-align:middle;font-weight:600"><i class="fas fa-globe"></i> Plataforma</span>`:''}</div>
       <div style="font-size:13px;color:#2d3748;white-space:pre-line;line-height:1.7">${esc(c.mensaje)}</div>
       <div style="font-size:10px;color:#718096;margin-top:8px">Válido hasta: ${c.fechaFin}</div>
     </div>`;
   }).join('');
 
-  const titulo = role==='admin' ? '📢 Comunicado de la Plataforma' : '📢 Comunicados del Colegio';
+  const titulo = role==='admin' ? '<i class="fas fa-bullhorn"></i> Comunicado de la Plataforma' : '<i class="fas fa-bullhorn"></i> Comunicados del Colegio';
 
   Swal.fire({
     title: titulo,
     html:`<div style="max-height:65vh;overflow-y:auto;padding-right:4px;margin-top:8px">${htmlComs}</div>`,
-    confirmButtonText:'Entendido ✓',
+    confirmButtonText:'Entendido <i class="fas fa-check"></i>',
     confirmButtonColor:'#2b6cb0',
     width:'min(620px,95vw)',
     showClass:{popup:'swal2-show'},
@@ -928,8 +928,8 @@ function bootApp(){
   if(_tbDate) _tbDate.textContent=new Date().toLocaleDateString('es-CO',{weekday:'short',year:'numeric',month:'short',day:'numeric'});
   const st=gi('tbStatus');
   if(st){
-    if(notasOk()){st.className='tbst tbop';st.textContent='✓ Notas Abiertas';}
-    else{st.className='tbst tbcl';st.textContent='✗ Notas Cerradas';}
+    if(notasOk()){st.className='tbst tbop';st.textContent='<i class="fas fa-check"></i> Notas Abiertas';}
+    else{st.className='tbst tbcl';st.textContent='<i class="fas fa-xmark"></i> Notas Cerradas';}
   }
   const _sbUser=gi('sbUser');
   if(_sbUser) _sbUser.innerHTML=`<div class="sbav">${(CU.nombre||'?')[0].toUpperCase()}</div>
@@ -1000,10 +1000,10 @@ async function notifDeudaEstudiante(){
     sessionStorage.setItem('deudaNotifShown','1');
     await Swal.fire({
       icon:'warning',
-      title:'⚠️ Tienes cobros pendientes',
+      title:'<i class="fas fa-triangle-exclamation"></i> Tienes cobros pendientes',
       html:`<div style="font-family:var(--fn);font-size:14px">
         <p>Tienes <strong>${pendientes.length} cobro${pendientes.length!==1?'s':''}</strong> pendiente${pendientes.length!==1?'s':''} por un total de <strong style="color:#b91c1c">${fmt(total)}</strong>.</p>
-        <p style="font-size:12px;color:var(--sl3);margin-top:8px">Dirígete a <strong>💳 Mi Cuenta</strong> para ver el detalle.</p>
+        <p style="font-size:12px;color:var(--sl3);margin-top:8px">Dirígete a <strong><i class="fas fa-credit-card"></i> Mi Cuenta</strong> para ver el detalle.</p>
       </div>`,
       confirmButtonText:'Ver mi cuenta',cancelButtonText:'Cerrar',
       showCancelButton:true,
@@ -1021,19 +1021,19 @@ async function notifRespuestasExcusas(){
     if(!noLeidas.length) return;
     await Swal.fire({
       icon:'info',
-      title:`📩 Tienes ${noLeidas.length} respuesta${noLeidas.length>1?'s':''} de excusa${noLeidas.length>1?'s':''} sin leer`,
+      title:`<i class="fas fa-envelope"></i> Tienes ${noLeidas.length} respuesta${noLeidas.length>1?'s':''} de excusa${noLeidas.length>1?'s':''} sin leer`,
       html:`<div style="font-family:var(--fn);text-align:left">
         ${noLeidas.map(x=>`
           <div style="background:#e6fffa;border-radius:8px;padding:10px;margin-bottom:8px;border:1px solid #9ae6b4">
-            <div style="font-size:12px;font-weight:700;color:#276749">📩 ${x.respProfNombre||'Tu profesor'} respondió tu excusa del ${x.fecha}</div>
+            <div style="font-size:12px;font-weight:700;color:#276749"><i class="fas fa-envelope"></i> ${x.respProfNombre||'Tu profesor'} respondió tu excusa del ${x.fecha}</div>
             <div style="font-size:13px;margin-top:4px">${x.respProf}</div>
-            ${x.diasExtra>0?`<div style="font-size:12px;margin-top:4px">⏰ <strong>Tiempo extra:</strong> ${x.diasExtra} día(s) — Límite: ${x.fechaLimite||'—'}</div>`:''}
+            ${x.diasExtra>0?`<div style="font-size:12px;margin-top:4px"><i class="fas fa-clock"></i> <strong>Tiempo extra:</strong> ${x.diasExtra} día(s) — Límite: ${x.fechaLimite||'—'}</div>`:''}
           </div>`).join('')}
         <div style="background:#fffbeb;border:1.5px solid #f6ad55;border-radius:8px;padding:10px;margin-top:8px;font-size:12px;font-weight:700;color:#c05621">
-          ⚠️ Debes enviar el trabajo en <strong>Talleres y Tareas</strong> dentro del tiempo estipulado. Después de la fecha límite <strong>no se calificará</strong>.
+          <i class="fas fa-triangle-exclamation"></i> Debes enviar el trabajo en <strong>Talleres y Tareas</strong> dentro del tiempo estipulado. Después de la fecha límite <strong>no se calificará</strong>.
         </div>
       </div>`,
-      confirmButtonText:'📬 Ver mis excusas',
+      confirmButtonText:'<i class="fas fa-envelope-circle-check"></i> Ver mis excusas',
       confirmButtonColor:'#2b6cb0',
       showCancelButton:true,
       cancelButtonText:'Cerrar'
@@ -1063,11 +1063,11 @@ function notifyExtPeriod(){
   if(abrioAhora){
     Swal.fire({
       icon:'warning',
-      title:'🔄 ¡Periodo de Recuperación Abierto!',
+      title:'<i class="fas fa-arrows-rotate"></i> ¡Periodo de Recuperación Abierto!',
       html:`<div style="font-family:var(--fn);text-align:left">
         <p>Tienes <strong style="color:#c53030">${mp.length}</strong> materia(s) en recuperación:</p>
         <div style="margin:10px 0">${mp.map(m=>`<span class="bdg brd" style="margin:3px">${m}</span>`).join('')}</div>
-        <p>📅 Periodo extraordinario:<br>
+        <p><i class="fas fa-calendar-days"></i> Periodo extraordinario:<br>
           <strong>${curr.s}</strong> → <strong>${curr.e}</strong>
         </p>
         <p style="font-size:13px;color:#718096">Ve a <em>Mi Recuperación</em> para enviar tus trabajos al docente.</p>
@@ -1079,7 +1079,7 @@ function notifyExtPeriod(){
   } else if(cerroAhora){
     Swal.fire({
       icon:'info',
-      title:'🔒 Periodo de Recuperación Cerrado',
+      title:'<i class="fas fa-lock"></i> Periodo de Recuperación Cerrado',
       html:`<div style="font-family:var(--fn)">
         <p>El periodo extraordinario de recuperación <strong>ha finalizado</strong>.</p>
         <p style="font-size:13px;color:#718096">Si tienes dudas sobre tu estado, consulta con tu docente o el administrador.</p>
@@ -1089,10 +1089,10 @@ function notifyExtPeriod(){
   } else if(fechasCambiaron){
     Swal.fire({
       icon:'info',
-      title:'📅 Fechas de Recuperación Actualizadas',
+      title:'<i class="fas fa-calendar-days"></i> Fechas de Recuperación Actualizadas',
       html:`<div style="font-family:var(--fn);text-align:left">
         <p>Las fechas del periodo de recuperación cambiaron:</p>
-        <p>📅 Nuevo rango: <strong>${curr.s}</strong> → <strong>${curr.e}</strong></p>
+        <p><i class="fas fa-calendar-days"></i> Nuevo rango: <strong>${curr.s}</strong> → <strong>${curr.e}</strong></p>
         <p style="font-size:13px;color:#718096">Consulta <em>Mi Recuperación</em> para más detalles.</p>
       </div>`,
       confirmButtonText:'Ver Recuperación',
@@ -1109,7 +1109,7 @@ function notifyExtPeriod(){
       /* Show alert for new plan */
       Swal.fire({
         icon:'success',
-        title:'📋 ¡Tu docente envió un Plan de Recuperación!',
+        title:'<i class="fas fa-clipboard-list"></i> ¡Tu docente envió un Plan de Recuperación!',
         html:`<div style="font-family:var(--fn);text-align:left">
           <p>Tienes <strong>${planesNuevos.length}</strong> plan(es) nuevo(s) de recuperación:</p>
           <div style="margin:10px 0">${matsMostrar.map(mat=>{
@@ -1144,66 +1144,66 @@ function defPg(){
 }
 function navItems(){
   if(CU.role==='superadmin') return[
-    {s:'Super Admin'},{id:'sadash',ic:'🌐',lb:'Panel Global'},
-    {id:'sacolegios',ic:'🏫',lb:'Colegios & Admins'},
-    {s:'Supervisión'},{id:'saestadisticas',ic:'📊',lb:'Estadísticas'},
-    {id:'saauditoria',ic:'🔍',lb:'Auditoría Global'},
-    {s:'Comunicación'},{id:'sacom',ic:'📢',lb:'Comunicados Globales'},
-    {s:'Finanzas'},{id:'safin',ic:'💰',lb:'Módulo Financiero'},
-    {s:'Sistema'},{id:'samantenimiento',ic:'⚙️',lb:'Mantenimiento'},
-    {id:'sasug',ic:'💡',lb:'Sugerencias Recibidas'},
+    {s:'Super Admin'},{id:'sadash',ic:'<i class="fas fa-globe"></i>',lb:'Panel Global'},
+    {id:'sacolegios',ic:'<i class="fas fa-school"></i>',lb:'Colegios & Admins'},
+    {s:'Supervisión'},{id:'saestadisticas',ic:'<i class="fas fa-chart-column"></i>',lb:'Estadísticas'},
+    {id:'saauditoria',ic:'<i class="fas fa-magnifying-glass"></i>',lb:'Auditoría Global'},
+    {s:'Comunicación'},{id:'sacom',ic:'<i class="fas fa-bullhorn"></i>',lb:'Comunicados Globales'},
+    {s:'Finanzas'},{id:'safin',ic:'<i class="fas fa-sack-dollar"></i>',lb:'Módulo Financiero'},
+    {s:'Sistema'},{id:'samantenimiento',ic:'<i class="fas fa-gear"></i>',lb:'Mantenimiento'},
+    {id:'sasug',ic:'<i class="fas fa-lightbulb"></i>',lb:'Sugerencias Recibidas'},
   ];
   if(CU.role==='finAdmin') return[
-    {s:'Financiero'},{id:'findash',ic:'📊',lb:'Panel Financiero'},
-    {s:'Gestión'},{id:'finpagos',ic:'💳',lb:'Pagos & Cobros'},
-    {id:'finconceptos',ic:'📋',lb:'Conceptos de Cobro'},
-    {s:'Control'},{id:'finmorosos',ic:'⚠️',lb:'Reporte de Morosos'},
-    {id:'finbloqueos',ic:'🔒',lb:'Bloqueos'},
-    {id:'fincomprobantes',ic:'📎',lb:'Comprobantes'},
-    {s:'Comunicación'},{id:'fincom',ic:'📢',lb:'Comunicados'},
+    {s:'Financiero'},{id:'findash',ic:'<i class="fas fa-chart-column"></i>',lb:'Panel Financiero'},
+    {s:'Gestión'},{id:'finpagos',ic:'<i class="fas fa-credit-card"></i>',lb:'Pagos & Cobros'},
+    {id:'finconceptos',ic:'<i class="fas fa-clipboard-list"></i>',lb:'Conceptos de Cobro'},
+    {s:'Control'},{id:'finmorosos',ic:'<i class="fas fa-triangle-exclamation"></i>',lb:'Reporte de Morosos'},
+    {id:'finbloqueos',ic:'<i class="fas fa-lock"></i>',lb:'Bloqueos'},
+    {id:'fincomprobantes',ic:'<i class="fas fa-paperclip"></i>',lb:'Comprobantes'},
+    {s:'Comunicación'},{id:'fincom',ic:'<i class="fas fa-bullhorn"></i>',lb:'Comunicados'},
   ];
   if(CU.role==='finUser') return[
-    {s:'Financiero'},{id:'findash',ic:'📊',lb:'Panel Financiero'},
-    {id:'finpagos',ic:'💳',lb:'Pagos & Cobros'},
-    {id:'finmorosos',ic:'⚠️',lb:'Reporte de Morosos'},
+    {s:'Financiero'},{id:'findash',ic:'<i class="fas fa-chart-column"></i>',lb:'Panel Financiero'},
+    {id:'finpagos',ic:'<i class="fas fa-credit-card"></i>',lb:'Pagos & Cobros'},
+    {id:'finmorosos',ic:'<i class="fas fa-triangle-exclamation"></i>',lb:'Reporte de Morosos'},
   ];
 
   if(CU.role==='admin') return[
-    {s:'Principal'},{id:'dash',ic:'📊',lb:'Panel General'},
-    {s:'Académico'},{id:'asal',ic:'🏫',lb:'Salones & Grados'},
-    {id:'apri',ic:'📚',lb:'Primaria (1°-5°)'},{id:'abac',ic:'🎓',lb:'Bachillerato (6°-11°)'},
-    {id:'aprf',ic:'👩‍🏫',lb:'Profesores'},{id:'ahor',ic:'🕐',lb:'Horarios'},{id:'amat',ic:'📖',lb:'Materias & Periodos'},
-    {s:'Notas'},{id:'anot',ic:'📝',lb:'Gestión de Notas'},{id:'areh',ic:'🔄',lb:'Recuperaciones'},
-    {s:'Comunicación'},{id:'acom',ic:'📢',lb:'Comunicados'},{id:'aexc',ic:'✉️',lb:'Excusas'},{id:'avcl',ic:'💻',lb:'Clases Virtuales'},
-    {s:'Sistema'},{id:'afec',ic:'📅',lb:'Control de Fechas'},
-    {id:'ablk',ic:'🔒',lb:'Usuarios Bloqueados'},
-    {id:'aaud',ic:'🔍',lb:'Auditoría'},{id:'aexp',ic:'📤',lb:'Exportar'},{id:'ahist',ic:'📚',lb:'Historial'},
-    {s:'Comunicación Extra'},{id:'asug',ic:'💡',lb:'Sugerencias'},
+    {s:'Principal'},{id:'dash',ic:'<i class="fas fa-chart-column"></i>',lb:'Panel General'},
+    {s:'Académico'},{id:'asal',ic:'<i class="fas fa-school"></i>',lb:'Salones & Grados'},
+    {id:'apri',ic:'<i class="fas fa-book"></i>',lb:'Primaria (1°-5°)'},{id:'abac',ic:'<i class="fas fa-graduation-cap"></i>',lb:'Bachillerato (6°-11°)'},
+    {id:'aprf',ic:'<i class="fas fa-chalkboard-user"></i>',lb:'Profesores'},{id:'ahor',ic:'<i class="fas fa-clock"></i>',lb:'Horarios'},{id:'amat',ic:'<i class="fas fa-book-open"></i>',lb:'Materias & Periodos'},
+    {s:'Notas'},{id:'anot',ic:'<i class="fas fa-pen-to-square"></i>',lb:'Gestión de Notas'},{id:'areh',ic:'<i class="fas fa-arrows-rotate"></i>',lb:'Recuperaciones'},
+    {s:'Comunicación'},{id:'acom',ic:'<i class="fas fa-bullhorn"></i>',lb:'Comunicados'},{id:'aexc',ic:'<i class="fas fa-envelope"></i>',lb:'Excusas'},{id:'avcl',ic:'<i class="fas fa-laptop"></i>',lb:'Clases Virtuales'},
+    {s:'Sistema'},{id:'afec',ic:'<i class="fas fa-calendar-days"></i>',lb:'Control de Fechas'},
+    {id:'ablk',ic:'<i class="fas fa-lock"></i>',lb:'Usuarios Bloqueados'},
+    {id:'aaud',ic:'<i class="fas fa-magnifying-glass"></i>',lb:'Auditoría'},{id:'aexp',ic:'<i class="fas fa-upload"></i>',lb:'Exportar'},{id:'ahist',ic:'<i class="fas fa-book"></i>',lb:'Historial'},
+    {s:'Comunicación Extra'},{id:'asug',ic:'<i class="fas fa-lightbulb"></i>',lb:'Sugerencias'},
   ];
   if(CU.role==='profe') return[
-    {s:'Mi Panel'},{id:'ph',ic:'🏠',lb:'Inicio'},
-    {id:'pcom',ic:'📢',lb:'Comunicados'},
-    {id:'pnot',ic:'📝',lb:'Ingresar Notas'},{id:'past',ic:'✅',lb:'Asistencias'},
-    {id:'pvir',ic:'💻',lb:'Clases Virtuales'},
-    {id:'ptar',ic:'📂',lb:'Tareas Recibidas'},
-    {id:'prec',ic:'🔄',lb:'Recuperaciones'},
-    {id:'phist',ic:'📚',lb:'Historial Recuperaciones'},
-    {id:'psug',ic:'💡',lb:'Sugerencias'},
+    {s:'Mi Panel'},{id:'ph',ic:'<i class="fas fa-house"></i>',lb:'Inicio'},
+    {id:'pcom',ic:'<i class="fas fa-bullhorn"></i>',lb:'Comunicados'},
+    {id:'pnot',ic:'<i class="fas fa-pen-to-square"></i>',lb:'Ingresar Notas'},{id:'past',ic:'<i class="fas fa-circle-check"></i>',lb:'Asistencias'},
+    {id:'pvir',ic:'<i class="fas fa-laptop"></i>',lb:'Clases Virtuales'},
+    {id:'ptar',ic:'<i class="fas fa-folder-open"></i>',lb:'Tareas Recibidas'},
+    {id:'prec',ic:'<i class="fas fa-arrows-rotate"></i>',lb:'Recuperaciones'},
+    {id:'phist',ic:'<i class="fas fa-book"></i>',lb:'Historial Recuperaciones'},
+    {id:'psug',ic:'<i class="fas fa-lightbulb"></i>',lb:'Sugerencias'},
   ];
   /* estudiante */
   const it=[
-    {s:'Comunicados'},{id:'ecom',ic:'📢',lb:'Comunicados'},
-    {s:'Financiero'},{id:'ecuen',ic:'💳',lb:'Mi Cuenta'},
-    {s:'Mi Perfil'},{id:'eb',ic:'📋',lb:'Mi Boletín'},{id:'east',ic:'✅',lb:'Mi Asistencia'},
-    {id:'etare',ic:'📎',lb:'Tareas & Talleres'},{id:'eexc',ic:'✉️',lb:'Excusas'},
-    {id:'eprof',ic:'👩‍🏫',lb:'Mis Profesores'},{id:'evir',ic:'💻',lb:'Mis Clases Virtuales'},
-    {id:'ehist',ic:'📚',lb:'Historial Recuperaciones'},
-    {id:'esug',ic:'💡',lb:'Sugerencias'},
+    {s:'Comunicados'},{id:'ecom',ic:'<i class="fas fa-bullhorn"></i>',lb:'Comunicados'},
+    {s:'Financiero'},{id:'ecuen',ic:'<i class="fas fa-credit-card"></i>',lb:'Mi Cuenta'},
+    {s:'Mi Perfil'},{id:'eb',ic:'<i class="fas fa-clipboard-list"></i>',lb:'Mi Boletín'},{id:'east',ic:'<i class="fas fa-circle-check"></i>',lb:'Mi Asistencia'},
+    {id:'etare',ic:'<i class="fas fa-paperclip"></i>',lb:'Tareas & Talleres'},{id:'eexc',ic:'<i class="fas fa-envelope"></i>',lb:'Excusas'},
+    {id:'eprof',ic:'<i class="fas fa-chalkboard-user"></i>',lb:'Mis Profesores'},{id:'evir',ic:'<i class="fas fa-laptop"></i>',lb:'Mis Clases Virtuales'},
+    {id:'ehist',ic:'<i class="fas fa-book"></i>',lb:'Historial Recuperaciones'},
+    {id:'esug',ic:'<i class="fas fa-lightbulb"></i>',lb:'Sugerencias'},
   ];
   // Simulacro ICFES solo para bachillerato
-  if(cicloOf(CU.salon)==='bachillerato') it.push({id:'eicfes',ic:'🎯',lb:'Simulacro ICFES'});
+  if(cicloOf(CU.salon)==='bachillerato') it.push({id:'eicfes',ic:'<i class="fas fa-bullseye"></i>',lb:'Simulacro ICFES'});
   const mp=matPerd(CU.id);
-  if(DB.ext.on&&mp.length>=1&&mp.length<=2) it.push({id:'ereh',ic:'🔄',lb:'Mi Recuperación'});
+  if(DB.ext.on&&mp.length>=1&&mp.length<=2) it.push({id:'ereh',ic:'<i class="fas fa-arrows-rotate"></i>',lb:'Mi Recuperación'});
   return it;
 }
 function buildNav(){
@@ -1259,7 +1259,7 @@ function buildNav(){
         const badge = document.createElement('span');
         badge.className = 'vir-badge';
         badge.style.cssText = 'display:inline-flex;align-items:center;justify-content:center;background:#10b981;color:#fff;border-radius:20px;padding:1px 8px;font-size:10px;font-weight:800;margin-left:auto;min-width:18px;animation:pulse-dot 1.5s ease infinite';
-        badge.textContent = '🟢 En vivo';
+        badge.textContent = '<i class="fas fa-circle"></i> En vivo';
         virBtn.appendChild(badge);
       }
     }
@@ -1308,7 +1308,7 @@ function goto(pid){
   }catch(err){
     console.error('[goto] Error al renderizar página "'+pid+'":', err);
     gi('contentArea').innerHTML=`<div class="card"><div class="mty">
-      <div class="ei">⚠️</div>
+      <div class="ei"><i class="fas fa-triangle-exclamation"></i></div>
       <p style="color:var(--red)">Error al cargar la página.<br>
       <span style="font-size:12px;color:var(--sl3)">${err.message}</span></p>
       <button class="btn bg" onclick="goto('dash')">Volver al inicio</button>
@@ -1358,7 +1358,7 @@ function pgDash(){
   return`<div class="ph" style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:12px">
     <div>
       <h2>Panel General</h2><p>Resumen del sistema</p>
-      <button class="btn xs bg" onclick="showHelp('dash')" style="margin-top:6px">❓ Ayuda</button>
+      <button class="btn xs bg" onclick="showHelp('dash')" style="margin-top:6px"><i class="fas fa-circle-question"></i> Ayuda</button>
     </div>
     ${_logoD ? `<div style="display:flex;flex-direction:column;align-items:center;gap:6px">
       <img src="${_logoD}" alt="Logo" style="height:72px;width:auto;max-width:130px;object-fit:contain;border-radius:10px;box-shadow:0 4px 18px rgba(0,0,0,.13);background:var(--bg2);padding:6px">
@@ -1368,14 +1368,14 @@ function pgDash(){
   <div class="sr" id="dSt"></div>
   <div id="dSinSalon" style="display:none;margin-bottom:16px;background:var(--wh);border:2px solid #fbbf24;border-radius:12px;overflow:hidden"></div>
   <div class="g2">
-    <div class="card"><div class="chd"><span class="cti">🏆 Mejores por Salón</span></div><div id="dTop"></div></div>
-    <div class="card"><div class="chd"><span class="cti">🕐 Últimas Auditorías</span></div><div class="lw" id="dLog"></div></div>
+    <div class="card"><div class="chd"><span class="cti"><i class="fas fa-trophy"></i> Mejores por Salón</span></div><div id="dTop"></div></div>
+    <div class="card"><div class="chd"><span class="cti"><i class="fas fa-clock"></i> Últimas Auditorías</span></div><div class="lw" id="dLog"></div></div>
   </div>`;
 }
 function initDash(){
-  gi('dSt').innerHTML=[{v:DB.ests.length,l:'Estudiantes',i:'🎓'},
-    {v:DB.profs.length,l:'Profesores',i:'👩‍🏫'},{v:DB.sals.length,l:'Salones',i:'🏫'},
-    {v:DB.mB.length+DB.mP.length,l:'Materias',i:'📖'}]
+  gi('dSt').innerHTML=[{v:DB.ests.length,l:'Estudiantes',i:'<i class="fas fa-graduation-cap"></i>'},
+    {v:DB.profs.length,l:'Profesores',i:'<i class="fas fa-chalkboard-user"></i>'},{v:DB.sals.length,l:'Salones',i:'<i class="fas fa-school"></i>'},
+    {v:DB.mB.length+DB.mP.length,l:'Materias',i:'<i class="fas fa-book-open"></i>'}]
     .map(s=>`<div class="scc" data-i="${s.i}"><div class="sv">${s.v}</div><div class="sl">${s.l}</div><div class="bar"></div></div>`).join('');
 
   // Widget estudiantes sin salón
@@ -1385,7 +1385,7 @@ function initDash(){
     if(sinSalon.length){
       dSinSalon.innerHTML=`<div class="chd" style="background:#fffbeb;border-radius:12px 12px 0 0;padding:12px 18px;
         display:flex;align-items:center;gap:8px;border-bottom:1px solid #fde68a">
-        <span>⚠️</span>
+        <span><i class="fas fa-triangle-exclamation"></i></span>
         <span style="font-weight:800;font-size:13px;color:#92400e">${sinSalon.length} estudiante${sinSalon.length>1?'s':''} sin salón</span>
         <button class="btn xs" onclick="goto('apri')" style="margin-left:auto;font-size:11px;background:#fef3c7;color:#92400e;border:1px solid #fbbf24">Ver todos →</button>
       </div>
@@ -1408,25 +1408,25 @@ function initDash(){
       <div style="font-size:12px;font-weight:800;color:var(--nv);margin-bottom:6px">${sal.nombre}
         <span class="bdg bgy">${ests.length} est.</span></div>
       ${top.map((e,i)=>`<div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--bd);font-size:13px">
-        <span>${['🥇','🥈','🥉'][i]} ${e.n}</span><span class="${scC(e.p)}">${e.p.toFixed(2)}</span>
+        <span>${['<i class="fas fa-medal"></i>','<i class="fas fa-medal"></i>','<i class="fas fa-medal"></i>'][i]} ${e.n}</span><span class="${scC(e.p)}">${e.p.toFixed(2)}</span>
       </div>`).join('')}
     </div>`;
   });
-  gi('dTop').innerHTML=h||'<div class="mty"><div class="ei">🏫</div><p>Sin salones</p></div>';
+  gi('dTop').innerHTML=h||'<div class="mty"><div class="ei"><i class="fas fa-school"></i></div><p>Sin salones</p></div>';
   const rec=(DB.audit||[]).slice(-8).reverse();
   gi('dLog').innerHTML=rec.length?rec.map(l=>`<div class="le"><div class="lts">${l.ts}</div>
     <div><span class="lwho ${l.role==='admin'?'ladm':''}">${l.who}</span> → <strong>${l.est}</strong>
     | ${l.mat}: <span class="${scC(l.old)}">${l.old}</span>→<span class="${scC(l.nw)}">${l.nw}</span></div>
-  </div>`).join(''):'<div class="mty" style="padding:20px"><div class="ei">📋</div><p>Sin registros</p></div>';
+  </div>`).join(''):'<div class="mty" style="padding:20px"><div class="ei"><i class="fas fa-clipboard-list"></i></div><p>Sin registros</p></div>';
 }
 
 /* ============================================================
    SALONES
 ============================================================ */
 function pgASal(){
-  return`<div class="ph"><h2>Salones & Grados</h2><button class="btn xs bg" onclick="showHelp('asal')" style="margin-top:6px">❓ Ayuda</button></div>
+  return`<div class="ph"><h2>Salones & Grados</h2><button class="btn xs bg" onclick="showHelp('asal')" style="margin-top:6px"><i class="fas fa-circle-question"></i> Ayuda</button></div>
   <div class="card">
-    <div class="chd"><span class="cti">➕ Nuevo Salón</span></div>
+    <div class="chd"><span class="cti"><i class="fas fa-plus"></i> Nuevo Salón</span></div>
     <div style="display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:16px;align-items:end">
       <div class="fld" style="margin:0">
         <label>Nombre del salón (ej: 6A)</label>
@@ -1449,13 +1449,13 @@ function pgASal(){
         </select>
       </div>
       <button class="btn bn" onclick="addSal()" style="padding:13px 28px;font-size:15px;font-weight:800;white-space:nowrap;height:48px">
-        ➕ Agregar Salón
+        <i class="fas fa-plus"></i> Agregar Salón
       </button>
     </div>
   </div>
   <div class="g2">
-    <div class="card"><div class="chd"><span class="cti">📚 Primaria</span></div><div id="slP"></div></div>
-    <div class="card"><div class="chd"><span class="cti">🎓 Bachillerato</span></div><div id="slB"></div></div>
+    <div class="card"><div class="chd"><span class="cti"><i class="fas fa-book"></i> Primaria</span></div><div id="slP"></div></div>
+    <div class="card"><div class="chd"><span class="cti"><i class="fas fa-graduation-cap"></i> Bachillerato</span></div><div id="slB"></div></div>
   </div>`;
 }
 function initASal(){
@@ -1467,7 +1467,7 @@ function renderSals(){
   ['primaria','bachillerato'].forEach(c=>{
     const el=gi(c==='primaria'?'slP':'slB');if(!el) return;
     const list=DB.sals.filter(s=>s.ciclo===c);
-    if(!list.length){el.innerHTML='<div class="mty" style="padding:20px"><div class="ei">🏫</div><p>Sin salones</p></div>';return;}
+    if(!list.length){el.innerHTML='<div class="mty" style="padding:20px"><div class="ei"><i class="fas fa-school"></i></div><p>Sin salones</p></div>';return;}
     // Áreas configuradas para este ciclo
     const areasDelCiclo=(DB.areas||[]).filter(a=>a.ciclo===c);
     const matDocs=(DB.materiasDocs||[]).filter(d=>d.ciclo===c);
@@ -1475,7 +1475,7 @@ function renderSals(){
       const nMats=s.mats&&s.mats.length;
       const dfMats=c==='primaria'?DB.mP:DB.mB;
       const matsLabel=nMats
-        ?`<span class="bdg bgr" style="font-size:10px">🎯 ${s.mats.length} materias propias</span>`
+        ?`<span class="bdg bgr" style="font-size:10px"><i class="fas fa-bullseye"></i> ${s.mats.length} materias propias</span>`
         :`<span class="bdg bgy" style="font-size:10px">${dfMats.length} materias (${c==='primaria'?'global primaria':'global bach.'})</span>`;
       const matsList=nMats?s.mats:dfMats;
 
@@ -1484,7 +1484,7 @@ function renderSals(){
       const hayAreas=areasDelCiclo.length>0;
       const areasLabel=hayAreas
         ?(areasDelSalon.length>0
-          ?`<span class="bdg" style="font-size:10px;background:#e0e7ff;color:#3730a3;border:1px solid #a5b4fc">📂 ${areasDelSalon.length} área${areasDelSalon.length>1?'s':''}</span>`
+          ?`<span class="bdg" style="font-size:10px;background:#e0e7ff;color:#3730a3;border:1px solid #a5b4fc"><i class="fas fa-folder-open"></i> ${areasDelSalon.length} área${areasDelSalon.length>1?'s':''}</span>`
           :`<span class="bdg bgy" style="font-size:10px">Sin áreas asignadas</span>`)
         :'';
 
@@ -1504,7 +1504,7 @@ function renderSals(){
                     return d&&d.areaNombre===areaNombre;
                   });
                 return`<div style="display:flex;align-items:flex-start;gap:8px;padding:5px 8px;background:#f5f3ff;border-radius:7px;border:1px solid #ddd6fe">
-                  <span style="font-size:11px;font-weight:700;color:#5b21b6;min-width:80px">▸ ${areaNombre}</span>
+                  <span style="font-size:11px;font-weight:700;color:#5b21b6;min-width:80px"><i class="fas fa-caret-right"></i> ${areaNombre}</span>
                   <div style="display:flex;flex-wrap:wrap;gap:3px">${
                     matsDelArea.length
                       ?matsDelArea.map(m=>`<span style="font-size:10px;padding:1px 6px;background:#ede9fe;border:1px solid #c4b5fd;border-radius:4px">${m}</span>`).join('')
@@ -1521,15 +1521,15 @@ function renderSals(){
           <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
             <strong style="font-size:15px">${s.nombre}</strong>
             <span class="bdg bgy">${ebySalon(s.nombre).length} est.</span>
-            ${s.jornada?`<span class="bdg" style="font-size:10px;background:#e0f2fe;color:#0369a1;border:1px solid #7dd3fc;text-transform:capitalize">🕐 ${s.jornada}</span>`:`<span class="bdg" style="font-size:10px;background:#fefce8;color:#854d0e;border:1px solid #fde68a">🕐 Jornada no asignada</span>`}
+            ${s.jornada?`<span class="bdg" style="font-size:10px;background:#e0f2fe;color:#0369a1;border:1px solid #7dd3fc;text-transform:capitalize"><i class="fas fa-clock"></i> ${s.jornada}</span>`:`<span class="bdg" style="font-size:10px;background:#fefce8;color:#854d0e;border:1px solid #fde68a"><i class="fas fa-clock"></i> Jornada no asignada</span>`}
             ${matsLabel}
             ${areasLabel}
           </div>
           <div style="display:flex;gap:6px;flex-wrap:wrap">
-            <button class="btn xs" style="background:#e0e7ff;color:#3730a3;border:1px solid #a5b4fc" onclick="editSalAreas('${s.nombre}')">📂 Áreas</button>
-            <button class="btn xs" style="background:#fefce8;color:#854d0e;border:1px solid #fde047" onclick="editSalJornada('${s.nombre}')">🕐 Jornada</button>
-            <button class="btn xs bg" onclick="editSalMats('${s.nombre}')">🎯 Materias</button>
-            <button class="btn xs bd" onclick="delSal('${s.nombre}')">🗑</button>
+            <button class="btn xs" style="background:#e0e7ff;color:#3730a3;border:1px solid #a5b4fc" onclick="editSalAreas('${s.nombre}')"><i class="fas fa-folder-open"></i> Áreas</button>
+            <button class="btn xs" style="background:#fefce8;color:#854d0e;border:1px solid #fde047" onclick="editSalJornada('${s.nombre}')"><i class="fas fa-clock"></i> Jornada</button>
+            <button class="btn xs bg" onclick="editSalMats('${s.nombre}')"><i class="fas fa-bullseye"></i> Materias</button>
+            <button class="btn xs bd" onclick="delSal('${s.nombre}')"><i class="fas fa-trash"></i></button>
           </div>
         </div>
         <div style="margin-top:8px;display:flex;flex-wrap:wrap;gap:4px">
@@ -1549,7 +1549,7 @@ function delSal(n){ /* implementado en api-layer.js */ }
 async function editSalJornada(sname){
   const sal=DB.sals.find(s=>s.nombre===sname);if(!sal)return;
   const {value:jornada}=await Swal.fire({
-    title:`🕐 Jornada del Salón ${sname}`,
+    title:`<i class="fas fa-clock"></i> Jornada del Salón ${sname}`,
     html:`<div style="text-align:left;font-family:var(--fn)">
       <label style="font-size:13px;font-weight:600;display:block;margin-bottom:8px">Selecciona la jornada:</label>
       <select id="sj_sel" style="width:100%;padding:10px 14px;font-size:14px;border:1.5px solid var(--bd);border-radius:8px;outline:none">
@@ -1599,7 +1599,7 @@ function editSalMats(sname){
     </label>`).join('');
 
   Swal.fire({
-    title:`🎯 Materias del Salón ${sname}`,
+    title:`<i class="fas fa-bullseye"></i> Materias del Salón ${sname}`,
     width:600,
     html:`<div style="text-align:left;font-family:var(--fn)">
       <div class="al alb" style="margin-bottom:10px;font-size:12px">
@@ -1607,22 +1607,22 @@ function editSalMats(sname){
         <br>Puedes agregar materias nuevas abajo. Para volver a las globales del ciclo, usa <em>Restablecer</em>.
       </div>
       <div style="display:flex;gap:8px;margin-bottom:10px">
-        <button type="button" class="btn xs bn" onclick="[...document.querySelectorAll('.smck')].forEach(c=>c.checked=true)">✅ Todas</button>
-        <button type="button" class="btn xs bd" onclick="[...document.querySelectorAll('.smck')].forEach(c=>c.checked=false)">☐ Ninguna</button>
+        <button type="button" class="btn xs bn" onclick="[...document.querySelectorAll('.smck')].forEach(c=>c.checked=true)"><i class="fas fa-circle-check"></i> Todas</button>
+        <button type="button" class="btn xs bd" onclick="[...document.querySelectorAll('.smck')].forEach(c=>c.checked=false)"><i class="fas fa-square"></i> Ninguna</button>
         <span style="font-size:11px;color:var(--sl3);margin-left:auto;align-self:center">${tienePropia?`${sal.mats.length} propias configuradas`:'Usando globales del ciclo'}</span>
       </div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:12px">${rows}</div>
       <div style="display:flex;gap:8px;align-items:center;padding:10px;background:#f7fafc;border-radius:8px;border:1px solid var(--bd)">
         <input id="newMat" placeholder="Nueva materia personalizada..."
           style="flex:1;padding:7px 10px;border:1.5px solid var(--bd);border-radius:7px;font-size:13px;outline:none">
-        <button type="button" class="btn xs bn" onclick="addCustomMatRow()">➕ Agregar</button>
+        <button type="button" class="btn xs bn" onclick="addCustomMatRow()"><i class="fas fa-plus"></i> Agregar</button>
       </div>
       <div id="customMatsAdded"></div>
     </div>`,
     showCancelButton:true,
     confirmButtonText:'Guardar Materias',
     cancelButtonText:'Cancelar',
-    footer:`<button class="btn xs bd" style="font-size:11px" onclick="Swal.close();resetSalMats('${sname}')">🔄 Restablecer a globales del ciclo</button>`,
+    footer:`<button class="btn xs bd" style="font-size:11px" onclick="Swal.close();resetSalMats('${sname}')"><i class="fas fa-arrows-rotate"></i> Restablecer a globales del ciclo</button>`,
     didOpen:()=>{
       gi('newMat').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();addCustomMatRow();}});
     },
@@ -1721,14 +1721,14 @@ async function editSalAreas(sname){
       border-radius:8px;border:1px solid var(--bd);cursor:pointer;margin-bottom:7px">
       <input type="checkbox" class="sack" value="${area.nombre}" ${current.includes(area.nombre)?'checked':''} style="margin-top:3px;width:16px;height:16px">
       <div style="flex:1">
-        <div style="font-size:13px;font-weight:700">📂 ${area.nombre}</div>
+        <div style="font-size:13px;font-weight:700"><i class="fas fa-folder-open"></i> ${area.nombre}</div>
         <div style="display:flex;flex-wrap:wrap;gap:3px;margin-top:4px">${preview}</div>
       </div>
     </label>`;
   }).join('');
 
   const r=await Swal.fire({
-    title:`📂 Áreas del Salón ${sname}`,
+    title:`<i class="fas fa-folder-open"></i> Áreas del Salón ${sname}`,
     width:560,
     html:`<div style="text-align:left;font-family:var(--fn)">
       <div class="al alb" style="margin-bottom:12px;font-size:12px">
@@ -1764,7 +1764,7 @@ async function editSalAreas(sname){
         </label>`;
       }).join('');
       return`<div style="margin-bottom:14px">
-        <div style="font-size:13px;font-weight:700;color:#3730a3;margin-bottom:6px">📂 ${areaNombre}</div>
+        <div style="font-size:13px;font-weight:700;color:#3730a3;margin-bottom:6px"><i class="fas fa-folder-open"></i> ${areaNombre}</div>
         <div style="display:flex;flex-wrap:wrap;gap:5px;padding:8px;background:#f5f3ff;border-radius:8px;border:1px solid #ddd6fe">
           ${matsChk||'<span style="font-size:12px;color:var(--sl3)">Sin materias disponibles</span>'}
         </div>
@@ -1772,7 +1772,7 @@ async function editSalAreas(sname){
     }).join('');
 
     const r2=await Swal.fire({
-      title:`🎯 Materias por Área — Salón ${sname}`,
+      title:`<i class="fas fa-bullseye"></i> Materias por Área — Salón ${sname}`,
       width:620,
       html:`<div style="text-align:left;font-family:var(--fn)">
         <div class="al alb" style="margin-bottom:14px;font-size:12px">
@@ -1825,7 +1825,7 @@ function pgAEst(ciclo){
   const sinSalonSection = sinSalon.length ? `
     <div class="card" style="margin-top:18px;border:2px solid #fbbf24;border-radius:14px">
       <div class="chd" style="background:#fffbeb;border-radius:12px 12px 0 0;padding:14px 18px;display:flex;align-items:center;gap:10px">
-        <span style="font-size:18px">⚠️</span>
+        <span style="font-size:18px"><i class="fas fa-triangle-exclamation"></i></span>
         <span style="font-weight:800;font-size:14px;color:#92400e">${sinSalon.length} Estudiante${sinSalon.length>1?'s':''} sin salón asignado</span>
         <span style="margin-left:auto;font-size:11px;color:#b45309">Deben ser asignados a un salón</span>
       </div>
@@ -1836,13 +1836,13 @@ function pgAEst(ciclo){
             <span style="font-weight:700;color:var(--nv)">${esc(e.nombre)}</span>
             <span style="font-size:10px;color:var(--sl3)">${e.ti||''}</span>
             <button class="btn xs bn" onclick="asignarSalonEst('${e.id}','${ciclo}')"
-              style="font-size:11px;padding:3px 8px;margin-left:4px">📌 Asignar</button>
+              style="font-size:11px;padding:3px 8px;margin-left:4px"><i class="fas fa-thumbtack"></i> Asignar</button>
           </div>`).join('')}
       </div>
     </div>` : '';
   return `<div class="ph">
     <h2>Estudiantes — ${tt}</h2>
-    <button class="btn xs bg" onclick="showHelp('${ciclo==='primaria'?'apri':'abac'}')" style="margin-top:6px">❓ Ayuda</button>
+    <button class="btn xs bg" onclick="showHelp('${ciclo==='primaria'?'apri':'abac'}')" style="margin-top:6px"><i class="fas fa-circle-question"></i> Ayuda</button>
   </div>
   <div id="aestContent">
     ${sals.length ? renderSalonGrid(ciclo, sals) : renderSalonVacio(ciclo)}
@@ -1880,7 +1880,7 @@ function renderSalonGrid(ciclo, sals){
 }
 
 function renderSalonVacio(ciclo){
-  return `<div class="card"><div class="mty"><div class="ei">🏫</div>
+  return `<div class="card"><div class="mty"><div class="ei"><i class="fas fa-school"></i></div>
     <p>No hay salones de ${ciclo==='primaria'?'Primaria':'Bachillerato'} creados.<br>
     <button class="btn bg" onclick="goto('asal')">Ir a Salones & Grados</button></p>
   </div></div>`;
@@ -1894,7 +1894,7 @@ async function asignarSalonEst(estId, ciclo){
   if(!sals.length){ sw('info','Sin salones','Crea salones primero en Salones & Grados.'); return; }
   const opts = sals.map(s=>`<option value="${s.nombre}">${esc(s.nombre)} (${s.ciclo})</option>`).join('');
   const {value:salon, isConfirmed} = await Swal.fire({
-    title:`📌 Asignar salón a ${esc(e.nombre)}`,
+    title:`<i class="fas fa-thumbtack"></i> Asignar salón a ${esc(e.nombre)}`,
     html:`<div style="text-align:left;font-family:var(--fn)">
       <label style="font-size:11px;font-weight:800;text-transform:uppercase;color:var(--sl);display:block;margin-bottom:6px">Selecciona el salón</label>
       <select id="aseSel" style="width:100%;padding:10px 12px;border:1.5px solid var(--bd);border-radius:8px;font-size:14px">
@@ -1930,7 +1930,7 @@ function abrirSalon(salon, ciclo){
         style="background:var(--bg2);border:1.5px solid var(--bd);border-radius:9px;padding:8px 14px;
         cursor:pointer;font-size:13px;font-weight:700;color:var(--sl2);display:flex;align-items:center;gap:6px;transition:all .15s"
         onmouseover="this.style.borderColor='var(--bl2)'" onmouseout="this.style.borderColor='var(--bd)'">
-        ← Salones
+        <i class="fas fa-arrow-left"></i> Salones
       </button>
       <div style="flex:1;min-width:140px">
         <select onchange="abrirSalon(this.value,'${ciclo}')"
@@ -1947,28 +1947,28 @@ function abrirSalon(salon, ciclo){
     <!-- ACCIONES DEL SALÓN -->
     <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px">
       <button class="btn bn sm" onclick="openAddEstSalon('${salon}','${ciclo}')" style="display:flex;align-items:center;gap:5px">
-        ➕ Agregar Estudiante
+        <i class="fas fa-plus"></i> Agregar Estudiante
       </button>
       <button class="btn bg sm" onclick="abrirCSVEstSalon('${salon}','${ciclo}')" style="display:flex;align-items:center;gap:5px">
-        📂 Carga Masiva CSV
+        <i class="fas fa-folder-open"></i> Carga Masiva CSV
       </button>
       <button class="btn bs sm" onclick="descargarPlantillaCSV('est','${ciclo}')" style="display:flex;align-items:center;gap:5px">
-        ⬇️ Plantilla CSV
+        <i class="fas fa-arrow-down"></i> Plantilla CSV
       </button>
       <button class="btn bg sm" onclick="expEstXlsSalon('${salon}')" style="display:flex;align-items:center;gap:5px">
-        📤 Excel
+        <i class="fas fa-upload"></i> Excel
       </button>
       <button class="btn bn sm" onclick="promoverEstudiantes('${ciclo}')" style="display:flex;align-items:center;gap:5px">
-        🎓 Promover Año
+        <i class="fas fa-graduation-cap"></i> Promover Año
       </button>
       <button class="btn bd sm" onclick="eliminarTodosSalon('${salon}','${ciclo}')" style="display:flex;align-items:center;gap:5px">
-        🗑️ Eliminar Todos
+        <i class="fas fa-trash"></i> Eliminar Todos
       </button>
     </div>
 
     <!-- BUSCADOR -->
     <div class="srch" style="margin-bottom:14px">
-      <span style="color:var(--sl3);font-size:15px">🔍</span>
+      <span style="color:var(--sl3);font-size:15px"><i class="fas fa-magnifying-glass"></i></span>
       <input id="seBusqSalon" placeholder="Buscar por nombre o T.I.…"
         oninput="filtrarSalonTable('${salon}','${ciclo}')">
     </div>
@@ -1993,9 +1993,9 @@ function abrirSalon(salon, ciclo){
             <td style="font-family:var(--mn);font-size:12px">${esc(e.usuario||'')}</td>
             <td><span class="${scC(pg)}" style="font-size:13px;font-weight:800">${pg.toFixed(2)}</span></td>
             <td><div style="display:flex;gap:5px">
-              <button class="btn xs bg" onclick="editEst('${e.id}','${ciclo}')">✏️</button>
-              <button class="btn xs bd" onclick="delEst('${e.id}','${ciclo}')">🗑</button>
-              <button class="btn xs bb" onclick="dlBoletinUI('${e.id}')">📄</button>
+              <button class="btn xs bg" onclick="editEst('${e.id}','${ciclo}')"><i class="fas fa-pen"></i></button>
+              <button class="btn xs bd" onclick="delEst('${e.id}','${ciclo}')"><i class="fas fa-trash"></i></button>
+              <button class="btn xs bb" onclick="dlBoletinUI('${e.id}')"><i class="fas fa-file-lines"></i></button>
             </div></td>
           </tr>`;
         }).join('')}
@@ -2021,7 +2021,7 @@ function openAddEstSalon(salon, ciclo){
   // We show a compact Swal matching pgAEst add form
   const sOpts = DB.sals.filter(s=>s.ciclo===ciclo).map(s=>`<option value="${s.nombre}"${s.nombre===salon?' selected':''}>${s.nombre}</option>`).join('');
   Swal.fire({
-    title:`➕ Agregar Estudiante — ${salon}`, width:520,
+    title:`<i class="fas fa-plus"></i> Agregar Estudiante — ${salon}`, width:520,
     html:`<div style="text-align:left;font-family:var(--fn)">
       <div style="display:flex;flex-direction:column;gap:10px">
         <div class="fld" style="margin:0"><label>Nombre completo *</label><input id="nen" placeholder="Juan Pérez Gómez" class="inp"></div>
@@ -2036,7 +2036,7 @@ function openAddEstSalon(salon, ciclo){
         </div>
       </div>
     </div>`,
-    showCancelButton:true, confirmButtonText:'➕ Agregar', confirmButtonColor:'var(--nv)', cancelButtonText:'Cancelar',
+    showCancelButton:true, confirmButtonText:'<i class="fas fa-plus"></i> Agregar', confirmButtonColor:'var(--nv)', cancelButtonText:'Cancelar',
     preConfirm:()=>{ return {}; } // handled by addEst()
   }).then(r=>{
     if(r.isConfirmed) addEst(ciclo).then(()=>abrirSalon(salon,ciclo));
@@ -2123,13 +2123,13 @@ function expEstXls(ciclo){
    PROFESORES
 ============================================================ */
 function pgAPrf(){
-  return`<div class="ph"><h2>Profesores</h2><button class="btn xs bg" onclick="showHelp('aprf')" style="margin-top:6px">❓ Ayuda</button></div>
+  return`<div class="ph"><h2>Profesores</h2><button class="btn xs bg" onclick="showHelp('aprf')" style="margin-top:6px"><i class="fas fa-circle-question"></i> Ayuda</button></div>
   <div class="card">
-    <div class="chd"><span class="cti">👩‍🏫 Todos los Profesores</span>
+    <div class="chd"><span class="cti"><i class="fas fa-chalkboard-user"></i> Todos los Profesores</span>
       <div style="display:flex;gap:8px">
-        <button class="btn bg sm" onclick="abrirCSVPrf('primaria')" title="CSV Primaria">📂 CSV</button>
+        <button class="btn bg sm" onclick="abrirCSVPrf('primaria')" title="CSV Primaria"><i class="fas fa-folder-open"></i> CSV</button>
         <button class="btn bn" onclick="openAddPrf()" style="padding:8px 18px;font-size:13px;font-weight:700">
-          ➕ Agregar Profesor
+          <i class="fas fa-plus"></i> Agregar Profesor
         </button>
       </div>
     </div>
@@ -2140,7 +2140,7 @@ function initAPrf(){renderPrfTbl();}
 function renderPrfTbl(){
   const el=gi('pfAll');if(!el) return;
   const list=DB.profs;
-  if(!list.length){el.innerHTML='<div class="mty" style="padding:20px"><div class="ei">👩‍🏫</div><p>Sin profesores</p></div>';return;}
+  if(!list.length){el.innerHTML='<div class="mty" style="padding:20px"><div class="ei"><i class="fas fa-chalkboard-user"></i></div><p>Sin profesores</p></div>';return;}
   el.innerHTML=`<div class="tw"><table>
     <thead><tr>
       <th>Nombre</th><th>C.C.</th>
@@ -2177,11 +2177,11 @@ function renderPrfTbl(){
               </div>`;
             }).join('')}
           </div>`:'<span style="color:var(--sl3);font-size:12px">Sin salones</span>'}
-          <button class="btn xs bg" style="margin-top:5px" onclick="openSalonMaterias('${p.id}',()=>renderPrfTbl())">🎯 Asignar materias</button>
+          <button class="btn xs bg" style="margin-top:5px" onclick="openSalonMaterias('${p.id}',()=>renderPrfTbl())"><i class="fas fa-bullseye"></i> Asignar materias</button>
         </td>
         <td><div style="display:flex;gap:5px">
-          <button class="btn xs bg" onclick="editPrf('${p.id}')">✏️</button>
-          <button class="btn xs bd" onclick="delPrf('${p.id}')">🗑</button>
+          <button class="btn xs bg" onclick="editPrf('${p.id}')"><i class="fas fa-pen"></i></button>
+          <button class="btn xs bd" onclick="delPrf('${p.id}')"><i class="fas fa-trash"></i></button>
         </div></td>
       </tr>`;
     }).join('')}</tbody></table></div>`;
@@ -2203,12 +2203,12 @@ function openAddPrf(){
       <div style="text-align:left;margin-bottom:0">
         <label style="font-size:11px;font-weight:800;text-transform:uppercase;color:var(--sl);display:block;margin-bottom:4px">Salones asignados</label>
         <div style="background:var(--bg2);border:1px solid var(--bd);border-radius:8px;padding:10px">
-          ${mkSals(salsPri,'📚 Primaria')}
-          ${mkSals(salsBach,'🎓 Bachillerato')}
+          ${mkSals(salsPri,'<i class="fas fa-book"></i> Primaria')}
+          ${mkSals(salsBach,'<i class="fas fa-graduation-cap"></i> Bachillerato')}
           ${(!salsPri.length&&!salsBach.length)?'<p style="font-size:12px;color:var(--sl3)">Sin salones — créalos primero</p>':''}
         </div>
       </div>
-      <div class="al alb" style="margin-top:12px;font-size:12px">ℹ️ Puedes asignar salones de cualquier ciclo. Después asigna las materias por salón con 🎯.</div>
+      <div class="al alb" style="margin-top:12px;font-size:12px"><i class="fas fa-circle-info"></i> Puedes asignar salones de cualquier ciclo. Después asigna las materias por salón con <i class="fas fa-bullseye"></i>.</div>
     </div>`,
     showCancelButton:true,confirmButtonText:'Guardar',
     preConfirm:()=>{
@@ -2245,7 +2245,7 @@ function openSalonMaterias(pid,cb){
     const globalMats=cicloSal==='primaria'?DB.mP:DB.mB;
     const availMats=(salObj?.mats&&salObj.mats.length)?salObj.mats:globalMats;
     return`<div style="margin-bottom:12px;padding:10px 12px;background:var(--bg2);border-radius:8px;border:1px solid var(--bd)">
-      <div style="font-size:12px;font-weight:800;color:var(--nv);margin-bottom:7px">📍 ${s}
+      <div style="font-size:12px;font-weight:800;color:var(--nv);margin-bottom:7px"><i class="fas fa-location-dot"></i> ${s}
         ${salObj?.mats?.length?`<span style="font-size:10px;font-weight:400;color:var(--sl2);margin-left:6px">(${salObj.mats.length} materias del salón)</span>`:''}
       </div>
       <div style="display:flex;flex-wrap:wrap;gap:6px">
@@ -2312,13 +2312,13 @@ function editPrf(pid){
       <div style="text-align:left;margin-bottom:0">
         <label style="font-size:11px;font-weight:800;text-transform:uppercase;color:var(--sl);display:block;margin-bottom:4px">Salones asignados</label>
         <div style="background:var(--bg2);border:1px solid var(--bd);border-radius:8px;padding:10px">
-          ${mkEPSals(salsPri,'📚 Primaria')}
-          ${mkEPSals(salsBach,'🎓 Bachillerato')}
+          ${mkEPSals(salsPri,'<i class="fas fa-book"></i> Primaria')}
+          ${mkEPSals(salsBach,'<i class="fas fa-graduation-cap"></i> Bachillerato')}
         </div>
       </div>
       <div style="margin-top:12px">
         <button type="button" class="btn bg sm" onclick="openSalonMaterias('${pid}',()=>renderPrfTbl())">
-          🎯 Asignar Materias por Salón</button>
+          <i class="fas fa-bullseye"></i> Asignar Materias por Salón</button>
         ${(p.salones||[]).length?`<div style="margin-top:8px;font-size:11px;color:var(--sl2)">${
           Object.entries(p.salonMaterias||{}).filter(([,v])=>v.length).map(([s,ms])=>
             `<strong>${s}:</strong> ${ms.join(', ')}`).join(' · ')||'Sin materias asignadas por salón'
@@ -2367,46 +2367,46 @@ function delPrf(pid){
    MATERIAS & PERIODOS
 ============================================================ */
 function pgAMat(){
-  return`<div class="ph"><h2>Áreas & Materias</h2><button class="btn xs bg" onclick="showHelp('amat')" style="margin-top:6px">❓ Ayuda</button></div>
+  return`<div class="ph"><h2>Áreas & Materias</h2><button class="btn xs bg" onclick="showHelp('amat')" style="margin-top:6px"><i class="fas fa-circle-question"></i> Ayuda</button></div>
   <div class="g2">
     <div class="card">
-      <div class="chd"><span class="cti">📚 Primaria — Áreas y Materias</span></div>
+      <div class="chd"><span class="cti"><i class="fas fa-book"></i> Primaria — Áreas y Materias</span></div>
       <div style="display:flex;gap:8px;margin-bottom:14px">
         <div class="fld" style="margin:0;flex:1"><input id="nap" placeholder="Nueva área primaria..."></div>
-        <button class="btn bn sm" onclick="addArea('primaria')">➕ Área</button>
+        <button class="btn bn sm" onclick="addArea('primaria')"><i class="fas fa-plus"></i> Área</button>
       </div>
       <div id="areaListP"></div>
       <div style="margin-top:14px;padding-top:12px;border-top:1px solid var(--bd)">
         <div style="font-size:11px;font-weight:700;color:var(--sl);text-transform:uppercase;margin-bottom:8px">Materias sin área</div>
         <div style="display:flex;gap:8px;margin-bottom:10px">
           <div class="fld" style="margin:0;flex:1"><input id="nmp" placeholder="Nueva materia primaria..."></div>
-          <button class="btn bg sm" onclick="addMP()">➕ Materia</button>
+          <button class="btn bg sm" onclick="addMP()"><i class="fas fa-plus"></i> Materia</button>
         </div>
         <div id="mlP"></div>
       </div>
     </div>
     <div class="card">
-      <div class="chd"><span class="cti">🎓 Bachillerato — Áreas y Materias</span></div>
+      <div class="chd"><span class="cti"><i class="fas fa-graduation-cap"></i> Bachillerato — Áreas y Materias</span></div>
       <div style="display:flex;gap:8px;margin-bottom:14px">
         <div class="fld" style="margin:0;flex:1"><input id="nab" placeholder="Nueva área bachillerato..."></div>
-        <button class="btn bn sm" onclick="addArea('bachillerato')">➕ Área</button>
+        <button class="btn bn sm" onclick="addArea('bachillerato')"><i class="fas fa-plus"></i> Área</button>
       </div>
       <div id="areaListB"></div>
       <div style="margin-top:14px;padding-top:12px;border-top:1px solid var(--bd)">
         <div style="font-size:11px;font-weight:700;color:var(--sl);text-transform:uppercase;margin-bottom:8px">Materias sin área</div>
         <div style="display:flex;gap:8px;margin-bottom:10px">
           <div class="fld" style="margin:0;flex:1"><input id="nmb" placeholder="Nueva materia bachillerato..."></div>
-          <button class="btn bg sm" onclick="addMB()">➕ Materia</button>
+          <button class="btn bg sm" onclick="addMB()"><i class="fas fa-plus"></i> Materia</button>
         </div>
         <div id="mlB"></div>
       </div>
     </div>
   </div>
   <div class="card">
-    <div class="chd"><span class="cti">📅 Periodos</span></div>
+    <div class="chd"><span class="cti"><i class="fas fa-calendar-days"></i> Periodos</span></div>
     <div style="display:flex;gap:8px;margin-bottom:14px">
       <div class="fld" style="margin:0;flex:1"><input id="nper" placeholder="Nuevo periodo..."></div>
-      <button class="btn bn sm" onclick="addPer()">➕</button>
+      <button class="btn bn sm" onclick="addPer()"><i class="fas fa-plus"></i></button>
     </div><div id="perL"></div>
   </div>`;
 }
@@ -2439,11 +2439,11 @@ function renderAreaBlock(ciclo){
     const matsDelArea=matDocs.filter(d=>d.areaNombre===area.nombre).map(d=>d.nombre);
     return`<div style="background:var(--bg2);border:1px solid var(--bd);border-radius:10px;padding:12px 14px;margin-bottom:10px">
       <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px">
-        <strong style="font-size:14px">📂 ${area.nombre}</strong>
+        <strong style="font-size:14px"><i class="fas fa-folder-open"></i> ${area.nombre}</strong>
         <div style="display:flex;gap:5px">
-          <button class="btn xs bg" onclick="editAreaMats('${area.nombre}','${ciclo}')">🎯 Materias</button>
-          <button class="btn xs bg" onclick="renameArea('${area.nombre}','${ciclo}')">✏️</button>
-          <button class="btn xs bd" onclick="delArea('${area.nombre}','${ciclo}')">🗑</button>
+          <button class="btn xs bg" onclick="editAreaMats('${area.nombre}','${ciclo}')"><i class="fas fa-bullseye"></i> Materias</button>
+          <button class="btn xs bg" onclick="renameArea('${area.nombre}','${ciclo}')"><i class="fas fa-pen"></i></button>
+          <button class="btn xs bd" onclick="delArea('${area.nombre}','${ciclo}')"><i class="fas fa-trash"></i></button>
         </div>
       </div>
       <div style="margin-top:8px;display:flex;flex-wrap:wrap;gap:4px">
@@ -2459,8 +2459,8 @@ function matItem(v,delFn,ciclo){
     padding:9px 12px;background:var(--bg2);border-radius:8px;margin-bottom:7px;border:1px solid var(--bd)">
     <span style="font-size:13px">${v}</span>
     <div style="display:flex;gap:5px">
-      <button class="btn xs bg" onclick="renameMat('${ciclo}','${v}')">✏️</button>
-      <button class="btn xs bd" onclick="${delFn}('${v}')">🗑</button>
+      <button class="btn xs bg" onclick="renameMat('${ciclo}','${v}')"><i class="fas fa-pen"></i></button>
+      <button class="btn xs bd" onclick="${delFn}('${v}')"><i class="fas fa-trash"></i></button>
     </div></div>`;
 }
 function renderMats(){
@@ -2476,7 +2476,7 @@ function renderMats(){
     <div style="display:flex;justify-content:space-between;align-items:center;
       padding:9px 12px;background:var(--bg2);border-radius:8px;margin-bottom:7px;border:1px solid var(--bd)">
       <span style="font-size:13px">${p}</span>
-      <button class="btn xs bd" onclick="delPer('${p}')">🗑</button>
+      <button class="btn xs bd" onclick="delPer('${p}')"><i class="fas fa-trash"></i></button>
     </div>`).join('');
 }
 async function addArea(ciclo){
@@ -2654,7 +2654,7 @@ let _anE=[];
 function pgANot(){
   const sO=DB.sals.map(s=>`<option value="${s.nombre}">${s.nombre}</option>`).join('');
   const pO=DB.pers.map(p=>`<option value="${p}">${p}</option>`).join('');
-  return`<div class="ph"><h2>Gestión de Notas</h2><button class="btn xs bg" onclick="showHelp('anot')">❓ Ayuda</button></div>
+  return`<div class="ph"><h2>Gestión de Notas</h2><button class="btn xs bg" onclick="showHelp('anot')"><i class="fas fa-circle-question"></i> Ayuda</button></div>
   <div class="card">
     <div style="display:flex;flex-wrap:wrap;gap:14px;align-items:flex-end;margin-bottom:16px">
       <div class="fld" style="margin:0;min-width:160px;flex:1">
@@ -2672,21 +2672,21 @@ function pgANot(){
       <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;flex:2;min-width:280px">
         <button onclick="loadAN()"
           style="padding:10px 22px;font-size:14px;font-weight:700;background:var(--nv);color:#fff;border:none;border-radius:9px;cursor:pointer;white-space:nowrap">
-          📋 Cargar
+          <i class="fas fa-clipboard-list"></i> Cargar
         </button>
         <button onclick="dlPlantillaNotas()"
           style="padding:10px 22px;font-size:14px;font-weight:600;background:#e0f2fe;color:#0369a1;border:1.5px solid #7dd3fc;border-radius:9px;cursor:pointer;white-space:nowrap">
-          ⬇️ Plantilla CSV
+          <i class="fas fa-arrow-down"></i> Plantilla CSV
         </button>
         <label style="padding:10px 22px;font-size:14px;font-weight:600;background:#dcfce7;color:#166534;border:1.5px solid #86efac;border-radius:9px;cursor:pointer;white-space:nowrap;display:inline-flex;align-items:center;gap:6px">
-          ⬆️ Importar CSV
+          <i class="fas fa-arrow-up"></i> Importar CSV
           <input type="file" accept=".csv" style="display:none" onchange="importNotasCSV(this)">
         </label>
       </div>
     </div>
     <div id="anImportResult"></div>
     <div style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:var(--bg2);border-radius:9px;border:1.5px solid var(--bd);margin-bottom:14px">
-      <span style="font-size:16px;color:var(--sl3)">🔍</span>
+      <span style="font-size:16px;color:var(--sl3)"><i class="fas fa-magnifying-glass"></i></span>
       <input id="anq" placeholder="Buscar estudiante..." oninput="filterAN()"
         style="flex:1;border:none;background:transparent;font-size:14px;outline:none;color:var(--tx)">
     </div>
@@ -2772,7 +2772,7 @@ async function importNotasCSV(input){
   // Buscar estudiantes por nombre o TI
   let ok=0,skip=0,errores=[];
   const resultEl=gi('anImportResult');
-  if(resultEl) resultEl.innerHTML=`<div class="al alb" style="margin-bottom:8px">⏳ Importando notas...</div>`;
+  if(resultEl) resultEl.innerHTML=`<div class="al alb" style="margin-bottom:8px"><i class="fas fa-hourglass-half"></i> Importando notas...</div>`;
 
   for(let i=1;i<lines.length;i++){
     const cols=lines[i].split(',').map(c=>c.trim().replace(/^"|"$/g,''));
@@ -2825,8 +2825,8 @@ async function importNotasCSV(input){
   // Mostrar resultado
   const color=errores.length?'aly':'alg';
   if(resultEl) resultEl.innerHTML=`<div class="al ${color}" style="margin-bottom:8px">
-    ✅ ${ok} estudiante${ok!==1?'s':''} importados correctamente.
-    ${skip?`⚠️ ${skip} no encontrados.`:''}
+    <i class="fas fa-circle-check"></i> ${ok} estudiante${ok!==1?'s':''} importados correctamente.
+    ${skip?`<i class="fas fa-triangle-exclamation"></i> ${skip} no encontrados.`:''}
     ${errores.length?`<details style="margin-top:6px"><summary style="cursor:pointer;font-size:11px">Ver errores (${errores.length})</summary>
       <div style="font-size:11px;margin-top:4px">${errores.map(e=>`<div>• ${e}</div>`).join('')}</div>
     </details>`:''}
@@ -2842,7 +2842,7 @@ function loadAN(){const s=gi('ans')?.value,p=gi('anp')?.value;if(!s||!p){sw('war
 function filterAN(){const s=gi('ans')?.value,p=gi('anp')?.value;if(!s||!p)return;const f=(gi('anq')?.value||'').toLowerCase();renderANotTbl(s,p,_anE.filter(e=>e.nombre.toLowerCase().includes(f)));}
 function renderANotTbl(salon,per,list){
   const el=gi('anW');if(!el) return;
-  if(!list.length){el.innerHTML='<div class="mty"><div class="ei">🎓</div><p>Sin estudiantes</p></div>';return;}
+  if(!list.length){el.innerHTML='<div class="mty"><div class="ei"><i class="fas fa-graduation-cap"></i></div><p>Sin estudiantes</p></div>';return;}
   const mats=getMats(list[0].id);
   el.innerHTML=`<div class="tw"><table>
     <thead>
@@ -2913,10 +2913,10 @@ async function saveConducta(eid,v){ /* implementado en api-layer.js */ }
 /* ============================================================
    REHAB
 ============================================================ */
-function pgAReh(){return`<div class="ph"><h2>Recuperaciones</h2><button class="btn xs bg" onclick="showHelp('areh')" style="margin-top:6px">❓ Ayuda</button></div><div id="arB"></div>`;}
+function pgAReh(){return`<div class="ph"><h2>Recuperaciones</h2><button class="btn xs bg" onclick="showHelp('areh')" style="margin-top:6px"><i class="fas fa-circle-question"></i> Ayuda</button></div><div id="arB"></div>`;}
 function initAReh(){
   const el=gi('arB');if(!el)return;
-  if(!DB.ext.on){el.innerHTML=`<div class="al aly">⚠️ Activa el Periodo Extraordinario en <strong>Control de Fechas</strong>.</div>`;return;}
+  if(!DB.ext.on){el.innerHTML=`<div class="al aly"><i class="fas fa-triangle-exclamation"></i> Activa el Periodo Extraordinario en <strong>Control de Fechas</strong>.</div>`;return;}
 
   // Determinar elegibles usando áreas (si hay) o materias
   const elegibles=[];
@@ -2933,9 +2933,9 @@ function initAReh(){
     }
   });
 
-  if(!elegibles.length){el.innerHTML=`<div class="al alg">✅ Sin estudiantes en recuperación actualmente.</div>`;return;}
-  el.innerHTML=`<div class="al aly">📅 Periodo Extraordinario: <strong>${DB.ext.s} → ${DB.ext.e}</strong></div>
-  <div class="card"><div class="chd"><span class="cti">⚠️ Estudiantes Elegibles (${elegibles.length})</span></div>
+  if(!elegibles.length){el.innerHTML=`<div class="al alg"><i class="fas fa-circle-check"></i> Sin estudiantes en recuperación actualmente.</div>`;return;}
+  el.innerHTML=`<div class="al aly"><i class="fas fa-calendar-days"></i> Periodo Extraordinario: <strong>${DB.ext.s} → ${DB.ext.e}</strong></div>
+  <div class="card"><div class="chd"><span class="cti"><i class="fas fa-triangle-exclamation"></i> Estudiantes Elegibles (${elegibles.length})</span></div>
   <div class="tw"><table><thead><tr><th>Estudiante</th><th>Salón</th><th>${elegibles.some(x=>x.tipo==='area')?'Área Perdida':'Materia Perdida'}</th><th>Profesor Asignado</th><th>Recuperación Enviada</th></tr></thead>
   <tbody>${elegibles.map(({est:e,tipo,perdidas})=>{
     const pg=gprom(e.id);
@@ -2958,7 +2958,7 @@ function initAReh(){
         <td><span class="bdg brd">${nombre}</span>${tipo==='area'?'<span style="font-size:10px;color:var(--sl3)"> (área)</span>':''}</td>
         <td style="font-size:13px">${profNombre}</td>
         <td>${recs.length?recs.map(r=>`<div style="font-size:11px;padding:3px 0">
-          📎 ${esc(r.nombre)} <span style="color:var(--sl3)">${r.fecha}</span></div>`).join('')
+          <i class="fas fa-paperclip"></i> ${esc(r.nombre)} <span style="color:var(--sl3)">${r.fecha}</span></div>`).join('')
           :'<span style="font-size:12px;color:var(--sl3)">Pendiente</span>'}
         </td>
       </tr>`;
@@ -2974,7 +2974,7 @@ function pgAFec(){
     const dp=DB.drPer[p]||{s:'',e:'',extPer:''};
     return`<div style="padding:12px;background:var(--bg2);border-radius:8px;border:1px solid var(--bd);margin-bottom:10px">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;flex-wrap:wrap;gap:8px">
-        <strong style="font-size:13px">📅 ${p}</strong>
+        <strong style="font-size:13px"><i class="fas fa-calendar-days"></i> ${p}</strong>
         <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
           <label style="font-size:11px;color:var(--sl2)">Inicio</label>
           <input type="date" id="dps_${p.replace(/\s/g,'_')}" value="${dp.s}"
@@ -3002,9 +3002,9 @@ function pgAFec(){
     </div>`;
   }).join('');
   return`<div class="ph"><h2>Control de Fechas</h2>
-    <button class="btn xs bg" style="margin-top:4px" onclick="showHelp('afec')">❓ Ayuda</button></div>
+    <button class="btn xs bg" style="margin-top:4px" onclick="showHelp('afec')"><i class="fas fa-circle-question"></i> Ayuda</button></div>
   <div class="card" style="border:2px solid var(--bl3)">
-    <div class="chd"><span class="cti">🎓 Año Lectivo Activo</span></div>
+    <div class="chd"><span class="cti"><i class="fas fa-graduation-cap"></i> Año Lectivo Activo</span></div>
     <div class="al alb" style="margin-bottom:14px;font-size:12px">
       El año lectivo aparece en los boletines PDF y en el historial académico de los estudiantes.
     </div>
@@ -3016,7 +3016,7 @@ function pgAFec(){
           style="width:110px;padding:8px 12px;border:1.5px solid var(--bd);border-radius:var(--r);font-size:15px;font-weight:800;text-align:center;outline:none">
       </div>
       <div style="padding-top:18px">
-        <button class="btn bn" onclick="saveAno()">💾 Guardar Año</button>
+        <button class="btn bn" onclick="saveAno()"><i class="fas fa-floppy-disk"></i> Guardar Año</button>
       </div>
       <div style="padding-top:18px">
         <span style="font-size:13px;color:var(--sl2)">Año actual en el sistema:
@@ -3025,34 +3025,34 @@ function pgAFec(){
       </div>
     </div>
   </div>
-  <div class="card"><div class="chd"><span class="cti">📅 Rangos por Periodo</span></div>
+  <div class="card"><div class="chd"><span class="cti"><i class="fas fa-calendar-days"></i> Rangos por Periodo</span></div>
     <div class="al alb" style="margin-bottom:14px">
-      ℹ️ Define cuándo puede ingresar notas cada periodo. Si no se configura un rango, el periodo permanece siempre abierto.
+      <i class="fas fa-circle-info"></i> Define cuándo puede ingresar notas cada periodo. Si no se configura un rango, el periodo permanece siempre abierto.
       El campo <strong>Periodo Ext.</strong> indica a qué periodo corresponden las notas de recuperación.
     </div>
     ${perRows||'<div class="mty"><p>Sin periodos configurados</p></div>'}
   </div>
   <div class="card">
-    <div class="chd"><span class="cti">🔄 Periodo Extraordinario</span>
+    <div class="chd"><span class="cti"><i class="fas fa-arrows-rotate"></i> Periodo Extraordinario</span>
       <div style="display:flex;align-items:center;gap:10px">
         <span class="bdg ${DB.ext.on?'bgr':'bgy'}" style="font-size:12px;padding:5px 14px">
-          ${DB.ext.on?'🟢 Activo':'⚫ Inactivo'}
+          ${DB.ext.on?'<i class="fas fa-circle"></i> Activo':'<i class="fas fa-circle"></i> Inactivo'}
         </span>
       </div>
     </div>
     <div class="al aly" style="margin-bottom:20px;font-size:13px">
-      ⚠️ Solo para estudiantes con <strong>1 o 2 materias perdidas</strong>. Al cerrarse, los planes y recuperaciones activos se archivan automáticamente en el historial.
+      <i class="fas fa-triangle-exclamation"></i> Solo para estudiantes con <strong>1 o 2 materias perdidas</strong>. Al cerrarse, los planes y recuperaciones activos se archivan automáticamente en el historial.
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:20px;align-items:end;margin-bottom:20px">
       <div class="fld" style="margin:0">
-        <label>📅 Fecha de Inicio</label>
+        <label><i class="fas fa-calendar-days"></i> Fecha de Inicio</label>
         <input type="date" id="exs" value="${DB.ext.s}"
           min="${DB.anoActual||new Date().getFullYear()}-01-01"
           max="${DB.anoActual||new Date().getFullYear()}-12-31"
           style="font-size:14px;padding:12px 15px">
       </div>
       <div class="fld" style="margin:0">
-        <label>📅 Fecha de Fin</label>
+        <label><i class="fas fa-calendar-days"></i> Fecha de Fin</label>
         <input type="date" id="exe" value="${DB.ext.e}"
           min="${DB.anoActual||new Date().getFullYear()}-01-01"
           max="${DB.anoActual||new Date().getFullYear()}-12-31"
@@ -3071,7 +3071,7 @@ function pgAFec(){
       <button class="btn bw" onclick="saveExt()"
         style="height:48px;padding:0 28px;font-size:15px;font-weight:800;white-space:nowrap;
         background:linear-gradient(135deg,#f08030,#d06018);box-shadow:0 4px 16px rgba(240,128,48,.3)">
-        💾 Guardar
+        <i class="fas fa-floppy-disk"></i> Guardar
       </button>
     </div>
     ${DB.ext.s&&DB.ext.e?`
@@ -3086,12 +3086,12 @@ function pgAFec(){
       </div>
       <div style="background:${DB.ext.on?'#ecfdf5':'#f8fafc'};border-radius:10px;border:1px solid ${DB.ext.on?'#a7f3d0':'var(--bd)'};padding:16px;text-align:center">
         <div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:var(--sl3);margin-bottom:6px">Estado</div>
-        <div style="font-size:16px;font-weight:800;color:${DB.ext.on?'var(--grn)':'var(--sl2)'}">${DB.ext.on?'🟢 Activo':'⚫ Inactivo'}</div>
+        <div style="font-size:16px;font-weight:800;color:${DB.ext.on?'var(--grn)':'var(--sl2)'}">${DB.ext.on?'<i class="fas fa-circle"></i> Activo':'<i class="fas fa-circle"></i> Inactivo'}</div>
       </div>
     </div>`:''}
   </div>
   <div class="card" style="border:2px solid #bee3f8;margin-top:16px">
-    <div class="chd"><span class="cti">⏰ Horario de Excusas</span></div>
+    <div class="chd"><span class="cti"><i class="fas fa-clock"></i> Horario de Excusas</span></div>
     <div class="al alb" style="margin-bottom:14px;font-size:12px">
       Define el rango horario en que los estudiantes pueden enviar excusas.<br>
       Actualmente: <strong>${DB.excHorario?.ini??18}:00 – ${DB.excHorario?.fin??7}:00</strong>
@@ -3108,11 +3108,11 @@ function pgAFec(){
           style="width:90px;padding:8px 12px;border:1.5px solid var(--bd);border-radius:var(--r);font-size:15px;font-weight:800;text-align:center">
       </div>
       <div style="padding-top:18px">
-        <button class="btn bn" onclick="saveExcHorario()">💾 Guardar Horario</button>
+        <button class="btn bn" onclick="saveExcHorario()"><i class="fas fa-floppy-disk"></i> Guardar Horario</button>
       </div>
     </div>
     <div style="margin-top:10px;font-size:12px;color:var(--sl3)">
-      💡 Si el rango cruza medianoche (ej: inicio 18, fin 7) el sistema lo detecta automáticamente.
+      <i class="fas fa-lightbulb"></i> Si el rango cruza medianoche (ej: inicio 18, fin 7) el sistema lo detecta automáticamente.
     </div>
   </div>`;
 }
@@ -3140,41 +3140,41 @@ function extExpirado(){
    SISTEMA DE AYUDA CONTEXTUAL
 ============================================================ */
 const HELP={
-  ph:`<b>📊 Panel Principal</b><br>Resumen de tus salones, materias y estado del periodo activo. Usa el menú lateral para navegar a cada sección.`,
-  pnot:`<b>📝 Ingresar Notas</b><br>1. Selecciona el <b>Salón</b> y el <b>Periodo</b>.<br>2. Haz clic en <b>Cargar</b>.<br>3. Ingresa: <b>Aptitud (60%)</b>, <b>Actitud (20%)</b> y <b>Responsabilidad (20%)</b>.<br>La definitiva se calcula automáticamente.<br>⚠️ Solo puedes ingresar notas durante el rango de fechas configurado para ese periodo.`,
-  past:`<b>✅ Pasar Asistencia</b><br>Selecciona el salón y la fecha, marca ✓ a los presentes y ✗ a los ausentes. Guarda al terminar.`,
-  pvir:`<b>💻 Clases Virtuales</b><br>Programa clases en vivo directamente desde la plataforma usando videoconferencia integrada (sin salir de la página).<br>1. Selecciona el salón, la fecha y la hora.<br>2. Escribe el tema de la clase.<br>3. Haz clic en <b>Programar Clase</b>.<br>Cuando sea el momento, entra con <b>🎥 Iniciar Clase</b> — la sala se abre aquí mismo. Los estudiantes verán el botón <b>🎥 Unirse</b> en su panel.`,
-  ptar:`<b>📂 Tareas Recibidas</b><br>Archivos que los estudiantes te enviaron. Ábrelos y márcalos como <b>✓ Revisado</b>. Solo puedes eliminar los ya revisados; los intentos de eliminar sin revisar quedan en Auditoría.`,
-  prec:`<b>🔄 Recuperaciones</b><br>Activo durante el Periodo Extraordinario.<br>1. Envía un Plan de Recuperación al salón o individual.<br>2. Los estudiantes responden antes de la fecha límite.<br>3. Revisa sus respuestas aquí y márcalas como revisadas.<br>Puedes exportar el historial de planes en Excel.`,
-  phist:`<b>📚 Historial Recuperaciones</b><br>Recuperaciones de periodos anteriores. Usa el buscador para filtrar por nombre de archivo, estudiante o materia. Puedes abrir cualquier archivo archivado.`,
-  eb:`<b>📋 Mi Boletín</b><br>Tus notas de todos los periodos y materias. Descárgalo en PDF con el botón correspondiente.`,
-  east:`<b>📆 Mi Asistencia</b><br>Historial de asistencia: días presentes, ausentes y con excusa presentada.`,
-  etare:`<b>📎 Tareas & Talleres</b><br>1. Selecciona materia, periodo y docente.<br>2. Escribe una descripción breve.<br>3. Adjunta el archivo (PDF, Word, Excel — máx 5 MB) y haz clic en Subir.<br>En <em>Mis Archivos Enviados</em> verás si el docente ya lo revisó. Puedes eliminar los revisados.`,
-  eexc:`<b>✉️ Excusas</b><br>Envía una excusa cuando faltaste. Solo en horario permitido (6:00 PM – 7:00 AM). Selecciona el motivo y el docente destinatario.`,
-  ereh:`<b>🔄 Mi Recuperación</b><br>Disponible cuando tienes 1–2 materias perdidas y el Periodo Extraordinario está activo.<br>Cada plan de tu docente aparece aquí. Respóndelo adjuntando tu trabajo antes de la fecha límite.<br>Una vez que el docente lo revise, el formulario se bloquea y puedes eliminar el registro.`,
-  ehist:`<b>📚 Historial Recuperaciones</b><br>Todos los trabajos de recuperación que enviaste en periodos anteriores, con su estado de revisión.`,
-  afec:`<b>📅 Control de Fechas</b><br><b>Rangos por Periodo:</b> define cuándo puede cada periodo recibir notas. Si no se configura, el periodo permanece siempre abierto.<br><b>Periodo Ext.:</b> a qué periodo van las notas de recuperación.<br><b>Rango Global:</b> aplica cuando un periodo no tiene rango propio.<br>Al cerrar el rango de un periodo, el Periodo Extraordinario se activa automáticamente si tiene fechas.`,
-  anot:`<b>📊 Gestión de Notas (Admin)</b><br>Ve y edita notas de cualquier salón y periodo sin restricción de fechas.`,
-  aaud:`<b>🔍 Auditoría</b><br>Registro automático de acciones sensibles: intentos de eliminar talleres sin revisar, cambios críticos. Solo visible para el administrador.`,
-  dash:`<b>🏠 Panel General</b><br>Resumen estadístico del colegio: total de estudiantes, profesores, salones y materias.<br>Muestra el ranking de los mejores estudiantes por salón y las últimas acciones registradas en auditoría.<br>Usa el menú lateral para navegar a cualquier sección del sistema.`,
-  asal:`<b>🏫 Salones & Grados</b><br>Crea y gestiona los salones del colegio separados por ciclo (Primaria y Bachillerato).<br>1. Escribe el nombre del salón (ej: 6A), selecciona ciclo y jornada, y haz clic en <b>Agregar</b>.<br>2. Desde cada salón puedes editar sus materias o eliminarlo si no tiene estudiantes activos.`,
-  apri:`<b>🎓 Estudiantes — Primaria</b><br>Gestiona los estudiantes de primaria (1°–5°).<br>Puedes agregar estudiantes uno a uno o hacer <b>Carga Masiva CSV</b>.<br>Edita datos como nombre, T.I., salón y contraseña. Usa el buscador para filtrar por nombre o salón.<br>Al final del año puedes usar <b>Promover Año</b> para avanzar automáticamente a los estudiantes según sus resultados.`,
-  abac:`<b>🎓 Estudiantes — Bachillerato</b><br>Gestiona los estudiantes de bachillerato (6°–11°).<br>Puedes agregar estudiantes uno a uno o hacer <b>Carga Masiva CSV</b>.<br>Edita datos como nombre, T.I., salón y contraseña. Usa el buscador para filtrar por nombre o salón.<br>Al final del año puedes usar <b>Promover Año</b> para avanzar automáticamente a los estudiantes según sus resultados.`,
-  aprf:`<b>👩‍🏫 Profesores</b><br>Crea y administra los docentes del colegio por ciclo (Primaria / Bachillerato).<br>Al crear un profesor asigna sus <b>salones</b> y las <b>materias</b> que imparte en cada salón.<br>Puedes hacer carga masiva desde un archivo CSV. Edita o elimina profesores en cualquier momento.`,
-  amat:`<b>📖 Áreas & Materias</b><br>Define las áreas académicas y las materias que las componen para cada ciclo.<br>Las áreas agrupan materias y determinan si el estudiante aprueba, recupera o pierde el año.<br>Configura también los porcentajes de calificación (Aptitud, Actitud, Responsabilidad) y el año lectivo que aparecerá en los boletines.`,
-  areh:`<b>🔄 Recuperaciones (Admin)</b><br>Vista global de todos los estudiantes en periodo de recuperación.<br>Muestra quién tiene materias pendidas y en qué materias. El docente correspondiente envía el plan de recuperación desde su panel.<br>Al cerrar el periodo puedes archivar todos los registros.`,
-  ablk:`<b>🔒 Usuarios Bloqueados</b><br>Lista de usuarios que han sido bloqueados por intentos fallidos de inicio de sesión.<br>Haz clic en <b>Desbloquear</b> para permitir que el usuario vuelva a ingresar al sistema.`,
-  aexp:`<b>📤 Exportar Datos</b><br>Descarga información del sistema en formato <b>Excel</b> o genera <b>Boletines PDF</b>.<br>• <b>Excel:</b> exporta notas consolidadas, asistencia o datos de estudiantes por salón.<br>• <b>Boletín individual:</b> selecciona un estudiante y descarga su reporte académico.<br>• <b>Boletines por salón:</b> genera todos los boletines de un grupo en un solo clic.`,
-  ahist:`<b>📚 Historial de Estudiantes</b><br>Registro de todos los estudiantes que alguna vez fueron dados de alta en el sistema, incluso los ya eliminados.<br>Puedes buscar por nombre o documento. El historial mantiene el año y salón en que estuvieron matriculados.`,
-  pcom:`<b>📢 Comunicados del Colegio</b><br>
+  ph:`<b><i class="fas fa-chart-column"></i> Panel Principal</b><br>Resumen de tus salones, materias y estado del periodo activo. Usa el menú lateral para navegar a cada sección.`,
+  pnot:`<b><i class="fas fa-pen-to-square"></i> Ingresar Notas</b><br>1. Selecciona el <b>Salón</b> y el <b>Periodo</b>.<br>2. Haz clic en <b>Cargar</b>.<br>3. Ingresa: <b>Aptitud (60%)</b>, <b>Actitud (20%)</b> y <b>Responsabilidad (20%)</b>.<br>La definitiva se calcula automáticamente.<br><i class="fas fa-triangle-exclamation"></i> Solo puedes ingresar notas durante el rango de fechas configurado para ese periodo.`,
+  past:`<b><i class="fas fa-circle-check"></i> Pasar Asistencia</b><br>Selecciona el salón y la fecha, marca <i class="fas fa-check"></i> a los presentes y <i class="fas fa-xmark"></i> a los ausentes. Guarda al terminar.`,
+  pvir:`<b><i class="fas fa-laptop"></i> Clases Virtuales</b><br>Programa clases en vivo directamente desde la plataforma usando videoconferencia integrada (sin salir de la página).<br>1. Selecciona el salón, la fecha y la hora.<br>2. Escribe el tema de la clase.<br>3. Haz clic en <b>Programar Clase</b>.<br>Cuando sea el momento, entra con <b><i class="fas fa-video"></i> Iniciar Clase</b> — la sala se abre aquí mismo. Los estudiantes verán el botón <b><i class="fas fa-video"></i> Unirse</b> en su panel.`,
+  ptar:`<b><i class="fas fa-folder-open"></i> Tareas Recibidas</b><br>Archivos que los estudiantes te enviaron. Ábrelos y márcalos como <b><i class="fas fa-check"></i> Revisado</b>. Solo puedes eliminar los ya revisados; los intentos de eliminar sin revisar quedan en Auditoría.`,
+  prec:`<b><i class="fas fa-arrows-rotate"></i> Recuperaciones</b><br>Activo durante el Periodo Extraordinario.<br>1. Envía un Plan de Recuperación al salón o individual.<br>2. Los estudiantes responden antes de la fecha límite.<br>3. Revisa sus respuestas aquí y márcalas como revisadas.<br>Puedes exportar el historial de planes en Excel.`,
+  phist:`<b><i class="fas fa-book"></i> Historial Recuperaciones</b><br>Recuperaciones de periodos anteriores. Usa el buscador para filtrar por nombre de archivo, estudiante o materia. Puedes abrir cualquier archivo archivado.`,
+  eb:`<b><i class="fas fa-clipboard-list"></i> Mi Boletín</b><br>Tus notas de todos los periodos y materias. Descárgalo en PDF con el botón correspondiente.`,
+  east:`<b><i class="fas fa-calendar"></i> Mi Asistencia</b><br>Historial de asistencia: días presentes, ausentes y con excusa presentada.`,
+  etare:`<b><i class="fas fa-paperclip"></i> Tareas & Talleres</b><br>1. Selecciona materia, periodo y docente.<br>2. Escribe una descripción breve.<br>3. Adjunta el archivo (PDF, Word, Excel — máx 5 MB) y haz clic en Subir.<br>En <em>Mis Archivos Enviados</em> verás si el docente ya lo revisó. Puedes eliminar los revisados.`,
+  eexc:`<b><i class="fas fa-envelope"></i> Excusas</b><br>Envía una excusa cuando faltaste. Solo en horario permitido (6:00 PM – 7:00 AM). Selecciona el motivo y el docente destinatario.`,
+  ereh:`<b><i class="fas fa-arrows-rotate"></i> Mi Recuperación</b><br>Disponible cuando tienes 1–2 materias perdidas y el Periodo Extraordinario está activo.<br>Cada plan de tu docente aparece aquí. Respóndelo adjuntando tu trabajo antes de la fecha límite.<br>Una vez que el docente lo revise, el formulario se bloquea y puedes eliminar el registro.`,
+  ehist:`<b><i class="fas fa-book"></i> Historial Recuperaciones</b><br>Todos los trabajos de recuperación que enviaste en periodos anteriores, con su estado de revisión.`,
+  afec:`<b><i class="fas fa-calendar-days"></i> Control de Fechas</b><br><b>Rangos por Periodo:</b> define cuándo puede cada periodo recibir notas. Si no se configura, el periodo permanece siempre abierto.<br><b>Periodo Ext.:</b> a qué periodo van las notas de recuperación.<br><b>Rango Global:</b> aplica cuando un periodo no tiene rango propio.<br>Al cerrar el rango de un periodo, el Periodo Extraordinario se activa automáticamente si tiene fechas.`,
+  anot:`<b><i class="fas fa-chart-column"></i> Gestión de Notas (Admin)</b><br>Ve y edita notas de cualquier salón y periodo sin restricción de fechas.`,
+  aaud:`<b><i class="fas fa-magnifying-glass"></i> Auditoría</b><br>Registro automático de acciones sensibles: intentos de eliminar talleres sin revisar, cambios críticos. Solo visible para el administrador.`,
+  dash:`<b><i class="fas fa-house"></i> Panel General</b><br>Resumen estadístico del colegio: total de estudiantes, profesores, salones y materias.<br>Muestra el ranking de los mejores estudiantes por salón y las últimas acciones registradas en auditoría.<br>Usa el menú lateral para navegar a cualquier sección del sistema.`,
+  asal:`<b><i class="fas fa-school"></i> Salones & Grados</b><br>Crea y gestiona los salones del colegio separados por ciclo (Primaria y Bachillerato).<br>1. Escribe el nombre del salón (ej: 6A), selecciona ciclo y jornada, y haz clic en <b>Agregar</b>.<br>2. Desde cada salón puedes editar sus materias o eliminarlo si no tiene estudiantes activos.`,
+  apri:`<b><i class="fas fa-graduation-cap"></i> Estudiantes — Primaria</b><br>Gestiona los estudiantes de primaria (1°–5°).<br>Puedes agregar estudiantes uno a uno o hacer <b>Carga Masiva CSV</b>.<br>Edita datos como nombre, T.I., salón y contraseña. Usa el buscador para filtrar por nombre o salón.<br>Al final del año puedes usar <b>Promover Año</b> para avanzar automáticamente a los estudiantes según sus resultados.`,
+  abac:`<b><i class="fas fa-graduation-cap"></i> Estudiantes — Bachillerato</b><br>Gestiona los estudiantes de bachillerato (6°–11°).<br>Puedes agregar estudiantes uno a uno o hacer <b>Carga Masiva CSV</b>.<br>Edita datos como nombre, T.I., salón y contraseña. Usa el buscador para filtrar por nombre o salón.<br>Al final del año puedes usar <b>Promover Año</b> para avanzar automáticamente a los estudiantes según sus resultados.`,
+  aprf:`<b><i class="fas fa-chalkboard-user"></i> Profesores</b><br>Crea y administra los docentes del colegio por ciclo (Primaria / Bachillerato).<br>Al crear un profesor asigna sus <b>salones</b> y las <b>materias</b> que imparte en cada salón.<br>Puedes hacer carga masiva desde un archivo CSV. Edita o elimina profesores en cualquier momento.`,
+  amat:`<b><i class="fas fa-book-open"></i> Áreas & Materias</b><br>Define las áreas académicas y las materias que las componen para cada ciclo.<br>Las áreas agrupan materias y determinan si el estudiante aprueba, recupera o pierde el año.<br>Configura también los porcentajes de calificación (Aptitud, Actitud, Responsabilidad) y el año lectivo que aparecerá en los boletines.`,
+  areh:`<b><i class="fas fa-arrows-rotate"></i> Recuperaciones (Admin)</b><br>Vista global de todos los estudiantes en periodo de recuperación.<br>Muestra quién tiene materias pendidas y en qué materias. El docente correspondiente envía el plan de recuperación desde su panel.<br>Al cerrar el periodo puedes archivar todos los registros.`,
+  ablk:`<b><i class="fas fa-lock"></i> Usuarios Bloqueados</b><br>Lista de usuarios que han sido bloqueados por intentos fallidos de inicio de sesión.<br>Haz clic en <b>Desbloquear</b> para permitir que el usuario vuelva a ingresar al sistema.`,
+  aexp:`<b><i class="fas fa-upload"></i> Exportar Datos</b><br>Descarga información del sistema en formato <b>Excel</b> o genera <b>Boletines PDF</b>.<br>• <b>Excel:</b> exporta notas consolidadas, asistencia o datos de estudiantes por salón.<br>• <b>Boletín individual:</b> selecciona un estudiante y descarga su reporte académico.<br>• <b>Boletines por salón:</b> genera todos los boletines de un grupo en un solo clic.`,
+  ahist:`<b><i class="fas fa-book"></i> Historial de Estudiantes</b><br>Registro de todos los estudiantes que alguna vez fueron dados de alta en el sistema, incluso los ya eliminados.<br>Puedes buscar por nombre o documento. El historial mantiene el año y salón en que estuvieron matriculados.`,
+  pcom:`<b><i class="fas fa-bullhorn"></i> Comunicados del Colegio</b><br>
 Aquí aparecen todos los avisos y anuncios activos publicados por el administrador.<br><br>
 Los comunicados se muestran automáticamente al iniciar sesión y también puedes consultarlos aquí en cualquier momento.<br><br>
 Cada comunicado indica su <b>fecha de vigencia</b> — al vencer desaparece automáticamente.`,
-  ecom:`<b>📢 Comunicados del Colegio</b><br>
+  ecom:`<b><i class="fas fa-bullhorn"></i> Comunicados del Colegio</b><br>
 Aquí aparecen todos los avisos y anuncios activos que el colegio tiene para ti.<br><br>
 Los comunicados se muestran automáticamente al iniciar sesión y también puedes consultarlos aquí en cualquier momento.<br><br>
 Cada comunicado indica su <b>fecha de vigencia</b> — al vencer desaparece automáticamente.`,
-  acom:`<b>📢 Comunicados</b><br>
+  acom:`<b><i class="fas fa-bullhorn"></i> Comunicados</b><br>
 Crea avisos o anuncios que profesores y/o estudiantes verán al iniciar sesión.<br><br>
 <b>Para crear un comunicado:</b><br>
 1. Escribe el <b>título</b> y el <b>mensaje</b>.<br>
@@ -3185,14 +3185,14 @@ Crea avisos o anuncios que profesores y/o estudiantes verán al iniciar sesión.
 Los destinatarios verán el comunicado automáticamente en una pantalla de bienvenida al hacer login, y también podrán consultarlo en el menú.<br><br>
 Puedes <b>activar/desactivar</b> o <b>eliminar</b> cualquier comunicado en cualquier momento.`,
 
-  aexc:`<b>✉️ Excusas Recibidas</b><br>Bandeja de excusas enviadas por los estudiantes (horario permitido: 18:00 – 07:00).<br>Haz clic en una excusa para leerla y escribir una <b>respuesta</b> al estudiante.<br>Las excusas respondidas quedan marcadas y el estudiante puede verlas en su módulo.`,
-  avcl:`<b>💻 Clases Virtuales (Admin)</b><br>Vista general de todas las clases virtuales programadas por los docentes.<br>Cada tarjeta muestra el salón, la fecha, el docente y el estado de la clase.<br>Las clases se realizan integradas en la plataforma — sin salir de la página.`,
-  eprof:`<b>👩‍🏫 Mis Profesores</b><br>Lista de todos los docentes asignados a tu salón con sus materias y datos de contacto.<br>Consulta aquí el nombre y materias de cada profesor para saber a quién dirigirte.`,
-  evir:`<b>💻 Mis Clases Virtuales</b><br>Aquí aparecen las clases virtuales que tus docentes han programado para tu salón.<br>Cuando el docente inicie la clase, aparecerá el botón <b>🎥 Unirse a la clase</b>.<br>La videoconferencia se abre aquí mismo, sin salir de la plataforma. ¡Sin necesidad de instalar nada!`,
+  aexc:`<b><i class="fas fa-envelope"></i> Excusas Recibidas</b><br>Bandeja de excusas enviadas por los estudiantes (horario permitido: 18:00 – 07:00).<br>Haz clic en una excusa para leerla y escribir una <b>respuesta</b> al estudiante.<br>Las excusas respondidas quedan marcadas y el estudiante puede verlas en su módulo.`,
+  avcl:`<b><i class="fas fa-laptop"></i> Clases Virtuales (Admin)</b><br>Vista general de todas las clases virtuales programadas por los docentes.<br>Cada tarjeta muestra el salón, la fecha, el docente y el estado de la clase.<br>Las clases se realizan integradas en la plataforma — sin salir de la página.`,
+  eprof:`<b><i class="fas fa-chalkboard-user"></i> Mis Profesores</b><br>Lista de todos los docentes asignados a tu salón con sus materias y datos de contacto.<br>Consulta aquí el nombre y materias de cada profesor para saber a quién dirigirte.`,
+  evir:`<b><i class="fas fa-laptop"></i> Mis Clases Virtuales</b><br>Aquí aparecen las clases virtuales que tus docentes han programado para tu salón.<br>Cuando el docente inicie la clase, aparecerá el botón <b><i class="fas fa-video"></i> Unirse a la clase</b>.<br>La videoconferencia se abre aquí mismo, sin salir de la plataforma. ¡Sin necesidad de instalar nada!`,
 };
 function showHelp(panel){
   const txt=HELP[panel]||'Sin ayuda disponible para esta sección.';
-  Swal.fire({title:'❓ Ayuda',html:`<div style="text-align:left;font-size:14px;line-height:1.8">${txt}</div>`,
+  Swal.fire({title:'<i class="fas fa-circle-question"></i> Ayuda',html:`<div style="text-align:left;font-size:14px;line-height:1.8">${txt}</div>`,
     confirmButtonText:'Entendido',icon:'info'});
 }
 /* Log audit entry */
@@ -3203,14 +3203,14 @@ function logAudit(msg,extra){ /* implementado en api-layer.js */ }
 ============================================================ */
 function pgABlk(){
   const list=Object.entries(DB.blk).filter(([,v])=>v.on);
-  return`<div class="ph"><h2>Usuarios Bloqueados</h2><button class="btn xs bg" onclick="showHelp('ablk')" style="margin-top:6px">❓ Ayuda</button></div>
+  return`<div class="ph"><h2>Usuarios Bloqueados</h2><button class="btn xs bg" onclick="showHelp('ablk')" style="margin-top:6px"><i class="fas fa-circle-question"></i> Ayuda</button></div>
   <div class="card">${list.length?`<div class="tw"><table>
     <thead><tr><th>Usuario</th><th>Bloqueado en</th><th>Acción</th></tr></thead>
     <tbody>${list.map(([u,v])=>`<tr>
       <td><strong>${u}</strong></td>
       <td style="font-family:var(--mn);font-size:12px">${new Date(v.ts||'').toLocaleString('es-CO')}</td>
-      <td><button class="btn sm bs" onclick="unblk('${u}')">🔓 Desbloquear</button></td>
-    </tr>`).join('')}</tbody></table></div>`:'<div class="mty"><div class="ei">🔓</div><p>Sin bloqueados</p></div>'}
+      <td><button class="btn sm bs" onclick="unblk('${u}')"><i class="fas fa-lock-open"></i> Desbloquear</button></td>
+    </tr>`).join('')}</tbody></table></div>`:'<div class="mty"><div class="ei"><i class="fas fa-lock-open"></i></div><p>Sin bloqueados</p></div>'}
   </div>`;
 }
 /* ── SOBREESCRITA por api-layer.js ── */
@@ -3241,7 +3241,7 @@ function pgAAud(){
 
   /* Nombre legible del campo */
   const fmtCampo = (mat, accion) => {
-    if(accion && !mat) return `<span style="color:#718096;font-size:.82rem">📌 ${esc(accion)}</span>`;
+    if(accion && !mat) return `<span style="color:#718096;font-size:.82rem"><i class="fas fa-thumbtack"></i> ${esc(accion)}</span>`;
     if(!mat) return '<span style="color:#a0aec0">—</span>';
     /* mat suele ser "Matemáticas (Periodo 1)" */
     const match = mat.match(/^(.+?)\s*\((.+?)\)$/);
@@ -3253,7 +3253,7 @@ function pgAAud(){
       return `<div style="font-size:.82rem"><b>${esc(sub[1])}</b><br><span style="color:#718096">${lbl}</span></div>`;
     }
     /* Acciones especiales */
-    const icons={'Sesión cerrada':'🔒','login':'🔑','Login':'🔑','Auditoria limpiada':'🗑️','bloqueado':'🔴','desbloqueado':'🟢','taller':'📎'};
+    const icons={'Sesión cerrada':'<i class="fas fa-lock"></i>','login':'<i class="fas fa-key"></i>','Login':'<i class="fas fa-key"></i>','Auditoria limpiada':'<i class="fas fa-trash"></i>','bloqueado':'<i class="fas fa-circle"></i>','desbloqueado':'<i class="fas fa-circle"></i>','taller':'<i class="fas fa-paperclip"></i>'};
     const icon=Object.entries(icons).find(([k])=>mat.includes(k))?.[1]||'';
     return `<span style="font-size:.82rem">${icon} ${esc(mat)}</span>`;
   };
@@ -3276,12 +3276,12 @@ function pgAAud(){
     }catch(_){return ts.slice(0,16);}
   };
 
-  return`<div class="ph"><h2>Historial de Auditoría</h2><button class="btn xs bg" onclick="showHelp('aaud')" style="margin-top:6px">❓ Ayuda</button></div>
+  return`<div class="ph"><h2>Historial de Auditoría</h2><button class="btn xs bg" onclick="showHelp('aaud')" style="margin-top:6px"><i class="fas fa-circle-question"></i> Ayuda</button></div>
   <div class="card"><div class="chd">
-    <span class="cti">📋 Cambios (${list.length})</span>
+    <span class="cti"><i class="fas fa-clipboard-list"></i> Cambios (${list.length})</span>
     <div style="display:flex;gap:8px">
-      <button class="btn bg sm" onclick="expAudXls()">📤 Excel</button>
-      <button class="btn br sm" onclick="clearAudit()">🗑️ Limpiar historial</button>
+      <button class="btn bg sm" onclick="expAudXls()"><i class="fas fa-upload"></i> Excel</button>
+      <button class="btn br sm" onclick="clearAudit()"><i class="fas fa-trash"></i> Limpiar historial</button>
     </div>
   </div>
   <div class="tw"><table><thead>
@@ -3326,17 +3326,17 @@ function pgAExp(){
   const yr=new Date().getFullYear();
   const annos=Array.from({length:4},(_,i)=>yr-1+i);
   const salOpts=DB.sals.map(s=>`<option value="${s.nombre}">${s.nombre} (${cicloOf(s.nombre)==='primaria'?'Primaria':'Bach.'})</option>`).join('');
-  return`<div class="ph"><h2>Exportar Datos</h2><button class="btn xs bg" onclick="showHelp('aexp')" style="margin-top:6px">❓ Ayuda</button></div>
+  return`<div class="ph"><h2>Exportar Datos</h2><button class="btn xs bg" onclick="showHelp('aexp')" style="margin-top:6px"><i class="fas fa-circle-question"></i> Ayuda</button></div>
   <div class="g2">
     <!-- Excel exports -->
-    <div class="card"><div class="chd"><span class="cti">📊 Exportar Excel</span></div>
+    <div class="card"><div class="chd"><span class="cti"><i class="fas fa-chart-column"></i> Exportar Excel</span></div>
       <div style="display:flex;flex-direction:column;gap:10px">
-        <button class="btn bn" onclick="expCons()">📊 Consolidado de Notas</button>
-        <button class="btn bg" onclick="expAudXls()">📋 Historial Auditoría</button>
+        <button class="btn bn" onclick="expCons()"><i class="fas fa-chart-column"></i> Consolidado de Notas</button>
+        <button class="btn bg" onclick="expAudXls()"><i class="fas fa-clipboard-list"></i> Historial Auditoría</button>
       </div>
     </div>
     <!-- Boletín por estudiante individual -->
-    <div class="card"><div class="chd"><span class="cti">📄 Boletín PDF — Por Estudiante</span></div>
+    <div class="card"><div class="chd"><span class="cti"><i class="fas fa-file-lines"></i> Boletín PDF — Por Estudiante</span></div>
       <div class="fld"><label>Seleccionar Estudiante</label>
         <select id="expe" onchange="renderExpUI()">
           <option value="">Seleccionar...</option>
@@ -3347,7 +3347,7 @@ function pgAExp(){
     </div>
   </div>
   <!-- Boletín por salón -->
-  <div class="card" style="margin-top:0"><div class="chd"><span class="cti">🏫 Boletín PDF — Por Salón</span></div>
+  <div class="card" style="margin-top:0"><div class="chd"><span class="cti"><i class="fas fa-school"></i> Boletín PDF — Por Salón</span></div>
     <div class="al alb" style="font-size:12px;margin-bottom:14px">
       Selecciona un salón para ver todos sus estudiantes y descargar sus boletines de manera individual.
     </div>
@@ -3367,7 +3367,7 @@ function pgAExp(){
         </select>
       </div>
     </div>
-    <div id="expSalonW"><div class="mty"><div class="ei">🏫</div><p>Selecciona un salón</p></div></div>
+    <div id="expSalonW"><div class="mty"><div class="ei"><i class="fas fa-school"></i></div><p>Selecciona un salón</p></div></div>
   </div>`;
 }
 function renderExpUI(){
@@ -3379,13 +3379,13 @@ function renderExpUI(){
 function renderExpSalon(){
   const salon=gi('expSalon')?.value,box=gi('expSalonW');
   if(!box)return;
-  if(!salon){box.innerHTML='<div class="mty"><div class="ei">🏫</div><p>Selecciona un salón</p></div>';return;}
+  if(!salon){box.innerHTML='<div class="mty"><div class="ei"><i class="fas fa-school"></i></div><p>Selecciona un salón</p></div>';return;}
   const ests=ebySalon(salon);
-  if(!ests.length){box.innerHTML='<div class="mty"><div class="ei">🎓</div><p>Sin estudiantes en este salón</p></div>';return;}
+  if(!ests.length){box.innerHTML='<div class="mty"><div class="ei"><i class="fas fa-graduation-cap"></i></div><p>Sin estudiantes en este salón</p></div>';return;}
   box.innerHTML=`
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
       <strong style="font-size:14px;color:var(--nv)">${salon} — ${ests.length} estudiante(s)</strong>
-      <button class="btn bs sm" onclick="dlSalonTodos()">📄 Descargar todos (zip individual)</button>
+      <button class="btn bs sm" onclick="dlSalonTodos()"><i class="fas fa-file-lines"></i> Descargar todos (zip individual)</button>
     </div>
     <div class="tw"><table><thead>
       <tr><th>Nombre</th><th>T.I.</th><th>Prom. General</th><th>Puesto</th><th>Descargar Boletín</th></tr>
@@ -3398,7 +3398,7 @@ function renderExpSalon(){
         <td style="font-weight:700">${ps}°</td>
         <td>
           <div style="display:flex;gap:6px;flex-wrap:wrap">
-            <button class="btn xs bg" onclick="dlBSalon('${e.id}','TODOS')">📄 Todos</button>
+            <button class="btn xs bg" onclick="dlBSalon('${e.id}','TODOS')"><i class="fas fa-file-lines"></i> Todos</button>
             ${DB.pers.map(p=>`<button class="btn xs bg" onclick="dlBSalon('${e.id}','${encodeURIComponent(p)}')">${p}</button>`).join('')}
           </div>
         </td>
@@ -3439,13 +3439,13 @@ function dlSalonTodos(){
 ============================================================ */
 function pgAHist(){
   return`<div class="ph"><h2>Historial de Estudiantes</h2>
-    <p>Registro de todos los estudiantes que alguna vez fueron dados de alta en el sistema.</p><button class="btn xs bg" onclick="showHelp('ahist')" style="margin-top:6px">❓ Ayuda</button></div>
+    <p>Registro de todos los estudiantes que alguna vez fueron dados de alta en el sistema.</p><button class="btn xs bg" onclick="showHelp('ahist')" style="margin-top:6px"><i class="fas fa-circle-question"></i> Ayuda</button></div>
   <div class="card">
     <div class="chd">
-      <span class="cti">📚 Registro Histórico (${(DB.estHist||[]).length})</span>
+      <span class="cti"><i class="fas fa-book"></i> Registro Histórico (${(DB.estHist||[]).length})</span>
     </div>
     <div style="display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap">
-      <input id="histQ" placeholder="🔍 Buscar por nombre, T.I. o salón..." style="flex:1;min-width:220px;padding:9px 14px;border:1.5px solid var(--bd);border-radius:var(--r);font-size:14px;outline:none" oninput="filtrarHist()">
+      <input id="histQ" placeholder="<i class="fas fa-magnifying-glass"></i> Buscar por nombre, T.I. o salón..." style="flex:1;min-width:220px;padding:9px 14px;border:1.5px solid var(--bd);border-radius:var(--r);font-size:14px;outline:none" oninput="filtrarHist()">
       <select id="histFiltro" style="padding:9px 12px;border:1.5px solid var(--bd);border-radius:var(--r);font-size:13px;outline:none" onchange="filtrarHist()">
         <option value="todos">Todos</option>
         <option value="activo">Solo Activos</option>
@@ -3456,7 +3456,7 @@ function pgAHist(){
   </div>`;
 }
 function renderHistTabla(lista){
-  if(!lista.length) return'<div class="mty"><div class="ei">📚</div><p>Sin registros</p></div>';
+  if(!lista.length) return'<div class="mty"><div class="ei"><i class="fas fa-book"></i></div><p>Sin registros</p></div>';
   return`<div class="tw"><table><thead>
     <tr><th>Nombre</th><th>T.I.</th><th>Salón</th><th>Registrado</th><th>Estado</th><th>Eliminado</th><th>Acciones</th></tr>
   </thead><tbody>${lista.map(h=>`<tr>
@@ -3467,8 +3467,8 @@ function renderHistTabla(lista){
     <td><span class="bdg ${h.activo?'bgr':'brd'}">${h.activo?'Activo':'Eliminado'}</span></td>
     <td style="font-family:var(--mn);font-size:11px;color:var(--sl3)">${h.eliminado||'—'}</td>
     <td style="display:flex;gap:6px;flex-wrap:wrap">
-      <button class="btn xs bg" onclick="verHistAcademico('${h.id}')">📊 Ver notas</button>
-      ${!h.activo?`<button class="btn xs bn" onclick="restaurarEst('${h.id}')">♻️ Restaurar</button>`:''}
+      <button class="btn xs bg" onclick="verHistAcademico('${h.id}')"><i class="fas fa-chart-column"></i> Ver notas</button>
+      ${!h.activo?`<button class="btn xs bn" onclick="restaurarEst('${h.id}')"><i class="fas fa-recycle"></i> Restaurar</button>`:''}
     </td>
   </tr>`).join('')}</tbody></table></div>`;
 }
@@ -3514,7 +3514,7 @@ function verHistAcademico(eid){
         <td style="padding:5px 9px;border-bottom:1px solid #e2e8f0;text-align:center;font-size:12px">${t.c.toFixed(1)}</td>
         <td style="padding:5px 9px;border-bottom:1px solid #e2e8f0;text-align:center;font-size:12px">${t.r.toFixed(1)}</td>
         <td style="padding:5px 9px;border-bottom:1px solid #e2e8f0;text-align:center;font-weight:800;font-size:12px;color:${scCol(d)}">${d.toFixed(2)}</td>
-        <td style="padding:5px 9px;border-bottom:1px solid #e2e8f0;text-align:center;font-size:11px;color:${d===0?'#a0aec0':d>=3?'#276749':'#c53030'}">${d===0?'—':d>=3?'✓':'✗'}</td>
+        <td style="padding:5px 9px;border-bottom:1px solid #e2e8f0;text-align:center;font-size:11px;color:${d===0?'#a0aec0':d>=3?'#276749':'#c53030'}">${d===0?'—':d>=3?'<i class="fas fa-check"></i>':'<i class="fas fa-xmark"></i>'}</td>
       </tr>`;
     }).join('');
     const prom=mats.length?+(mats.reduce((s,m)=>s+def(pd[m]||{a:0,c:0,r:0}),0)/mats.length).toFixed(2):0;
@@ -3532,7 +3532,7 @@ function verHistAcademico(eid){
           <th style="padding:5px 9px;text-align:center;font-size:11px">Act.</th>
           <th style="padding:5px 9px;text-align:center;font-size:11px">Res.</th>
           <th style="padding:5px 9px;text-align:center;font-size:11px">Def.</th>
-          <th style="padding:5px 9px;text-align:center;font-size:11px">✓</th>
+          <th style="padding:5px 9px;text-align:center;font-size:11px"><i class="fas fa-check"></i></th>
         </tr></thead>
         <tbody>${matRows}</tbody>
       </table>
@@ -3547,9 +3547,9 @@ function verHistAcademico(eid){
   const presentes=total-ausentes-tarde;
   const asistHTML=total
     ?`<div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:8px">
-        <span style="background:#c6f6d5;color:#276749;padding:4px 10px;border-radius:6px;font-size:12px;font-weight:700">✓ Presente: ${presentes}</span>
-        <span style="background:#fed7d7;color:#c53030;padding:4px 10px;border-radius:6px;font-size:12px;font-weight:700">✗ Ausente: ${ausentes}</span>
-        <span style="background:#fefcbf;color:#744210;padding:4px 10px;border-radius:6px;font-size:12px;font-weight:700">⏰ Tarde: ${tarde}</span>
+        <span style="background:#c6f6d5;color:#276749;padding:4px 10px;border-radius:6px;font-size:12px;font-weight:700"><i class="fas fa-check"></i> Presente: ${presentes}</span>
+        <span style="background:#fed7d7;color:#c53030;padding:4px 10px;border-radius:6px;font-size:12px;font-weight:700"><i class="fas fa-xmark"></i> Ausente: ${ausentes}</span>
+        <span style="background:#fefcbf;color:#744210;padding:4px 10px;border-radius:6px;font-size:12px;font-weight:700"><i class="fas fa-clock"></i> Tarde: ${tarde}</span>
         <span style="background:#e2e8f0;color:#4a5568;padding:4px 10px;border-radius:6px;font-size:12px">Total registros: ${total}</span>
       </div>`
     :'<p style="color:#a0aec0;font-size:12px;margin-top:6px">Sin registros de asistencia.</p>';
@@ -3598,18 +3598,18 @@ function verHistAcademico(eid){
 
   const dlSection=hayDatos&&anosDisponibles.length
     ?`<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:10px;padding-top:10px;border-top:1px solid #e2e8f0">
-        ${!eActive?`<span style="font-size:11px;color:#c53030;font-weight:700;background:#fff5f5;padding:3px 8px;border-radius:5px;border:1px solid #fed7d7">📁 Archivo histórico</span>`:''}
+        ${!eActive?`<span style="font-size:11px;color:#c53030;font-weight:700;background:#fff5f5;padding:3px 8px;border-radius:5px;border:1px solid #fed7d7"><i class="fas fa-folder"></i> Archivo histórico</span>`:''}
         <label style="font-size:12px;font-weight:700;color:var(--sl)">Año lectivo:</label>
         <select id="haAnno" style="padding:6px 10px;border:1.5px solid var(--bd);border-radius:6px;font-size:13px;outline:none">${annoOpts}</select>
-        ${persConDatos.length>1?`<button class="btn bb sm" onclick="_dlHistBol('${eid}','TODOS')">📋 Todos los Periodos</button>`:''}
-        ${persConDatos.map(p=>`<button class="btn bg sm" onclick="_dlHistBol('${eid}','${encodeURIComponent(p)}')">📄 ${p}</button>`).join('')}
+        ${persConDatos.length>1?`<button class="btn bb sm" onclick="_dlHistBol('${eid}','TODOS')"><i class="fas fa-clipboard-list"></i> Todos los Periodos</button>`:''}
+        ${persConDatos.map(p=>`<button class="btn bg sm" onclick="_dlHistBol('${eid}','${encodeURIComponent(p)}')"><i class="fas fa-file-lines"></i> ${p}</button>`).join('')}
       </div>`
     :`<div style="margin-top:10px;padding-top:10px;border-top:1px solid #e2e8f0;font-size:12px;color:#a0aec0;font-style:italic">
-        📭 Sin notas registradas — no hay boletín disponible para descargar.
+        <i class="fas fa-envelope-open"></i> Sin notas registradas — no hay boletín disponible para descargar.
       </div>`;
 
   Swal.fire({
-    title:`📊 Historial Académico`,
+    title:`<i class="fas fa-chart-column"></i> Historial Académico`,
     width:700,
     html:`<div style="text-align:left;font-family:var(--fn);max-height:70vh;overflow-y:auto;padding-right:4px">
       <!-- Header info -->
@@ -3635,11 +3635,11 @@ function verHistAcademico(eid){
       </div>
       <!-- Asistencia -->
       <div style="margin-bottom:14px">
-        <div style="font-size:12px;font-weight:800;text-transform:uppercase;color:var(--sl);margin-bottom:4px">📅 Asistencia</div>
+        <div style="font-size:12px;font-weight:800;text-transform:uppercase;color:var(--sl);margin-bottom:4px"><i class="fas fa-calendar-days"></i> Asistencia</div>
         ${asistHTML}
       </div>
       <!-- Notas por periodo -->
-      <div style="font-size:12px;font-weight:800;text-transform:uppercase;color:var(--sl);margin-bottom:8px">📝 Notas por Periodo</div>
+      <div style="font-size:12px;font-weight:800;text-transform:uppercase;color:var(--sl);margin-bottom:8px"><i class="fas fa-pen-to-square"></i> Notas por Periodo</div>
       ${perRows}
     </div>`,
     showConfirmButton:false,
@@ -3683,20 +3683,20 @@ function filtrarHist(){
 ============================================================ */
 function _comColorStyle(color){
   const map={
-    azul:   {bg:'#ebf8ff',border:'#3182ce',icon:'🔵',badge:'#3182ce'},
-    verde:  {bg:'#f0fff4',border:'#38a169',icon:'🟢',badge:'#38a169'},
-    naranja:{bg:'#fffaf0',border:'#dd6b20',icon:'🟠',badge:'#dd6b20'},
-    rojo:   {bg:'#fff5f5',border:'#e53e3e',icon:'🔴',badge:'#e53e3e'},
-    morado: {bg:'#faf5ff',border:'#805ad5',icon:'🟣',badge:'#805ad5'},
+    azul:   {bg:'#ebf8ff',border:'#3182ce',icon:'<i class="fas fa-circle"></i>',badge:'#3182ce'},
+    verde:  {bg:'#f0fff4',border:'#38a169',icon:'<i class="fas fa-circle"></i>',badge:'#38a169'},
+    naranja:{bg:'#fffaf0',border:'#dd6b20',icon:'<i class="fas fa-circle"></i>',badge:'#dd6b20'},
+    rojo:   {bg:'#fff5f5',border:'#e53e3e',icon:'<i class="fas fa-circle"></i>',badge:'#e53e3e'},
+    morado: {bg:'#faf5ff',border:'#805ad5',icon:'<i class="fas fa-circle"></i>',badge:'#805ad5'},
   };
   return map[color]||map.azul;
 }
 
 function pgACom(){
-  return`<div class="ph"><h2>📢 Comunicados</h2><button class="btn xs bg" onclick="showHelp('acom')" style="margin-top:6px">❓ Ayuda</button></div>
+  return`<div class="ph"><h2><i class="fas fa-bullhorn"></i> Comunicados</h2><button class="btn xs bg" onclick="showHelp('acom')" style="margin-top:6px"><i class="fas fa-circle-question"></i> Ayuda</button></div>
   <div class="g2">
     <div class="card">
-      <div class="chd"><span class="cti">➕ Nuevo Comunicado</span></div>
+      <div class="chd"><span class="cti"><i class="fas fa-plus"></i> Nuevo Comunicado</span></div>
       <div class="fg">
         <div class="fld" style="grid-column:1/-1"><label>Título</label>
           <input id="comTit" placeholder="Ej: Reunión de padres de familia" style="width:100%">
@@ -3706,18 +3706,18 @@ function pgACom(){
         </div>
         <div class="fld"><label>Dirigido a</label>
           <select id="comPara">
-            <option value="todos">👥 Todos (profesores y estudiantes)</option>
-            <option value="profe">👩‍🏫 Solo Profesores</option>
-            <option value="est">🎓 Solo Estudiantes</option>
+            <option value="todos"><i class="fas fa-users"></i> Todos (profesores y estudiantes)</option>
+            <option value="profe"><i class="fas fa-chalkboard-user"></i> Solo Profesores</option>
+            <option value="est"><i class="fas fa-graduation-cap"></i> Solo Estudiantes</option>
           </select>
         </div>
         <div class="fld"><label>Color / Tipo</label>
           <select id="comColor">
-            <option value="azul">🔵 Azul — Informativo</option>
-            <option value="verde">🟢 Verde — Positivo / Éxito</option>
-            <option value="naranja">🟠 Naranja — Atención</option>
-            <option value="rojo">🔴 Rojo — Urgente</option>
-            <option value="morado">🟣 Morado — Evento especial</option>
+            <option value="azul"><i class="fas fa-circle"></i> Azul — Informativo</option>
+            <option value="verde"><i class="fas fa-circle"></i> Verde — Positivo / Éxito</option>
+            <option value="naranja"><i class="fas fa-circle"></i> Naranja — Atención</option>
+            <option value="rojo"><i class="fas fa-circle"></i> Rojo — Urgente</option>
+            <option value="morado"><i class="fas fa-circle"></i> Morado — Evento especial</option>
           </select>
         </div>
         <div class="fld"><label>Fecha inicio</label>
@@ -3727,11 +3727,11 @@ function pgACom(){
           <input type="date" id="comFf">
         </div>
       </div>
-      <button class="btn bn" style="margin-top:12px" onclick="publicarComunicado()">📢 Publicar Comunicado</button>
+      <button class="btn bn" style="margin-top:12px" onclick="publicarComunicado()"><i class="fas fa-bullhorn"></i> Publicar Comunicado</button>
     </div>
     <div class="card">
-      <div class="chd"><span class="cti">📋 Comunicados Creados</span></div>
-      <div id="comListW"><div class="mty"><div class="ei">📢</div><p>Cargando…</p></div></div>
+      <div class="chd"><span class="cti"><i class="fas fa-clipboard-list"></i> Comunicados Creados</span></div>
+      <div id="comListW"><div class="mty"><div class="ei"><i class="fas fa-bullhorn"></i></div><p>Cargando…</p></div></div>
     </div>
   </div>`;
 }
@@ -3752,31 +3752,31 @@ async function renderComList(){
   const el=gi('comListW');if(!el)return;
   try{
     const lista=await cargarTodosComunicados();
-    if(!lista.length){el.innerHTML='<div class="mty"><div class="ei">📢</div><p>Sin comunicados creados</p></div>';return;}
+    if(!lista.length){el.innerHTML='<div class="mty"><div class="ei"><i class="fas fa-bullhorn"></i></div><p>Sin comunicados creados</p></div>';return;}
     const hoy=today();
     el.innerHTML=lista.map(c=>{
       const cs=_comColorStyle(c.color);
       const vigente=c.activo&&c.fechaInicio<=hoy&&c.fechaFin>=hoy;
       const esSA=!!(c.esSuperAdmin);
-      const paraLabel={todos:'👥 Todos',profe:'👩‍🏫 Profesores',est:'🎓 Estudiantes'}[c.para]||c.para;
+      const paraLabel={todos:'<i class="fas fa-users"></i> Todos',profe:'<i class="fas fa-chalkboard-user"></i> Profesores',est:'<i class="fas fa-graduation-cap"></i> Estudiantes'}[c.para]||c.para;
       return`<div style="border:1.5px solid ${cs.border};border-radius:10px;background:${cs.bg};padding:14px;margin-bottom:10px">
         <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;flex-wrap:wrap">
           <div style="flex:1;min-width:0">
-            <div style="font-weight:800;font-size:14px;margin-bottom:4px">${cs.icon} ${esc(c.titulo)} ${esSA?'<span class="bdg" style="background:#553c9a;color:#fff;font-size:9px">🌐 Plataforma</span>':''}</div>
+            <div style="font-weight:800;font-size:14px;margin-bottom:4px">${cs.icon} ${esc(c.titulo)} ${esSA?'<span class="bdg" style="background:#553c9a;color:#fff;font-size:9px"><i class="fas fa-globe"></i> Plataforma</span>':''}</div>
             <div style="font-size:12px;color:var(--sl2);white-space:pre-line;line-height:1.6">${esc(c.mensaje)}</div>
           </div>
           <div style="display:flex;flex-direction:column;gap:6px;align-items:flex-end;flex-shrink:0">
             <span class="bdg" style="background:${cs.badge};color:#fff;font-size:10px">${paraLabel}</span>
-            <span class="bdg ${vigente?'bgr':'brd'}" style="font-size:10px">${vigente?'✅ Activo':'⭕ Inactivo'}</span>
+            <span class="bdg ${vigente?'bgr':'brd'}" style="font-size:10px">${vigente?'<i class="fas fa-circle-check"></i> Activo':'<i class="fas fa-circle"></i> Inactivo'}</span>
           </div>
         </div>
         <div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px;flex-wrap:wrap;gap:8px">
-          <span style="font-size:11px;color:var(--sl3)">📅 ${c.fechaInicio} → ${c.fechaFin}</span>
+          <span style="font-size:11px;color:var(--sl3)"><i class="fas fa-calendar-days"></i> ${c.fechaInicio} → ${c.fechaFin}</span>
           ${esSA
             ? `<span style="font-size:11px;color:#805ad5;font-style:italic">Solo lectura — enviado por la plataforma</span>`
             : `<div style="display:flex;gap:8px">
-                <button class="btn xs ${c.activo?'brd':'bgr'} sm" onclick="toggleComunicado('${c.id}',${!c.activo})">${c.activo?'⏸ Desactivar':'▶ Activar'}</button>
-                <button class="btn xs br sm" onclick="borrarComunicado('${c.id}')">🗑️ Eliminar</button>
+                <button class="btn xs ${c.activo?'brd':'bgr'} sm" onclick="toggleComunicado('${c.id}',${!c.activo})">${c.activo?'<i class="fas fa-circle-pause"></i> Desactivar':'<i class="fas fa-circle-play"></i> Activar'}</button>
+                <button class="btn xs br sm" onclick="borrarComunicado('${c.id}')"><i class="fas fa-trash"></i> Eliminar</button>
               </div>`
           }
         </div>
@@ -3798,7 +3798,7 @@ async function publicarComunicado(){
   if(fi>ff){sw('warning','La fecha de fin debe ser igual o posterior al inicio');return;}
   const com=await crearComunicado({titulo:tit,mensaje:msg,para,color,fechaInicio:fi,fechaFin:ff});
   if(com){
-    sw('success','📢 Comunicado publicado');
+    sw('success','<i class="fas fa-bullhorn"></i> Comunicado publicado');
     gi('comTit').value='';gi('comMsg').value='';
     await renderComList();
   }
@@ -3823,34 +3823,34 @@ async function editarComunicado(id,d){ /* implementado en api-layer.js */ }
 async function eliminarComunicado(id){ /* implementado en api-layer.js */ }
 async function cargarTodosComunicados(){ /* implementado en api-layer.js */ }
 
-function pgAExc(){return`<div class="ph"><h2>Excusas Recibidas</h2><p>Horario de envío: ${(DB.excHorario?.ini??18)}:00 – ${(DB.excHorario?.fin??7)}:00</p><button class="btn xs bg" onclick="showHelp('aexc')" style="margin-top:6px">❓ Ayuda</button></div><div id="aexcB"></div>`;}
+function pgAExc(){return`<div class="ph"><h2>Excusas Recibidas</h2><p>Horario de envío: ${(DB.excHorario?.ini??18)}:00 – ${(DB.excHorario?.fin??7)}:00</p><button class="btn xs bg" onclick="showHelp('aexc')" style="margin-top:6px"><i class="fas fa-circle-question"></i> Ayuda</button></div><div id="aexcB"></div>`;}
 function initAExc(){
   const el=gi('aexcB');if(!el)return;
   const list=(DB.exc||[]).slice().reverse();
-  if(!list.length){el.innerHTML='<div class="mty"><div class="ei">✉️</div><p>Sin excusas</p></div>';return;}
+  if(!list.length){el.innerHTML='<div class="mty"><div class="ei"><i class="fas fa-envelope"></i></div><p>Sin excusas</p></div>';return;}
   el.innerHTML=list.map(x=>{
     const yaRespondida=!!(x.respProf);
-    const talleresList=(x.talleres||[]).map(t=>`<div style="font-size:11px;padding:3px 7px;background:#ebf8ff;border-radius:5px;display:inline-block;margin:2px">📎 ${t.nombre}</div>`).join('');
+    const talleresList=(x.talleres||[]).map(t=>`<div style="font-size:11px;padding:3px 7px;background:#ebf8ff;border-radius:5px;display:inline-block;margin:2px"><i class="fas fa-paperclip"></i> ${t.nombre}</div>`).join('');
     return`<div class="card" style="margin-bottom:12px">
       <div class="chd" style="display:flex;justify-content:space-between;align-items:center">
-        <span class="cti">✉️ ${x.enombre} <span class="bdg bgy" style="font-size:10px">${x.salon||'—'}</span></span>
-        <span class="bdg ${yaRespondida?'bgr':'bor'}">${yaRespondida?'✅ Respondida':'⏳ Sin respuesta'}</span>
+        <span class="cti"><i class="fas fa-envelope"></i> ${x.enombre} <span class="bdg bgy" style="font-size:10px">${x.salon||'—'}</span></span>
+        <span class="bdg ${yaRespondida?'bgr':'bor'}">${yaRespondida?'<i class="fas fa-circle-check"></i> Respondida':'<i class="fas fa-hourglass-half"></i> Sin respuesta'}</span>
       </div>
       <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:8px">
-        <span style="font-size:12px">📅 <strong>Fecha:</strong> ${x.fecha}</span>
-        <span style="font-size:12px">👤 <strong>Dirigida a:</strong> ${x.dest}</span>
-        <span style="font-size:12px">📋 <strong>Causa:</strong> <span class="bdg bor">${x.causa}</span></span>
-        <span style="font-size:12px">🕐 ${x.ts?.split(',')[1]?.trim()||'—'}</span>
+        <span style="font-size:12px"><i class="fas fa-calendar-days"></i> <strong>Fecha:</strong> ${x.fecha}</span>
+        <span style="font-size:12px"><i class="fas fa-user"></i> <strong>Dirigida a:</strong> ${x.dest}</span>
+        <span style="font-size:12px"><i class="fas fa-clipboard-list"></i> <strong>Causa:</strong> <span class="bdg bor">${x.causa}</span></span>
+        <span style="font-size:12px"><i class="fas fa-clock"></i> ${x.ts?.split(',')[1]?.trim()||'—'}</span>
       </div>
-      ${x.desc?`<div style="font-size:12px;color:var(--sl2);margin-bottom:8px">💬 ${x.desc}</div>`:''}
+      ${x.desc?`<div style="font-size:12px;color:var(--sl2);margin-bottom:8px"><i class="fas fa-comment"></i> ${x.desc}</div>`:''}
       ${yaRespondida?`<div style="background:#f0fff4;border-radius:8px;padding:10px;margin-bottom:8px;font-size:12px">
-        <strong>✅ Respuesta de ${x.respProfNombre||'Profesor'}:</strong> ${x.respProf}
-        ${x.diasExtra>0?`<br>⏰ <strong>Tiempo prolongado:</strong> ${x.diasExtra} día(s) extra — Entrega límite: ${x.fechaLimite||'—'}`:''}
-        ${talleresList?`<br><div style="margin-top:5px">📚 Talleres adjuntos:<br>${talleresList}</div>`:''}
+        <strong><i class="fas fa-circle-check"></i> Respuesta de ${x.respProfNombre||'Profesor'}:</strong> ${x.respProf}
+        ${x.diasExtra>0?`<br><i class="fas fa-clock"></i> <strong>Tiempo prolongado:</strong> ${x.diasExtra} día(s) extra — Entrega límite: ${x.fechaLimite||'—'}`:''}
+        ${talleresList?`<br><div style="margin-top:5px"><i class="fas fa-book"></i> Talleres adjuntos:<br>${talleresList}</div>`:''}
         <div style="font-size:10px;color:var(--sl3);margin-top:4px">${x.respTs||''} ${x.respLeida?'<span class=\'bdg bgr\' style=\'font-size:9px\'>Vista por estudiante</span>':''}</div>
       </div>`:''}
       <button class="btn ${yaRespondida?'bs':'bn'} sm" onclick="responderExcusa('${x._id}')">
-        ${yaRespondida?'✏️ Editar respuesta':'📨 Responder con talleres'}
+        ${yaRespondida?'<i class="fas fa-pen"></i> Editar respuesta':'<i class="fas fa-envelope"></i> Responder con talleres'}
       </button>
     </div>`;
   }).join('');
@@ -3883,13 +3883,13 @@ async function responderExcusa(excId){
       <input type="file" id="rpFiles" multiple accept=".pdf,.doc,.docx,.jpg,.png,.xlsx,.txt"
         style="width:100%;padding:8px;border:1.5px solid var(--bd);border-radius:var(--r);font-size:12px;background:var(--bg2)">
       <div id="rpFileList" style="margin-top:6px">
-        ${(exc.talleres||[]).map(t=>`<div style="font-size:11px;padding:3px 7px;background:#ebf8ff;border-radius:5px;display:inline-block;margin:2px">📎 ${t.nombre}</div>`).join('')}
+        ${(exc.talleres||[]).map(t=>`<div style="font-size:11px;padding:3px 7px;background:#ebf8ff;border-radius:5px;display:inline-block;margin:2px"><i class="fas fa-paperclip"></i> ${t.nombre}</div>`).join('')}
       </div>
     </div>
   </div>`;
   const res=await Swal.fire({
-    title:'📨 Responder Excusa',width:520,html,showCancelButton:true,
-    confirmButtonText:'✅ Enviar respuesta',cancelButtonText:'Cancelar',
+    title:'<i class="fas fa-envelope"></i> Responder Excusa',width:520,html,showCancelButton:true,
+    confirmButtonText:'<i class="fas fa-circle-check"></i> Enviar respuesta',cancelButtonText:'Cancelar',
     confirmButtonColor:'#2b6cb0',
     preConfirm:async()=>{
       const resp=gi('rpResp')?.value.trim();
@@ -3930,7 +3930,7 @@ async function responderExcusa(excId){
     // Mostrar confirmación con resumen de lo enviado
     await Swal.fire({
       icon:'success',
-      title:'✅ Respuesta enviada',
+      title:'<i class="fas fa-circle-check"></i> Respuesta enviada',
       html:`<div style="text-align:left;font-family:var(--fn);font-size:13px">
         <div style="background:#f0fff4;border-radius:8px;padding:10px;margin-bottom:10px">
           <strong>Estudiante:</strong> ${exc.enombre}<br>
@@ -3939,7 +3939,7 @@ async function responderExcusa(excId){
           ${talleres.length?`<strong>Talleres adjuntos:</strong> ${talleres.length} archivo(s)`:''}
         </div>
         <div style="background:#fffbeb;border:1.5px solid #f6ad55;border-radius:8px;padding:10px;font-size:12px;color:#c05621">
-          ⚠️ El estudiante verá esta respuesta en su bandeja de excusas junto con el recordatorio de entregar el trabajo a tiempo.
+          <i class="fas fa-triangle-exclamation"></i> El estudiante verá esta respuesta en su bandeja de excusas junto con el recordatorio de entregar el trabajo a tiempo.
         </div>
       </div>`,
       confirmButtonText:'Aceptar',
@@ -3952,11 +3952,11 @@ async function responderExcusa(excId){
 /* ============================================================
    ADMIN — CLASES VIRTUALES
 ============================================================ */
-function pgAVcl(){return`<div class="ph"><h2>💻 Clases Virtuales</h2><button class="btn xs bg" onclick="showHelp('avcl')" style="margin-top:6px">❓ Ayuda</button></div><div id="avcB"></div>`;}
+function pgAVcl(){return`<div class="ph"><h2><i class="fas fa-laptop"></i> Clases Virtuales</h2><button class="btn xs bg" onclick="showHelp('avcl')" style="margin-top:6px"><i class="fas fa-circle-question"></i> Ayuda</button></div><div id="avcB"></div>`;}
 function initAVcl(){
   const el=gi('avcB');if(!el)return;
   const clases=(DB.vclases||[]).slice().reverse();
-  el.innerHTML=`<div class="card"><div class="chd"><span class="cti">📅 Clases Programadas (${clases.length})</span></div>
+  el.innerHTML=`<div class="card"><div class="chd"><span class="cti"><i class="fas fa-calendar-days"></i> Clases Programadas (${clases.length})</span></div>
   ${clases.length?`<div class="tw"><table><thead>
     <tr><th>Salón</th><th>Profesor</th><th>Fecha</th><th>Hora</th><th>Tema</th><th>Estado</th></tr></thead>
     <tbody>${clases.map(c=>{
@@ -3965,10 +3965,10 @@ function initAVcl(){
       const diffMin=(ahora-claseTs)/60000;
       const activa = c.activa || (diffMin>=-10 && diffMin<=120);
       const estado = activa
-        ? `<span class="bdg" style="background:#d1fae5;color:#065f46;border:1px solid #6ee7b7">🟢 En vivo</span>`
+        ? `<span class="bdg" style="background:#d1fae5;color:#065f46;border:1px solid #6ee7b7"><i class="fas fa-circle"></i> En vivo</span>`
         : diffMin>120
           ? `<span class="bdg bgy">Finalizada</span>`
-          : `<span class="bdg" style="background:#eff6ff;color:#1e40af;border:1px solid #bfdbfe">📅 Programada</span>`;
+          : `<span class="bdg" style="background:#eff6ff;color:#1e40af;border:1px solid #bfdbfe"><i class="fas fa-calendar-days"></i> Programada</span>`;
       return`<tr>
         <td><span class="bdg bgy">${c.salon}</span></td>
         <td>${c.profNombre||'—'}</td>
@@ -3978,7 +3978,7 @@ function initAVcl(){
         <td>${estado}</td>
       </tr>`;
     }).join('')}</tbody></table></div>`
-    :'<div class="mty"><div class="ei">💻</div><p>Sin clases programadas</p></div>'}
+    :'<div class="mty"><div class="ei"><i class="fas fa-laptop"></i></div><p>Sin clases programadas</p></div>'}
   </div>`;
 }
 
@@ -3987,8 +3987,8 @@ function initAVcl(){
    PROFE / ESTUDIANTE — VER COMUNICADOS (solo lectura)
 ============================================================ */
 function pgComVer(){
-  return`<div class="ph"><h2>📢 Comunicados</h2><p>Avisos del colegio para ti</p></div>
-  <div id="comVerW"><div class="mty"><div class="ei">📢</div><p>Cargando…</p></div></div>`;
+  return`<div class="ph"><h2><i class="fas fa-bullhorn"></i> Comunicados</h2><p>Avisos del colegio para ti</p></div>
+  <div id="comVerW"><div class="mty"><div class="ei"><i class="fas fa-bullhorn"></i></div><p>Cargando…</p></div></div>`;
 }
 function initComVer(){
   const el=gi('comVerW');if(!el)return;
@@ -4009,15 +4009,15 @@ function _renderComVer(el){
     return c.para===role;
   });
   if(!coms.length){
-    el.innerHTML='<div class="card"><div class="mty"><div class="ei">📢</div><p>No hay comunicados activos en este momento</p></div></div>';
+    el.innerHTML='<div class="card"><div class="mty"><div class="ei"><i class="fas fa-bullhorn"></i></div><p>No hay comunicados activos en este momento</p></div></div>';
     return;
   }
   const colorMap={
-    azul:  {hdr:'#2b6cb0',bg:'#ebf8ff',border:'#bee3f8',icon:'🔵'},
-    verde: {hdr:'#276749',bg:'#f0fff4',border:'#9ae6b4',icon:'🟢'},
-    naranja:{hdr:'#c05621',bg:'#fffaf0',border:'#fbd38d',icon:'🟠'},
-    rojo:  {hdr:'#c53030',bg:'#fff5f5',border:'#feb2b2',icon:'🔴'},
-    morado:{hdr:'#553c9a',bg:'#faf5ff',border:'#d6bcfa',icon:'🟣'},
+    azul:  {hdr:'#2b6cb0',bg:'#ebf8ff',border:'#bee3f8',icon:'<i class="fas fa-circle"></i>'},
+    verde: {hdr:'#276749',bg:'#f0fff4',border:'#9ae6b4',icon:'<i class="fas fa-circle"></i>'},
+    naranja:{hdr:'#c05621',bg:'#fffaf0',border:'#fbd38d',icon:'<i class="fas fa-circle"></i>'},
+    rojo:  {hdr:'#c53030',bg:'#fff5f5',border:'#feb2b2',icon:'<i class="fas fa-circle"></i>'},
+    morado:{hdr:'#553c9a',bg:'#faf5ff',border:'#d6bcfa',icon:'<i class="fas fa-circle"></i>'},
   };
   el.innerHTML=coms.map(c=>{
     const cs=colorMap[c.color]||colorMap.azul;
@@ -4025,8 +4025,8 @@ function _renderComVer(el){
       <div style="font-weight:800;font-size:16px;color:${cs.hdr};margin-bottom:8px">${cs.icon} ${esc(c.titulo)}</div>
       <div style="font-size:14px;color:#2d3748;white-space:pre-line;line-height:1.8">${esc(c.mensaje)}</div>
       <div style="font-size:11px;color:#718096;margin-top:10px;display:flex;gap:16px;flex-wrap:wrap">
-        <span>📅 Vigente hasta: <strong>${c.fechaFin}</strong></span>
-        ${c.creadoPor?`<span>👤 Publicado por: <strong>${esc(c.creadoPor)}</strong></span>`:''}
+        <span><i class="fas fa-calendar-days"></i> Vigente hasta: <strong>${c.fechaFin}</strong></span>
+        ${c.creadoPor?`<span><i class="fas fa-user"></i> Publicado por: <strong>${esc(c.creadoPor)}</strong></span>`:''}
       </div>
     </div>`;
   }).join('');
@@ -4072,7 +4072,7 @@ function pgPH(){
     if(!horario||!franjas.length){
       // Placeholder elegante cuando no hay horario asignado
       return`<div style="text-align:center;padding:32px 20px;color:var(--sl3)">
-        <div style="font-size:36px;margin-bottom:10px">📅</div>
+        <div style="font-size:36px;margin-bottom:10px"><i class="fas fa-calendar-days"></i></div>
         <div style="font-size:14px;font-weight:600;color:var(--sl2);margin-bottom:4px">Horario no configurado</div>
         <div style="font-size:12px">El administrador debe asignar tu horario desde la configuración del colegio.</div>
       </div>`;
@@ -4106,7 +4106,7 @@ function pgPH(){
     <div>
       <h2 style="margin-bottom:4px">Bienvenido, ${esc(p.nombre)}</h2>
       <span class="bdg ${isBach?'bte':'bbl'}" style="font-size:11px">${isBach?'Bachillerato':'Primaria'}</span>
-      <button class="btn xs bg" onclick="showHelp('ph')" style="margin-left:8px">❓ Ayuda</button>
+      <button class="btn xs bg" onclick="showHelp('ph')" style="margin-left:8px"><i class="fas fa-circle-question"></i> Ayuda</button>
     </div>
     ${_logoP?`<img src="${_logoP}" alt="Logo" style="height:56px;width:auto;max-width:100px;object-fit:contain;border-radius:10px;background:var(--bg2);padding:4px">`:
     `<div style="font-size:22px;font-weight:800;color:var(--nv)">${_nomP||''}</div>`}
@@ -4114,19 +4114,19 @@ function pgPH(){
 
   <!-- STATS ROW -->
   <div class="sr" style="margin-bottom:18px">
-    <div class="scc" data-i="🏫"><div class="sv">${sals.length}</div><div class="sl">Salones</div><div class="bar"></div></div>
-    <div class="scc" data-i="📚"><div class="sv">${matCards.length||sals.reduce((t,s)=>t+getProfMatsSalon(p.id,s).length,0)||'—'}</div><div class="sl">Materias</div><div class="bar"></div></div>
-    <div class="scc" data-i="✉️" style="cursor:pointer" onclick="goto('ph');setTimeout(()=>{const t=gi('phTabExc');if(t)t.click();},100)">
-      <div class="sv" style="color:${excPend>0?'var(--red)':'var(--grn)'}">${excPend>0?excPend:'✓'}</div>
+    <div class="scc" data-i="<i class="fas fa-school"></i>"><div class="sv">${sals.length}</div><div class="sl">Salones</div><div class="bar"></div></div>
+    <div class="scc" data-i="<i class="fas fa-book"></i>"><div class="sv">${matCards.length||sals.reduce((t,s)=>t+getProfMatsSalon(p.id,s).length,0)||'—'}</div><div class="sl">Materias</div><div class="bar"></div></div>
+    <div class="scc" data-i="<i class="fas fa-envelope"></i>" style="cursor:pointer" onclick="goto('ph');setTimeout(()=>{const t=gi('phTabExc');if(t)t.click();},100)">
+      <div class="sv" style="color:${excPend>0?'var(--red)':'var(--grn)'}">${excPend>0?excPend:'<i class="fas fa-check"></i>'}</div>
       <div class="sl">${excPend>0?'Excusas pend.':'Sin pendientes'}</div><div class="bar"></div>
     </div>
-    ${pendRec?`<div class="scc" data-i="🔄" style="cursor:pointer" onclick="goto('prec')">
+    ${pendRec?`<div class="scc" data-i="<i class="fas fa-arrows-rotate"></i>" style="cursor:pointer" onclick="goto('prec')">
       <div class="sv" style="color:var(--ora)">${pendRec}</div><div class="sl">Recup. pend.</div><div class="bar"></div>
     </div>`:''}
   </div>
 
   ${pendRec?`<div class="al aly" style="cursor:pointer;margin-bottom:14px" onclick="goto('prec')">
-    🔄 Tienes <strong>${pendRec}</strong> recuperación(es) pendiente(s). <span style="text-decoration:underline">Ver ahora →</span>
+    <i class="fas fa-arrows-rotate"></i> Tienes <strong>${pendRec}</strong> recuperación(es) pendiente(s). <span style="text-decoration:underline">Ver ahora →</span>
   </div>`:''}
 
   <!-- TABS -->
@@ -4135,39 +4135,39 @@ function pgPH(){
       <button id="phTabMats" onclick="phTab('__mats')"
         style="padding:11px 20px;border:none;background:var(--bg);border-bottom:2px solid var(--nv);margin-bottom:-2px;
         font-size:13px;font-weight:800;color:var(--nv);cursor:pointer;white-space:nowrap;display:flex;align-items:center;gap:6px">
-        📚 Mis Materias
+        <i class="fas fa-book"></i> Mis Materias
         <span style="background:var(--nv);color:#fff;border-radius:20px;padding:1px 8px;font-size:10px;font-weight:700">${matCards.length}</span>
       </button>
       <button id="phTabHor" onclick="phTab('__hor')"
         style="padding:11px 20px;border:none;background:transparent;border-bottom:2px solid transparent;
         margin-bottom:-2px;font-size:13px;font-weight:600;color:var(--sl2);cursor:pointer;white-space:nowrap">
-        📅 Mi Horario
+        <i class="fas fa-calendar-days"></i> Mi Horario
       </button>
       <button id="phTabExc" onclick="phTab('__exc')"
         style="padding:11px 20px;border:none;background:transparent;border-bottom:2px solid transparent;
         margin-bottom:-2px;font-size:13px;font-weight:600;color:${excPend>0?'var(--red)':'var(--sl2)'};
         cursor:pointer;white-space:nowrap;display:flex;align-items:center;gap:6px">
-        ✉️ Excusas
+        <i class="fas fa-envelope"></i> Excusas
         ${excPend?`<span style="background:var(--red);color:#fff;border-radius:20px;padding:1px 7px;font-size:10px;font-weight:800">${excPend}</span>`:
-        `<span style="background:#c6f6d5;color:#276749;border-radius:20px;padding:1px 7px;font-size:10px;font-weight:800">✓</span>`}
+        `<span style="background:#c6f6d5;color:#276749;border-radius:20px;padding:1px 7px;font-size:10px;font-weight:800"><i class="fas fa-check"></i></span>`}
       </button>
       <button id="phTabRpt" onclick="phTab('__rpt')"
         style="padding:11px 20px;border:none;background:transparent;border-bottom:2px solid transparent;
         margin-bottom:-2px;font-size:13px;font-weight:600;color:var(--sl2);cursor:pointer;white-space:nowrap">
-        📥 Informes
+        <i class="fas fa-download"></i> Informes
       </button>
     </div>
 
     <!-- Tab content -->
     <div id="phTabContent" style="padding:16px">
-      ${matCards.length?renderPhMatsGrid(matCards,perActivo):'<div class="mty"><div class="ei">📚</div><p>Sin materias asignadas todavía.<br><small style="color:#a0aec0">Pide al admin que te asigne materias por salón.</small></p></div>'}
+      ${matCards.length?renderPhMatsGrid(matCards,perActivo):'<div class="mty"><div class="ei"><i class="fas fa-book"></i></div><p>Sin materias asignadas todavía.<br><small style="color:#a0aec0">Pide al admin que te asigne materias por salón.</small></p></div>'}
     </div>
   </div>`;
 }
 
 /* Renderiza grid de materias para bachillerato */
 function renderPhMatsGrid(matCards,perActivo){
-  if(!matCards.length) return`<div class="mty"><div class="ei">📚</div><p>Sin materias asignadas todavía</p></div>`;
+  if(!matCards.length) return`<div class="mty"><div class="ei"><i class="fas fa-book"></i></div><p>Sin materias asignadas todavía</p></div>`;
 
   // Group by salon
   const bySalon={};
@@ -4181,20 +4181,20 @@ function renderPhMatsGrid(matCards,perActivo){
   return Object.entries(bySalon).map(([sal,cards])=>`
     <div style="margin-bottom:20px">
       <div style="font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--sl2);margin-bottom:10px">
-        🏫 Salón ${sal} · ${ebySalon(sal).length} estudiantes
+        <i class="fas fa-school"></i> Salón ${sal} · ${ebySalon(sal).length} estudiantes
       </div>
       <div class="phMatsGrid">
         ${cards.map(c=>`<div class="phMatCard" onclick="irANotasSalonMat('${c.sal}','${c.mat}')">
-          <div class="phMatCard-salon">📚 ${c.sal}</div>
+          <div class="phMatCard-salon"><i class="fas fa-book"></i> ${c.sal}</div>
           <div class="phMatCard-nombre">${c.mat}</div>
           <div class="phMatCard-stats">
-            <span>✅ ${c.conNotas}/${c.ests}</span>
+            <span><i class="fas fa-circle-check"></i> ${c.conNotas}/${c.ests}</span>
             <span style="margin-left:auto;font-weight:700;color:${colorPct(c.pct)}">${c.pct}%</span>
           </div>
           <div class="phMatCard-progress">
             <div class="phMatCard-progress-bar" style="width:${c.pct}%"></div>
           </div>
-          ${c.excSal?`<div style="font-size:10px;color:var(--red);font-weight:700">⚠️ ${c.excSal} excusa${c.excSal>1?'s':''} pendiente${c.excSal>1?'s':''}</div>`:''}
+          ${c.excSal?`<div style="font-size:10px;color:var(--red);font-weight:700"><i class="fas fa-triangle-exclamation"></i> ${c.excSal} excusa${c.excSal>1?'s':''} pendiente${c.excSal>1?'s':''}</div>`:''}
         </div>`).join('')}
       </div>
     </div>
@@ -4218,7 +4218,7 @@ function irANotasSalonMat(salon,mat){
 /* Renderiza el contenido de un tab de salón */
 function renderPhSalonTab(sal){
   const ests=ebySalon(sal);
-  if(!ests.length) return`<div class="mty"><div class="ei">🎓</div><p>Sin estudiantes en ${sal}</p></div>`;
+  if(!ests.length) return`<div class="mty"><div class="ei"><i class="fas fa-graduation-cap"></i></div><p>Sin estudiantes en ${sal}</p></div>`;
 
   // Stats del salón
   const perActivo=DB.pers[DB.pers.length-1]||'';
@@ -4229,11 +4229,11 @@ function renderPhSalonTab(sal){
   return`
   <!-- Acciones rápidas del salón -->
   <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px;align-items:center">
-    <button class="btn bg" onclick="irANotasSalon('${sal}')">📝 Ingresar notas</button>
-    <button class="btn bs" onclick="irAAsistSalon('${sal}')">✅ Asistencia</button>
-    <button class="btn bs" onclick="selRptProf('${sal}',DB.pers[0]||'','pdf')">📄 PDF Informe</button>
-    <button class="btn bs" onclick="selRptProf('${sal}',DB.pers[0]||'','xls')">📊 Excel</button>
-    ${excSal.length?`<span style="margin-left:auto;font-size:12px;color:var(--red);font-weight:700">⚠️ ${excSal.length} excusa${excSal.length>1?'s':''} sin responder</span>`:''}
+    <button class="btn bg" onclick="irANotasSalon('${sal}')"><i class="fas fa-pen-to-square"></i> Ingresar notas</button>
+    <button class="btn bs" onclick="irAAsistSalon('${sal}')"><i class="fas fa-circle-check"></i> Asistencia</button>
+    <button class="btn bs" onclick="selRptProf('${sal}',DB.pers[0]||'','pdf')"><i class="fas fa-file-lines"></i> PDF Informe</button>
+    <button class="btn bs" onclick="selRptProf('${sal}',DB.pers[0]||'','xls')"><i class="fas fa-chart-column"></i> Excel</button>
+    ${excSal.length?`<span style="margin-left:auto;font-size:12px;color:var(--red);font-weight:700"><i class="fas fa-triangle-exclamation"></i> ${excSal.length} excusa${excSal.length>1?'s':''} sin responder</span>`:''}
   </div>
 
   <!-- Progreso notas -->
@@ -4248,7 +4248,7 @@ function renderPhSalonTab(sal){
 
   <!-- Buscador + tabla de estudiantes -->
   <div style="display:flex;gap:8px;margin-bottom:10px;align-items:center">
-    <input id="phBusq_${sal}" placeholder="🔍 Buscar estudiante en ${sal}…"
+    <input id="phBusq_${sal}" placeholder="<i class="fas fa-magnifying-glass"></i> Buscar estudiante en ${sal}…"
       style="flex:1;padding:8px 12px;border:1px solid var(--bd);border-radius:8px;font-size:13px;font-family:var(--fn)"
       oninput="filtrarPhEsts('${sal}')">
     <span id="phCount_${sal}" style="font-size:12px;color:var(--sl2);white-space:nowrap">${ests.length} est.</span>
@@ -4285,7 +4285,7 @@ function renderPhSalonTab(sal){
             :'<span style="color:var(--sl3);font-size:12px">—</span>';
           const excTxt=excEst
             ?'<span style="background:var(--red);color:#fff;border-radius:10px;padding:2px 8px;font-size:11px;font-weight:800">'+excEst+'</span>'
-            :'<span style="color:#68d391;font-size:13px">✓</span>';
+            :'<span style="color:#68d391;font-size:13px"><i class="fas fa-check"></i></span>';
           return '<tr data-nombre="'+e.nombre.toLowerCase()+'" style="border-bottom:1px solid var(--bd);background:'+rowBg+'">'
             +'<td style="padding:8px 10px;text-align:center;font-size:11px;color:var(--sl3);font-weight:600">'+(idx+1)+'</td>'
             +'<td style="padding:8px 10px">'
@@ -4296,7 +4296,7 @@ function renderPhSalonTab(sal){
             +'<td style="padding:8px 10px;text-align:center">'+promTxt+'</td>'
             +'<td style="padding:8px 10px;text-align:center">'+excTxt+'</td>'
             +'<td style="padding:8px 10px;text-align:center">'
-              +'<button class="btn xs bg" data-sal="'+sal+'" onclick="_phGoNotes(this)" style="font-size:11px;padding:4px 10px">✏️ Notas</button>'
+              +'<button class="btn xs bg" data-sal="'+sal+'" onclick="_phGoNotes(this)" style="font-size:11px;padding:4px 10px"><i class="fas fa-pen"></i> Notas</button>'
             +'</td>'
             +'</tr>';
         }).join(''); })()}
@@ -4313,7 +4313,7 @@ function renderPhExcTab(){
   const pendientes=todas.filter(x=>!x.respProf);
   const respondidas=todas.filter(x=>!!x.respProf);
 
-  if(!todas.length) return`<div class="mty" style="padding:24px"><div class="ei">📬</div><p>Sin excusas recibidas</p></div>`;
+  if(!todas.length) return`<div class="mty" style="padding:24px"><div class="ei"><i class="fas fa-envelope-circle-check"></i></div><p>Sin excusas recibidas</p></div>`;
 
   const renderExc=(list,label)=>{
     if(!list.length) return`<p style="font-size:13px;color:var(--sl3);padding:8px 0">Sin ${label}</p>`;
@@ -4329,18 +4329,18 @@ function renderPhExcTab(){
               <span class="bdg bor" style="font-size:10px">${x.causa||'—'}</span>
               ${!yaResp?'<span class="bdg brd" style="font-size:9px">PENDIENTE</span>':''}
             </div>
-            <span style="font-size:11px;color:var(--sl2)">📅 ${x.fecha||'—'}</span>
-            ${x.desc?`<div style="font-size:11px;color:var(--sl3);margin-top:3px">💬 ${esc(x.desc)}</div>`:''}
+            <span style="font-size:11px;color:var(--sl2)"><i class="fas fa-calendar-days"></i> ${x.fecha||'—'}</span>
+            ${x.desc?`<div style="font-size:11px;color:var(--sl3);margin-top:3px"><i class="fas fa-comment"></i> ${esc(x.desc)}</div>`:''}
           </div>
           <button class="btn ${yaResp?'bs':'bn'} sm" onclick="responderExcusa('${x._id||x.id}')">
-            ${yaResp?'✏️ Ver/Editar':'📨 Responder'}
+            ${yaResp?'<i class="fas fa-pen"></i> Ver/Editar':'<i class="fas fa-envelope"></i> Responder'}
           </button>
         </div>
         ${yaResp?`<div style="margin-top:8px;font-size:11px;background:#e6fffa;border-radius:6px;padding:8px;border:1px solid #b2f5ea">
-          ✅ <strong>Tu respuesta:</strong> ${esc(x.respProf)}
-          ${x.diasExtra>0?`<br>⏰ ${x.diasExtra} día(s) extra — Límite: ${x.fechaLimite||'—'}`:''}
-          ${(x.talleres||[]).length?`<br>📎 ${x.talleres.length} taller(es) adjunto(s)`:''}
-          ${x.respLeida?'<span class="bdg bgr" style="font-size:9px;margin-left:4px">✓ Vista por estudiante</span>':''}
+          <i class="fas fa-circle-check"></i> <strong>Tu respuesta:</strong> ${esc(x.respProf)}
+          ${x.diasExtra>0?`<br><i class="fas fa-clock"></i> ${x.diasExtra} día(s) extra — Límite: ${x.fechaLimite||'—'}`:''}
+          ${(x.talleres||[]).length?`<br><i class="fas fa-paperclip"></i> ${x.talleres.length} taller(es) adjunto(s)`:''}
+          ${x.respLeida?'<span class="bdg bgr" style="font-size:9px;margin-left:4px"><i class="fas fa-check"></i> Vista por estudiante</span>':''}
         </div>`:''}
       </div>`;
     }).join('');
@@ -4349,18 +4349,18 @@ function renderPhExcTab(){
   return`
   <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;align-items:center">
     <span style="font-size:13px;font-weight:700">${todas.length} excusa${todas.length>1?'s':''} en total</span>
-    ${pendientes.length?`<span class="bdg brd">${pendientes.length} sin responder</span>`:'<span class="bdg bgr">✓ Todas respondidas</span>'}
+    ${pendientes.length?`<span class="bdg brd">${pendientes.length} sin responder</span>`:'<span class="bdg bgr"><i class="fas fa-check"></i> Todas respondidas</span>'}
   </div>
   ${pendientes.length?`
   <div style="margin-bottom:20px">
     <div style="font-size:12px;font-weight:800;color:var(--red);text-transform:uppercase;letter-spacing:.04em;margin-bottom:8px">
-      🔴 Sin Responder (${pendientes.length})
+      <i class="fas fa-circle"></i> Sin Responder (${pendientes.length})
     </div>
     ${renderExc(pendientes,'pendientes')}
   </div>`:''}
   <div>
     <div style="font-size:12px;font-weight:800;color:var(--sl2);text-transform:uppercase;letter-spacing:.04em;margin-bottom:8px">
-      ✅ Respondidas (${respondidas.length})
+      <i class="fas fa-circle-check"></i> Respondidas (${respondidas.length})
     </div>
     ${renderExc(respondidas,'respondidas')}
   </div>`;
@@ -4374,13 +4374,13 @@ function renderPhRptTab(){
   <div style="display:grid;gap:12px">
     ${sals.map(sal=>`
     <div style="border:1px solid var(--bd);border-radius:10px;padding:14px;background:var(--bg2)">
-      <div style="font-size:14px;font-weight:800;margin-bottom:10px">🏫 ${sal}
+      <div style="font-size:14px;font-weight:800;margin-bottom:10px"><i class="fas fa-school"></i> ${sal}
         <span class="bdg bgy" style="margin-left:6px">${ebySalon(sal).length} est.</span>
       </div>
       <div style="display:flex;flex-wrap:wrap;gap:8px">
         ${DB.pers.map(per=>`
-        <button class="btn bs sm" onclick="selRptProf('${sal}','${per}','pdf')">📄 ${per} PDF</button>
-        <button class="btn bs sm" onclick="selRptProf('${sal}','${per}','xls')">📊 ${per} Excel</button>`).join('')}
+        <button class="btn bs sm" onclick="selRptProf('${sal}','${per}','pdf')"><i class="fas fa-file-lines"></i> ${per} PDF</button>
+        <button class="btn bs sm" onclick="selRptProf('${sal}','${per}','xls')"><i class="fas fa-chart-column"></i> ${per} Excel</button>`).join('')}
       </div>
     </div>`).join('')}
   </div>`;
@@ -4443,7 +4443,7 @@ function renderPhHorarioTab(){
   const franjas=horario?.franjas||[];
   if(!horario||!franjas.length){
     return`<div style="text-align:center;padding:40px 20px;color:var(--sl3)">
-      <div style="font-size:40px;margin-bottom:12px">📅</div>
+      <div style="font-size:40px;margin-bottom:12px"><i class="fas fa-calendar-days"></i></div>
       <div style="font-size:15px;font-weight:700;color:var(--sl2);margin-bottom:6px">Horario no configurado</div>
       <div style="font-size:13px">El administrador debe asignar tu horario desde la configuración del colegio.</div>
     </div>`;
@@ -4452,7 +4452,7 @@ function renderPhHorarioTab(){
     if(f.esDescanso){
       return`<tr style="background:#fff8e1">
         <td style="font-family:var(--mn);font-size:11px;color:#b7791f;white-space:nowrap;padding:9px 10px;font-weight:700">${f.hora}</td>
-        <td colspan="5" style="text-align:center;padding:9px;font-size:12px;font-weight:700;color:#b7791f;letter-spacing:.04em">☕ DESCANSO</td>
+        <td colspan="5" style="text-align:center;padding:9px;font-size:12px;font-weight:700;color:#b7791f;letter-spacing:.04em"><i class="fas fa-mug-hot"></i> DESCANSO</td>
       </tr>`;
     }
     const celdas=DIAS.map(dia=>{
@@ -4467,7 +4467,7 @@ function renderPhHorarioTab(){
   }).join('');
   return`<div>
     <div style="display:flex;justify-content:flex-end;padding:10px 14px;background:#f0f7ff;border-bottom:1px solid var(--bd)">
-      <button class="btn bn sm" onclick="descargarMiHorario()">📥 Descargar mi horario</button>
+      <button class="btn bn sm" onclick="descargarMiHorario()"><i class="fas fa-download"></i> Descargar mi horario</button>
     </div>
     <div style="overflow-x:auto"><table class="phHorarioTable">
       <thead><tr><th>Hora</th>${DIAS.map(d=>`<th>${d}</th>`).join('')}</tr></thead>
@@ -4583,7 +4583,7 @@ function _generarHorarioPDF_jspdf(franjas, DIAS){
       doc.setFontSize(7.5);
       doc.text(f.hora||'', ML + horaColW/2, y+4, {align:'center'});
       doc.setFontSize(7);
-      doc.text('☕ DESCANSO', ML + horaColW + (contentW-horaColW)/2, y+6.5, {align:'center'});
+      doc.text('<i class="fas fa-mug-hot"></i> DESCANSO', ML + horaColW + (contentW-horaColW)/2, y+6.5, {align:'center'});
     } else {
       // Hora normal
       doc.setTextColor(...NAVY);
@@ -4652,7 +4652,7 @@ function _generarHorarioPDF_jspdf(franjas, DIAS){
   // ── Descargar ────────────────────────────────────────────
   const filename = `horario_${(CU.nombre||'profesor').replace(/\s+/g,'_')}.pdf`;
   doc.save(filename);
-  sw('success','✅ Horario descargado correctamente','',2000);
+  sw('success','<i class="fas fa-circle-check"></i> Horario descargado correctamente','',2000);
 }
 
 /* Fallback: ventana de impresión si jsPDF no está disponible */
@@ -4660,7 +4660,7 @@ function _horarioFallbackPrint(franjas, DIAS){
   const rows = franjas.map(f=>{
     if(f.esDescanso) return`<tr style="background:#fff8e1">
       <td style="padding:7px 10px;border:1px solid #ddd;font-size:11px;font-weight:700;color:#b7791f">${f.hora||''}</td>
-      <td colspan="5" style="border:1px solid #ddd;text-align:center;font-weight:700;font-size:12px;color:#b7791f">☕ DESCANSO</td></tr>`;
+      <td colspan="5" style="border:1px solid #ddd;text-align:center;font-weight:700;font-size:12px;color:#b7791f"><i class="fas fa-mug-hot"></i> DESCANSO</td></tr>`;
     return`<tr><td style="padding:7px 10px;border:1px solid #ddd;font-size:11px;font-weight:600">${f.hora||''}</td>`+
       DIAS.map(d=>{const c=f.clases?.[d];return c
         ?`<td style="padding:6px;border:1px solid #ddd;text-align:center;background:#eff6ff"><div style="font-size:11px;font-weight:700;color:#1e40af">${c.mat||''}</div><div style="font-size:10px;color:#666">${c.salon||''}</div></td>`
@@ -4723,16 +4723,16 @@ function pgPNot(){
   const pO=DB.pers.map(per=>{
     const ok=notasOk(per);
     return`<option value="${per}" ${!ok?'style="color:#a0aec0"':''}>
-      ${ok?'✓':'🔒'} ${per}${!ok?' (cerrado)':''}
+      ${ok?'<i class="fas fa-check"></i>':'<i class="fas fa-lock"></i>'} ${per}${!ok?' (cerrado)':''}
     </option>`;
   }).join('');
   const extTarget=DB.ext?.on
     ?Object.entries(DB.drPer||{}).find(([,dp])=>dp.extPer)?.[1]?.extPer||null:null;
   const banner=DB.ext?.on
-    ?`<div class="al aly" style="margin-bottom:14px">🔄 Periodo Extraordinario activo.
+    ?`<div class="al aly" style="margin-bottom:14px"><i class="fas fa-arrows-rotate"></i> Periodo Extraordinario activo.
         ${extTarget?`Solo <strong>${extTarget}</strong> está abierto.`:'Configura el Periodo Ext. en Control de Fechas.'}</div>`:'';
   const isBach=p.ciclo==='bachillerato';
-  return`<div class="ph"><h2>Ingresar Notas</h2><button class="btn xs bg" onclick="showHelp('pnot')">❓ Ayuda</button></div>
+  return`<div class="ph"><h2>Ingresar Notas</h2><button class="btn xs bg" onclick="showHelp('pnot')"><i class="fas fa-circle-question"></i> Ayuda</button></div>
   <div id="pnLockBanner"></div>
   ${banner}
   <div class="card">
@@ -4751,7 +4751,7 @@ function pgPNot(){
           <option value="">— Selecciona salón primero —</option>
         </select>
       </div>
-      <button class="btn bn" onclick="loadPN()" style="height:42px;padding:0 20px;font-size:14px;align-self:flex-end">Cargar ▶</button>
+      <button class="btn bn" onclick="loadPN()" style="height:42px;padding:0 20px;font-size:14px;align-self:flex-end">Cargar <i class="fas fa-circle-play"></i></button>
     </div>
     <div id="pnW" style="margin-top:14px"></div>
   </div>`;
@@ -4794,16 +4794,16 @@ function loadPN(){
   if(!ests.length){
     // Intentar recargar DB y reintentar UNA vez — puede ser que aún no cargó
     if(typeof dbLoad==='function'){
-      el.innerHTML='<div style="text-align:center;padding:1rem;color:#718096">🔄 Cargando estudiantes…</div>';
+      el.innerHTML='<div style="text-align:center;padding:1rem;color:#718096"><i class="fas fa-arrows-rotate"></i> Cargando estudiantes…</div>';
       dbLoad().then(()=>{
         const estsReloaded=ebySalon(salonClean);
         if(estsReloaded.length){ loadPN(); return; }
-        el.innerHTML='<div class="mty"><div class="ei">🎓</div><p>Sin estudiantes en el salón <strong>'+salonClean+'</strong>.<br><small style="color:#a0aec0">Verifica que los estudiantes tengan asignado este salón.</small></p></div>';
+        el.innerHTML='<div class="mty"><div class="ei"><i class="fas fa-graduation-cap"></i></div><p>Sin estudiantes en el salón <strong>'+salonClean+'</strong>.<br><small style="color:#a0aec0">Verifica que los estudiantes tengan asignado este salón.</small></p></div>';
       }).catch(()=>{
-        el.innerHTML='<div class="mty"><div class="ei">🎓</div><p>Sin estudiantes en este salón</p></div>';
+        el.innerHTML='<div class="mty"><div class="ei"><i class="fas fa-graduation-cap"></i></div><p>Sin estudiantes en este salón</p></div>';
       });
     } else {
-      el.innerHTML='<div class="mty"><div class="ei">🎓</div><p>Sin estudiantes en este salón</p></div>';
+      el.innerHTML='<div class="mty"><div class="ei"><i class="fas fa-graduation-cap"></i></div><p>Sin estudiantes en este salón</p></div>';
     }
     return;
   }
@@ -4840,7 +4840,7 @@ function loadPN(){
   /* Si aún no hay materias, mostrar advertencia clara */
   if(!mats.length){
     el.innerHTML=`<div class="al aly" style="margin-top:10px">
-      ⚠️ <strong>No se encontraron materias para el salón ${salon}.</strong><br>
+      <i class="fas fa-triangle-exclamation"></i> <strong>No se encontraron materias para el salón ${salon}.</strong><br>
       Verifica que el salón tenga materias asignadas en la configuración del sistema.
     </div>`;
     return;
@@ -4857,11 +4857,11 @@ function loadPN(){
 
   el.innerHTML = `
     <div class="pnInfoBar">
-      <span>📚 <strong>${matSel||'Todas las materias'}</strong></span>
+      <span><i class="fas fa-book"></i> <strong>${matSel||'Todas las materias'}</strong></span>
       <span style="color:var(--bd2)">|</span>
-      <span>👩‍🏫 <strong>${esc(CU.nombre)}</strong></span>
+      <span><i class="fas fa-chalkboard-user"></i> <strong>${esc(CU.nombre)}</strong></span>
       <span style="color:var(--bd2)">|</span>
-      <span>📅 Periodo: <strong>${per}</strong>${_jornadaLabel?' · '+_jornadaLabel:''}</span>
+      <span><i class="fas fa-calendar-days"></i> Periodo: <strong>${per}</strong>${_jornadaLabel?' · '+_jornadaLabel:''}</span>
       <span style="margin-left:auto;font-size:11px">
         Min: <strong>1.0</strong> &nbsp; Max: <strong>5.0</strong> &nbsp;
         Aprueba: <strong style="color:var(--grn)">3.0</strong>
@@ -4870,8 +4870,8 @@ function loadPN(){
     <div class="pnTblToolbar">
       <input class="pnSearch2" id="pnFiltro" placeholder="Buscar estudiante..." oninput="filtrarPNTable()">
       <span id="pnContador" style="font-size:12px;color:var(--sl2);white-space:nowrap">${ests.length} estudiantes</span>
-      <button class="btn bg sm" onclick="selRptProf('${salon}','${per}','pdf')">📄 PDF</button>
-      <button class="btn bs sm" onclick="selRptProf('${salon}','${per}','xls')">📊 Excel</button>
+      <button class="btn bg sm" onclick="selRptProf('${salon}','${per}','pdf')"><i class="fas fa-file-lines"></i> PDF</button>
+      <button class="btn bs sm" onclick="selRptProf('${salon}','${per}','xls')"><i class="fas fa-chart-column"></i> Excel</button>
     </div>
     <div style="overflow-x:auto;border:1.5px solid var(--bd);border-top:none;border-radius:0 0 12px 12px">
       <table class="pnTableV2" id="pnMainTable">
@@ -5018,7 +5018,7 @@ function loadPN(){
     if(badge)badge.remove();
     badge=document.createElement('div');
     badge.className='pn-saved2';
-    badge.textContent='✓ Guardado';
+    badge.textContent='<i class="fas fa-check"></i> Guardado';
     document.body.appendChild(badge);
     setTimeout(()=>{if(badge.parentNode)badge.parentNode.removeChild(badge);},2000);
   };
@@ -5051,8 +5051,8 @@ function loadPN(){
       <tbody id="pnB"></tbody>
     </table></div>
     <div style="margin-top:14px;display:flex;gap:10px;flex-wrap:wrap">
-      <button class="btn bg sm" onclick="selRptProf('${salon}','${per}','pdf')">📄 Reporte PDF</button>
-      <button class="btn bs sm" onclick="selRptProf('${salon}','${per}','xls')">📊 Descargar Excel</button>
+      <button class="btn bg sm" onclick="selRptProf('${salon}','${per}','pdf')"><i class="fas fa-file-lines"></i> Reporte PDF</button>
+      <button class="btn bs sm" onclick="selRptProf('${salon}','${per}','xls')"><i class="fas fa-chart-column"></i> Descargar Excel</button>
     </div>`;
     const body=gi('pnB');
     ests.forEach(e=>{
@@ -5109,7 +5109,7 @@ function selRptProf(defaultSalon,defaultPer,tipo){
   const perOpts=DB.pers.map(p=>`<option value="${p}" ${p===defaultPer?'selected':''}>${p}</option>`).join('');
 
   Swal.fire({
-    title:`${tipo==='pdf'?'📄 Reporte PDF':'📊 Informe Excel'}`,
+    title:`${tipo==='pdf'?'<i class="fas fa-file-lines"></i> Reporte PDF':'<i class="fas fa-chart-column"></i> Informe Excel'}`,
     width:440,
     html:`<div style="text-align:left;font-family:var(--fn)">
       <div class="al alb" style="margin-bottom:12px;font-size:12px">
@@ -5138,7 +5138,7 @@ function selRptProf(defaultSalon,defaultPer,tipo){
       </div>
     </div>`,
     showCancelButton:true,
-    confirmButtonText:tipo==='pdf'?'📄 Generar PDF':'📊 Generar Excel',
+    confirmButtonText:tipo==='pdf'?'<i class="fas fa-file-lines"></i> Generar PDF':'<i class="fas fa-chart-column"></i> Generar Excel',
     didOpen:()=>updateRptMats(),
     preConfirm:()=>({salon:gi('rptSalon')?.value,per:gi('rptPer')?.value,mat:gi('rptMat')?.value})
   }).then(r=>{
@@ -5181,7 +5181,7 @@ function dlRptProf(salon,per,matFilter){
       return`<tr style="background:${mi%2===0?'#f7fafc':'#fff'}">
         <td style="padding:6px 10px;border-bottom:1px solid #e2e8f0;font-weight:500">${m}</td>
         <td style="padding:6px 10px;border-bottom:1px solid #e2e8f0;text-align:center;font-weight:800;font-size:13px;color:${scCol(d)}">${d.toFixed(2)}</td>
-        <td style="padding:6px 10px;border-bottom:1px solid #e2e8f0;text-align:center;font-size:11px;color:${d===0?'#a0aec0':d>=3?'#276749':'#c53030'};font-weight:600">${d===0?'Sin nota':d>=3?'✓ Aprobado':'✗ Reprobado'}</td>
+        <td style="padding:6px 10px;border-bottom:1px solid #e2e8f0;text-align:center;font-size:11px;color:${d===0?'#a0aec0':d>=3?'#276749':'#c53030'};font-weight:600">${d===0?'Sin nota':d>=3?'<i class="fas fa-check"></i> Aprobado':'<i class="fas fa-xmark"></i> Reprobado'}</td>
       </tr>`;
     }).join('');
     return`<div style="margin-bottom:18px;page-break-inside:avoid;border:1px solid #d8e2ef;border-radius:8px;overflow:hidden">
@@ -5212,7 +5212,7 @@ function dlRptProf(salon,per,matFilter){
   box.innerHTML=`<div style="font-family:'Outfit',sans-serif;background:#fff;max-width:780px">
     <!-- HEADER -->
     <div style="background:linear-gradient(135deg,#0b1e33,#1a3a5c);color:#fff;padding:20px 28px;position:relative;overflow:hidden">
-      ${_logoProfe ? `<img src="${_logoProfe}" style="position:absolute;right:18px;top:50%;transform:translateY(-50%);height:52px;width:auto;object-fit:contain;opacity:.92;border-radius:6px;background:rgba(255,255,255,.1);padding:4px" alt="">` : '<div style="position:absolute;right:16px;top:50%;transform:translateY(-50%);font-size:80px;opacity:.07;line-height:1">🏛️</div>'}
+      ${_logoProfe ? `<img src="${_logoProfe}" style="position:absolute;right:18px;top:50%;transform:translateY(-50%);height:52px;width:auto;object-fit:contain;opacity:.92;border-radius:6px;background:rgba(255,255,255,.1);padding:4px" alt="">` : '<div style="position:absolute;right:16px;top:50%;transform:translateY(-50%);font-size:80px;opacity:.07;line-height:1"><i class="fas fa-building-columns"></i></div>'}
       ${_nomProfe ? `<div style="font-size:10px;text-transform:uppercase;letter-spacing:.1em;opacity:.7;margin-bottom:2px;font-weight:600">${_nomProfe}</div>` : ''}
       <div style="font-size:10px;text-transform:uppercase;letter-spacing:.15em;opacity:.5;margin-bottom:5px">EduSistema Pro · Reporte Docente</div>
       <h1 style="font-size:19px;font-weight:900;margin-bottom:4px">Informe de Calificaciones</h1>
@@ -5336,7 +5336,7 @@ function dlRptXls(salon,per,matFilter){
 ============================================================ */
 function pgPAst(){
   const sO=(CU.salones||[]).map(s=>`<option value="${s}">${s}</option>`).join('');
-  return`<div class="ph"><h2>Asistencias</h2><button class="btn xs bg" onclick="showHelp('past')" style="margin-top:6px">❓ Ayuda</button></div>
+  return`<div class="ph"><h2>Asistencias</h2><button class="btn xs bg" onclick="showHelp('past')" style="margin-top:6px"><i class="fas fa-circle-question"></i> Ayuda</button></div>
   <div class="card">
     <div class="fg">
       <div class="fld"><label>Salón</label><select id="pas">${sO||'<option>Sin salones</option>'}</select></div>
@@ -5352,15 +5352,15 @@ function loadAst(){
   const key=`${s}__${d}`;
   if(!DB.asist[key]) DB.asist[key]={};
   const ests=ebySalon(s);const el=gi('paW');
-  if(!ests.length){el.innerHTML='<div class="mty"><div class="ei">🎓</div><p>Sin estudiantes</p></div>';return;}
+  if(!ests.length){el.innerHTML='<div class="mty"><div class="ei"><i class="fas fa-graduation-cap"></i></div><p>Sin estudiantes</p></div>';return;}
   el.innerHTML=`<div class="tw"><table><thead>
     <tr><th>Estudiante</th><th style="width:90px;text-align:center">Presente</th><th style="width:90px;text-align:center">Ausente</th></tr></thead>
     <tbody>${ests.map(e=>{const v=DB.asist[key][e.id]??'presente';return`<tr id="ar${e.id}">
       <td>${esc(e.nombre)}</td>
-      <td style="text-align:center"><button class="btn xs ${v==='presente'?'bs':'bg'}" onclick="setAst('${key}','${e.id}','presente')">✓</button></td>
-      <td style="text-align:center"><button class="btn xs ${v==='ausente'?'bd':'bg'}" onclick="setAst('${key}','${e.id}','ausente')">✗</button></td>
+      <td style="text-align:center"><button class="btn xs ${v==='presente'?'bs':'bg'}" onclick="setAst('${key}','${e.id}','presente')"><i class="fas fa-check"></i></button></td>
+      <td style="text-align:center"><button class="btn xs ${v==='ausente'?'bd':'bg'}" onclick="setAst('${key}','${e.id}','ausente')"><i class="fas fa-xmark"></i></button></td>
     </tr>`;}).join('')}</tbody></table></div>
-    <button class="btn bs" style="margin-top:12px" onclick="saveAst('${key}')">💾 Guardar</button>`;
+    <button class="btn bs" style="margin-top:12px" onclick="saveAst('${key}')"><i class="fas fa-floppy-disk"></i> Guardar</button>`;
 }
 function setAst(key,eid,val){
   if(!DB.asist[key]) DB.asist[key]={};
@@ -5378,8 +5378,8 @@ async function saveAst(key){ /* implementado en api-layer.js */ }
 function pgPVir(){
   const sO=(CU.salones||[]).map(s=>`<option value="${s}">${s}</option>`).join('');
   const mis=(DB.vclases||[]).filter(c=>c.profId===CU.id).slice().reverse();
-  return`<div class="ph"><h2>💻 Clases Virtuales</h2><button class="btn xs bg" onclick="showHelp('pvir')" style="margin-top:6px">❓ Ayuda</button></div>
-  <div class="card"><div class="chd"><span class="cti">📅 Programar Clase</span></div>
+  return`<div class="ph"><h2><i class="fas fa-laptop"></i> Clases Virtuales</h2><button class="btn xs bg" onclick="showHelp('pvir')" style="margin-top:6px"><i class="fas fa-circle-question"></i> Ayuda</button></div>
+  <div class="card"><div class="chd"><span class="cti"><i class="fas fa-calendar-days"></i> Programar Clase</span></div>
     <div class="fg">
       <div class="fld"><label>Salón</label><select id="vcs">${sO||'<option value="">Sin salones asignados</option>'}</select></div>
       <div class="fld"><label>Fecha</label><input type="date" id="vcf" value="${today()}"></div>
@@ -5387,9 +5387,9 @@ function pgPVir(){
     </div>
     <div class="fld"><label>Tema / Descripción</label>
       <input id="vcd" placeholder="Ej: Clase de matemáticas — fracciones"></div>
-    <button class="btn bn" onclick="addVClase()">📅 Programar Clase</button>
+    <button class="btn bn" onclick="addVClase()"><i class="fas fa-calendar-days"></i> Programar Clase</button>
   </div>
-  <div class="card"><div class="chd"><span class="cti">📋 Mis Clases (${mis.length})</span></div>
+  <div class="card"><div class="chd"><span class="cti"><i class="fas fa-clipboard-list"></i> Mis Clases (${mis.length})</span></div>
   ${mis.length?mis.map(c=>{
     const ahora=new Date();
     const claseTs=new Date(c.fecha+'T'+c.hora);
@@ -5399,23 +5399,23 @@ function pgPVir(){
     return`<div class="vc-card" style="flex-direction:column;align-items:stretch;gap:12px">
       <div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:8px">
         <div>
-          <div style="font-size:15px;font-weight:800">💻 ${c.desc||'Clase Virtual'}</div>
+          <div style="font-size:15px;font-weight:800"><i class="fas fa-laptop"></i> ${c.desc||'Clase Virtual'}</div>
           <div style="font-size:11px;opacity:.7;margin-top:3px">Salón ${c.salon} · ${c.fecha} a las ${c.hora}</div>
         </div>
         ${pasada
           ? `<span class="bdg bgy" style="font-size:11px">Finalizada</span>`
           : activa
-            ? `<span class="bdg" style="background:#d1fae5;color:#065f46;border:1px solid #6ee7b7;font-size:11px">🟢 En vivo</span>`
-            : `<span class="bdg" style="background:rgba(255,255,255,.15);color:#fff;border:1px solid rgba(255,255,255,.25);font-size:11px">📅 Programada</span>`
+            ? `<span class="bdg" style="background:#d1fae5;color:#065f46;border:1px solid #6ee7b7;font-size:11px"><i class="fas fa-circle"></i> En vivo</span>`
+            : `<span class="bdg" style="background:rgba(255,255,255,.15);color:#fff;border:1px solid rgba(255,255,255,.25);font-size:11px"><i class="fas fa-calendar-days"></i> Programada</span>`
         }
       </div>
       <div style="display:flex;gap:8px;flex-wrap:wrap">
-        ${!pasada?`<button class="btn sm bs" onclick="abrirSalaJitsi('${c.roomId}','${(c.desc||'Clase Virtual').replace(/'/g,"\'")}',true)">🎥 Iniciar clase</button>`:''}
-        <button class="btn sm bd" onclick="delVClase('${c.id}')">🗑 Eliminar</button>
+        ${!pasada?`<button class="btn sm bs" onclick="abrirSalaJitsi('${c.roomId}','${(c.desc||'Clase Virtual').replace(/'/g,"\'")}',true)"><i class="fas fa-video"></i> Iniciar clase</button>`:''}
+        <button class="btn sm bd" onclick="delVClase('${c.id}')"><i class="fas fa-trash"></i> Eliminar</button>
       </div>
     </div>`;
   }).join('')
-  :'<div class="mty"><div class="ei">💻</div><p>Sin clases programadas aún</p></div>'}
+  :'<div class="mty"><div class="ei"><i class="fas fa-laptop"></i></div><p>Sin clases programadas aún</p></div>'}
   </div>`;
 }
 
@@ -5432,11 +5432,11 @@ function abrirSalaJitsi(roomId, titulo, esProfesor) {
 
   // Aviso previo para TODOS (profesor y estudiante)
   Swal.fire({
-    title: '💻 ' + (esProfesor ? 'Iniciando clase' : 'Unirse a la clase'),
+    title: '<i class="fas fa-laptop"></i> ' + (esProfesor ? 'Iniciando clase' : 'Unirse a la clase'),
     html: `<div style="text-align:left;font-size:14px;line-height:1.7">
       <p>${esProfesor ? 'La sala se abrirá ahora.' : 'Vas a entrar a la clase virtual.'}</p>
       <div style="background:#fef9c3;border:1px solid #fde047;border-radius:8px;padding:10px 14px;margin-top:10px;font-size:13px">
-        ⚠️ <strong>Aviso:</strong> Al entrar puede aparecer un mensaje de Jitsi que dice
+        <i class="fas fa-triangle-exclamation"></i> <strong>Aviso:</strong> Al entrar puede aparecer un mensaje de Jitsi que dice
         <em>"Embedding is only meant for demo purposes"</em>.<br><br>
         Solo haz clic en <strong>Aceptar</strong> y la clase continuará sin interrupciones.
       </div>
@@ -5459,10 +5459,10 @@ function _abrirOverlayJitsi(roomId, titulo, esProfesor) {
       <div class="jitsi-modal">
         <div class="jitsi-header">
           <div class="jitsi-title">
-            <span style="font-size:20px">💻</span>
+            <span style="font-size:20px"><i class="fas fa-laptop"></i></span>
             <span id="jitsiTitulo">Clase Virtual</span>
           </div>
-          <button class="jitsi-close" onclick="cerrarSalaJitsi()" title="Salir de la clase">✕ Salir</button>
+          <button class="jitsi-close" onclick="cerrarSalaJitsi()" title="Salir de la clase"><i class="fas fa-xmark"></i> Salir</button>
         </div>
         <div id="jitsiContainer"></div>
       </div>`;
@@ -5559,7 +5559,7 @@ function _lanzarJitsi(roomId, titulo, esProfesor, container) {
     });
   } catch(err) {
     container.innerHTML = `<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;color:#fff;gap:16px">
-      <div style="font-size:48px">⚠️</div>
+      <div style="font-size:48px"><i class="fas fa-triangle-exclamation"></i></div>
       <div style="font-size:16px;font-weight:700">No se pudo iniciar la sala</div>
       <div style="font-size:13px;opacity:.7;text-align:center;max-width:320px">Verifica tu conexión a internet e inténtalo de nuevo.</div>
       <button class="btn bn" onclick="cerrarSalaJitsi()">Cerrar</button>
@@ -5591,9 +5591,9 @@ function pgPTar(){
   todas.sort((a,b)=>(b.id||'').localeCompare(a.id||''));
   const sinRevisar=todas.filter(u=>!u.revisado).length;
   const sOpts=(CU.salones||[]).map(s=>`<option value="${s}">${s}</option>`).join('');
-  return`<div class="ph"><h2>Tareas Recibidas</h2><button class="btn xs bg" style="margin-top:4px" onclick="showHelp('ptar')">❓ Ayuda</button><p>${todas.length} archivo(s) enviados a ti${sinRevisar?` · <strong style="color:var(--red)">${sinRevisar} sin revisar</strong>`:''}</p></div>
+  return`<div class="ph"><h2>Tareas Recibidas</h2><button class="btn xs bg" style="margin-top:4px" onclick="showHelp('ptar')"><i class="fas fa-circle-question"></i> Ayuda</button><p>${todas.length} archivo(s) enviados a ti${sinRevisar?` · <strong style="color:var(--red)">${sinRevisar} sin revisar</strong>`:''}</p></div>
   <div class="card"><div class="chd">
-    <span class="cti">📂 Archivos Recibidos (${todas.length})</span>
+    <span class="cti"><i class="fas fa-folder-open"></i> Archivos Recibidos (${todas.length})</span>
     <select id="ptarF" style="padding:7px 12px;border:1.5px solid var(--bd);border-radius:var(--r);font-size:13px;outline:none" onchange="filtrarPTar()">
       <option value="">Todos los salones</option>${sOpts}
     </select>
@@ -5606,23 +5606,23 @@ function pgPTar(){
       return`<tr data-salon="${est?.salon||''}" style="background:${!u.revisado?'':'#f9fff9'}">
         <td><strong style="font-size:13px">${u.estNombre||'—'}</strong></td>
         <td><span class="bdg bgy">${est?.salon||'—'}</span></td>
-        <td><span style="font-size:12px;font-family:var(--mn)">📎 ${esc(u.nombre)}</span><br>
+        <td><span style="font-size:12px;font-family:var(--mn)"><i class="fas fa-paperclip"></i> ${esc(u.nombre)}</span><br>
           <span style="font-size:10px;color:var(--sl3)">${u.size?(u.size/1024).toFixed(1)+' KB':'—'}</span></td>
         <td><span class="bdg bbl">${u.materia}</span></td>
         <td style="font-size:12px">${u.periodo}</td>
         <td style="font-size:12px;color:var(--sl2);max-width:110px">${u.desc||'—'}</td>
         <td style="font-family:var(--mn);font-size:11px">${u.fecha}</td>
         <td>
-          <span class="bdg ${u.revisado?'bgr':'bwa'}">${u.revisado?'✓ Revisado':'Pendiente'}</span>
+          <span class="bdg ${u.revisado?'bgr':'bwa'}">${u.revisado?'<i class="fas fa-check"></i> Revisado':'Pendiente'}</span>
           ${u.revisado?`<div style="font-size:10px;color:var(--sl3);margin-top:3px">${u.revisadoTs||''}</div>`:''}
         </td>
         <td style="display:flex;flex-direction:column;gap:5px">
-          ${canOpen?`<button class="btn xs bb" onclick="abrirArchivo(${i})">📂 Abrir</button>`:''}
-          ${!u.revisado?`<button class="btn xs bs" onclick="marcarTareaRevisada('${u.id}')">✓ Revisado</button>`
-            :`<button class="btn xs br" onclick="eliminarTallerProf('${u.id}')">🗑️ Eliminar</button>`}
+          ${canOpen?`<button class="btn xs bb" onclick="abrirArchivo(${i})"><i class="fas fa-folder-open"></i> Abrir</button>`:''}
+          ${!u.revisado?`<button class="btn xs bs" onclick="marcarTareaRevisada('${u.id}')"><i class="fas fa-check"></i> Revisado</button>`
+            :`<button class="btn xs br" onclick="eliminarTallerProf('${u.id}')"><i class="fas fa-trash"></i> Eliminar</button>`}
         </td>
       </tr>`;}).join('')}</tbody></table></div>`
-  :'<div class="mty"><div class="ei">📂</div><p>Sin tareas recibidas aún</p></div>'}
+  :'<div class="mty"><div class="ei"><i class="fas fa-folder-open"></i></div><p>Sin tareas recibidas aún</p></div>'}
   </div>`;
 }
 /* Collect professor's received tasks for index-based access */
@@ -5705,7 +5705,7 @@ function exportarHistorialPlanes(){
 ============================================================ */
 function pgPRec(){
   if(!DB.ext.on) return`<div class="ph"><h2>Recuperaciones</h2></div>
-    <div class="al aly">⚠️ El periodo extraordinario no está activo. El admin debe habilitarlo en Control de Fechas.</div>`;
+    <div class="al aly"><i class="fas fa-triangle-exclamation"></i> El periodo extraordinario no está activo. El admin debe habilitarlo en Control de Fechas.</div>`;
 
   /* ── Section 1: Students who need recovery plan from THIS professor ── */
   const misSalones=CU.salones||[];
@@ -5745,21 +5745,21 @@ function pgPRec(){
     <div style="margin-bottom:16px;padding:14px;background:var(--bg2);border-radius:10px;border:1px solid var(--bd)">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;flex-wrap:wrap;gap:8px">
         <div>
-          <span style="font-size:13px;font-weight:800;color:var(--nv)">🏫 Salón ${salon}</span>
+          <span style="font-size:13px;font-weight:800;color:var(--nv)"><i class="fas fa-school"></i> Salón ${salon}</span>
           <span class="bdg bgy" style="margin-left:8px">${items.length} estudiante(s)</span>
           ${matsEnSalon.map(m=>`<span class="bdg brd" style="margin-left:4px">${m}</span>`).join('')}
         </div>
         <button class="btn bn sm" onclick="abrirEnviarPlanSalon('${salon}','${matsEnSalon.join('|')}')">
-          📤 ${planesGrupo.length?'Enviar Otro Plan al Salón':'Enviar Plan al Salón'}
+          <i class="fas fa-upload"></i> ${planesGrupo.length?'Enviar Otro Plan al Salón':'Enviar Plan al Salón'}
         </button>
       </div>
       ${planesGrupo.length?`<div style="margin-bottom:10px">
         <div style="font-size:11px;font-weight:800;color:var(--sl);text-transform:uppercase;margin-bottom:6px">Planes enviados al salón (${planesGrupo.length})</div>
         ${planesGrupo.slice().reverse().map(pl=>`<div style="background:#f0fff4;border:1px solid #9ae6b4;border-radius:7px;padding:8px 12px;font-size:12px;margin-bottom:5px">
-          <span class="bdg bgr" style="margin-right:8px">✓ ${pl.fecha}</span>
+          <span class="bdg bgr" style="margin-right:8px"><i class="fas fa-check"></i> ${pl.fecha}</span>
           <strong>${pl.titulo}</strong>
-          ${pl.archNombre?`<span style="margin-left:8px;color:var(--sl3)">📎 ${pl.archNombre}</span>`:''}
-          <span style="margin-left:8px;color:var(--sl3)">📅 ${pl.fechaLimite||DB.ext.e||'—'}</span>
+          ${pl.archNombre?`<span style="margin-left:8px;color:var(--sl3)"><i class="fas fa-paperclip"></i> ${pl.archNombre}</span>`:''}
+          <span style="margin-left:8px;color:var(--sl3)"><i class="fas fa-calendar-days"></i> ${pl.fechaLimite||DB.ext.e||'—'}</span>
         </div>`).join('')}
       </div>`:''}
       <div class="tw" style="margin-top:10px"><table><thead>
@@ -5771,12 +5771,12 @@ function pgPRec(){
             <td><strong>${esc(est.nombre)}</strong></td>
             <td><span class="bdg brd">${mat}</span></td>
             <td>${planesInd.length
-              ?planesInd.slice().reverse().map(pl=>`<span class="bdg bgr" style="font-size:10px;margin:1px">✓ ${pl.fecha}</span>`).join('')
+              ?planesInd.slice().reverse().map(pl=>`<span class="bdg bgr" style="font-size:10px;margin:1px"><i class="fas fa-check"></i> ${pl.fecha}</span>`).join('')
               :(planesGrupo.length?`<span class="bdg bgy" style="font-size:10px">${planesGrupo.length} via salón</span>`:'<span style="font-size:11px;color:var(--sl3)">—</span>')}
             </td>
             <td>
               <button class="btn xs bg" onclick="abrirEnviarPlan('${est.id}','${mat}','${salon}')">
-                📤 ${planesInd.length?'Otro':'Enviar'}
+                <i class="fas fa-upload"></i> ${planesInd.length?'Otro':'Enviar'}
               </button>
             </td>
           </tr>`;}).join('')}
@@ -5785,27 +5785,27 @@ function pgPRec(){
   }).join('');
 
   return`<div class="ph"><h2>Recuperaciones</h2>
-    <button class="btn xs bg" style="margin-top:4px" onclick="showHelp('prec')">❓ Ayuda</button>
+    <button class="btn xs bg" style="margin-top:4px" onclick="showHelp('prec')"><i class="fas fa-circle-question"></i> Ayuda</button>
     <p>Periodo Extraordinario: <strong>${DB.ext.s} → ${DB.ext.e}</strong></p>
-    <button class="btn bg sm" style="margin-top:8px" onclick="exportarHistorialPlanes()">📊 Exportar Historial de Planes (Excel)</button></div>
+    <button class="btn bg sm" style="margin-top:8px" onclick="exportarHistorialPlanes()"><i class="fas fa-chart-column"></i> Exportar Historial de Planes (Excel)</button></div>
 
   <!-- Plan de recuperación por salón -->
   <div class="card">
-    <div class="chd"><span class="cti">📋 Estudiantes que Deben Recuperar tu Materia</span>
+    <div class="chd"><span class="cti"><i class="fas fa-clipboard-list"></i> Estudiantes que Deben Recuperar tu Materia</span>
       <span class="bdg brd">${elegibles.length} estudiante(s)</span>
     </div>
     ${elegibles.length
       ?`<div class="al alb" style="font-size:12px;margin-bottom:12px">
-          ℹ️ Usa <strong>"Enviar Plan al Salón"</strong> para enviar un plan a todos los estudiantes del salón de una vez (con archivo adjunto). O usa el botón individual 📤 por estudiante si prefieres planes personalizados.
+          <i class="fas fa-circle-info"></i> Usa <strong>"Enviar Plan al Salón"</strong> para enviar un plan a todos los estudiantes del salón de una vez (con archivo adjunto). O usa el botón individual <i class="fas fa-upload"></i> por estudiante si prefieres planes personalizados.
         </div>${salonCards}`
-      :'<div class="mty"><div class="ei">🎓</div><p>Ningún estudiante de tus salones tiene materias a recuperar contigo.</p></div>'}
+      :'<div class="mty"><div class="ei"><i class="fas fa-graduation-cap"></i></div><p>Ningún estudiante de tus salones tiene materias a recuperar contigo.</p></div>'}
   </div>
 
   <!-- Respuestas recibidas — agrupadas por estudiante -->
   <div class="card">
     <div class="chd">
-      <span class="cti">📂 Respuestas de Recuperación por Estudiante</span>
-      ${pendientes?`<span class="bdg brd">⚠️ ${pendientes} pendiente(s)</span>`:''}
+      <span class="cti"><i class="fas fa-folder-open"></i> Respuestas de Recuperación por Estudiante</span>
+      ${pendientes?`<span class="bdg brd"><i class="fas fa-triangle-exclamation"></i> ${pendientes} pendiente(s)</span>`:''}
     </div>
     ${recs.length?(()=>{
       /* Group by student */
@@ -5824,8 +5824,8 @@ function pgPRec(){
               <span class="bdg bgy" style="margin-left:8px">${data.salon||'—'}</span>
               <span class="bdg bbl" style="margin-left:6px">${data.recs.length} archivo(s)</span>
             </div>
-            ${pendEst?`<span class="bdg brd">⚠️ ${pendEst} sin revisar</span>`:
-              `<span class="bdg bgr">✓ Todo revisado</span>`}
+            ${pendEst?`<span class="bdg brd"><i class="fas fa-triangle-exclamation"></i> ${pendEst} sin revisar</span>`:
+              `<span class="bdg bgr"><i class="fas fa-check"></i> Todo revisado</span>`}
           </div>
           <div class="tw"><table><thead>
             <tr><th>Archivo</th><th>Materia</th><th>Responde al Plan</th><th>Descripción</th><th>Fecha</th><th>Estado</th><th>Acción</th></tr>
@@ -5834,7 +5834,7 @@ function pgPRec(){
               const idx=recs.findIndex(x=>x.id===r.id);
               const planRef=r.planId?(DB.planes||[]).find(p=>p.id===r.planId):null;
               return`<tr style="background:${!r.revisado?'#fffff0':''}">
-                <td><span style="font-size:12px;font-family:var(--mn)">📎 ${esc(r.nombre)}</span></td>
+                <td><span style="font-size:12px;font-family:var(--mn)"><i class="fas fa-paperclip"></i> ${esc(r.nombre)}</span></td>
                 <td><span class="bdg brd">${r.materia}</span></td>
                 <td style="font-size:12px;max-width:140px">${planRef
                   ?`<span style="color:var(--nv);font-weight:700">${planRef.titulo}</span><br><span style="font-size:10px;color:var(--sl3)">${planRef.fecha}</span>`
@@ -5843,19 +5843,19 @@ function pgPRec(){
                 <td style="font-size:12px;color:var(--sl2);max-width:110px">${r.desc||'—'}</td>
                 <td style="font-family:var(--mn);font-size:11px">${r.fecha}</td>
                 <td>
-                  <span class="bdg ${r.revisado?'bgr':'bwa'}">${r.revisado?'✓ Revisado':'Pendiente'}</span>
+                  <span class="bdg ${r.revisado?'bgr':'bwa'}">${r.revisado?'<i class="fas fa-check"></i> Revisado':'Pendiente'}</span>
                   ${r.revisado?`<div style="font-size:10px;color:var(--sl3)">${r.revisadoTs||''}</div>`:''}
                 </td>
                 <td style="display:flex;flex-direction:column;gap:4px">
-                  ${(r.id||r.dataUrl)?`<button class="btn xs bb" onclick="abrirRec(${idx})">📂 Abrir</button>`:''}
-                  ${!r.revisado?`<button class="btn xs bs" onclick="marcarRecRevisado('${r.id}')">✓ Revisado</button>`:''}
+                  ${(r.id||r.dataUrl)?`<button class="btn xs bb" onclick="abrirRec(${idx})"><i class="fas fa-folder-open"></i> Abrir</button>`:''}
+                  ${!r.revisado?`<button class="btn xs bs" onclick="marcarRecRevisado('${r.id}')"><i class="fas fa-check"></i> Revisado</button>`:''}
                 </td>
               </tr>`;}).join('')}
           </tbody></table></div>
         </div>`;
       }).join('');
     })()
-    :'<div class="mty"><div class="ei">📂</div><p>Sin respuestas de recuperación aún</p></div>'}
+    :'<div class="mty"><div class="ei"><i class="fas fa-folder-open"></i></div><p>Sin respuestas de recuperación aún</p></div>'}
   </div>`;
 }
 
@@ -5864,13 +5864,13 @@ function _planDialog({titulo='',desc='',archNombre='',archDataUrl='',archType=''
   const fechaLimite=DB.ext.e||'';/* Always locked to admin-defined end date */
   const inputId='planFile_'+Date.now();
   Swal.fire({
-    title:'📋 Plan de Recuperación',width:600,
+    title:'<i class="fas fa-clipboard-list"></i> Plan de Recuperación',width:600,
     html:`<div style="text-align:left;font-family:var(--fn)">
       <div style="background:var(--bg2);border-radius:8px;padding:10px 14px;margin-bottom:12px;font-size:13px">
         ${destinatario}
       </div>
       ${existing?`<div class="al alg" style="margin-bottom:10px;font-size:12px">
-        ✓ Ya enviaste un plan el <strong>${existing.fecha}</strong>. Puedes reenviarlo.</div>`:''}
+        <i class="fas fa-check"></i> Ya enviaste un plan el <strong>${existing.fecha}</strong>. Puedes reenviarlo.</div>`:''}
       <div class="fld" style="margin-bottom:10px">
         <label style="font-size:11px;font-weight:800;text-transform:uppercase;color:var(--sl)">Título del Plan</label>
         <input id="planTitulo" value="${titulo}" placeholder="Ej: Plan de Nivelación — Matemáticas P3">
@@ -5883,20 +5883,20 @@ function _planDialog({titulo='',desc='',archNombre='',archDataUrl='',archType=''
         <label style="font-size:11px;font-weight:800;text-transform:uppercase;color:var(--sl)">Adjuntar Archivo (opcional — PDF, Word, Excel — máx 5 MB)</label>
         <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
           <label style="cursor:pointer;padding:8px 14px;background:var(--nv);color:#fff;border-radius:var(--r);font-size:12px;font-weight:700">
-            📎 Seleccionar archivo
+            <i class="fas fa-paperclip"></i> Seleccionar archivo
             <input type="file" id="${inputId}" accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx" style="display:none" onchange="onPlanFilePick(this,'planFileLabel')">
           </label>
-          <span id="planFileLabel" style="font-size:12px;color:var(--sl2)">${archNombre?'📎 '+archNombre:'Sin archivo seleccionado'}</span>
+          <span id="planFileLabel" style="font-size:12px;color:var(--sl2)">${archNombre?'<i class="fas fa-paperclip"></i> '+archNombre:'Sin archivo seleccionado'}</span>
         </div>
       </div>
       <div class="fld" style="margin-bottom:0;background:#fff3cd;border-radius:8px;padding:10px 14px;border:1px solid #f6c343">
-        <label style="font-size:11px;font-weight:800;text-transform:uppercase;color:#856404">📅 Fecha Límite de Entrega</label>
+        <label style="font-size:11px;font-weight:800;text-transform:uppercase;color:#856404"><i class="fas fa-calendar-days"></i> Fecha Límite de Entrega</label>
         <div style="font-size:15px;font-weight:800;color:#c53030;margin-top:4px">${fechaLimite||'No definida por el admin'}</div>
         <div style="font-size:11px;color:#856404;margin-top:2px">Definida por el administrador (fin del periodo extraordinario)</div>
       </div>
     </div>`,
     showCancelButton:true,
-    confirmButtonText:'📤 Enviar Plan',cancelButtonText:'Cancelar',confirmButtonColor:'var(--nv)',
+    confirmButtonText:'<i class="fas fa-upload"></i> Enviar Plan',cancelButtonText:'Cancelar',confirmButtonColor:'var(--nv)',
     didOpen:()=>{/* store ref to file input */window._planFileInput=gi(inputId);},
     preConfirm:()=>{
       const t=gi('planTitulo').value.trim(),d=gi('planDesc').value.trim();
@@ -5918,7 +5918,7 @@ function _planDialog({titulo='',desc='',archNombre='',archDataUrl='',archType=''
   });
 }
 window.onPlanFilePick=function(inp,labelId){
-  const lb=gi(labelId);if(lb&&inp.files[0]) lb.textContent='📎 '+inp.files[0].name;
+  const lb=gi(labelId);if(lb&&inp.files[0]) lb.textContent='<i class="fas fa-paperclip"></i> '+inp.files[0].name;
 };
 
 /* Send plan to entire salon */
@@ -6021,12 +6021,12 @@ async function marcarRecRevisado(id){ /* implementado en api-layer.js */ }
 function pgEHist(){
   const hist=(DB.histRecs||[]).filter(r=>r.estId===CU.id).slice().reverse();
   const periodos=[...new Set(hist.map(r=>r._periodo))];
-  if(!hist.length) return`<div class="ph"><h2>Historial Recuperaciones</h2><button class="btn xs bg" onclick="showHelp('ehist')" style="margin-top:6px">❓ Ayuda</button></div>
-    <div class="al alb">📭 Aún no hay periodos de recuperación archivados.</div>`;
+  if(!hist.length) return`<div class="ph"><h2>Historial Recuperaciones</h2><button class="btn xs bg" onclick="showHelp('ehist')" style="margin-top:6px"><i class="fas fa-circle-question"></i> Ayuda</button></div>
+    <div class="al alb"><i class="fas fa-envelope-open"></i> Aún no hay periodos de recuperación archivados.</div>`;
   const cards=periodos.map(per=>{
     const items=hist.filter(r=>r._periodo===per);
     return`<div class="card" style="margin-bottom:14px">
-      <div class="chd"><span class="cti">📅 Periodo: ${per}</span>
+      <div class="chd"><span class="cti"><i class="fas fa-calendar-days"></i> Periodo: ${per}</span>
         <span class="bdg bgy" style="font-size:11px">Archivado ${items[0]?._archivedAt||''}</span>
       </div>
       <div class="tw"><table><thead>
@@ -6037,18 +6037,18 @@ function pgEHist(){
           return`<tr>
             <td><span class="bdg brd">${r.materia}</span></td>
             <td style="font-size:12px;max-width:130px">${planRef?`<strong>${planRef.titulo}</strong>`:'<span style="color:var(--sl3)">—</span>'}</td>
-            <td><span style="font-size:12px;font-family:var(--mn)">📎 ${esc(r.nombre)}</span></td>
+            <td><span style="font-size:12px;font-family:var(--mn)"><i class="fas fa-paperclip"></i> ${esc(r.nombre)}</span></td>
             <td style="font-size:12px;color:var(--sl2);max-width:110px">${r.desc||'—'}</td>
             <td style="font-family:var(--mn);font-size:11px">${r.fecha}</td>
-            <td><span class="bdg ${r.revisado?'bgr':'brd'}">${r.revisado?`✓ Revisado ${r.revisadoTs||''}`:'✗ No revisado'}</span></td>
-            <td>${(r.id||r.dataUrl)?`<button class="btn xs bb" onclick="abrirHistRec('histRecs',${(DB.histRecs||[]).indexOf(r)})">📂 Abrir</button>`:'—'}</td>
+            <td><span class="bdg ${r.revisado?'bgr':'brd'}">${r.revisado?`<i class="fas fa-check"></i> Revisado ${r.revisadoTs||''}`:'<i class="fas fa-xmark"></i> No revisado'}</span></td>
+            <td>${(r.id||r.dataUrl)?`<button class="btn xs bb" onclick="abrirHistRec('histRecs',${(DB.histRecs||[]).indexOf(r)})"><i class="fas fa-folder-open"></i> Abrir</button>`:'—'}</td>
           </tr>`;
         }).join('')}
       </tbody></table></div>
     </div>`;
   }).join('');
   return`<div class="ph"><h2>Historial de Recuperaciones</h2>
-    <button class="btn xs bg" style="margin-top:4px" onclick="showHelp('ehist')">❓ Ayuda</button>
+    <button class="btn xs bg" style="margin-top:4px" onclick="showHelp('ehist')"><i class="fas fa-circle-question"></i> Ayuda</button>
     <p>Registro de todos los trabajos enviados en periodos extraordinarios anteriores.</p></div>
   ${cards}`;
 }
@@ -6060,13 +6060,13 @@ function pgPHist(){
   const hist=(DB.histRecs||[]).filter(r=>r.profId===CU.id).slice().reverse();
   const periodos=[...new Set(hist.map(r=>r._periodo))];
   const busqId='phistBusq_'+Date.now();
-  if(!hist.length) return`<div class="ph"><h2>Historial Recuperaciones</h2><button class="btn xs bg" onclick="showHelp('phist')" style="margin-top:6px">❓ Ayuda</button></div>
-    <div class="al alb">📭 Aún no hay periodos de recuperación archivados.</div>`;
+  if(!hist.length) return`<div class="ph"><h2>Historial Recuperaciones</h2><button class="btn xs bg" onclick="showHelp('phist')" style="margin-top:6px"><i class="fas fa-circle-question"></i> Ayuda</button></div>
+    <div class="al alb"><i class="fas fa-envelope-open"></i> Aún no hay periodos de recuperación archivados.</div>`;
   return`<div class="ph"><h2>Historial de Recuperaciones Recibidas</h2>
-    <button class="btn xs bg" style="margin-top:4px" onclick="showHelp('phist')">❓ Ayuda</button>
+    <button class="btn xs bg" style="margin-top:4px" onclick="showHelp('phist')"><i class="fas fa-circle-question"></i> Ayuda</button>
     <p>Registro de todas las recuperaciones recibidas en periodos anteriores.</p></div>
   <div class="card">
-    <div class="chd"><span class="cti">🔍 Buscar</span></div>
+    <div class="chd"><span class="cti"><i class="fas fa-magnifying-glass"></i> Buscar</span></div>
     <input id="phistQ" placeholder="Buscar por nombre de archivo, estudiante o materia..." 
       style="width:100%;padding:9px 12px;border:1.5px solid var(--bd);border-radius:var(--r);font-size:13px;outline:none;box-sizing:border-box"
       oninput="filtrarHistProf()">
@@ -6075,7 +6075,7 @@ function pgPHist(){
     ${periodos.map(per=>{
       const items=hist.filter(r=>r._periodo===per);
       return`<div class="card phist-period" data-periodo="${per}" style="margin-bottom:14px">
-        <div class="chd"><span class="cti">📅 Periodo: ${per}</span>
+        <div class="chd"><span class="cti"><i class="fas fa-calendar-days"></i> Periodo: ${per}</span>
           <span class="bdg bgy" style="font-size:11px">Archivado ${items[0]?._archivedAt||''}</span>
           <span class="bdg bbl">${items.length} archivo(s)</span>
         </div>
@@ -6089,13 +6089,13 @@ function pgPHist(){
               <td><strong>${r.estNombre||'—'}</strong></td>
               <td><span class="bdg bgy">${r.salon||'—'}</span></td>
               <td><span class="bdg brd">${r.materia}</span></td>
-              <td><span style="font-size:12px;font-family:var(--mn)">📎 ${esc(r.nombre)}</span></td>
+              <td><span style="font-size:12px;font-family:var(--mn)"><i class="fas fa-paperclip"></i> ${esc(r.nombre)}</span></td>
               <td style="font-size:12px;max-width:130px">${planRef?`<strong>${planRef.titulo}</strong><br><span style="font-size:10px;color:var(--sl3)">${planRef.fecha}</span>`:'<span style="color:var(--sl3)">—</span>'}</td>
               <td style="font-size:12px;color:var(--sl2);max-width:100px">${r.desc||'—'}</td>
               <td style="font-family:var(--mn);font-size:11px">${r.fecha}</td>
-              <td><span class="bdg ${r.revisado?'bgr':'brd'}">${r.revisado?`✓ Revisado`:'✗ Sin revisar'}</span>
+              <td><span class="bdg ${r.revisado?'bgr':'brd'}">${r.revisado?`<i class="fas fa-check"></i> Revisado`:'<i class="fas fa-xmark"></i> Sin revisar'}</span>
                 ${r.revisado?`<div style="font-size:10px;color:var(--sl3)">${r.revisadoTs||''}</div>`:''}</td>
-              <td>${(r.id||r.dataUrl)?`<button class="btn xs bb" onclick="abrirHistRec('histRecs',${globalIdx})">📂 Abrir</button>`:'—'}</td>
+              <td>${(r.id||r.dataUrl)?`<button class="btn xs bb" onclick="abrirHistRec('histRecs',${globalIdx})"><i class="fas fa-folder-open"></i> Abrir</button>`:'—'}</td>
             </tr>`;
           }).join('')}
         </tbody></table></div>
@@ -6138,7 +6138,7 @@ function pgEB(){
   return`<div class="ph" style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:12px">
     <div>
       <h2>Mi Boletín</h2>
-      <button class="btn xs bg" onclick="showHelp('eb')" style="margin-top:6px">❓ Ayuda</button>
+      <button class="btn xs bg" onclick="showHelp('eb')" style="margin-top:6px"><i class="fas fa-circle-question"></i> Ayuda</button>
     </div>
     ${_logoEB ? `<div style="display:flex;flex-direction:column;align-items:center;gap:6px">
       <img src="${_logoEB}" alt="Logo" style="height:72px;width:auto;max-width:130px;object-fit:contain;border-radius:10px;box-shadow:0 4px 18px rgba(0,0,0,.13);background:var(--bg2);padding:6px">
@@ -6168,12 +6168,12 @@ function initEB(){
     mats.some(m=>{const t=DB.notas[e.id]?.[per]?.[m];return t&&(t.a>0||t.c>0||t.r>0);}));
 
   let h=`<div class="al alb" style="margin-bottom:6px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
-    <span>📅 Año Lectivo: <strong style="font-size:15px;color:var(--nv)">${anoLabel}</strong></span>
+    <span><i class="fas fa-calendar-days"></i> Año Lectivo: <strong style="font-size:15px;color:var(--nv)">${anoLabel}</strong></span>
     <span style="font-size:12px;color:var(--sl2)">Salón: <strong>${e.salon||'Sin asignar'}</strong></span>
   </div>`;
 
   if(!persConDatos.length){
-    h+=`<div class="card"><div class="mty"><div class="ei">📭</div>
+    h+=`<div class="card"><div class="mty"><div class="ei"><i class="fas fa-envelope-open"></i></div>
       <p>Aún no tienes notas registradas.</p>
       <p style="font-size:13px;color:var(--sl3)">Cuando tu profesor ingrese las calificaciones aparecerán aquí.</p>
     </div></div>`;
@@ -6182,17 +6182,17 @@ function initEB(){
   }
 
   h+=`<div class="sr">
-    <div class="scc" data-i="📊"><div class="sv" style="color:${scCol(pg)}">${fmt(pg)}</div><div class="sl">Prom. General</div><div class="bar"></div></div>
-    <div class="scc" data-i="🏆"><div class="sv">${ps}</div><div class="sl">Puesto Salón</div><div class="bar"></div></div>
-    <div class="scc" data-i="🏫"><div class="sv" style="font-size:${(e.salon||'—').length>4?'15px':'22px'};margin-top:2px">${e.salon||'—'}</div><div class="sl">Mi Salón</div><div class="bar"></div></div>
-    <div class="scc" data-i="⚠️"><div class="sv" style="color:${cantPerdidas>0?'var(--red)':'var(--grn)'}">${cantPerdidas}</div><div class="sl">${labelPerdidas}</div><div class="bar"></div></div>
+    <div class="scc" data-i="<i class="fas fa-chart-column"></i>"><div class="sv" style="color:${scCol(pg)}">${fmt(pg)}</div><div class="sl">Prom. General</div><div class="bar"></div></div>
+    <div class="scc" data-i="<i class="fas fa-trophy"></i>"><div class="sv">${ps}</div><div class="sl">Puesto Salón</div><div class="bar"></div></div>
+    <div class="scc" data-i="<i class="fas fa-school"></i>"><div class="sv" style="font-size:${(e.salon||'—').length>4?'15px':'22px'};margin-top:2px">${e.salon||'—'}</div><div class="sl">Mi Salón</div><div class="bar"></div></div>
+    <div class="scc" data-i="<i class="fas fa-triangle-exclamation"></i>"><div class="sv" style="color:${cantPerdidas>0?'var(--red)':'var(--grn)'}">${cantPerdidas}</div><div class="sl">${labelPerdidas}</div><div class="bar"></div></div>
   </div>`;
 
   const elegible=tieneAreas?(areasP.length>=1&&areasP.length<=2):(mp.length>=1&&mp.length<=2);
   const nombresPerdidos=tieneAreas?areasP.map(a=>a.areaNombre):mp;
   if(DB.ext.on&&elegible){
     const tipLabel=tieneAreas?'área(s)':'materia(s)';
-    h+=`<div class="rbc"><h4>⚠️ Tienes ${nombresPerdidos.length} ${tipLabel} en recuperación</h4>
+    h+=`<div class="rbc"><h4><i class="fas fa-triangle-exclamation"></i> Tienes ${nombresPerdidos.length} ${tipLabel} en recuperación</h4>
       <p style="font-size:13px;margin-bottom:8px">${nombresPerdidos.map(m=>`<span class="bdg brd" style="margin:2px">${m}</span>`).join('')}</p>
       <p style="font-size:13px">Extraordinario: <strong>${DB.ext.s} → ${DB.ext.e}</strong></p></div>`;
   }
@@ -6207,7 +6207,7 @@ function initEB(){
         if(!matsArea.length) return;
         const defsA=matsArea.map(m=>def(DB.notas[e.id]?.[per]?.[m]||{a:0,c:0,r:0})).filter(d=>d>0);
         const da=defsA.length?+(defsA.reduce((s,v)=>s+v,0)/defsA.length).toFixed(2):0;
-        tablaBody+=`<tr style="background:#f0f0f0"><td colspan="7" style="padding:5px 8px;font-weight:800;font-size:12px">▸ ${areaNombre} — Def. Área: <span class="${scC(da)}">${da===0?'—':fmt(da)}</span></td></tr>`;
+        tablaBody+=`<tr style="background:#f0f0f0"><td colspan="7" style="padding:5px 8px;font-weight:800;font-size:12px"><i class="fas fa-caret-right"></i> ${areaNombre} — Def. Área: <span class="${scC(da)}">${da===0?'—':fmt(da)}</span></td></tr>`;
         matsArea.forEach(m=>{
           const t=DB.notas[e.id]?.[per]?.[m]||{a:0,c:0,r:0};const d=def(t);
           const prf=profForMat(m,e.salon);
@@ -6289,17 +6289,17 @@ function pgEAst(){
   recs.sort((a,b)=>b.fecha.localeCompare(a.fecha));
   const pres=recs.filter(r=>r.val==='presente').length;
   const aus=recs.filter(r=>r.val==='ausente').length;
-  return`<div class="ph"><h2>Mi Asistencia</h2><button class="btn xs bg" onclick="showHelp('east')">❓ Ayuda</button></div>
+  return`<div class="ph"><h2>Mi Asistencia</h2><button class="btn xs bg" onclick="showHelp('east')"><i class="fas fa-circle-question"></i> Ayuda</button></div>
   <div class="sr">
-    <div class="scc" data-i="✅"><div class="sv" style="color:var(--grn)">${pres}</div><div class="sl">Presente</div><div class="bar"></div></div>
-    <div class="scc" data-i="❌"><div class="sv" style="color:var(--red)">${aus}</div><div class="sl">Ausente</div><div class="bar"></div></div>
-    <div class="scc" data-i="📅"><div class="sv">${recs.length}</div><div class="sl">Total</div><div class="bar"></div></div>
+    <div class="scc" data-i="<i class="fas fa-circle-check"></i>"><div class="sv" style="color:var(--grn)">${pres}</div><div class="sl">Presente</div><div class="bar"></div></div>
+    <div class="scc" data-i="<i class="fas fa-circle-xmark"></i>"><div class="sv" style="color:var(--red)">${aus}</div><div class="sl">Ausente</div><div class="bar"></div></div>
+    <div class="scc" data-i="<i class="fas fa-calendar-days"></i>"><div class="sv">${recs.length}</div><div class="sl">Total</div><div class="bar"></div></div>
   </div>
   <div class="card"><div class="chd"><span class="cti">Historial</span></div>
   ${recs.length?`<div class="tw"><table><thead><tr><th>Fecha</th><th>Estado</th></tr></thead>
   <tbody>${recs.map(r=>`<tr><td style="font-family:var(--mn);font-size:13px">${r.fecha}</td>
     <td><span class="bdg ${r.val==='presente'?'bgr':'brd'}">${r.val}</span></td></tr>`).join('')}</tbody></table></div>`
-  :'<div class="mty"><div class="ei">📅</div><p>Sin registros</p></div>'}
+  :'<div class="mty"><div class="ei"><i class="fas fa-calendar-days"></i></div><p>Sin registros</p></div>'}
   </div>`;
 }
 
@@ -6313,8 +6313,8 @@ function pgETare(){
     ?prfsDelSalon.map(p=>`<option value="${p.id}">${esc(p.nombre)}</option>`).join('')
     :'<option value="">Sin profesores asignados</option>';
   const mis=(DB.ups[e.id]||[]).slice().reverse();
-  return`<div class="ph"><h2>Tareas & Talleres</h2><button class="btn xs bg" onclick="showHelp('etare')">❓ Ayuda</button></div>
-  <div class="card"><div class="chd"><span class="cti">📎 Subir Archivo</span></div>
+  return`<div class="ph"><h2>Tareas & Talleres</h2><button class="btn xs bg" onclick="showHelp('etare')"><i class="fas fa-circle-question"></i> Ayuda</button></div>
+  <div class="card"><div class="chd"><span class="cti"><i class="fas fa-paperclip"></i> Subir Archivo</span></div>
     <div class="fg">
       <div class="fld"><label>Profesor</label><select id="utprof" onchange="onProfChangeTaller()">
         <option value="">Seleccionar profesor...</option>${profOpts}
@@ -6336,15 +6336,15 @@ function pgETare(){
     </div>
     <div class="fld"><label>Título / Descripción</label><input id="utd" placeholder="Taller unidad 3 — Descripción breve..."></div>
     <div class="uzone" onclick="gi('utf').click()">
-      <div class="uzic">📎</div>
+      <div class="uzic"><i class="fas fa-paperclip"></i></div>
       <p><strong>Clic para seleccionar archivo</strong></p>
       <small>PDF, Word (.doc/.docx), Excel (.xls/.xlsx) — máx 10 MB</small>
       <input type="file" id="utf" accept=".pdf,.doc,.docx,.xls,.xlsx" style="display:none" onchange="onFPick(this)">
       <div id="utfn" style="margin-top:8px;font-size:13px;font-weight:700;color:var(--nv)"></div>
     </div>
-    <button class="btn bn" style="margin-top:14px" onclick="subirTarea()">📤 Subir</button>
+    <button class="btn bn" style="margin-top:14px" onclick="subirTarea()"><i class="fas fa-upload"></i> Subir</button>
   </div>
-  <div class="card"><div class="chd"><span class="cti">📂 Mis Archivos Enviados</span></div>
+  <div class="card"><div class="chd"><span class="cti"><i class="fas fa-folder-open"></i> Mis Archivos Enviados</span></div>
   ${mis.length?`<div class="tw"><table><thead>
     <tr><th>Archivo</th><th>Materia</th><th>Periodo</th><th>Profesor</th><th>Descripción</th><th>Fecha</th><th>Estado</th><th>Acción</th></tr></thead>
     <tbody>${mis.map(u=>`<tr>
@@ -6355,19 +6355,19 @@ function pgETare(){
       <td style="font-size:12px;color:var(--sl2)">${u.desc||'—'}</td>
       <td style="font-family:var(--mn);font-size:11px">${u.fecha}</td>
       <td>
-        <span class="bdg ${u.revisado?'bgr':'bwa'}">${u.revisado?'✓ Revisado':'⏳ Pendiente'}</span>
+        <span class="bdg ${u.revisado?'bgr':'bwa'}">${u.revisado?'<i class="fas fa-check"></i> Revisado':'<i class="fas fa-hourglass-half"></i> Pendiente'}</span>
         ${u.revisado?`<div style="font-size:10px;color:var(--sl3);margin-top:3px">${u.revisadoTs||''}</div>`:''}
       </td>
       <td>${u.revisado
-        ?`<button class="btn xs br" onclick="eliminarTallerEst('${u.id}')">🗑️</button>`
+        ?`<button class="btn xs br" onclick="eliminarTallerEst('${u.id}')"><i class="fas fa-trash"></i></button>`
         :'<span style="font-size:10px;color:var(--sl3)">—</span>'}
       </td>
     </tr>`).join('')}</tbody></table></div>`
-  :'<div class="mty"><div class="ei">📂</div><p>Sin archivos subidos</p></div>'}
+  :'<div class="mty"><div class="ei"><i class="fas fa-folder-open"></i></div><p>Sin archivos subidos</p></div>'}
   </div>`;
 }
 function onFPick(inp){
-  if(inp.files[0]) gi('utfn').textContent='📎 '+inp.files[0].name;
+  if(inp.files[0]) gi('utfn').textContent='<i class="fas fa-paperclip"></i> '+inp.files[0].name;
 }
 function onProfChangeTaller(){
   const profId=gi('utprof')?.value;
@@ -6407,11 +6407,11 @@ function pgEExc(){
   const mis=DB.exc.filter(x=>x.estId===e.id||x.eid===e.id).slice().reverse();
   const ventanaOk=excusasOk();
   return`<div class="ph"><h2>Módulo de Excusas</h2>
-    <p>Horario de envío: ${(DB.excHorario?.ini??18)}:00 – ${(DB.excHorario?.fin??7)}:00 ${ventanaOk?'<span class="bdg bgr">✓ Abierto</span>':'<span class="bdg brd">✗ Cerrado</span>'}</p>
-    <button class="btn xs bg" onclick="showHelp('eexc')" style="margin-top:6px">❓ Ayuda</button>
+    <p>Horario de envío: ${(DB.excHorario?.ini??18)}:00 – ${(DB.excHorario?.fin??7)}:00 ${ventanaOk?'<span class="bdg bgr"><i class="fas fa-check"></i> Abierto</span>':'<span class="bdg brd"><i class="fas fa-xmark"></i> Cerrado</span>'}</p>
+    <button class="btn xs bg" onclick="showHelp('eexc')" style="margin-top:6px"><i class="fas fa-circle-question"></i> Ayuda</button>
   </div>
-  ${!ventanaOk?`<div class="al aly">⚠️ Las excusas solo pueden enviarse entre las ${DB.excHorario?.ini??18}:00 y las ${DB.excHorario?.fin??7}:00.</div>`:''}
-  <div class="card"><div class="chd"><span class="cti">✉️ Redactar Excusa</span></div>
+  ${!ventanaOk?`<div class="al aly"><i class="fas fa-triangle-exclamation"></i> Las excusas solo pueden enviarse entre las ${DB.excHorario?.ini??18}:00 y las ${DB.excHorario?.fin??7}:00.</div>`:''}
+  <div class="card"><div class="chd"><span class="cti"><i class="fas fa-envelope"></i> Redactar Excusa</span></div>
     <div class="fg">
       <div class="fld"><label>Fecha de la ausencia</label><input type="date" id="exd" value="${today()}"></div>
       <div class="fld"><label>Dirigir a</label><select id="exdst">
@@ -6424,46 +6424,46 @@ function pgEExc(){
     </div>
     <div class="fld"><label>Descripción adicional</label>
       <textarea id="exdesc" placeholder="Detalles adicionales..."></textarea></div>
-    <button class="btn bn" ${!ventanaOk?'disabled':''} onclick="envExcusa()">📨 Enviar Excusa</button>
+    <button class="btn bn" ${!ventanaOk?'disabled':''} onclick="envExcusa()"><i class="fas fa-envelope"></i> Enviar Excusa</button>
   </div>
-  <div class="card"><div class="chd"><span class="cti">📬 Mis Excusas</span></div>
+  <div class="card"><div class="chd"><span class="cti"><i class="fas fa-envelope-circle-check"></i> Mis Excusas</span></div>
   <div id="excBandeja">${renderBandejaEst(e.id)}</div>
   </div>`;
 }
 
 function renderBandejaEst(estId){
   const mis=(DB.exc||[]).filter(x=>x.estId===estId||x.eid===estId).slice().reverse();
-  if(!mis.length) return '<div class="mty"><div class="ei">📬</div><p>Sin excusas</p></div>';
+  if(!mis.length) return '<div class="mty"><div class="ei"><i class="fas fa-envelope-circle-check"></i></div><p>Sin excusas</p></div>';
   return mis.map(x=>{
     const tieneResp=!!(x.respProf);
     const noLeida=tieneResp&&!x.respLeida;
     const talleresHtml=(x.talleres||[]).map(t=>
       `<div style="display:flex;align-items:center;gap:8px;padding:6px 10px;background:#ebf8ff;border-radius:6px;margin-top:4px">
-        <span>📎</span>
+        <span><i class="fas fa-paperclip"></i></span>
         <span style="font-size:12px;flex:1">${t.nombre} <span style="font-size:10px;color:var(--sl3)">(${t.tamanio||''})</span></span>
-        <button class="btn xs bb" onclick="descargarTallerExcusa('${x._id||x.id}','${encodeURIComponent(t.nombre)}')">⬇️ Descargar</button>
+        <button class="btn xs bb" onclick="descargarTallerExcusa('${x._id||x.id}','${encodeURIComponent(t.nombre)}')"><i class="fas fa-arrow-down"></i> Descargar</button>
       </div>`).join('');
     return`<div style="border:2px solid ${noLeida?'#f6ad55':tieneResp?'#68d391':'var(--bd)'};border-radius:10px;padding:12px;margin-bottom:10px;background:${noLeida?'#fffaf0':tieneResp?'#f0fff4':'var(--bg2)'}">
       <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px;margin-bottom:6px">
         <div>
-          <span style="font-size:12px;font-family:var(--mn)">📅 ${x.fecha}</span>&nbsp;
+          <span style="font-size:12px;font-family:var(--mn)"><i class="fas fa-calendar-days"></i> ${x.fecha}</span>&nbsp;
           <span class="bdg bbl">${x.dest}</span>&nbsp;
           <span class="bdg bor">${x.causa}</span>
         </div>
-        <span class="bdg ${noLeida?'bor':tieneResp?'bgr':'bwa'}">${noLeida?'🔔 Nueva respuesta':tieneResp?'✅ Respondida':'⏳ Pendiente'}</span>
+        <span class="bdg ${noLeida?'bor':tieneResp?'bgr':'bwa'}">${noLeida?'<i class="fas fa-bell"></i> Nueva respuesta':tieneResp?'<i class="fas fa-circle-check"></i> Respondida':'<i class="fas fa-hourglass-half"></i> Pendiente'}</span>
       </div>
-      ${x.desc?`<div style="font-size:12px;color:var(--sl2);margin-bottom:6px">💬 ${x.desc}</div>`:''}
+      ${x.desc?`<div style="font-size:12px;color:var(--sl2);margin-bottom:6px"><i class="fas fa-comment"></i> ${x.desc}</div>`:''}
       ${tieneResp?`<div style="background:#e6fffa;border-radius:8px;padding:10px;margin-top:6px;border:1px solid ${noLeida?'#f6ad55':'#9ae6b4'}">
-        <div style="font-size:12px;font-weight:700;color:#276749;margin-bottom:4px">📩 Respuesta de ${x.respProfNombre||'tu profesor'}: <span style="font-size:10px;color:var(--sl3)">${x.respTs||''}</span></div>
+        <div style="font-size:12px;font-weight:700;color:#276749;margin-bottom:4px"><i class="fas fa-envelope"></i> Respuesta de ${x.respProfNombre||'tu profesor'}: <span style="font-size:10px;color:var(--sl3)">${x.respTs||''}</span></div>
         <div style="font-size:13px;color:#234e52">${x.respProf}</div>
-        ${x.diasExtra>0?`<div style="margin-top:6px;font-size:12px">⏰ <strong>Tiempo extra:</strong> ${x.diasExtra} día(s) — <strong>Fecha límite:</strong> ${x.fechaLimite||'—'}</div>`:''}
-        ${talleresHtml?`<div style="margin-top:8px"><strong style="font-size:12px">📚 Talleres a realizar:</strong>${talleresHtml}</div>`:''}
+        ${x.diasExtra>0?`<div style="margin-top:6px;font-size:12px"><i class="fas fa-clock"></i> <strong>Tiempo extra:</strong> ${x.diasExtra} día(s) — <strong>Fecha límite:</strong> ${x.fechaLimite||'—'}</div>`:''}
+        ${talleresHtml?`<div style="margin-top:8px"><strong style="font-size:12px"><i class="fas fa-book"></i> Talleres a realizar:</strong>${talleresHtml}</div>`:''}
         <div style="margin-top:10px;padding:10px;background:#fffbeb;border:1.5px solid #f6ad55;border-radius:8px;font-size:12px;color:#c05621">
-          ⚠️ <strong>Debes enviar el trabajo en el apartado Talleres y Tareas dentro del tiempo estipulado. Después de la fecha límite no se calificará.</strong>
+          <i class="fas fa-triangle-exclamation"></i> <strong>Debes enviar el trabajo en el apartado Talleres y Tareas dentro del tiempo estipulado. Después de la fecha límite no se calificará.</strong>
         </div>
         ${noLeida
-          ?`<button class="btn xs bg" style="margin-top:8px" onclick="marcarRespLeida('${x._id||x.id}')">👁️ Marcar como leída</button>`
-          :`<div style="font-size:10px;color:var(--sl3);margin-top:6px">✓ Vista el ${x.respTs||''}</div>`}
+          ?`<button class="btn xs bg" style="margin-top:8px" onclick="marcarRespLeida('${x._id||x.id}')"><i class="fas fa-eye"></i> Marcar como leída</button>`
+          :`<div style="font-size:10px;color:var(--sl3);margin-top:6px"><i class="fas fa-check"></i> Vista el ${x.respTs||''}</div>`}
       </div>`:''}
     </div>`;
   }).join('');
@@ -6491,13 +6491,13 @@ function notifNuevasExcusas(){
   const nuevas=mis.filter(x=>!x.respProf);
   if(!nuevas.length) return;
   sessionStorage.setItem(sessionKey,'1');
-  sw('info',`📨 Tienes <strong>${nuevas.length}</strong> excusa${nuevas.length>1?'s':''} sin responder`);
+  sw('info',`<i class="fas fa-envelope"></i> Tienes <strong>${nuevas.length}</strong> excusa${nuevas.length>1?'s':''} sin responder`);
 }
 
 /* Show excusas to professor in their home panel */
 function renderPExcR(){
   // Panel de tabs activo — no se usa este contenedor
-  // Las excusas se muestran en el tab ✉️ del panel principal
+  // Las excusas se muestran en el tab <i class="fas fa-envelope"></i> del panel principal
   const el=gi('pExcR');if(el) el.innerHTML='';
 }
 
@@ -6506,7 +6506,7 @@ function renderPExcR(){
 ============================================================ */
 function pgEProf(){
   const e=CU;const prfs=profsInSalon(e.salon);
-  return`<div class="ph"><h2>Mis Profesores</h2><button class="btn xs bg" onclick="showHelp('eprof')" style="margin-top:6px">❓ Ayuda</button></div>
+  return`<div class="ph"><h2>Mis Profesores</h2><button class="btn xs bg" onclick="showHelp('eprof')" style="margin-top:6px"><i class="fas fa-circle-question"></i> Ayuda</button></div>
   <div class="card"><div class="chd"><span class="cti">Salón: <span class="bdg bbl">${e.salon||'Sin salón'}</span></span></div>
   ${e.salon&&prfs.length?`<div class="tw"><table><thead>
     <tr><th>Profesor</th><th>Ciclo</th><th>Materias</th></tr></thead>
@@ -6518,7 +6518,7 @@ function pgEProf(){
           '<span style="font-size:12px;color:var(--sl3)">Todas (Primaria)</span>'}
       </div></td>
     </tr>`).join('')}</tbody></table></div>`
-  :'<div class="mty"><div class="ei">👩‍🏫</div><p>Sin profesores asignados</p></div>'}
+  :'<div class="mty"><div class="ei"><i class="fas fa-chalkboard-user"></i></div><p>Sin profesores asignados</p></div>'}
   </div>`;
 }
 
@@ -6529,7 +6529,7 @@ function pgEVir(){
   const e=CU;
   const clases=(DB.vclases||[]).filter(c=>c.salon===e.salon)
     .sort((a,b)=>b.fecha.localeCompare(a.fecha)||b.hora.localeCompare(a.hora));
-  return`<div class="ph"><h2>💻 Mis Clases Virtuales</h2><p>Salón: <strong>${e.salon||'Sin salón'}</strong></p><button class="btn xs bg" onclick="showHelp('evir')" style="margin-top:6px">❓ Ayuda</button></div>
+  return`<div class="ph"><h2><i class="fas fa-laptop"></i> Mis Clases Virtuales</h2><p>Salón: <strong>${e.salon||'Sin salón'}</strong></p><button class="btn xs bg" onclick="showHelp('evir')" style="margin-top:6px"><i class="fas fa-circle-question"></i> Ayuda</button></div>
   ${clases.length?clases.map(c=>{
     const ahora=new Date();
     const claseTs=new Date(c.fecha+'T'+c.hora);
@@ -6539,25 +6539,25 @@ function pgEVir(){
     return`<div class="vc-card" style="flex-direction:column;align-items:stretch;gap:12px">
       <div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:8px">
         <div>
-          <h4>💻 ${c.desc||'Clase Virtual'}</h4>
+          <h4><i class="fas fa-laptop"></i> ${c.desc||'Clase Virtual'}</h4>
           <small>Salón ${c.salon} · ${c.fecha} a las ${c.hora} · Prof. ${c.profNombre||'—'}</small>
         </div>
         ${pasada
           ? `<span class="bdg bgy" style="font-size:11px">Finalizada</span>`
           : activa
-            ? `<span class="bdg" style="background:#d1fae5;color:#065f46;border:1px solid #6ee7b7;font-size:11px">🟢 En vivo</span>`
-            : `<span class="bdg" style="background:rgba(255,255,255,.15);color:#fff;border:1px solid rgba(255,255,255,.25);font-size:11px">📅 Programada</span>`
+            ? `<span class="bdg" style="background:#d1fae5;color:#065f46;border:1px solid #6ee7b7;font-size:11px"><i class="fas fa-circle"></i> En vivo</span>`
+            : `<span class="bdg" style="background:rgba(255,255,255,.15);color:#fff;border:1px solid rgba(255,255,255,.25);font-size:11px"><i class="fas fa-calendar-days"></i> Programada</span>`
         }
       </div>
       ${activa
-        ? `<button class="btn sm bs" onclick="abrirSalaJitsi('${c.roomId}','${(c.desc||'Clase Virtual').replace(/'/g,"\'")}',false)" style="align-self:flex-start">🎥 Unirse a la clase</button>`
+        ? `<button class="btn sm bs" onclick="abrirSalaJitsi('${c.roomId}','${(c.desc||'Clase Virtual').replace(/'/g,"\'")}',false)" style="align-self:flex-start"><i class="fas fa-video"></i> Unirse a la clase</button>`
         : pasada
           ? `<span style="font-size:12px;opacity:.7">Esta clase ya finalizó</span>`
           : `<span style="font-size:12px;opacity:.7">La clase aún no ha comenzado. Vuelve el ${c.fecha} a las ${c.hora}.</span>`
       }
     </div>`;
   }).join('')
-  :`<div class="card"><div class="mty"><div class="ei">💻</div><p>Sin clases programadas para tu salón</p></div></div>`}`;
+  :`<div class="card"><div class="mty"><div class="ei"><i class="fas fa-laptop"></i></div><p>Sin clases programadas para tu salón</p></div></div>`}`;
 }
 
 /* ============================================================
@@ -6565,8 +6565,8 @@ function pgEVir(){
 ============================================================ */
 function pgEReh(){
   const e=CU;const mp=matPerd(e.id);
-  if(!DB.ext.on) return`<div class="ph"><h2>Mi Recuperación</h2><button class="btn xs bg" onclick="showHelp('ereh')" style="margin-top:6px">❓ Ayuda</button></div><div class="al aly">⚠️ El periodo extraordinario no está activo.</div>`;
-  if(!mp.length) return`<div class="ph"><h2>Mi Recuperación</h2><button class="btn xs bg" onclick="showHelp('ereh')" style="margin-top:6px">❓ Ayuda</button></div><div class="al alg">✅ No tienes materias en recuperación. ¡Bien hecho!</div>`;
+  if(!DB.ext.on) return`<div class="ph"><h2>Mi Recuperación</h2><button class="btn xs bg" onclick="showHelp('ereh')" style="margin-top:6px"><i class="fas fa-circle-question"></i> Ayuda</button></div><div class="al aly"><i class="fas fa-triangle-exclamation"></i> El periodo extraordinario no está activo.</div>`;
+  if(!mp.length) return`<div class="ph"><h2>Mi Recuperación</h2><button class="btn xs bg" onclick="showHelp('ereh')" style="margin-top:6px"><i class="fas fa-circle-question"></i> Ayuda</button></div><div class="al alg"><i class="fas fa-circle-check"></i> No tienes materias en recuperación. ¡Bien hecho!</div>`;
 
   /* Mark all plans as seen */
   let planesChanged=false;
@@ -6582,9 +6582,9 @@ function pgEReh(){
 
     return`<div class="card" style="border-left:4px solid ${hayPlanes?'var(--grn)':'var(--red)'}">
       <div class="chd">
-        <span class="cti">📚 ${m}</span>
-        <span class="bdg ${hayPlanes?'bgr':'brd'}">${hayPlanes?`📋 ${planesMat.length} Plan(es)`:'⚠️ Sin Plan Aún'}</span>
-        ${periodoVencido?`<span class="bdg brd" style="font-size:10px">🔒 Periodo vencido</span>`:''}
+        <span class="cti"><i class="fas fa-book"></i> ${m}</span>
+        <span class="bdg ${hayPlanes?'bgr':'brd'}">${hayPlanes?`<i class="fas fa-clipboard-list"></i> ${planesMat.length} Plan(es)`:'<i class="fas fa-triangle-exclamation"></i> Sin Plan Aún'}</span>
+        ${periodoVencido?`<span class="bdg brd" style="font-size:10px"><i class="fas fa-lock"></i> Periodo vencido</span>`:''}
       </div>
       <div style="font-size:13px;margin-bottom:14px">
         <strong>Docente:</strong> ${prf?prf.nombre:'<span style="color:var(--sl3)">Sin docente asignado</span>'}<br>
@@ -6599,26 +6599,26 @@ function pgEReh(){
           const keyPlan=plan.id.replace(/[^a-z0-9]/gi,'_');
           return`<div style="background:#f0fff4;border:1.5px solid #9ae6b4;border-radius:8px;padding:14px;margin-bottom:14px">
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;flex-wrap:wrap;gap:6px">
-              <div style="font-size:12px;font-weight:800;color:#276749">📋 Plan ${planesMat.length-pi} — ${plan.fecha}${plan.esSalon?' <span style="font-size:10px;font-weight:400">(salón)</span>':''}</div>
-              ${yaRevisada?`<span class="bdg bgr" style="font-size:11px">✅ Revisado ${ultimaResp.revisadoTs||''}</span>`:''}
+              <div style="font-size:12px;font-weight:800;color:#276749"><i class="fas fa-clipboard-list"></i> Plan ${planesMat.length-pi} — ${plan.fecha}${plan.esSalon?' <span style="font-size:10px;font-weight:400">(salón)</span>':''}</div>
+              ${yaRevisada?`<span class="bdg bgr" style="font-size:11px"><i class="fas fa-circle-check"></i> Revisado ${ultimaResp.revisadoTs||''}</span>`:''}
             </div>
             <div style="font-size:14px;font-weight:700;color:var(--nv);margin-bottom:6px">${plan.titulo}</div>
             <div style="font-size:13px;white-space:pre-line;color:#2d3748;line-height:1.6;margin-bottom:8px">${plan.desc}</div>
             ${plan.fechaLimite?`<div style="font-size:12px;padding:5px 10px;background:#c6f6d5;border-radius:6px;display:inline-block;margin-bottom:8px">
-              📅 Fecha límite: <strong>${plan.fechaLimite}</strong></div>`:''}
+              <i class="fas fa-calendar-days"></i> Fecha límite: <strong>${plan.fechaLimite}</strong></div>`:''}
             ${plan.archNombre?`<div style="display:flex;align-items:center;gap:10px;padding:7px 12px;background:#ebf8ff;border-radius:7px;border:1px solid #90cdf4;margin-bottom:10px">
-              <span style="font-size:12px">📎 ${plan.archNombre}</span>
-              <button class="btn xs bb" onclick="abrirArchivoPlan('${plan.id}')">📂 Abrir</button>
+              <span style="font-size:12px"><i class="fas fa-paperclip"></i> ${plan.archNombre}</span>
+              <button class="btn xs bb" onclick="abrirArchivoPlan('${plan.id}')"><i class="fas fa-folder-open"></i> Abrir</button>
             </div>`:''}
 
             <!-- Respuestas a este plan -->
             ${respuestas.length?`<div style="margin-bottom:10px">
               <div style="font-size:11px;font-weight:800;color:var(--sl);text-transform:uppercase;margin-bottom:5px">Mis respuestas:</div>
               ${respuestas.map(r=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:7px 10px;background:${r.revisado?'#f0fff4':'#fffff0'};border-radius:6px;border:1px solid ${r.revisado?'#9ae6b4':'#f6e05e'};margin-bottom:5px">
-                <span style="font-size:12px">📎 ${esc(r.nombre)} <span style="color:var(--sl3);font-size:11px">${r.fecha}</span>${r.desc?` — <em style="color:var(--sl2)">${r.desc}</em>`:''}</span>
+                <span style="font-size:12px"><i class="fas fa-paperclip"></i> ${esc(r.nombre)} <span style="color:var(--sl3);font-size:11px">${r.fecha}</span>${r.desc?` — <em style="color:var(--sl2)">${r.desc}</em>`:''}</span>
                 <div style="display:flex;align-items:center;gap:6px">
-                  <span class="bdg ${r.revisado?'bgr':'bwa'}">${r.revisado?`✓ Revisado`:'⏳ Pendiente'}</span>
-                  ${r.revisado?`<button class="btn xs br" onclick="eliminarRecEst('${r.id}')">🗑️</button>`:''}
+                  <span class="bdg ${r.revisado?'bgr':'bwa'}">${r.revisado?`<i class="fas fa-check"></i> Revisado`:'<i class="fas fa-hourglass-half"></i> Pendiente'}</span>
+                  ${r.revisado?`<button class="btn xs br" onclick="eliminarRecEst('${r.id}')"><i class="fas fa-trash"></i></button>`:''}
                 </div>
               </div>`).join('')}
             </div>`:''}
@@ -6626,28 +6626,28 @@ function pgEReh(){
             <!-- Formulario respuesta: bloqueado si revisado O periodo vencido -->
             ${yaRevisada
               ?`<div style="background:#c6f6d5;border-radius:7px;padding:10px 14px;display:flex;align-items:center;gap:10px">
-                  <span>✅</span><div style="font-size:12px;color:#276749"><strong>Revisado</strong> por el docente el ${ultimaResp.revisadoTs||''}.</div>
+                  <span><i class="fas fa-circle-check"></i></span><div style="font-size:12px;color:#276749"><strong>Revisado</strong> por el docente el ${ultimaResp.revisadoTs||''}.</div>
                 </div>`
               :periodoVencido
                 ?`<div style="background:#fed7d7;border-radius:7px;padding:10px 14px;display:flex;align-items:center;gap:10px">
-                    <span>🔒</span><div style="font-size:12px;color:#c53030"><strong>Periodo vencido.</strong> Ya no puedes enviar respuestas a este plan.</div>
+                    <span><i class="fas fa-lock"></i></span><div style="font-size:12px;color:#c53030"><strong>Periodo vencido.</strong> Ya no puedes enviar respuestas a este plan.</div>
                   </div>`
                 :`<div style="background:#fff;border:1.5px dashed #9ae6b4;border-radius:7px;padding:12px;margin-top:4px">
-                    <div style="font-size:12px;font-weight:800;color:var(--nv);margin-bottom:8px">📤 Responder → ${prf?prf.nombre:'el docente'}</div>
+                    <div style="font-size:12px;font-weight:800;color:var(--nv);margin-bottom:8px"><i class="fas fa-upload"></i> Responder → ${prf?prf.nombre:'el docente'}</div>
                     <div class="fld" style="margin-bottom:8px"><label style="font-size:11px">Descripción</label>
                       <input id="rdesc_${keyPlan}" placeholder="Describe brevemente..."></div>
                     <div class="uzone" style="padding:10px" onclick="gi('rf_${keyPlan}').click()">
-                      <div class="uzic" style="font-size:20px">📎</div>
+                      <div class="uzic" style="font-size:20px"><i class="fas fa-paperclip"></i></div>
                       <p style="font-size:12px;margin:3px 0"><strong>Clic para seleccionar archivo</strong></p>
                       <small>PDF, Word, Excel — máx 5 MB</small>
                       <input type="file" id="rf_${keyPlan}" accept=".pdf,.doc,.docx,.xls,.xlsx" style="display:none" onchange="onRecFPick(this,'rfn_${keyPlan}')">
                       <div id="rfn_${keyPlan}" style="margin-top:5px;font-size:12px;font-weight:700;color:var(--nv)"></div>
                     </div>
-                    <button class="btn bn sm" style="margin-top:10px" onclick="subirRecPlan('${plan.id}','${m}','${prf?prf.id:''}')">📤 Enviar Respuesta</button>
+                    <button class="btn bn sm" style="margin-top:10px" onclick="subirRecPlan('${plan.id}','${m}','${prf?prf.id:''}')"><i class="fas fa-upload"></i> Enviar Respuesta</button>
                   </div>`}
           </div>`;
         }).join('')
-        :`<div class="al aly" style="font-size:12px;margin-bottom:14px">⏳ Tu docente aún no ha enviado el plan.</div>`}
+        :`<div class="al aly" style="font-size:12px;margin-bottom:14px"><i class="fas fa-hourglass-half"></i> Tu docente aún no ha enviado el plan.</div>`}
 
       <!-- Trabajos sin plan (legado) -->
       ${(()=>{
@@ -6656,10 +6656,10 @@ function pgEReh(){
         return`<div style="margin-top:8px">
           <div style="font-size:11px;font-weight:700;color:var(--sl);margin-bottom:5px">Otros trabajos enviados:</div>
           ${sinPlan.map(r=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:7px 10px;background:${r.revisado?'#f0fff4':'#fffff0'};border-radius:6px;border:1px solid ${r.revisado?'#9ae6b4':'#f6e05e'};margin-bottom:5px">
-            <span style="font-size:12px">📎 ${esc(r.nombre)} <span style="color:var(--sl3);font-size:11px">${r.fecha}</span></span>
+            <span style="font-size:12px"><i class="fas fa-paperclip"></i> ${esc(r.nombre)} <span style="color:var(--sl3);font-size:11px">${r.fecha}</span></span>
             <div style="display:flex;align-items:center;gap:6px">
-              <span class="bdg ${r.revisado?'bgr':'bwa'}">${r.revisado?`✓ Revisado`:'⏳ Pendiente'}</span>
-              ${r.revisado?`<button class="btn xs br" onclick="eliminarRecEst('${r.id}')">🗑️</button>`:''}
+              <span class="bdg ${r.revisado?'bgr':'bwa'}">${r.revisado?`<i class="fas fa-check"></i> Revisado`:'<i class="fas fa-hourglass-half"></i> Pendiente'}</span>
+              ${r.revisado?`<button class="btn xs br" onclick="eliminarRecEst('${r.id}')"><i class="fas fa-trash"></i></button>`:''}
             </div>
           </div>`).join('')}
         </div>`;
@@ -6670,12 +6670,12 @@ function pgEReh(){
   const dot=document.querySelector('#ni_ereh .notif-dot');if(dot)dot.remove();
 
   return`<div class="ph"><h2>Mi Recuperación</h2>
-    <p>Tienes <strong>${mp.length}</strong> materia(s) en periodo extraordinario.</p><button class="btn xs bg" onclick="showHelp('ereh')" style="margin-top:6px">❓ Ayuda</button></div>
-  <div class="al aly" style="margin-bottom:14px">📅 Periodo Extraordinario: <strong>${DB.ext.s} → ${DB.ext.e}</strong></div>
+    <p>Tienes <strong>${mp.length}</strong> materia(s) en periodo extraordinario.</p><button class="btn xs bg" onclick="showHelp('ereh')" style="margin-top:6px"><i class="fas fa-circle-question"></i> Ayuda</button></div>
+  <div class="al aly" style="margin-bottom:14px"><i class="fas fa-calendar-days"></i> Periodo Extraordinario: <strong>${DB.ext.s} → ${DB.ext.e}</strong></div>
   ${tarjetas}`;
 }
 
-function onRecFPick(inp,key){if(inp.files[0]) gi(key).textContent='📎 '+inp.files[0].name;}
+function onRecFPick(inp,key){if(inp.files[0]) gi(key).textContent='<i class="fas fa-paperclip"></i> '+inp.files[0].name;}
 
 /* Submit a reply linked to a specific plan */
 /* ── SOBREESCRITA por api-layer.js ── */
@@ -6754,9 +6754,9 @@ function mkBoletinUI(estId,ctx){
 
   if(!anosConDatos.length){
     return`<div class="card" style="border:2px solid var(--bd)">
-      <div class="chd"><span class="cti">📄 Descargar Boletín PDF</span></div>
+      <div class="chd"><span class="cti"><i class="fas fa-file-lines"></i> Descargar Boletín PDF</span></div>
       <div class="al aly" style="font-size:13px">
-        📭 No hay notas registradas todavía. El boletín estará disponible cuando el profesor ingrese tus calificaciones.
+        <i class="fas fa-envelope-open"></i> No hay notas registradas todavía. El boletín estará disponible cuando el profesor ingrese tus calificaciones.
       </div>
     </div>`;
   }
@@ -6790,18 +6790,18 @@ function mkBoletinUI(estId,ctx){
     });
     const wrap=gi('perWrap_'+uid);if(!wrap)return;
     if(!persSel.length){
-      wrap.innerHTML=`<span style="font-size:13px;color:var(--sl3)">📭 No hay notas registradas para ${annoSel}.</span>`;
+      wrap.innerHTML=`<span style="font-size:13px;color:var(--sl3)"><i class="fas fa-envelope-open"></i> No hay notas registradas para ${annoSel}.</span>`;
       return;
     }
     const tBtn=persSel.length>1
-      ?`<button class="btn bb" onclick="dlBoletin('${estId}','TODOS',gi('yr_${uid}').value)">📋 Todos los Periodos</button>
+      ?`<button class="btn bb" onclick="dlBoletin('${estId}','TODOS',gi('yr_${uid}').value)"><i class="fas fa-clipboard-list"></i> Todos los Periodos</button>
          <span style="font-size:12px;color:var(--sl3);font-weight:600">— o por periodo —</span>`:'';
-    const pBtns=persSel.map(p=>`<button class="btn bg sm" onclick="dlBoletin('${estId}','${encodeURIComponent(p)}',gi('yr_${uid}').value)">📄 ${p}</button>`).join('');
+    const pBtns=persSel.map(p=>`<button class="btn bg sm" onclick="dlBoletin('${estId}','${encodeURIComponent(p)}',gi('yr_${uid}').value)"><i class="fas fa-file-lines"></i> ${p}</button>`).join('');
     wrap.innerHTML=tBtn+pBtns;
   };
 
   return`<div class="card" style="border:2px solid var(--bl3)">
-    <div class="chd"><span class="cti">📄 Descargar Boletín PDF</span></div>
+    <div class="chd"><span class="cti"><i class="fas fa-file-lines"></i> Descargar Boletín PDF</span></div>
     <div class="al alb" style="margin-bottom:14px">
       <div><strong>Todos los periodos:</strong> muestra definitivas resumidas.
       <strong>Por periodo:</strong> incluye desglose tripartita (Apt / Act / Res).
@@ -6819,9 +6819,9 @@ function mkBoletinUI(estId,ctx){
     <div id="perWrap_${uid}" style="display:flex;flex-wrap:wrap;gap:10px;align-items:center">
       ${(()=>{
         const tBtn=persConDatos.length>1
-          ?`<button class="btn bb" onclick="dlBoletin('${estId}','TODOS',gi('yr_${uid}').value)">📋 Todos los Periodos</button>
+          ?`<button class="btn bb" onclick="dlBoletin('${estId}','TODOS',gi('yr_${uid}').value)"><i class="fas fa-clipboard-list"></i> Todos los Periodos</button>
              <span style="font-size:12px;color:var(--sl3);font-weight:600">— o por periodo —</span>`:'';
-        const pBtns=persConDatos.map(p=>`<button class="btn bg sm" onclick="dlBoletin('${estId}','${encodeURIComponent(p)}',gi('yr_${uid}').value)">📄 ${p}</button>`).join('');
+        const pBtns=persConDatos.map(p=>`<button class="btn bg sm" onclick="dlBoletin('${estId}','${encodeURIComponent(p)}',gi('yr_${uid}').value)"><i class="fas fa-file-lines"></i> ${p}</button>`).join('');
         return tBtn+pBtns;
       })()}
     </div>
@@ -7381,7 +7381,7 @@ function dlBoletin(estId,perFilter,anno,snapData){
         }).join('');
         // Fila de área (cabecera de sección)
         bodyHTML += `<tr style="background:#e0e0e0">
-          <td style="padding:5px 8px;border:1px solid #bbb;font-weight:800;font-size:12px;color:#111">▸ ${areaNombre}</td>
+          <td style="padding:5px 8px;border:1px solid #bbb;font-weight:800;font-size:12px;color:#111"><i class="fas fa-caret-right"></i> ${areaNombre}</td>
           ${perCellsArea}
           <td style="padding:5px 7px;border:1px solid #bbb;text-align:center;font-weight:900;font-size:13px;color:${bCol(promArea)}">${promArea===0?'—':fmt(promArea)}</td>
           <td style="padding:5px 7px;border:1px solid #bbb;text-align:center;font-size:11px;font-weight:700;color:${bCol(promArea)}">${promArea===0?'—':bDes(promArea)}</td>
@@ -7428,7 +7428,7 @@ function dlBoletin(estId,perFilter,anno,snapData){
           const defsArea=matsArea.map(m=>def(notas[per]?.[m]||{a:0,c:0,r:0})).filter(d=>d>0);
           const dp=defsArea.length?+(defsArea.reduce((s,v)=>s+v,0)/defsArea.length).toFixed(2):0;
           tableBody+=`<tr style="background:#e0e0e0">
-            <td style="padding:5px 8px;border:1px solid #bbb;font-weight:800;font-size:12px" colspan="5">▸ ${areaNombre}</td>
+            <td style="padding:5px 8px;border:1px solid #bbb;font-weight:800;font-size:12px" colspan="5"><i class="fas fa-caret-right"></i> ${areaNombre}</td>
             <td style="padding:5px 7px;border:1px solid #bbb;text-align:center;font-weight:900;font-size:13px;color:${bCol(dp)}">${dp===0?'—':fmt(dp)}</td>
             <td style="padding:5px 7px;border:1px solid #bbb;text-align:center;font-size:10px;font-weight:700;color:${dp===0?'#aaa':bCol(dp)}">${dp===0?'—':bDes(dp)}</td>
           </tr>`;
@@ -7489,11 +7489,11 @@ function dlBoletin(estId,perFilter,anno,snapData){
     if(verd){
       if(verd.completo){
         // Resultado definitivo
-        const ic = verd.resultado==='gana'?'✓':verd.resultado==='recupera'?'⚠':'✗';
+        const ic = verd.resultado==='gana'?'<i class="fas fa-check"></i>':verd.resultado==='recupera'?'<i class="fas fa-triangle-exclamation"></i>':'<i class="fas fa-xmark"></i>';
         let resumenHTML = '';
         if(verd.tieneAreas && verd.resAreas){
           resumenHTML = verd.resAreas.map(a=>`<tr>
-            <td style="padding:5px 8px;border:1px solid #ddd;font-size:12px;font-weight:700">${a.gana?'✓':'✗'} ${a.areaNombre}</td>
+            <td style="padding:5px 8px;border:1px solid #ddd;font-size:12px;font-weight:700">${a.gana?'<i class="fas fa-check"></i>':'<i class="fas fa-xmark"></i>'} ${a.areaNombre}</td>
             <td style="padding:5px 7px;border:1px solid #ddd;text-align:center;font-size:13px;font-weight:800;color:${bCol(a.prom)}">${a.prom.toFixed(2)}</td>
             <td style="padding:5px 7px;border:1px solid #ddd;font-size:11px;font-weight:700;color:${bCol(a.prom)}">${a.gana?'Aprobada':'Perdida'}</td>
           </tr>`).join('');
@@ -7501,7 +7501,7 @@ function dlBoletin(estId,perFilter,anno,snapData){
           resumenHTML = `<table style="width:100%;border-collapse:collapse;font-size:11px;margin-top:8px"><tbody>${cabeza}${resumenHTML}</tbody></table>`;
         } else {
           resumenHTML = verd.resMateria.map(x=>`<tr>
-            <td style="padding:5px 8px;border:1px solid #ddd;font-size:12px;font-weight:700">${x.gana?'✓':'✗'} ${x.mat}</td>
+            <td style="padding:5px 8px;border:1px solid #ddd;font-size:12px;font-weight:700">${x.gana?'<i class="fas fa-check"></i>':'<i class="fas fa-xmark"></i>'} ${x.mat}</td>
             <td style="padding:5px 7px;border:1px solid #ddd;text-align:center;font-size:13px;font-weight:800;color:${bCol(x.prom)}">${x.prom.toFixed(2)}</td>
             <td style="padding:5px 7px;border:1px solid #ddd;font-size:11px;font-weight:700;color:${bCol(x.prom)}">${x.gana?'Aprobada':'Perdida'}</td>
           </tr>`).join('');
@@ -7513,7 +7513,7 @@ function dlBoletin(estId,perFilter,anno,snapData){
           : 'Aprobado ≥ 3.0 · Recuperación: 1–2 materias perdidas · Pierde año: 3+ materias perdidas';
         veredictoHTML = `<div style="border:1.5px solid #333;margin-top:16px;page-break-inside:avoid">
           <div style="background:#111;color:#fff;padding:10px 14px">
-            <div style="font-size:14px;font-weight:800">${ic} ${verd.mensaje.replace(/[🎉⚠️❌]/g,'').trim()}</div>
+            <div style="font-size:14px;font-weight:800">${ic} ${verd.mensaje.replace(/[<i class="fas fa-champagne-glasses"></i><i class="fas fa-triangle-exclamation"></i><i class="fas fa-circle-xmark"></i>]/g,'').trim()}</div>
             ${verd.resultado==='recupera'?'<div style="font-size:11px;margin-top:3px;opacity:.85">Tiene derecho a recuperación al finalizar el año por las áreas/materias perdidas.</div>':''}
             ${verd.resultado==='pierde'?'<div style="font-size:11px;margin-top:3px;opacity:.85">Perdió 3 o más áreas. Debe repetir el año escolar.</div>':''}
             ${verd.resultado==='gana'?'<div style="font-size:11px;margin-top:3px;opacity:.85">Felicitaciones. Aprobó todas las áreas del año lectivo.</div>':''}
@@ -7789,7 +7789,7 @@ function icfesGenerar(asig){
 
 // ─── pgEIcfes — página principal del simulacro ────────────────────────────
 function pgEIcfes(){
-  return `<div id="icfesRoot"><div class="ph"><h2>🎯 Simulacro ICFES</h2>
+  return `<div id="icfesRoot"><div class="ph"><h2><i class="fas fa-bullseye"></i> Simulacro ICFES</h2>
     <p style="font-size:13px;color:var(--sl2)">Practica con preguntas reales de las pruebas ICFES colombianas 2023-2025.</p>
   </div><div id="icfesContent"></div></div>`;
 }
@@ -7819,19 +7819,19 @@ function icfesRenderMenu(el, state){
     const progreso = state?.progreso?.[a];
     let badge = '';
     if(completada){
-      badge = `<span class="bdg bgr" style="font-size:11px">✅ ${res.correctas}/20</span>`;
+      badge = `<span class="bdg bgr" style="font-size:11px"><i class="fas fa-circle-check"></i> ${res.correctas}/20</span>`;
     } else if(enCurso && progreso){
-      badge = `<span class="bdg bor" style="font-size:11px">▶ En curso (${progreso.actual+1}/20)</span>`;
+      badge = `<span class="bdg bor" style="font-size:11px"><i class="fas fa-circle-play"></i> En curso (${progreso.actual+1}/20)</span>`;
     } else if(progreso && !completada){
-      badge = `<span class="bdg bor" style="font-size:11px">⏸ Pausado (${progreso.actual+1}/20)</span>`;
+      badge = `<span class="bdg bor" style="font-size:11px"><i class="fas fa-circle-pause"></i> Pausado (${progreso.actual+1}/20)</span>`;
     }
     const bg = completada ? '#f0fff4' : enCurso ? '#fffbeb' : 'var(--bg2)';
     const border = completada ? '#68d391' : enCurso ? '#f6ad55' : 'var(--bd)';
-    const iconos = {'Lectura Crítica':'📖','Matemáticas':'🔢','Sociales y Ciudadanas':'🌎','Ciencias Naturales':'🔬','Inglés':'🇬🇧'};
+    const iconos = {'Lectura Crítica':'<i class="fas fa-book-open"></i>','Matemáticas':'<i class="fas fa-hashtag"></i>','Sociales y Ciudadanas':'<i class="fas fa-earth-americas"></i>','Ciencias Naturales':'<i class="fas fa-microscope"></i>','Inglés':'<i class="fas fa-language"></i>'};
     return `<div onclick="icfesIniciarAsig('${encodeURIComponent(a)}')"
       style="cursor:pointer;border:2px solid ${border};border-radius:12px;padding:16px;background:${bg};transition:box-shadow .2s"
       onmouseover="this.style.boxShadow='0 4px 16px rgba(0,0,0,.12)'" onmouseout="this.style.boxShadow='none'">
-      <div style="font-size:24px;margin-bottom:6px">${iconos[a]||'📝'}</div>
+      <div style="font-size:24px;margin-bottom:6px">${iconos[a]||'<i class="fas fa-pen-to-square"></i>'}</div>
       <div style="font-weight:800;font-size:14px;margin-bottom:4px">${a}</div>
       <div style="font-size:11px;color:var(--sl2);margin-bottom:8px">20 preguntas</div>
       ${badge}
@@ -7848,10 +7848,10 @@ function icfesRenderMenu(el, state){
     const pct = Math.round((totalCorrectas/totalPreguntas)*100);
     const color = pct>=70?'#276749':pct>=50?'#c05621':'#c53030';
     resultadoFinalHtml = `<div style="background:#f0f4ff;border:2px solid #667eea;border-radius:12px;padding:20px;margin-bottom:20px;text-align:center">
-      <div style="font-size:28px;margin-bottom:8px">🏆</div>
+      <div style="font-size:28px;margin-bottom:8px"><i class="fas fa-trophy"></i></div>
       <div style="font-size:18px;font-weight:900;color:${color};margin-bottom:4px">${totalCorrectas} / ${totalPreguntas} correctas</div>
       <div style="font-size:14px;color:var(--sl2)">${pct}% de respuestas correctas en todas las asignaturas</div>
-      <button class="btn brd" style="margin-top:14px;font-size:13px" onclick="icfesReiniciarTodo()">🔄 Reiniciar simulacro</button>
+      <button class="btn brd" style="margin-top:14px;font-size:13px" onclick="icfesReiniciarTodo()"><i class="fas fa-arrows-rotate"></i> Reiniciar simulacro</button>
     </div>`;
   }
 
@@ -7859,7 +7859,7 @@ function icfesRenderMenu(el, state){
     <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:14px;margin-bottom:20px">
       ${cards}
     </div>
-    ${state && !todasCompletas ? `<button class="btn bs" style="font-size:12px" onclick="icfesReiniciarTodo()">🗑 Reiniciar todo el progreso</button>` : ''}`;
+    ${state && !todasCompletas ? `<button class="btn bs" style="font-size:12px" onclick="icfesReiniciarTodo()"><i class="fas fa-trash"></i> Reiniciar todo el progreso</button>` : ''}`;
 }
 
 // ─── Iniciar o continuar una asignatura ────────────────────────────────────
@@ -7873,7 +7873,7 @@ function icfesIniciarAsig(asigEnc){
     Swal.fire({
       title:`Resultado: ${asig}`,
       html:`<div style="font-size:28px;font-weight:900;color:#276749">${res.correctas}/20</div>
-        <div style="font-size:14px;margin-top:6px;color:#555">${res.correctas>=15?'🏆 Excelente':res.correctas>=10?'👍 Bien':' Puedes mejorar'}</div>`,
+        <div style="font-size:14px;margin-top:6px;color:#555">${res.correctas>=15?'<i class="fas fa-trophy"></i> Excelente':res.correctas>=10?'<i class="fas fa-thumbs-up"></i> Bien':' Puedes mejorar'}</div>`,
       icon: res.correctas>=15?'success':res.correctas>=10?'info':'warning',
       confirmButtonText:'Ver simulacro',
       showCancelButton:true, cancelButtonText:'Cerrar'
@@ -7938,7 +7938,7 @@ function icfesRenderPregunta(asig){
     </div>
     <button onclick="icfesSalirAsig('${encodeURIComponent(asig)}')"
       style="font-size:12px;color:var(--sl3);background:none;border:1px dashed var(--bd);border-radius:8px;padding:8px 14px;cursor:pointer">
-      ⏸ Pausar y salir (el progreso se guarda)
+      <i class="fas fa-circle-pause"></i> Pausar y salir (el progreso se guarda)
     </button>`;
 }
 
@@ -8008,21 +8008,21 @@ function icfesFinalizarAsig(asig){
     const pendiente = asigs.find(a => !state.resultados?.[a]?.finalizado);
     if(pendiente){
       siguienteHtml = `<button class="btn bn" style="margin-top:10px" onclick="icfesIniciarAsig('${encodeURIComponent(pendiente)}')">
-        ➡️ Continuar con: ${pendiente}</button>`;
+        <i class="fas fa-arrow-right"></i> Continuar con: ${pendiente}</button>`;
     }
   }
 
   el.innerHTML = `<div class="card" style="text-align:center;padding:28px 20px">
-    <div style="font-size:40px;margin-bottom:12px">${correctas>=15?'🏆':correctas>=10?'👍':'📚'}</div>
+    <div style="font-size:40px;margin-bottom:12px">${correctas>=15?'<i class="fas fa-trophy"></i>':correctas>=10?'<i class="fas fa-thumbs-up"></i>':'<i class="fas fa-book"></i>'}</div>
     <div style="font-size:28px;font-weight:900;color:${color};margin-bottom:6px">${correctas} / 20</div>
     <div style="font-size:15px;color:var(--sl2);margin-bottom:4px"><strong>${asig}</strong></div>
     <div style="font-size:13px;color:var(--sl3);margin-bottom:16px">${correctas>=15?'¡Excelente resultado!':correctas>=10?'Buen resultado, sigue practicando':'Sigue estudiando, tú puedes lograrlo'}</div>
     ${todasCompletas?`<div style="background:#f0f4ff;border-radius:10px;padding:14px;margin-bottom:16px">
-      <div style="font-size:15px;font-weight:800">🎓 Simulacro completo: ${totalCorrectas}/${asigs.length*20} total</div>
+      <div style="font-size:15px;font-weight:800"><i class="fas fa-graduation-cap"></i> Simulacro completo: ${totalCorrectas}/${asigs.length*20} total</div>
     </div>`:''}
     <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap">
-      <button class="btn bs" onclick="icfesIniciarAsig('${encodeURIComponent(asig)}')">🔄 Repetir ${asig}</button>
-      <button class="btn bg" onclick="icfesSalirAsig('${encodeURIComponent(asig)}')">📋 Ver resumen</button>
+      <button class="btn bs" onclick="icfesIniciarAsig('${encodeURIComponent(asig)}')"><i class="fas fa-arrows-rotate"></i> Repetir ${asig}</button>
+      <button class="btn bg" onclick="icfesSalirAsig('${encodeURIComponent(asig)}')"><i class="fas fa-clipboard-list"></i> Ver resumen</button>
       ${siguienteHtml}
     </div>
   </div>`;
@@ -8049,14 +8049,14 @@ function icfesReiniciarTodo(){
 ════════════════════════════════════════════════════════════ */
 function pgECuen(){
   return`<div style="margin-bottom:20px">
-    <h2 style="margin:0;font-size:20px">💳 Mi Cuenta</h2>
+    <h2 style="margin:0;font-size:20px"><i class="fas fa-credit-card"></i> Mi Cuenta</h2>
     <p style="margin:4px 0 0;font-size:13px;color:var(--sl2)">Consulta el estado de tus cobros y pagos pendientes.</p>
   </div>
-  <div id="ecuenW"><div class="mty"><div class="ei">💳</div><p>Cargando tu estado de cuenta…</p></div></div>`;
+  <div id="ecuenW"><div class="mty"><div class="ei"><i class="fas fa-credit-card"></i></div><p>Cargando tu estado de cuenta…</p></div></div>`;
 }
 async function initECuen(){
   const el=gi('ecuenW'); if(!el) return;
-  el.innerHTML='<div style="text-align:center;padding:24px;color:var(--sl3)">⏳ Cargando…</div>';
+  el.innerHTML='<div style="text-align:center;padding:24px;color:var(--sl3)"><i class="fas fa-hourglass-half"></i> Cargando…</div>';
   try{
     const [data, compList]=await Promise.all([
       apiFetch(`/api/fin/cuenta/${CU.id}`),
@@ -8072,7 +8072,7 @@ async function initECuen(){
     const totalDeuda=pendientes.reduce((a,p)=>a+(p.valorFinal||0),0);
     const totalPagado=pagados.reduce((a,p)=>a+(p.valorFinal||0),0);
     const stBadge=s=>({pagado:'bgr',pendiente:'bgy',vencido:'bred',anulado:'bgy'}[s]||'bgy');
-    const stLabel=s=>({pagado:'✅ Pagado',pendiente:'⏳ Pendiente',vencido:'🚨 Vencido',anulado:'❌ Anulado'}[s]||s);
+    const stLabel=s=>({pagado:'<i class="fas fa-circle-check"></i> Pagado',pendiente:'<i class="fas fa-hourglass-half"></i> Pendiente',vencido:'<i class="fas fa-triangle-exclamation"></i> Vencido',anulado:'<i class="fas fa-circle-xmark"></i> Anulado'}[s]||s);
     const compByPago={};
     comps.forEach(c=>{ compByPago[c.pagoId]=c; });
     const renderComp=(p)=>{
@@ -8082,37 +8082,37 @@ async function initECuen(){
       if(c){
         if(c.estado==='aprobado') return `
           <div style="margin-top:8px;padding:8px 12px;border-radius:8px;background:#dcfce7;border:1.5px solid #86efac;font-size:12px;color:#166534">
-            ✅ <strong>Comprobante aprobado</strong> el ${c.revisadoTs||'—'}</div>`;
+            <i class="fas fa-circle-check"></i> <strong>Comprobante aprobado</strong> el ${c.revisadoTs||'—'}</div>`;
         if(c.estado==='rechazado') return `
           <div style="margin-top:8px;padding:8px 12px;border-radius:8px;background:#fee2e2;border:1.5px solid #fca5a5;font-size:12px;color:#b91c1c">
-            ❌ <strong>Comprobante rechazado:</strong> ${esc(c.motivoRechazo||'—')}<br>
+            <i class="fas fa-circle-xmark"></i> <strong>Comprobante rechazado:</strong> ${esc(c.motivoRechazo||'—')}<br>
             <small style="display:block;margin-top:4px;opacity:.8">Debes subir nuevamente tu comprobante corregido.</small>
-            <button onclick="estSubirComprobante('${c.id}',null)" style="margin-top:6px;padding:5px 12px;font-size:11px;font-weight:700;background:#b91c1c;color:#fff;border:none;border-radius:6px;cursor:pointer">🔄 Volver a subir</button></div>`;
+            <button onclick="estSubirComprobante('${c.id}',null)" style="margin-top:6px;padding:5px 12px;font-size:11px;font-weight:700;background:#b91c1c;color:#fff;border:none;border-radius:6px;cursor:pointer"><i class="fas fa-arrows-rotate"></i> Volver a subir</button></div>`;
         if(c.estado==='enviado') return `
           <div style="margin-top:8px;padding:8px 12px;border-radius:8px;background:#dbeafe;border:1.5px solid #93c5fd;font-size:12px;color:#1e40af">
-            📬 <strong>Comprobante enviado</strong> — En revisión por el financiero.</div>`;
+            <i class="fas fa-envelope-circle-check"></i> <strong>Comprobante enviado</strong> — En revisión por el financiero.</div>`;
         if(c.estado==='solicitado') return `
           <div style="margin-top:8px;padding:8px 12px;border-radius:8px;background:#fef9c3;border:1.5px solid #fde68a;font-size:12px;color:#854d0e">
-            📎 El financiero solicita tu comprobante.<br>
-            <button onclick="estSubirComprobante('${c.id}',null)" style="margin-top:6px;padding:5px 14px;font-size:12px;font-weight:700;background:#854d0e;color:#fff;border:none;border-radius:6px;cursor:pointer">📤 Subir comprobante</button></div>`;
+            <i class="fas fa-paperclip"></i> El financiero solicita tu comprobante.<br>
+            <button onclick="estSubirComprobante('${c.id}',null)" style="margin-top:6px;padding:5px 14px;font-size:12px;font-weight:700;background:#854d0e;color:#fff;border:none;border-radius:6px;cursor:pointer"><i class="fas fa-upload"></i> Subir comprobante</button></div>`;
       }
       // Sin comprobante — mostrar botón para subir directamente
       return `
         <div style="margin-top:8px;padding:8px 12px;border-radius:8px;background:#f8fafc;border:1.5px dashed #94a3b8;font-size:12px;color:#475569">
-          📂 ¿Ya realizaste el pago? Adjunta tu comprobante para que el financiero lo verifique.<br>
-          <button onclick="estSubirComprobante(null,'${p.id}')" style="margin-top:6px;padding:5px 14px;font-size:12px;font-weight:700;background:#2563eb;color:#fff;border:none;border-radius:6px;cursor:pointer">📤 Subir comprobante</button>
+          <i class="fas fa-folder-open"></i> ¿Ya realizaste el pago? Adjunta tu comprobante para que el financiero lo verifique.<br>
+          <button onclick="estSubirComprobante(null,'${p.id}')" style="margin-top:6px;padding:5px 14px;font-size:12px;font-weight:700;background:#2563eb;color:#fff;border:none;border-radius:6px;cursor:pointer"><i class="fas fa-upload"></i> Subir comprobante</button>
         </div>`;
     };
     el.innerHTML=`
       <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:20px">
         <div style="padding:16px;border-radius:12px;background:${pendientes.length?'#fef9c3':'#f0fdf4'};border:1.5px solid ${pendientes.length?'#fde68a':'#86efac'}">
-          <div style="font-size:22px;margin-bottom:4px">${pendientes.length?'⏳':'🎉'}</div>
+          <div style="font-size:22px;margin-bottom:4px">${pendientes.length?'<i class="fas fa-hourglass-half"></i>':'<i class="fas fa-champagne-glasses"></i>'}</div>
           <div style="font-size:20px;font-weight:800;color:${pendientes.length?'#854d0e':'#166534'}">${fmt(totalDeuda)}</div>
           <div style="font-size:11px;font-weight:700;color:${pendientes.length?'#854d0e':'#166534'};text-transform:uppercase">Por pagar</div>
           <div style="font-size:11px;color:${pendientes.length?'#854d0e':'#166534'};opacity:.8">${pendientes.length} cobro${pendientes.length!==1?'s':''}</div>
         </div>
         <div style="padding:16px;border-radius:12px;background:#dcfce7;border:1.5px solid #86efac">
-          <div style="font-size:22px;margin-bottom:4px">✅</div>
+          <div style="font-size:22px;margin-bottom:4px"><i class="fas fa-circle-check"></i></div>
           <div style="font-size:20px;font-weight:800;color:#166534">${fmt(totalPagado)}</div>
           <div style="font-size:11px;font-weight:700;color:#166534;text-transform:uppercase">Pagado</div>
           <div style="font-size:11px;color:#166534;opacity:.8">${pagados.length} cobro${pagados.length!==1?'s':''}</div>
@@ -8120,7 +8120,7 @@ async function initECuen(){
       </div>
       ${pendientes.length?`
       <div class="card" style="padding:0;overflow:hidden;margin-bottom:16px">
-        <div style="padding:12px 16px;background:#fef9c3;border-bottom:1.5px solid #fde68a;font-weight:800;font-size:13px;color:#854d0e">⏳ Cobros pendientes de pago</div>
+        <div style="padding:12px 16px;background:#fef9c3;border-bottom:1.5px solid #fde68a;font-weight:800;font-size:13px;color:#854d0e"><i class="fas fa-hourglass-half"></i> Cobros pendientes de pago</div>
         <div style="padding:12px">
           ${pendientes.map(p=>`
             <div style="padding:12px 0;border-bottom:1px solid var(--bd)">
@@ -8140,7 +8140,7 @@ async function initECuen(){
       </div>`:``}
       ${pagos.length?`
       <div class="card" style="padding:0;overflow:hidden">
-        <div style="padding:12px 16px;background:var(--bg2);border-bottom:1px solid var(--bd);font-weight:800;font-size:13px">📄 Historial de cobros</div>
+        <div style="padding:12px 16px;background:var(--bg2);border-bottom:1px solid var(--bd);font-weight:800;font-size:13px"><i class="fas fa-file-lines"></i> Historial de cobros</div>
         <div class="tw"><table>
           <thead><tr><th>Concepto</th><th>Valor</th><th>Estado</th><th>Fecha</th><th></th></tr></thead>
           <tbody>${pagos.map(p=>`<tr>
@@ -8148,13 +8148,13 @@ async function initECuen(){
             <td>${fmt(p.valorFinal)}</td>
             <td><span class="bdg ${stBadge(p.estado)}" style="font-size:11px">${stLabel(p.estado)}</span></td>
             <td style="font-size:11px;color:var(--sl3)">${p.fechaPago||p.fechaVence||'—'}</td>
-            <td><button onclick="finVerReciboEst('${p.id}')" style="padding:4px 9px;font-size:11px;background:#f0f9ff;color:#0369a1;border:1.5px solid #7dd3fc;border-radius:6px;cursor:pointer" title="Ver recibo">👁</button></td>
+            <td><button onclick="finVerReciboEst('${p.id}')" style="padding:4px 9px;font-size:11px;background:#f0f9ff;color:#0369a1;border:1.5px solid #7dd3fc;border-radius:6px;cursor:pointer" title="Ver recibo"><i class="fas fa-eye"></i></button></td>
           </tr>`).join('')}</tbody>
         </table></div>
       </div>`
-      :`<div class="mty"><div class="ei">📭</div><p>No tienes cobros registrados todavía.</p></div>`}`;
+      :`<div class="mty"><div class="ei"><i class="fas fa-envelope-open"></i></div><p>No tienes cobros registrados todavía.</p></div>`}`;
   }catch(e){
-    el.innerHTML=`<div class="card"><div class="mty"><div class="ei">💳</div>
+    el.innerHTML=`<div class="card"><div class="mty"><div class="ei"><i class="fas fa-credit-card"></i></div>
       <p style="font-size:13px">La información financiera no está disponible en este momento.</p>
       <p style="font-size:12px;color:var(--sl3)">${esc(e.message)}</p>
     </div></div>`;
@@ -8165,13 +8165,13 @@ async function estSubirComprobante(compId, pagoId){
   // compId: ID de comprobante existente (para re-enviar)
   // pagoId: ID del pago (para crear comprobante nuevo)
   const {value:file}=await Swal.fire({
-    title:'📤 Subir comprobante de pago',
+    title:'<i class="fas fa-upload"></i> Subir comprobante de pago',
     html:`<p style="font-size:13px;color:#64748b;margin-bottom:12px">
       Adjunta la foto o PDF de tu transferencia/recibo de pago.<br>
       <small style="color:#94a3b8">Máximo 5 MB · JPG, PNG o PDF</small></p>
       <input type="file" id="swalCompFile" accept="image/*,application/pdf"
         style="width:100%;padding:8px;border:1.5px dashed #94a3b8;border-radius:8px;font-size:13px;cursor:pointer">`,
-    showCancelButton:true, confirmButtonText:'📤 Enviar', cancelButtonText:'Cancelar',
+    showCancelButton:true, confirmButtonText:'<i class="fas fa-upload"></i> Enviar', cancelButtonText:'Cancelar',
     confirmButtonColor:'#2563eb',
     preConfirm:()=>{
       const f=document.getElementById('swalCompFile')?.files?.[0];
@@ -8197,7 +8197,7 @@ async function estSubirComprobante(compId, pagoId){
         method:'POST', body:JSON.stringify({pagoId,dataUrl,fileType:file.type,fileName:file.name,estId:CU.id})
       });
     }
-    sw('success','✅ Comprobante enviado. El financiero lo revisará pronto.','',2500);
+    sw('success','<i class="fas fa-circle-check"></i> Comprobante enviado. El financiero lo revisará pronto.','',2500);
     initECuen();
   }catch(e){ sw('error','Error al enviar: '+e.message); }
 }
@@ -8769,29 +8769,29 @@ function veredictoAnual(eid){
 
     if(areasLost.length===0 && matsSinAreaPerd.length===0){
       resultado='gana';
-      mensaje='🎉 Aprueba el año. Ganó todas las áreas.';
+      mensaje='<i class="fas fa-champagne-glasses"></i> Aprueba el año. Ganó todas las áreas.';
     } else if(areasLost.length<=2 && (areasLost.length+matsSinAreaPerd.length)<=2){
       resultado='recupera';
       const nombresArea=areasLost.map(a=>a.areaNombre);
       const nombresMat=matsSinAreaPerd.map(x=>x.mat);
       const todos=[...nombresArea,...nombresMat];
-      mensaje=`⚠️ Va a recuperación. Perdió ${todos.length} área${todos.length>1?'s':''}: ${todos.join(', ')}.`;
+      mensaje=`<i class="fas fa-triangle-exclamation"></i> Va a recuperación. Perdió ${todos.length} área${todos.length>1?'s':''}: ${todos.join(', ')}.`;
     } else {
       resultado='pierde';
       const nombresArea=areasLost.map(a=>a.areaNombre);
-      mensaje=`❌ Pierde el año. Perdió ${areasLost.length} área${areasLost.length>1?'s':''}: ${nombresArea.join(', ')}.`;
+      mensaje=`<i class="fas fa-circle-xmark"></i> Pierde el año. Perdió ${areasLost.length} área${areasLost.length>1?'s':''}: ${nombresArea.join(', ')}.`;
     }
   } else {
     // Sin áreas: lógica original por materias
     const matsPerdidasFinal = resMateria.filter(x => !x.gana);
     if(matsPerdidasFinal.length===0){
-      resultado='gana'; mensaje='🎉 Aprueba el año. Ganó todas las materias.';
+      resultado='gana'; mensaje='<i class="fas fa-champagne-glasses"></i> Aprueba el año. Ganó todas las materias.';
     } else if(matsPerdidasFinal.length<=2){
       resultado='recupera';
-      mensaje=`⚠️ Va a recuperación. Perdió ${matsPerdidasFinal.length} materia${matsPerdidasFinal.length>1?'s':''}: ${matsPerdidasFinal.map(x=>x.mat).join(', ')}.`;
+      mensaje=`<i class="fas fa-triangle-exclamation"></i> Va a recuperación. Perdió ${matsPerdidasFinal.length} materia${matsPerdidasFinal.length>1?'s':''}: ${matsPerdidasFinal.map(x=>x.mat).join(', ')}.`;
     } else {
       resultado='pierde';
-      mensaje=`❌ Pierde el año. Perdió ${matsPerdidasFinal.length} materias: ${resMateria.filter(x=>!x.gana).map(x=>x.mat).join(', ')}.`;
+      mensaje=`<i class="fas fa-circle-xmark"></i> Pierde el año. Perdió ${matsPerdidasFinal.length} materias: ${resMateria.filter(x=>!x.gana).map(x=>x.mat).join(', ')}.`;
     }
   }
 
@@ -9071,28 +9071,28 @@ function mostrarComunicadosLogin(){
   if(!coms.length) return;
 
   const colorMap={
-    azul:  {hdr:'#2b6cb0',bg:'#ebf8ff',icon:'🔵'},
-    verde: {hdr:'#276749',bg:'#f0fff4',icon:'🟢'},
-    naranja:{hdr:'#c05621',bg:'#fffaf0',icon:'🟠'},
-    rojo:  {hdr:'#c53030',bg:'#fff5f5',icon:'🔴'},
-    morado:{hdr:'#553c9a',bg:'#faf5ff',icon:'🟣'},
+    azul:  {hdr:'#2b6cb0',bg:'#ebf8ff',icon:'<i class="fas fa-circle"></i>'},
+    verde: {hdr:'#276749',bg:'#f0fff4',icon:'<i class="fas fa-circle"></i>'},
+    naranja:{hdr:'#c05621',bg:'#fffaf0',icon:'<i class="fas fa-circle"></i>'},
+    rojo:  {hdr:'#c53030',bg:'#fff5f5',icon:'<i class="fas fa-circle"></i>'},
+    morado:{hdr:'#553c9a',bg:'#faf5ff',icon:'<i class="fas fa-circle"></i>'},
   };
 
   const htmlComs=coms.map(c=>{
     const cs=colorMap[c.color]||colorMap.azul;
     return`<div style="background:${cs.bg};border-left:4px solid ${cs.hdr};border-radius:0 10px 10px 0;padding:14px 16px;margin-bottom:12px;text-align:left">
-      <div style="font-weight:800;font-size:15px;color:${cs.hdr};margin-bottom:6px">${cs.icon} ${esc(c.titulo)}${c.esSuperAdmin?` <span style="font-size:10px;background:#553c9a;color:#fff;border-radius:4px;padding:1px 6px;vertical-align:middle;font-weight:600">🌐 Plataforma</span>`:''}</div>
+      <div style="font-weight:800;font-size:15px;color:${cs.hdr};margin-bottom:6px">${cs.icon} ${esc(c.titulo)}${c.esSuperAdmin?` <span style="font-size:10px;background:#553c9a;color:#fff;border-radius:4px;padding:1px 6px;vertical-align:middle;font-weight:600"><i class="fas fa-globe"></i> Plataforma</span>`:''}</div>
       <div style="font-size:13px;color:#2d3748;white-space:pre-line;line-height:1.7">${esc(c.mensaje)}</div>
       <div style="font-size:10px;color:#718096;margin-top:8px">Válido hasta: ${c.fechaFin}</div>
     </div>`;
   }).join('');
 
-  const titulo = role==='admin' ? '📢 Comunicado de la Plataforma' : '📢 Comunicados del Colegio';
+  const titulo = role==='admin' ? '<i class="fas fa-bullhorn"></i> Comunicado de la Plataforma' : '<i class="fas fa-bullhorn"></i> Comunicados del Colegio';
 
   Swal.fire({
     title: titulo,
     html:`<div style="max-height:65vh;overflow-y:auto;padding-right:4px;margin-top:8px">${htmlComs}</div>`,
-    confirmButtonText:'Entendido ✓',
+    confirmButtonText:'Entendido <i class="fas fa-check"></i>',
     confirmButtonColor:'#2b6cb0',
     width:'min(620px,95vw)',
     showClass:{popup:'swal2-show'},
@@ -9106,8 +9106,8 @@ function bootApp(){
   if(_tbDate) _tbDate.textContent=new Date().toLocaleDateString('es-CO',{weekday:'short',year:'numeric',month:'short',day:'numeric'});
   const st=gi('tbStatus');
   if(st){
-    if(notasOk()){st.className='tbst tbop';st.textContent='✓ Notas Abiertas';}
-    else{st.className='tbst tbcl';st.textContent='✗ Notas Cerradas';}
+    if(notasOk()){st.className='tbst tbop';st.textContent='<i class="fas fa-check"></i> Notas Abiertas';}
+    else{st.className='tbst tbcl';st.textContent='<i class="fas fa-xmark"></i> Notas Cerradas';}
   }
   const _sbUser=gi('sbUser');
   if(_sbUser) _sbUser.innerHTML=`<div class="sbav">${(CU.nombre||'?')[0].toUpperCase()}</div>
@@ -9178,10 +9178,10 @@ async function notifDeudaEstudiante(){
     sessionStorage.setItem('deudaNotifShown','1');
     await Swal.fire({
       icon:'warning',
-      title:'⚠️ Tienes cobros pendientes',
+      title:'<i class="fas fa-triangle-exclamation"></i> Tienes cobros pendientes',
       html:`<div style="font-family:var(--fn);font-size:14px">
         <p>Tienes <strong>${pendientes.length} cobro${pendientes.length!==1?'s':''}</strong> pendiente${pendientes.length!==1?'s':''} por un total de <strong style="color:#b91c1c">${fmt(total)}</strong>.</p>
-        <p style="font-size:12px;color:var(--sl3);margin-top:8px">Dirígete a <strong>💳 Mi Cuenta</strong> para ver el detalle.</p>
+        <p style="font-size:12px;color:var(--sl3);margin-top:8px">Dirígete a <strong><i class="fas fa-credit-card"></i> Mi Cuenta</strong> para ver el detalle.</p>
       </div>`,
       confirmButtonText:'Ver mi cuenta',cancelButtonText:'Cerrar',
       showCancelButton:true,
@@ -9199,19 +9199,19 @@ async function notifRespuestasExcusas(){
     if(!noLeidas.length) return;
     await Swal.fire({
       icon:'info',
-      title:`📩 Tienes ${noLeidas.length} respuesta${noLeidas.length>1?'s':''} de excusa${noLeidas.length>1?'s':''} sin leer`,
+      title:`<i class="fas fa-envelope"></i> Tienes ${noLeidas.length} respuesta${noLeidas.length>1?'s':''} de excusa${noLeidas.length>1?'s':''} sin leer`,
       html:`<div style="font-family:var(--fn);text-align:left">
         ${noLeidas.map(x=>`
           <div style="background:#e6fffa;border-radius:8px;padding:10px;margin-bottom:8px;border:1px solid #9ae6b4">
-            <div style="font-size:12px;font-weight:700;color:#276749">📩 ${x.respProfNombre||'Tu profesor'} respondió tu excusa del ${x.fecha}</div>
+            <div style="font-size:12px;font-weight:700;color:#276749"><i class="fas fa-envelope"></i> ${x.respProfNombre||'Tu profesor'} respondió tu excusa del ${x.fecha}</div>
             <div style="font-size:13px;margin-top:4px">${x.respProf}</div>
-            ${x.diasExtra>0?`<div style="font-size:12px;margin-top:4px">⏰ <strong>Tiempo extra:</strong> ${x.diasExtra} día(s) — Límite: ${x.fechaLimite||'—'}</div>`:''}
+            ${x.diasExtra>0?`<div style="font-size:12px;margin-top:4px"><i class="fas fa-clock"></i> <strong>Tiempo extra:</strong> ${x.diasExtra} día(s) — Límite: ${x.fechaLimite||'—'}</div>`:''}
           </div>`).join('')}
         <div style="background:#fffbeb;border:1.5px solid #f6ad55;border-radius:8px;padding:10px;margin-top:8px;font-size:12px;font-weight:700;color:#c05621">
-          ⚠️ Debes enviar el trabajo en <strong>Talleres y Tareas</strong> dentro del tiempo estipulado. Después de la fecha límite <strong>no se calificará</strong>.
+          <i class="fas fa-triangle-exclamation"></i> Debes enviar el trabajo en <strong>Talleres y Tareas</strong> dentro del tiempo estipulado. Después de la fecha límite <strong>no se calificará</strong>.
         </div>
       </div>`,
-      confirmButtonText:'📬 Ver mis excusas',
+      confirmButtonText:'<i class="fas fa-envelope-circle-check"></i> Ver mis excusas',
       confirmButtonColor:'#2b6cb0',
       showCancelButton:true,
       cancelButtonText:'Cerrar'
@@ -9241,11 +9241,11 @@ function notifyExtPeriod(){
   if(abrioAhora){
     Swal.fire({
       icon:'warning',
-      title:'🔄 ¡Periodo de Recuperación Abierto!',
+      title:'<i class="fas fa-arrows-rotate"></i> ¡Periodo de Recuperación Abierto!',
       html:`<div style="font-family:var(--fn);text-align:left">
         <p>Tienes <strong style="color:#c53030">${mp.length}</strong> materia(s) en recuperación:</p>
         <div style="margin:10px 0">${mp.map(m=>`<span class="bdg brd" style="margin:3px">${m}</span>`).join('')}</div>
-        <p>📅 Periodo extraordinario:<br>
+        <p><i class="fas fa-calendar-days"></i> Periodo extraordinario:<br>
           <strong>${curr.s}</strong> → <strong>${curr.e}</strong>
         </p>
         <p style="font-size:13px;color:#718096">Ve a <em>Mi Recuperación</em> para enviar tus trabajos al docente.</p>
@@ -9257,7 +9257,7 @@ function notifyExtPeriod(){
   } else if(cerroAhora){
     Swal.fire({
       icon:'info',
-      title:'🔒 Periodo de Recuperación Cerrado',
+      title:'<i class="fas fa-lock"></i> Periodo de Recuperación Cerrado',
       html:`<div style="font-family:var(--fn)">
         <p>El periodo extraordinario de recuperación <strong>ha finalizado</strong>.</p>
         <p style="font-size:13px;color:#718096">Si tienes dudas sobre tu estado, consulta con tu docente o el administrador.</p>
@@ -9267,10 +9267,10 @@ function notifyExtPeriod(){
   } else if(fechasCambiaron){
     Swal.fire({
       icon:'info',
-      title:'📅 Fechas de Recuperación Actualizadas',
+      title:'<i class="fas fa-calendar-days"></i> Fechas de Recuperación Actualizadas',
       html:`<div style="font-family:var(--fn);text-align:left">
         <p>Las fechas del periodo de recuperación cambiaron:</p>
-        <p>📅 Nuevo rango: <strong>${curr.s}</strong> → <strong>${curr.e}</strong></p>
+        <p><i class="fas fa-calendar-days"></i> Nuevo rango: <strong>${curr.s}</strong> → <strong>${curr.e}</strong></p>
         <p style="font-size:13px;color:#718096">Consulta <em>Mi Recuperación</em> para más detalles.</p>
       </div>`,
       confirmButtonText:'Ver Recuperación',
@@ -9287,7 +9287,7 @@ function notifyExtPeriod(){
       /* Show alert for new plan */
       Swal.fire({
         icon:'success',
-        title:'📋 ¡Tu docente envió un Plan de Recuperación!',
+        title:'<i class="fas fa-clipboard-list"></i> ¡Tu docente envió un Plan de Recuperación!',
         html:`<div style="font-family:var(--fn);text-align:left">
           <p>Tienes <strong>${planesNuevos.length}</strong> plan(es) nuevo(s) de recuperación:</p>
           <div style="margin:10px 0">${matsMostrar.map(mat=>{
@@ -9322,66 +9322,66 @@ function defPg(){
 }
 function navItems(){
   if(CU.role==='superadmin') return[
-    {s:'Super Admin'},{id:'sadash',ic:'🌐',lb:'Panel Global'},
-    {id:'sacolegios',ic:'🏫',lb:'Colegios & Admins'},
-    {s:'Supervisión'},{id:'saestadisticas',ic:'📊',lb:'Estadísticas'},
-    {id:'saauditoria',ic:'🔍',lb:'Auditoría Global'},
-    {s:'Comunicación'},{id:'sacom',ic:'📢',lb:'Comunicados Globales'},
-    {s:'Finanzas'},{id:'safin',ic:'💰',lb:'Módulo Financiero'},
-    {s:'Sistema'},{id:'samantenimiento',ic:'⚙️',lb:'Mantenimiento'},
-    {id:'sasug',ic:'💡',lb:'Sugerencias Recibidas'},
+    {s:'Super Admin'},{id:'sadash',ic:'<i class="fas fa-globe"></i>',lb:'Panel Global'},
+    {id:'sacolegios',ic:'<i class="fas fa-school"></i>',lb:'Colegios & Admins'},
+    {s:'Supervisión'},{id:'saestadisticas',ic:'<i class="fas fa-chart-column"></i>',lb:'Estadísticas'},
+    {id:'saauditoria',ic:'<i class="fas fa-magnifying-glass"></i>',lb:'Auditoría Global'},
+    {s:'Comunicación'},{id:'sacom',ic:'<i class="fas fa-bullhorn"></i>',lb:'Comunicados Globales'},
+    {s:'Finanzas'},{id:'safin',ic:'<i class="fas fa-sack-dollar"></i>',lb:'Módulo Financiero'},
+    {s:'Sistema'},{id:'samantenimiento',ic:'<i class="fas fa-gear"></i>',lb:'Mantenimiento'},
+    {id:'sasug',ic:'<i class="fas fa-lightbulb"></i>',lb:'Sugerencias Recibidas'},
   ];
   if(CU.role==='finAdmin') return[
-    {s:'Financiero'},{id:'findash',ic:'📊',lb:'Panel Financiero'},
-    {s:'Gestión'},{id:'finpagos',ic:'💳',lb:'Pagos & Cobros'},
-    {id:'finconceptos',ic:'📋',lb:'Conceptos de Cobro'},
-    {s:'Control'},{id:'finmorosos',ic:'⚠️',lb:'Reporte de Morosos'},
-    {id:'finbloqueos',ic:'🔒',lb:'Bloqueos'},
-    {id:'fincomprobantes',ic:'📎',lb:'Comprobantes'},
-    {s:'Comunicación'},{id:'fincom',ic:'📢',lb:'Comunicados'},
+    {s:'Financiero'},{id:'findash',ic:'<i class="fas fa-chart-column"></i>',lb:'Panel Financiero'},
+    {s:'Gestión'},{id:'finpagos',ic:'<i class="fas fa-credit-card"></i>',lb:'Pagos & Cobros'},
+    {id:'finconceptos',ic:'<i class="fas fa-clipboard-list"></i>',lb:'Conceptos de Cobro'},
+    {s:'Control'},{id:'finmorosos',ic:'<i class="fas fa-triangle-exclamation"></i>',lb:'Reporte de Morosos'},
+    {id:'finbloqueos',ic:'<i class="fas fa-lock"></i>',lb:'Bloqueos'},
+    {id:'fincomprobantes',ic:'<i class="fas fa-paperclip"></i>',lb:'Comprobantes'},
+    {s:'Comunicación'},{id:'fincom',ic:'<i class="fas fa-bullhorn"></i>',lb:'Comunicados'},
   ];
   if(CU.role==='finUser') return[
-    {s:'Financiero'},{id:'findash',ic:'📊',lb:'Panel Financiero'},
-    {id:'finpagos',ic:'💳',lb:'Pagos & Cobros'},
-    {id:'finmorosos',ic:'⚠️',lb:'Reporte de Morosos'},
+    {s:'Financiero'},{id:'findash',ic:'<i class="fas fa-chart-column"></i>',lb:'Panel Financiero'},
+    {id:'finpagos',ic:'<i class="fas fa-credit-card"></i>',lb:'Pagos & Cobros'},
+    {id:'finmorosos',ic:'<i class="fas fa-triangle-exclamation"></i>',lb:'Reporte de Morosos'},
   ];
 
   if(CU.role==='admin') return[
-    {s:'Principal'},{id:'dash',ic:'📊',lb:'Panel General'},
-    {s:'Académico'},{id:'asal',ic:'🏫',lb:'Salones & Grados'},
-    {id:'apri',ic:'📚',lb:'Primaria (1°-5°)'},{id:'abac',ic:'🎓',lb:'Bachillerato (6°-11°)'},
-    {id:'aprf',ic:'👩‍🏫',lb:'Profesores'},{id:'ahor',ic:'🕐',lb:'Horarios'},{id:'amat',ic:'📖',lb:'Materias & Periodos'},
-    {s:'Notas'},{id:'anot',ic:'📝',lb:'Gestión de Notas'},{id:'areh',ic:'🔄',lb:'Recuperaciones'},
-    {s:'Comunicación'},{id:'acom',ic:'📢',lb:'Comunicados'},{id:'aexc',ic:'✉️',lb:'Excusas'},{id:'avcl',ic:'💻',lb:'Clases Virtuales'},
-    {s:'Sistema'},{id:'afec',ic:'📅',lb:'Control de Fechas'},
-    {id:'ablk',ic:'🔒',lb:'Usuarios Bloqueados'},
-    {id:'aaud',ic:'🔍',lb:'Auditoría'},{id:'aexp',ic:'📤',lb:'Exportar'},{id:'ahist',ic:'📚',lb:'Historial'},
-    {s:'Comunicación Extra'},{id:'asug',ic:'💡',lb:'Sugerencias'},
+    {s:'Principal'},{id:'dash',ic:'<i class="fas fa-chart-column"></i>',lb:'Panel General'},
+    {s:'Académico'},{id:'asal',ic:'<i class="fas fa-school"></i>',lb:'Salones & Grados'},
+    {id:'apri',ic:'<i class="fas fa-book"></i>',lb:'Primaria (1°-5°)'},{id:'abac',ic:'<i class="fas fa-graduation-cap"></i>',lb:'Bachillerato (6°-11°)'},
+    {id:'aprf',ic:'<i class="fas fa-chalkboard-user"></i>',lb:'Profesores'},{id:'ahor',ic:'<i class="fas fa-clock"></i>',lb:'Horarios'},{id:'amat',ic:'<i class="fas fa-book-open"></i>',lb:'Materias & Periodos'},
+    {s:'Notas'},{id:'anot',ic:'<i class="fas fa-pen-to-square"></i>',lb:'Gestión de Notas'},{id:'areh',ic:'<i class="fas fa-arrows-rotate"></i>',lb:'Recuperaciones'},
+    {s:'Comunicación'},{id:'acom',ic:'<i class="fas fa-bullhorn"></i>',lb:'Comunicados'},{id:'aexc',ic:'<i class="fas fa-envelope"></i>',lb:'Excusas'},{id:'avcl',ic:'<i class="fas fa-laptop"></i>',lb:'Clases Virtuales'},
+    {s:'Sistema'},{id:'afec',ic:'<i class="fas fa-calendar-days"></i>',lb:'Control de Fechas'},
+    {id:'ablk',ic:'<i class="fas fa-lock"></i>',lb:'Usuarios Bloqueados'},
+    {id:'aaud',ic:'<i class="fas fa-magnifying-glass"></i>',lb:'Auditoría'},{id:'aexp',ic:'<i class="fas fa-upload"></i>',lb:'Exportar'},{id:'ahist',ic:'<i class="fas fa-book"></i>',lb:'Historial'},
+    {s:'Comunicación Extra'},{id:'asug',ic:'<i class="fas fa-lightbulb"></i>',lb:'Sugerencias'},
   ];
   if(CU.role==='profe') return[
-    {s:'Mi Panel'},{id:'ph',ic:'🏠',lb:'Inicio'},
-    {id:'pcom',ic:'📢',lb:'Comunicados'},
-    {id:'pnot',ic:'📝',lb:'Ingresar Notas'},{id:'past',ic:'✅',lb:'Asistencias'},
-    {id:'pvir',ic:'💻',lb:'Clases Virtuales'},
-    {id:'ptar',ic:'📂',lb:'Tareas Recibidas'},
-    {id:'prec',ic:'🔄',lb:'Recuperaciones'},
-    {id:'phist',ic:'📚',lb:'Historial Recuperaciones'},
-    {id:'psug',ic:'💡',lb:'Sugerencias'},
+    {s:'Mi Panel'},{id:'ph',ic:'<i class="fas fa-house"></i>',lb:'Inicio'},
+    {id:'pcom',ic:'<i class="fas fa-bullhorn"></i>',lb:'Comunicados'},
+    {id:'pnot',ic:'<i class="fas fa-pen-to-square"></i>',lb:'Ingresar Notas'},{id:'past',ic:'<i class="fas fa-circle-check"></i>',lb:'Asistencias'},
+    {id:'pvir',ic:'<i class="fas fa-laptop"></i>',lb:'Clases Virtuales'},
+    {id:'ptar',ic:'<i class="fas fa-folder-open"></i>',lb:'Tareas Recibidas'},
+    {id:'prec',ic:'<i class="fas fa-arrows-rotate"></i>',lb:'Recuperaciones'},
+    {id:'phist',ic:'<i class="fas fa-book"></i>',lb:'Historial Recuperaciones'},
+    {id:'psug',ic:'<i class="fas fa-lightbulb"></i>',lb:'Sugerencias'},
   ];
   /* estudiante */
   const it=[
-    {s:'Comunicados'},{id:'ecom',ic:'📢',lb:'Comunicados'},
-    {s:'Financiero'},{id:'ecuen',ic:'💳',lb:'Mi Cuenta'},
-    {s:'Mi Perfil'},{id:'eb',ic:'📋',lb:'Mi Boletín'},{id:'east',ic:'✅',lb:'Mi Asistencia'},
-    {id:'etare',ic:'📎',lb:'Tareas & Talleres'},{id:'eexc',ic:'✉️',lb:'Excusas'},
-    {id:'eprof',ic:'👩‍🏫',lb:'Mis Profesores'},{id:'evir',ic:'💻',lb:'Mis Clases Virtuales'},
-    {id:'ehist',ic:'📚',lb:'Historial Recuperaciones'},
-    {id:'esug',ic:'💡',lb:'Sugerencias'},
+    {s:'Comunicados'},{id:'ecom',ic:'<i class="fas fa-bullhorn"></i>',lb:'Comunicados'},
+    {s:'Financiero'},{id:'ecuen',ic:'<i class="fas fa-credit-card"></i>',lb:'Mi Cuenta'},
+    {s:'Mi Perfil'},{id:'eb',ic:'<i class="fas fa-clipboard-list"></i>',lb:'Mi Boletín'},{id:'east',ic:'<i class="fas fa-circle-check"></i>',lb:'Mi Asistencia'},
+    {id:'etare',ic:'<i class="fas fa-paperclip"></i>',lb:'Tareas & Talleres'},{id:'eexc',ic:'<i class="fas fa-envelope"></i>',lb:'Excusas'},
+    {id:'eprof',ic:'<i class="fas fa-chalkboard-user"></i>',lb:'Mis Profesores'},{id:'evir',ic:'<i class="fas fa-laptop"></i>',lb:'Mis Clases Virtuales'},
+    {id:'ehist',ic:'<i class="fas fa-book"></i>',lb:'Historial Recuperaciones'},
+    {id:'esug',ic:'<i class="fas fa-lightbulb"></i>',lb:'Sugerencias'},
   ];
   // Simulacro ICFES solo para bachillerato
-  if(cicloOf(CU.salon)==='bachillerato') it.push({id:'eicfes',ic:'🎯',lb:'Simulacro ICFES'});
+  if(cicloOf(CU.salon)==='bachillerato') it.push({id:'eicfes',ic:'<i class="fas fa-bullseye"></i>',lb:'Simulacro ICFES'});
   const mp=matPerd(CU.id);
-  if(DB.ext.on&&mp.length>=1&&mp.length<=2) it.push({id:'ereh',ic:'🔄',lb:'Mi Recuperación'});
+  if(DB.ext.on&&mp.length>=1&&mp.length<=2) it.push({id:'ereh',ic:'<i class="fas fa-arrows-rotate"></i>',lb:'Mi Recuperación'});
   return it;
 }
 function buildNav(){
@@ -9465,7 +9465,7 @@ function goto(pid){
   }catch(err){
     console.error('[goto] Error al renderizar página "'+pid+'":', err);
     gi('contentArea').innerHTML=`<div class="card"><div class="mty">
-      <div class="ei">⚠️</div>
+      <div class="ei"><i class="fas fa-triangle-exclamation"></i></div>
       <p style="color:var(--red)">Error al cargar la página.<br>
       <span style="font-size:12px;color:var(--sl3)">${err.message}</span></p>
       <button class="btn bg" onclick="goto('dash')">Volver al inicio</button>
@@ -9515,7 +9515,7 @@ function pgDash(){
   return`<div class="ph" style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:12px">
     <div>
       <h2>Panel General</h2><p>Resumen del sistema</p>
-      <button class="btn xs bg" onclick="showHelp('dash')" style="margin-top:6px">❓ Ayuda</button>
+      <button class="btn xs bg" onclick="showHelp('dash')" style="margin-top:6px"><i class="fas fa-circle-question"></i> Ayuda</button>
     </div>
     ${_logoD ? `<div style="display:flex;flex-direction:column;align-items:center;gap:6px">
       <img src="${_logoD}" alt="Logo" style="height:72px;width:auto;max-width:130px;object-fit:contain;border-radius:10px;box-shadow:0 4px 18px rgba(0,0,0,.13);background:var(--bg2);padding:6px">
@@ -9525,14 +9525,14 @@ function pgDash(){
   <div class="sr" id="dSt"></div>
   <div id="dSinSalon" style="display:none;margin-bottom:16px;background:var(--wh);border:2px solid #fbbf24;border-radius:12px;overflow:hidden"></div>
   <div class="g2">
-    <div class="card"><div class="chd"><span class="cti">🏆 Mejores por Salón</span></div><div id="dTop"></div></div>
-    <div class="card"><div class="chd"><span class="cti">🕐 Últimas Auditorías</span></div><div class="lw" id="dLog"></div></div>
+    <div class="card"><div class="chd"><span class="cti"><i class="fas fa-trophy"></i> Mejores por Salón</span></div><div id="dTop"></div></div>
+    <div class="card"><div class="chd"><span class="cti"><i class="fas fa-clock"></i> Últimas Auditorías</span></div><div class="lw" id="dLog"></div></div>
   </div>`;
 }
 function initDash(){
-  gi('dSt').innerHTML=[{v:DB.ests.length,l:'Estudiantes',i:'🎓'},
-    {v:DB.profs.length,l:'Profesores',i:'👩‍🏫'},{v:DB.sals.length,l:'Salones',i:'🏫'},
-    {v:DB.mB.length+DB.mP.length,l:'Materias',i:'📖'}]
+  gi('dSt').innerHTML=[{v:DB.ests.length,l:'Estudiantes',i:'<i class="fas fa-graduation-cap"></i>'},
+    {v:DB.profs.length,l:'Profesores',i:'<i class="fas fa-chalkboard-user"></i>'},{v:DB.sals.length,l:'Salones',i:'<i class="fas fa-school"></i>'},
+    {v:DB.mB.length+DB.mP.length,l:'Materias',i:'<i class="fas fa-book-open"></i>'}]
     .map(s=>`<div class="scc" data-i="${s.i}"><div class="sv">${s.v}</div><div class="sl">${s.l}</div><div class="bar"></div></div>`).join('');
 
   // Widget estudiantes sin salón
@@ -9542,7 +9542,7 @@ function initDash(){
     if(sinSalon.length){
       dSinSalon.innerHTML=`<div class="chd" style="background:#fffbeb;border-radius:12px 12px 0 0;padding:12px 18px;
         display:flex;align-items:center;gap:8px;border-bottom:1px solid #fde68a">
-        <span>⚠️</span>
+        <span><i class="fas fa-triangle-exclamation"></i></span>
         <span style="font-weight:800;font-size:13px;color:#92400e">${sinSalon.length} estudiante${sinSalon.length>1?'s':''} sin salón</span>
         <button class="btn xs" onclick="goto('apri')" style="margin-left:auto;font-size:11px;background:#fef3c7;color:#92400e;border:1px solid #fbbf24">Ver todos →</button>
       </div>
@@ -9565,25 +9565,25 @@ function initDash(){
       <div style="font-size:12px;font-weight:800;color:var(--nv);margin-bottom:6px">${sal.nombre}
         <span class="bdg bgy">${ests.length} est.</span></div>
       ${top.map((e,i)=>`<div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--bd);font-size:13px">
-        <span>${['🥇','🥈','🥉'][i]} ${e.n}</span><span class="${scC(e.p)}">${e.p.toFixed(2)}</span>
+        <span>${['<i class="fas fa-medal"></i>','<i class="fas fa-medal"></i>','<i class="fas fa-medal"></i>'][i]} ${e.n}</span><span class="${scC(e.p)}">${e.p.toFixed(2)}</span>
       </div>`).join('')}
     </div>`;
   });
-  gi('dTop').innerHTML=h||'<div class="mty"><div class="ei">🏫</div><p>Sin salones</p></div>';
+  gi('dTop').innerHTML=h||'<div class="mty"><div class="ei"><i class="fas fa-school"></i></div><p>Sin salones</p></div>';
   const rec=(DB.audit||[]).slice(-8).reverse();
   gi('dLog').innerHTML=rec.length?rec.map(l=>`<div class="le"><div class="lts">${l.ts}</div>
     <div><span class="lwho ${l.role==='admin'?'ladm':''}">${l.who}</span> → <strong>${l.est}</strong>
     | ${l.mat}: <span class="${scC(l.old)}">${l.old}</span>→<span class="${scC(l.nw)}">${l.nw}</span></div>
-  </div>`).join(''):'<div class="mty" style="padding:20px"><div class="ei">📋</div><p>Sin registros</p></div>';
+  </div>`).join(''):'<div class="mty" style="padding:20px"><div class="ei"><i class="fas fa-clipboard-list"></i></div><p>Sin registros</p></div>';
 }
 
 /* ============================================================
    SALONES
 ============================================================ */
 function pgASal(){
-  return`<div class="ph"><h2>Salones & Grados</h2><button class="btn xs bg" onclick="showHelp('asal')" style="margin-top:6px">❓ Ayuda</button></div>
+  return`<div class="ph"><h2>Salones & Grados</h2><button class="btn xs bg" onclick="showHelp('asal')" style="margin-top:6px"><i class="fas fa-circle-question"></i> Ayuda</button></div>
   <div class="card">
-    <div class="chd"><span class="cti">➕ Nuevo Salón</span></div>
+    <div class="chd"><span class="cti"><i class="fas fa-plus"></i> Nuevo Salón</span></div>
     <div style="display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:16px;align-items:end">
       <div class="fld" style="margin:0">
         <label>Nombre del salón (ej: 6A)</label>
@@ -9606,13 +9606,13 @@ function pgASal(){
         </select>
       </div>
       <button class="btn bn" onclick="addSal()" style="padding:13px 28px;font-size:15px;font-weight:800;white-space:nowrap;height:48px">
-        ➕ Agregar Salón
+        <i class="fas fa-plus"></i> Agregar Salón
       </button>
     </div>
   </div>
   <div class="g2">
-    <div class="card"><div class="chd"><span class="cti">📚 Primaria</span></div><div id="slP"></div></div>
-    <div class="card"><div class="chd"><span class="cti">🎓 Bachillerato</span></div><div id="slB"></div></div>
+    <div class="card"><div class="chd"><span class="cti"><i class="fas fa-book"></i> Primaria</span></div><div id="slP"></div></div>
+    <div class="card"><div class="chd"><span class="cti"><i class="fas fa-graduation-cap"></i> Bachillerato</span></div><div id="slB"></div></div>
   </div>`;
 }
 function initASal(){
@@ -9624,7 +9624,7 @@ function renderSals(){
   ['primaria','bachillerato'].forEach(c=>{
     const el=gi(c==='primaria'?'slP':'slB');if(!el) return;
     const list=DB.sals.filter(s=>s.ciclo===c);
-    if(!list.length){el.innerHTML='<div class="mty" style="padding:20px"><div class="ei">🏫</div><p>Sin salones</p></div>';return;}
+    if(!list.length){el.innerHTML='<div class="mty" style="padding:20px"><div class="ei"><i class="fas fa-school"></i></div><p>Sin salones</p></div>';return;}
     // Áreas configuradas para este ciclo
     const areasDelCiclo=(DB.areas||[]).filter(a=>a.ciclo===c);
     const matDocs=(DB.materiasDocs||[]).filter(d=>d.ciclo===c);
@@ -9632,7 +9632,7 @@ function renderSals(){
       const nMats=s.mats&&s.mats.length;
       const dfMats=c==='primaria'?DB.mP:DB.mB;
       const matsLabel=nMats
-        ?`<span class="bdg bgr" style="font-size:10px">🎯 ${s.mats.length} materias propias</span>`
+        ?`<span class="bdg bgr" style="font-size:10px"><i class="fas fa-bullseye"></i> ${s.mats.length} materias propias</span>`
         :`<span class="bdg bgy" style="font-size:10px">${dfMats.length} materias (${c==='primaria'?'global primaria':'global bach.'})</span>`;
       const matsList=nMats?s.mats:dfMats;
 
@@ -9641,7 +9641,7 @@ function renderSals(){
       const hayAreas=areasDelCiclo.length>0;
       const areasLabel=hayAreas
         ?(areasDelSalon.length>0
-          ?`<span class="bdg" style="font-size:10px;background:#e0e7ff;color:#3730a3;border:1px solid #a5b4fc">📂 ${areasDelSalon.length} área${areasDelSalon.length>1?'s':''}</span>`
+          ?`<span class="bdg" style="font-size:10px;background:#e0e7ff;color:#3730a3;border:1px solid #a5b4fc"><i class="fas fa-folder-open"></i> ${areasDelSalon.length} área${areasDelSalon.length>1?'s':''}</span>`
           :`<span class="bdg bgy" style="font-size:10px">Sin áreas asignadas</span>`)
         :'';
 
@@ -9661,7 +9661,7 @@ function renderSals(){
                     return d&&d.areaNombre===areaNombre;
                   });
                 return`<div style="display:flex;align-items:flex-start;gap:8px;padding:5px 8px;background:#f5f3ff;border-radius:7px;border:1px solid #ddd6fe">
-                  <span style="font-size:11px;font-weight:700;color:#5b21b6;min-width:80px">▸ ${areaNombre}</span>
+                  <span style="font-size:11px;font-weight:700;color:#5b21b6;min-width:80px"><i class="fas fa-caret-right"></i> ${areaNombre}</span>
                   <div style="display:flex;flex-wrap:wrap;gap:3px">${
                     matsDelArea.length
                       ?matsDelArea.map(m=>`<span style="font-size:10px;padding:1px 6px;background:#ede9fe;border:1px solid #c4b5fd;border-radius:4px">${m}</span>`).join('')
@@ -9678,15 +9678,15 @@ function renderSals(){
           <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
             <strong style="font-size:15px">${s.nombre}</strong>
             <span class="bdg bgy">${ebySalon(s.nombre).length} est.</span>
-            ${s.jornada?`<span class="bdg" style="font-size:10px;background:#e0f2fe;color:#0369a1;border:1px solid #7dd3fc;text-transform:capitalize">🕐 ${s.jornada}</span>`:`<span class="bdg" style="font-size:10px;background:#fefce8;color:#854d0e;border:1px solid #fde68a">🕐 Jornada no asignada</span>`}
+            ${s.jornada?`<span class="bdg" style="font-size:10px;background:#e0f2fe;color:#0369a1;border:1px solid #7dd3fc;text-transform:capitalize"><i class="fas fa-clock"></i> ${s.jornada}</span>`:`<span class="bdg" style="font-size:10px;background:#fefce8;color:#854d0e;border:1px solid #fde68a"><i class="fas fa-clock"></i> Jornada no asignada</span>`}
             ${matsLabel}
             ${areasLabel}
           </div>
           <div style="display:flex;gap:6px;flex-wrap:wrap">
-            <button class="btn xs" style="background:#e0e7ff;color:#3730a3;border:1px solid #a5b4fc" onclick="editSalAreas('${s.nombre}')">📂 Áreas</button>
-            <button class="btn xs" style="background:#fefce8;color:#854d0e;border:1px solid #fde047" onclick="editSalJornada('${s.nombre}')">🕐 Jornada</button>
-            <button class="btn xs bg" onclick="editSalMats('${s.nombre}')">🎯 Materias</button>
-            <button class="btn xs bd" onclick="delSal('${s.nombre}')">🗑</button>
+            <button class="btn xs" style="background:#e0e7ff;color:#3730a3;border:1px solid #a5b4fc" onclick="editSalAreas('${s.nombre}')"><i class="fas fa-folder-open"></i> Áreas</button>
+            <button class="btn xs" style="background:#fefce8;color:#854d0e;border:1px solid #fde047" onclick="editSalJornada('${s.nombre}')"><i class="fas fa-clock"></i> Jornada</button>
+            <button class="btn xs bg" onclick="editSalMats('${s.nombre}')"><i class="fas fa-bullseye"></i> Materias</button>
+            <button class="btn xs bd" onclick="delSal('${s.nombre}')"><i class="fas fa-trash"></i></button>
           </div>
         </div>
         <div style="margin-top:8px;display:flex;flex-wrap:wrap;gap:4px">
@@ -9706,7 +9706,7 @@ function delSal(n){ /* implementado en api-layer.js */ }
 async function editSalJornada(sname){
   const sal=DB.sals.find(s=>s.nombre===sname);if(!sal)return;
   const {value:jornada}=await Swal.fire({
-    title:`🕐 Jornada del Salón ${sname}`,
+    title:`<i class="fas fa-clock"></i> Jornada del Salón ${sname}`,
     html:`<div style="text-align:left;font-family:var(--fn)">
       <label style="font-size:13px;font-weight:600;display:block;margin-bottom:8px">Selecciona la jornada:</label>
       <select id="sj_sel" style="width:100%;padding:10px 14px;font-size:14px;border:1.5px solid var(--bd);border-radius:8px;outline:none">
@@ -9756,7 +9756,7 @@ function editSalMats(sname){
     </label>`).join('');
 
   Swal.fire({
-    title:`🎯 Materias del Salón ${sname}`,
+    title:`<i class="fas fa-bullseye"></i> Materias del Salón ${sname}`,
     width:600,
     html:`<div style="text-align:left;font-family:var(--fn)">
       <div class="al alb" style="margin-bottom:10px;font-size:12px">
@@ -9764,22 +9764,22 @@ function editSalMats(sname){
         <br>Puedes agregar materias nuevas abajo. Para volver a las globales del ciclo, usa <em>Restablecer</em>.
       </div>
       <div style="display:flex;gap:8px;margin-bottom:10px">
-        <button type="button" class="btn xs bn" onclick="[...document.querySelectorAll('.smck')].forEach(c=>c.checked=true)">✅ Todas</button>
-        <button type="button" class="btn xs bd" onclick="[...document.querySelectorAll('.smck')].forEach(c=>c.checked=false)">☐ Ninguna</button>
+        <button type="button" class="btn xs bn" onclick="[...document.querySelectorAll('.smck')].forEach(c=>c.checked=true)"><i class="fas fa-circle-check"></i> Todas</button>
+        <button type="button" class="btn xs bd" onclick="[...document.querySelectorAll('.smck')].forEach(c=>c.checked=false)"><i class="fas fa-square"></i> Ninguna</button>
         <span style="font-size:11px;color:var(--sl3);margin-left:auto;align-self:center">${tienePropia?`${sal.mats.length} propias configuradas`:'Usando globales del ciclo'}</span>
       </div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:12px">${rows}</div>
       <div style="display:flex;gap:8px;align-items:center;padding:10px;background:#f7fafc;border-radius:8px;border:1px solid var(--bd)">
         <input id="newMat" placeholder="Nueva materia personalizada..."
           style="flex:1;padding:7px 10px;border:1.5px solid var(--bd);border-radius:7px;font-size:13px;outline:none">
-        <button type="button" class="btn xs bn" onclick="addCustomMatRow()">➕ Agregar</button>
+        <button type="button" class="btn xs bn" onclick="addCustomMatRow()"><i class="fas fa-plus"></i> Agregar</button>
       </div>
       <div id="customMatsAdded"></div>
     </div>`,
     showCancelButton:true,
     confirmButtonText:'Guardar Materias',
     cancelButtonText:'Cancelar',
-    footer:`<button class="btn xs bd" style="font-size:11px" onclick="Swal.close();resetSalMats('${sname}')">🔄 Restablecer a globales del ciclo</button>`,
+    footer:`<button class="btn xs bd" style="font-size:11px" onclick="Swal.close();resetSalMats('${sname}')"><i class="fas fa-arrows-rotate"></i> Restablecer a globales del ciclo</button>`,
     didOpen:()=>{
       gi('newMat').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();addCustomMatRow();}});
     },
@@ -9878,14 +9878,14 @@ async function editSalAreas(sname){
       border-radius:8px;border:1px solid var(--bd);cursor:pointer;margin-bottom:7px">
       <input type="checkbox" class="sack" value="${area.nombre}" ${current.includes(area.nombre)?'checked':''} style="margin-top:3px;width:16px;height:16px">
       <div style="flex:1">
-        <div style="font-size:13px;font-weight:700">📂 ${area.nombre}</div>
+        <div style="font-size:13px;font-weight:700"><i class="fas fa-folder-open"></i> ${area.nombre}</div>
         <div style="display:flex;flex-wrap:wrap;gap:3px;margin-top:4px">${preview}</div>
       </div>
     </label>`;
   }).join('');
 
   const r=await Swal.fire({
-    title:`📂 Áreas del Salón ${sname}`,
+    title:`<i class="fas fa-folder-open"></i> Áreas del Salón ${sname}`,
     width:560,
     html:`<div style="text-align:left;font-family:var(--fn)">
       <div class="al alb" style="margin-bottom:12px;font-size:12px">
@@ -9921,7 +9921,7 @@ async function editSalAreas(sname){
         </label>`;
       }).join('');
       return`<div style="margin-bottom:14px">
-        <div style="font-size:13px;font-weight:700;color:#3730a3;margin-bottom:6px">📂 ${areaNombre}</div>
+        <div style="font-size:13px;font-weight:700;color:#3730a3;margin-bottom:6px"><i class="fas fa-folder-open"></i> ${areaNombre}</div>
         <div style="display:flex;flex-wrap:wrap;gap:5px;padding:8px;background:#f5f3ff;border-radius:8px;border:1px solid #ddd6fe">
           ${matsChk||'<span style="font-size:12px;color:var(--sl3)">Sin materias disponibles</span>'}
         </div>
@@ -9929,7 +9929,7 @@ async function editSalAreas(sname){
     }).join('');
 
     const r2=await Swal.fire({
-      title:`🎯 Materias por Área — Salón ${sname}`,
+      title:`<i class="fas fa-bullseye"></i> Materias por Área — Salón ${sname}`,
       width:620,
       html:`<div style="text-align:left;font-family:var(--fn)">
         <div class="al alb" style="margin-bottom:14px;font-size:12px">
@@ -9982,7 +9982,7 @@ function pgAEst(ciclo){
   const sinSalonSection = sinSalon.length ? `
     <div class="card" style="margin-top:18px;border:2px solid #fbbf24;border-radius:14px">
       <div class="chd" style="background:#fffbeb;border-radius:12px 12px 0 0;padding:14px 18px;display:flex;align-items:center;gap:10px">
-        <span style="font-size:18px">⚠️</span>
+        <span style="font-size:18px"><i class="fas fa-triangle-exclamation"></i></span>
         <span style="font-weight:800;font-size:14px;color:#92400e">${sinSalon.length} Estudiante${sinSalon.length>1?'s':''} sin salón asignado</span>
         <span style="margin-left:auto;font-size:11px;color:#b45309">Deben ser asignados a un salón</span>
       </div>
@@ -9993,13 +9993,13 @@ function pgAEst(ciclo){
             <span style="font-weight:700;color:var(--nv)">${esc(e.nombre)}</span>
             <span style="font-size:10px;color:var(--sl3)">${e.ti||''}</span>
             <button class="btn xs bn" onclick="asignarSalonEst('${e.id}','${ciclo}')"
-              style="font-size:11px;padding:3px 8px;margin-left:4px">📌 Asignar</button>
+              style="font-size:11px;padding:3px 8px;margin-left:4px"><i class="fas fa-thumbtack"></i> Asignar</button>
           </div>`).join('')}
       </div>
     </div>` : '';
   return `<div class="ph">
     <h2>Estudiantes — ${tt}</h2>
-    <button class="btn xs bg" onclick="showHelp('${ciclo==='primaria'?'apri':'abac'}')" style="margin-top:6px">❓ Ayuda</button>
+    <button class="btn xs bg" onclick="showHelp('${ciclo==='primaria'?'apri':'abac'}')" style="margin-top:6px"><i class="fas fa-circle-question"></i> Ayuda</button>
   </div>
   <div id="aestContent">
     ${sals.length ? renderSalonGrid(ciclo, sals) : renderSalonVacio(ciclo)}
@@ -10037,7 +10037,7 @@ function renderSalonGrid(ciclo, sals){
 }
 
 function renderSalonVacio(ciclo){
-  return `<div class="card"><div class="mty"><div class="ei">🏫</div>
+  return `<div class="card"><div class="mty"><div class="ei"><i class="fas fa-school"></i></div>
     <p>No hay salones de ${ciclo==='primaria'?'Primaria':'Bachillerato'} creados.<br>
     <button class="btn bg" onclick="goto('asal')">Ir a Salones & Grados</button></p>
   </div></div>`;
@@ -10051,7 +10051,7 @@ async function asignarSalonEst(estId, ciclo){
   if(!sals.length){ sw('info','Sin salones','Crea salones primero en Salones & Grados.'); return; }
   const opts = sals.map(s=>`<option value="${s.nombre}">${esc(s.nombre)} (${s.ciclo})</option>`).join('');
   const {value:salon, isConfirmed} = await Swal.fire({
-    title:`📌 Asignar salón a ${esc(e.nombre)}`,
+    title:`<i class="fas fa-thumbtack"></i> Asignar salón a ${esc(e.nombre)}`,
     html:`<div style="text-align:left;font-family:var(--fn)">
       <label style="font-size:11px;font-weight:800;text-transform:uppercase;color:var(--sl);display:block;margin-bottom:6px">Selecciona el salón</label>
       <select id="aseSel" style="width:100%;padding:10px 12px;border:1.5px solid var(--bd);border-radius:8px;font-size:14px">
@@ -10087,7 +10087,7 @@ function abrirSalon(salon, ciclo){
         style="background:var(--bg2);border:1.5px solid var(--bd);border-radius:9px;padding:8px 14px;
         cursor:pointer;font-size:13px;font-weight:700;color:var(--sl2);display:flex;align-items:center;gap:6px;transition:all .15s"
         onmouseover="this.style.borderColor='var(--bl2)'" onmouseout="this.style.borderColor='var(--bd)'">
-        ← Salones
+        <i class="fas fa-arrow-left"></i> Salones
       </button>
       <div style="flex:1;min-width:140px">
         <select onchange="abrirSalon(this.value,'${ciclo}')"
@@ -10104,28 +10104,28 @@ function abrirSalon(salon, ciclo){
     <!-- ACCIONES DEL SALÓN -->
     <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px">
       <button class="btn bn sm" onclick="openAddEstSalon('${salon}','${ciclo}')" style="display:flex;align-items:center;gap:5px">
-        ➕ Agregar Estudiante
+        <i class="fas fa-plus"></i> Agregar Estudiante
       </button>
       <button class="btn bg sm" onclick="abrirCSVEstSalon('${salon}','${ciclo}')" style="display:flex;align-items:center;gap:5px">
-        📂 Carga Masiva CSV
+        <i class="fas fa-folder-open"></i> Carga Masiva CSV
       </button>
       <button class="btn bs sm" onclick="descargarPlantillaCSV('est','${ciclo}')" style="display:flex;align-items:center;gap:5px">
-        ⬇️ Plantilla CSV
+        <i class="fas fa-arrow-down"></i> Plantilla CSV
       </button>
       <button class="btn bg sm" onclick="expEstXlsSalon('${salon}')" style="display:flex;align-items:center;gap:5px">
-        📤 Excel
+        <i class="fas fa-upload"></i> Excel
       </button>
       <button class="btn bn sm" onclick="promoverEstudiantes('${ciclo}')" style="display:flex;align-items:center;gap:5px">
-        🎓 Promover Año
+        <i class="fas fa-graduation-cap"></i> Promover Año
       </button>
       <button class="btn bd sm" onclick="eliminarTodosSalon('${salon}','${ciclo}')" style="display:flex;align-items:center;gap:5px">
-        🗑️ Eliminar Todos
+        <i class="fas fa-trash"></i> Eliminar Todos
       </button>
     </div>
 
     <!-- BUSCADOR -->
     <div class="srch" style="margin-bottom:14px">
-      <span style="color:var(--sl3);font-size:15px">🔍</span>
+      <span style="color:var(--sl3);font-size:15px"><i class="fas fa-magnifying-glass"></i></span>
       <input id="seBusqSalon" placeholder="Buscar por nombre o T.I.…"
         oninput="filtrarSalonTable('${salon}','${ciclo}')">
     </div>
@@ -10150,9 +10150,9 @@ function abrirSalon(salon, ciclo){
             <td style="font-family:var(--mn);font-size:12px">${esc(e.usuario||'')}</td>
             <td><span class="${scC(pg)}" style="font-size:13px;font-weight:800">${pg.toFixed(2)}</span></td>
             <td><div style="display:flex;gap:5px">
-              <button class="btn xs bg" onclick="editEst('${e.id}','${ciclo}')">✏️</button>
-              <button class="btn xs bd" onclick="delEst('${e.id}','${ciclo}')">🗑</button>
-              <button class="btn xs bb" onclick="dlBoletinUI('${e.id}')">📄</button>
+              <button class="btn xs bg" onclick="editEst('${e.id}','${ciclo}')"><i class="fas fa-pen"></i></button>
+              <button class="btn xs bd" onclick="delEst('${e.id}','${ciclo}')"><i class="fas fa-trash"></i></button>
+              <button class="btn xs bb" onclick="dlBoletinUI('${e.id}')"><i class="fas fa-file-lines"></i></button>
             </div></td>
           </tr>`;
         }).join('')}
@@ -10178,7 +10178,7 @@ function openAddEstSalon(salon, ciclo){
   // We show a compact Swal matching pgAEst add form
   const sOpts = DB.sals.filter(s=>s.ciclo===ciclo).map(s=>`<option value="${s.nombre}"${s.nombre===salon?' selected':''}>${s.nombre}</option>`).join('');
   Swal.fire({
-    title:`➕ Agregar Estudiante — ${salon}`, width:520,
+    title:`<i class="fas fa-plus"></i> Agregar Estudiante — ${salon}`, width:520,
     html:`<div style="text-align:left;font-family:var(--fn)">
       <div style="display:flex;flex-direction:column;gap:10px">
         <div class="fld" style="margin:0"><label>Nombre completo *</label><input id="nen" placeholder="Juan Pérez Gómez" class="inp"></div>
@@ -10193,7 +10193,7 @@ function openAddEstSalon(salon, ciclo){
         </div>
       </div>
     </div>`,
-    showCancelButton:true, confirmButtonText:'➕ Agregar', confirmButtonColor:'var(--nv)', cancelButtonText:'Cancelar',
+    showCancelButton:true, confirmButtonText:'<i class="fas fa-plus"></i> Agregar', confirmButtonColor:'var(--nv)', cancelButtonText:'Cancelar',
     preConfirm:()=>{ return {}; } // handled by addEst()
   }).then(r=>{
     if(r.isConfirmed) addEst(ciclo).then(()=>abrirSalon(salon,ciclo));
@@ -10280,13 +10280,13 @@ function expEstXls(ciclo){
    PROFESORES
 ============================================================ */
 function pgAPrf(){
-  return`<div class="ph"><h2>Profesores</h2><button class="btn xs bg" onclick="showHelp('aprf')" style="margin-top:6px">❓ Ayuda</button></div>
+  return`<div class="ph"><h2>Profesores</h2><button class="btn xs bg" onclick="showHelp('aprf')" style="margin-top:6px"><i class="fas fa-circle-question"></i> Ayuda</button></div>
   <div class="card">
-    <div class="chd"><span class="cti">👩‍🏫 Todos los Profesores</span>
+    <div class="chd"><span class="cti"><i class="fas fa-chalkboard-user"></i> Todos los Profesores</span>
       <div style="display:flex;gap:8px">
-        <button class="btn bg sm" onclick="abrirCSVPrf('primaria')" title="CSV Primaria">📂 CSV</button>
+        <button class="btn bg sm" onclick="abrirCSVPrf('primaria')" title="CSV Primaria"><i class="fas fa-folder-open"></i> CSV</button>
         <button class="btn bn" onclick="openAddPrf()" style="padding:8px 18px;font-size:13px;font-weight:700">
-          ➕ Agregar Profesor
+          <i class="fas fa-plus"></i> Agregar Profesor
         </button>
       </div>
     </div>
@@ -10297,7 +10297,7 @@ function initAPrf(){renderPrfTbl();}
 function renderPrfTbl(){
   const el=gi('pfAll');if(!el) return;
   const list=DB.profs;
-  if(!list.length){el.innerHTML='<div class="mty" style="padding:20px"><div class="ei">👩‍🏫</div><p>Sin profesores</p></div>';return;}
+  if(!list.length){el.innerHTML='<div class="mty" style="padding:20px"><div class="ei"><i class="fas fa-chalkboard-user"></i></div><p>Sin profesores</p></div>';return;}
   el.innerHTML=`<div class="tw"><table>
     <thead><tr>
       <th>Nombre</th><th>C.C.</th>
@@ -10334,11 +10334,11 @@ function renderPrfTbl(){
               </div>`;
             }).join('')}
           </div>`:'<span style="color:var(--sl3);font-size:12px">Sin salones</span>'}
-          <button class="btn xs bg" style="margin-top:5px" onclick="openSalonMaterias('${p.id}',()=>renderPrfTbl())">🎯 Asignar materias</button>
+          <button class="btn xs bg" style="margin-top:5px" onclick="openSalonMaterias('${p.id}',()=>renderPrfTbl())"><i class="fas fa-bullseye"></i> Asignar materias</button>
         </td>
         <td><div style="display:flex;gap:5px">
-          <button class="btn xs bg" onclick="editPrf('${p.id}')">✏️</button>
-          <button class="btn xs bd" onclick="delPrf('${p.id}')">🗑</button>
+          <button class="btn xs bg" onclick="editPrf('${p.id}')"><i class="fas fa-pen"></i></button>
+          <button class="btn xs bd" onclick="delPrf('${p.id}')"><i class="fas fa-trash"></i></button>
         </div></td>
       </tr>`;
     }).join('')}</tbody></table></div>`;
@@ -10360,12 +10360,12 @@ function openAddPrf(){
       <div style="text-align:left;margin-bottom:0">
         <label style="font-size:11px;font-weight:800;text-transform:uppercase;color:var(--sl);display:block;margin-bottom:4px">Salones asignados</label>
         <div style="background:var(--bg2);border:1px solid var(--bd);border-radius:8px;padding:10px">
-          ${mkSals(salsPri,'📚 Primaria')}
-          ${mkSals(salsBach,'🎓 Bachillerato')}
+          ${mkSals(salsPri,'<i class="fas fa-book"></i> Primaria')}
+          ${mkSals(salsBach,'<i class="fas fa-graduation-cap"></i> Bachillerato')}
           ${(!salsPri.length&&!salsBach.length)?'<p style="font-size:12px;color:var(--sl3)">Sin salones — créalos primero</p>':''}
         </div>
       </div>
-      <div class="al alb" style="margin-top:12px;font-size:12px">ℹ️ Puedes asignar salones de cualquier ciclo. Después asigna las materias por salón con 🎯.</div>
+      <div class="al alb" style="margin-top:12px;font-size:12px"><i class="fas fa-circle-info"></i> Puedes asignar salones de cualquier ciclo. Después asigna las materias por salón con <i class="fas fa-bullseye"></i>.</div>
     </div>`,
     showCancelButton:true,confirmButtonText:'Guardar',
     preConfirm:()=>{
@@ -10402,7 +10402,7 @@ function openSalonMaterias(pid,cb){
     const globalMats=cicloSal==='primaria'?DB.mP:DB.mB;
     const availMats=(salObj?.mats&&salObj.mats.length)?salObj.mats:globalMats;
     return`<div style="margin-bottom:12px;padding:10px 12px;background:var(--bg2);border-radius:8px;border:1px solid var(--bd)">
-      <div style="font-size:12px;font-weight:800;color:var(--nv);margin-bottom:7px">📍 ${s}
+      <div style="font-size:12px;font-weight:800;color:var(--nv);margin-bottom:7px"><i class="fas fa-location-dot"></i> ${s}
         ${salObj?.mats?.length?`<span style="font-size:10px;font-weight:400;color:var(--sl2);margin-left:6px">(${salObj.mats.length} materias del salón)</span>`:''}
       </div>
       <div style="display:flex;flex-wrap:wrap;gap:6px">
@@ -10469,13 +10469,13 @@ function editPrf(pid){
       <div style="text-align:left;margin-bottom:0">
         <label style="font-size:11px;font-weight:800;text-transform:uppercase;color:var(--sl);display:block;margin-bottom:4px">Salones asignados</label>
         <div style="background:var(--bg2);border:1px solid var(--bd);border-radius:8px;padding:10px">
-          ${mkEPSals(salsPri,'📚 Primaria')}
-          ${mkEPSals(salsBach,'🎓 Bachillerato')}
+          ${mkEPSals(salsPri,'<i class="fas fa-book"></i> Primaria')}
+          ${mkEPSals(salsBach,'<i class="fas fa-graduation-cap"></i> Bachillerato')}
         </div>
       </div>
       <div style="margin-top:12px">
         <button type="button" class="btn bg sm" onclick="openSalonMaterias('${pid}',()=>renderPrfTbl())">
-          🎯 Asignar Materias por Salón</button>
+          <i class="fas fa-bullseye"></i> Asignar Materias por Salón</button>
         ${(p.salones||[]).length?`<div style="margin-top:8px;font-size:11px;color:var(--sl2)">${
           Object.entries(p.salonMaterias||{}).filter(([,v])=>v.length).map(([s,ms])=>
             `<strong>${s}:</strong> ${ms.join(', ')}`).join(' · ')||'Sin materias asignadas por salón'
@@ -10524,46 +10524,46 @@ function delPrf(pid){
    MATERIAS & PERIODOS
 ============================================================ */
 function pgAMat(){
-  return`<div class="ph"><h2>Áreas & Materias</h2><button class="btn xs bg" onclick="showHelp('amat')" style="margin-top:6px">❓ Ayuda</button></div>
+  return`<div class="ph"><h2>Áreas & Materias</h2><button class="btn xs bg" onclick="showHelp('amat')" style="margin-top:6px"><i class="fas fa-circle-question"></i> Ayuda</button></div>
   <div class="g2">
     <div class="card">
-      <div class="chd"><span class="cti">📚 Primaria — Áreas y Materias</span></div>
+      <div class="chd"><span class="cti"><i class="fas fa-book"></i> Primaria — Áreas y Materias</span></div>
       <div style="display:flex;gap:8px;margin-bottom:14px">
         <div class="fld" style="margin:0;flex:1"><input id="nap" placeholder="Nueva área primaria..."></div>
-        <button class="btn bn sm" onclick="addArea('primaria')">➕ Área</button>
+        <button class="btn bn sm" onclick="addArea('primaria')"><i class="fas fa-plus"></i> Área</button>
       </div>
       <div id="areaListP"></div>
       <div style="margin-top:14px;padding-top:12px;border-top:1px solid var(--bd)">
         <div style="font-size:11px;font-weight:700;color:var(--sl);text-transform:uppercase;margin-bottom:8px">Materias sin área</div>
         <div style="display:flex;gap:8px;margin-bottom:10px">
           <div class="fld" style="margin:0;flex:1"><input id="nmp" placeholder="Nueva materia primaria..."></div>
-          <button class="btn bg sm" onclick="addMP()">➕ Materia</button>
+          <button class="btn bg sm" onclick="addMP()"><i class="fas fa-plus"></i> Materia</button>
         </div>
         <div id="mlP"></div>
       </div>
     </div>
     <div class="card">
-      <div class="chd"><span class="cti">🎓 Bachillerato — Áreas y Materias</span></div>
+      <div class="chd"><span class="cti"><i class="fas fa-graduation-cap"></i> Bachillerato — Áreas y Materias</span></div>
       <div style="display:flex;gap:8px;margin-bottom:14px">
         <div class="fld" style="margin:0;flex:1"><input id="nab" placeholder="Nueva área bachillerato..."></div>
-        <button class="btn bn sm" onclick="addArea('bachillerato')">➕ Área</button>
+        <button class="btn bn sm" onclick="addArea('bachillerato')"><i class="fas fa-plus"></i> Área</button>
       </div>
       <div id="areaListB"></div>
       <div style="margin-top:14px;padding-top:12px;border-top:1px solid var(--bd)">
         <div style="font-size:11px;font-weight:700;color:var(--sl);text-transform:uppercase;margin-bottom:8px">Materias sin área</div>
         <div style="display:flex;gap:8px;margin-bottom:10px">
           <div class="fld" style="margin:0;flex:1"><input id="nmb" placeholder="Nueva materia bachillerato..."></div>
-          <button class="btn bg sm" onclick="addMB()">➕ Materia</button>
+          <button class="btn bg sm" onclick="addMB()"><i class="fas fa-plus"></i> Materia</button>
         </div>
         <div id="mlB"></div>
       </div>
     </div>
   </div>
   <div class="card">
-    <div class="chd"><span class="cti">📅 Periodos</span></div>
+    <div class="chd"><span class="cti"><i class="fas fa-calendar-days"></i> Periodos</span></div>
     <div style="display:flex;gap:8px;margin-bottom:14px">
       <div class="fld" style="margin:0;flex:1"><input id="nper" placeholder="Nuevo periodo..."></div>
-      <button class="btn bn sm" onclick="addPer()">➕</button>
+      <button class="btn bn sm" onclick="addPer()"><i class="fas fa-plus"></i></button>
     </div><div id="perL"></div>
   </div>`;
 }
@@ -10596,11 +10596,11 @@ function renderAreaBlock(ciclo){
     const matsDelArea=matDocs.filter(d=>d.areaNombre===area.nombre).map(d=>d.nombre);
     return`<div style="background:var(--bg2);border:1px solid var(--bd);border-radius:10px;padding:12px 14px;margin-bottom:10px">
       <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px">
-        <strong style="font-size:14px">📂 ${area.nombre}</strong>
+        <strong style="font-size:14px"><i class="fas fa-folder-open"></i> ${area.nombre}</strong>
         <div style="display:flex;gap:5px">
-          <button class="btn xs bg" onclick="editAreaMats('${area.nombre}','${ciclo}')">🎯 Materias</button>
-          <button class="btn xs bg" onclick="renameArea('${area.nombre}','${ciclo}')">✏️</button>
-          <button class="btn xs bd" onclick="delArea('${area.nombre}','${ciclo}')">🗑</button>
+          <button class="btn xs bg" onclick="editAreaMats('${area.nombre}','${ciclo}')"><i class="fas fa-bullseye"></i> Materias</button>
+          <button class="btn xs bg" onclick="renameArea('${area.nombre}','${ciclo}')"><i class="fas fa-pen"></i></button>
+          <button class="btn xs bd" onclick="delArea('${area.nombre}','${ciclo}')"><i class="fas fa-trash"></i></button>
         </div>
       </div>
       <div style="margin-top:8px;display:flex;flex-wrap:wrap;gap:4px">
@@ -10616,8 +10616,8 @@ function matItem(v,delFn,ciclo){
     padding:9px 12px;background:var(--bg2);border-radius:8px;margin-bottom:7px;border:1px solid var(--bd)">
     <span style="font-size:13px">${v}</span>
     <div style="display:flex;gap:5px">
-      <button class="btn xs bg" onclick="renameMat('${ciclo}','${v}')">✏️</button>
-      <button class="btn xs bd" onclick="${delFn}('${v}')">🗑</button>
+      <button class="btn xs bg" onclick="renameMat('${ciclo}','${v}')"><i class="fas fa-pen"></i></button>
+      <button class="btn xs bd" onclick="${delFn}('${v}')"><i class="fas fa-trash"></i></button>
     </div></div>`;
 }
 function renderMats(){
@@ -10633,7 +10633,7 @@ function renderMats(){
     <div style="display:flex;justify-content:space-between;align-items:center;
       padding:9px 12px;background:var(--bg2);border-radius:8px;margin-bottom:7px;border:1px solid var(--bd)">
       <span style="font-size:13px">${p}</span>
-      <button class="btn xs bd" onclick="delPer('${p}')">🗑</button>
+      <button class="btn xs bd" onclick="delPer('${p}')"><i class="fas fa-trash"></i></button>
     </div>`).join('');
 }
 async function addArea(ciclo){
@@ -10811,7 +10811,7 @@ async function delPer(p){
 function pgANot(){
   const sO=DB.sals.map(s=>`<option value="${s.nombre}">${s.nombre}</option>`).join('');
   const pO=DB.pers.map(p=>`<option value="${p}">${p}</option>`).join('');
-  return`<div class="ph"><h2>Gestión de Notas</h2><button class="btn xs bg" onclick="showHelp('anot')">❓ Ayuda</button></div>
+  return`<div class="ph"><h2>Gestión de Notas</h2><button class="btn xs bg" onclick="showHelp('anot')"><i class="fas fa-circle-question"></i> Ayuda</button></div>
   <div class="card">
     <div style="display:flex;flex-wrap:wrap;gap:14px;align-items:flex-end;margin-bottom:16px">
       <div class="fld" style="margin:0;min-width:160px;flex:1">
@@ -10829,21 +10829,21 @@ function pgANot(){
       <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;flex:2;min-width:280px">
         <button onclick="loadAN()"
           style="padding:10px 22px;font-size:14px;font-weight:700;background:var(--nv);color:#fff;border:none;border-radius:9px;cursor:pointer;white-space:nowrap">
-          📋 Cargar
+          <i class="fas fa-clipboard-list"></i> Cargar
         </button>
         <button onclick="dlPlantillaNotas()"
           style="padding:10px 22px;font-size:14px;font-weight:600;background:#e0f2fe;color:#0369a1;border:1.5px solid #7dd3fc;border-radius:9px;cursor:pointer;white-space:nowrap">
-          ⬇️ Plantilla CSV
+          <i class="fas fa-arrow-down"></i> Plantilla CSV
         </button>
         <label style="padding:10px 22px;font-size:14px;font-weight:600;background:#dcfce7;color:#166534;border:1.5px solid #86efac;border-radius:9px;cursor:pointer;white-space:nowrap;display:inline-flex;align-items:center;gap:6px">
-          ⬆️ Importar CSV
+          <i class="fas fa-arrow-up"></i> Importar CSV
           <input type="file" accept=".csv" style="display:none" onchange="importNotasCSV(this)">
         </label>
       </div>
     </div>
     <div id="anImportResult"></div>
     <div style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:var(--bg2);border-radius:9px;border:1.5px solid var(--bd);margin-bottom:14px">
-      <span style="font-size:16px;color:var(--sl3)">🔍</span>
+      <span style="font-size:16px;color:var(--sl3)"><i class="fas fa-magnifying-glass"></i></span>
       <input id="anq" placeholder="Buscar estudiante..." oninput="filterAN()"
         style="flex:1;border:none;background:transparent;font-size:14px;outline:none;color:var(--tx)">
     </div>
@@ -10929,7 +10929,7 @@ async function importNotasCSV(input){
   // Buscar estudiantes por nombre o TI
   let ok=0,skip=0,errores=[];
   const resultEl=gi('anImportResult');
-  if(resultEl) resultEl.innerHTML=`<div class="al alb" style="margin-bottom:8px">⏳ Importando notas...</div>`;
+  if(resultEl) resultEl.innerHTML=`<div class="al alb" style="margin-bottom:8px"><i class="fas fa-hourglass-half"></i> Importando notas...</div>`;
 
   for(let i=1;i<lines.length;i++){
     const cols=lines[i].split(',').map(c=>c.trim().replace(/^"|"$/g,''));
@@ -10982,8 +10982,8 @@ async function importNotasCSV(input){
   // Mostrar resultado
   const color=errores.length?'aly':'alg';
   if(resultEl) resultEl.innerHTML=`<div class="al ${color}" style="margin-bottom:8px">
-    ✅ ${ok} estudiante${ok!==1?'s':''} importados correctamente.
-    ${skip?`⚠️ ${skip} no encontrados.`:''}
+    <i class="fas fa-circle-check"></i> ${ok} estudiante${ok!==1?'s':''} importados correctamente.
+    ${skip?`<i class="fas fa-triangle-exclamation"></i> ${skip} no encontrados.`:''}
     ${errores.length?`<details style="margin-top:6px"><summary style="cursor:pointer;font-size:11px">Ver errores (${errores.length})</summary>
       <div style="font-size:11px;margin-top:4px">${errores.map(e=>`<div>• ${e}</div>`).join('')}</div>
     </details>`:''}
@@ -10999,7 +10999,7 @@ function loadAN(){const s=gi('ans')?.value,p=gi('anp')?.value;if(!s||!p){sw('war
 function filterAN(){const s=gi('ans')?.value,p=gi('anp')?.value;if(!s||!p)return;const f=(gi('anq')?.value||'').toLowerCase();renderANotTbl(s,p,_anE.filter(e=>e.nombre.toLowerCase().includes(f)));}
 function renderANotTbl(salon,per,list){
   const el=gi('anW');if(!el) return;
-  if(!list.length){el.innerHTML='<div class="mty"><div class="ei">🎓</div><p>Sin estudiantes</p></div>';return;}
+  if(!list.length){el.innerHTML='<div class="mty"><div class="ei"><i class="fas fa-graduation-cap"></i></div><p>Sin estudiantes</p></div>';return;}
   const mats=getMats(list[0].id);
   el.innerHTML=`<div class="tw"><table>
     <thead>
@@ -11070,10 +11070,10 @@ async function saveConducta(eid,v){ /* implementado en api-layer.js */ }
 /* ============================================================
    REHAB
 ============================================================ */
-function pgAReh(){return`<div class="ph"><h2>Recuperaciones</h2><button class="btn xs bg" onclick="showHelp('areh')" style="margin-top:6px">❓ Ayuda</button></div><div id="arB"></div>`;}
+function pgAReh(){return`<div class="ph"><h2>Recuperaciones</h2><button class="btn xs bg" onclick="showHelp('areh')" style="margin-top:6px"><i class="fas fa-circle-question"></i> Ayuda</button></div><div id="arB"></div>`;}
 function initAReh(){
   const el=gi('arB');if(!el)return;
-  if(!DB.ext.on){el.innerHTML=`<div class="al aly">⚠️ Activa el Periodo Extraordinario en <strong>Control de Fechas</strong>.</div>`;return;}
+  if(!DB.ext.on){el.innerHTML=`<div class="al aly"><i class="fas fa-triangle-exclamation"></i> Activa el Periodo Extraordinario en <strong>Control de Fechas</strong>.</div>`;return;}
 
   // Determinar elegibles usando áreas (si hay) o materias
   const elegibles=[];
@@ -11090,9 +11090,9 @@ function initAReh(){
     }
   });
 
-  if(!elegibles.length){el.innerHTML=`<div class="al alg">✅ Sin estudiantes en recuperación actualmente.</div>`;return;}
-  el.innerHTML=`<div class="al aly">📅 Periodo Extraordinario: <strong>${DB.ext.s} → ${DB.ext.e}</strong></div>
-  <div class="card"><div class="chd"><span class="cti">⚠️ Estudiantes Elegibles (${elegibles.length})</span></div>
+  if(!elegibles.length){el.innerHTML=`<div class="al alg"><i class="fas fa-circle-check"></i> Sin estudiantes en recuperación actualmente.</div>`;return;}
+  el.innerHTML=`<div class="al aly"><i class="fas fa-calendar-days"></i> Periodo Extraordinario: <strong>${DB.ext.s} → ${DB.ext.e}</strong></div>
+  <div class="card"><div class="chd"><span class="cti"><i class="fas fa-triangle-exclamation"></i> Estudiantes Elegibles (${elegibles.length})</span></div>
   <div class="tw"><table><thead><tr><th>Estudiante</th><th>Salón</th><th>${elegibles.some(x=>x.tipo==='area')?'Área Perdida':'Materia Perdida'}</th><th>Profesor Asignado</th><th>Recuperación Enviada</th></tr></thead>
   <tbody>${elegibles.map(({est:e,tipo,perdidas})=>{
     const pg=gprom(e.id);
@@ -11115,7 +11115,7 @@ function initAReh(){
         <td><span class="bdg brd">${nombre}</span>${tipo==='area'?'<span style="font-size:10px;color:var(--sl3)"> (área)</span>':''}</td>
         <td style="font-size:13px">${profNombre}</td>
         <td>${recs.length?recs.map(r=>`<div style="font-size:11px;padding:3px 0">
-          📎 ${esc(r.nombre)} <span style="color:var(--sl3)">${r.fecha}</span></div>`).join('')
+          <i class="fas fa-paperclip"></i> ${esc(r.nombre)} <span style="color:var(--sl3)">${r.fecha}</span></div>`).join('')
           :'<span style="font-size:12px;color:var(--sl3)">Pendiente</span>'}
         </td>
       </tr>`;
@@ -11131,7 +11131,7 @@ function pgAFec(){
     const dp=DB.drPer[p]||{s:'',e:'',extPer:''};
     return`<div style="padding:12px;background:var(--bg2);border-radius:8px;border:1px solid var(--bd);margin-bottom:10px">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;flex-wrap:wrap;gap:8px">
-        <strong style="font-size:13px">📅 ${p}</strong>
+        <strong style="font-size:13px"><i class="fas fa-calendar-days"></i> ${p}</strong>
         <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
           <label style="font-size:11px;color:var(--sl2)">Inicio</label>
           <input type="date" id="dps_${p.replace(/\s/g,'_')}" value="${dp.s}"
@@ -11159,9 +11159,9 @@ function pgAFec(){
     </div>`;
   }).join('');
   return`<div class="ph"><h2>Control de Fechas</h2>
-    <button class="btn xs bg" style="margin-top:4px" onclick="showHelp('afec')">❓ Ayuda</button></div>
+    <button class="btn xs bg" style="margin-top:4px" onclick="showHelp('afec')"><i class="fas fa-circle-question"></i> Ayuda</button></div>
   <div class="card" style="border:2px solid var(--bl3)">
-    <div class="chd"><span class="cti">🎓 Año Lectivo Activo</span></div>
+    <div class="chd"><span class="cti"><i class="fas fa-graduation-cap"></i> Año Lectivo Activo</span></div>
     <div class="al alb" style="margin-bottom:14px;font-size:12px">
       El año lectivo aparece en los boletines PDF y en el historial académico de los estudiantes.
     </div>
@@ -11173,7 +11173,7 @@ function pgAFec(){
           style="width:110px;padding:8px 12px;border:1.5px solid var(--bd);border-radius:var(--r);font-size:15px;font-weight:800;text-align:center;outline:none">
       </div>
       <div style="padding-top:18px">
-        <button class="btn bn" onclick="saveAno()">💾 Guardar Año</button>
+        <button class="btn bn" onclick="saveAno()"><i class="fas fa-floppy-disk"></i> Guardar Año</button>
       </div>
       <div style="padding-top:18px">
         <span style="font-size:13px;color:var(--sl2)">Año actual en el sistema:
@@ -11182,34 +11182,34 @@ function pgAFec(){
       </div>
     </div>
   </div>
-  <div class="card"><div class="chd"><span class="cti">📅 Rangos por Periodo</span></div>
+  <div class="card"><div class="chd"><span class="cti"><i class="fas fa-calendar-days"></i> Rangos por Periodo</span></div>
     <div class="al alb" style="margin-bottom:14px">
-      ℹ️ Define cuándo puede ingresar notas cada periodo. Si no se configura un rango, el periodo permanece siempre abierto.
+      <i class="fas fa-circle-info"></i> Define cuándo puede ingresar notas cada periodo. Si no se configura un rango, el periodo permanece siempre abierto.
       El campo <strong>Periodo Ext.</strong> indica a qué periodo corresponden las notas de recuperación.
     </div>
     ${perRows||'<div class="mty"><p>Sin periodos configurados</p></div>'}
   </div>
   <div class="card">
-    <div class="chd"><span class="cti">🔄 Periodo Extraordinario</span>
+    <div class="chd"><span class="cti"><i class="fas fa-arrows-rotate"></i> Periodo Extraordinario</span>
       <div style="display:flex;align-items:center;gap:10px">
         <span class="bdg ${DB.ext.on?'bgr':'bgy'}" style="font-size:12px;padding:5px 14px">
-          ${DB.ext.on?'🟢 Activo':'⚫ Inactivo'}
+          ${DB.ext.on?'<i class="fas fa-circle"></i> Activo':'<i class="fas fa-circle"></i> Inactivo'}
         </span>
       </div>
     </div>
     <div class="al aly" style="margin-bottom:20px;font-size:13px">
-      ⚠️ Solo para estudiantes con <strong>1 o 2 materias perdidas</strong>. Al cerrarse, los planes y recuperaciones activos se archivan automáticamente en el historial.
+      <i class="fas fa-triangle-exclamation"></i> Solo para estudiantes con <strong>1 o 2 materias perdidas</strong>. Al cerrarse, los planes y recuperaciones activos se archivan automáticamente en el historial.
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:20px;align-items:end;margin-bottom:20px">
       <div class="fld" style="margin:0">
-        <label>📅 Fecha de Inicio</label>
+        <label><i class="fas fa-calendar-days"></i> Fecha de Inicio</label>
         <input type="date" id="exs" value="${DB.ext.s}"
           min="${DB.anoActual||new Date().getFullYear()}-01-01"
           max="${DB.anoActual||new Date().getFullYear()}-12-31"
           style="font-size:14px;padding:12px 15px">
       </div>
       <div class="fld" style="margin:0">
-        <label>📅 Fecha de Fin</label>
+        <label><i class="fas fa-calendar-days"></i> Fecha de Fin</label>
         <input type="date" id="exe" value="${DB.ext.e}"
           min="${DB.anoActual||new Date().getFullYear()}-01-01"
           max="${DB.anoActual||new Date().getFullYear()}-12-31"
@@ -11228,7 +11228,7 @@ function pgAFec(){
       <button class="btn bw" onclick="saveExt()"
         style="height:48px;padding:0 28px;font-size:15px;font-weight:800;white-space:nowrap;
         background:linear-gradient(135deg,#f08030,#d06018);box-shadow:0 4px 16px rgba(240,128,48,.3)">
-        💾 Guardar
+        <i class="fas fa-floppy-disk"></i> Guardar
       </button>
     </div>
     ${DB.ext.s&&DB.ext.e?`
@@ -11243,12 +11243,12 @@ function pgAFec(){
       </div>
       <div style="background:${DB.ext.on?'#ecfdf5':'#f8fafc'};border-radius:10px;border:1px solid ${DB.ext.on?'#a7f3d0':'var(--bd)'};padding:16px;text-align:center">
         <div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:var(--sl3);margin-bottom:6px">Estado</div>
-        <div style="font-size:16px;font-weight:800;color:${DB.ext.on?'var(--grn)':'var(--sl2)'}">${DB.ext.on?'🟢 Activo':'⚫ Inactivo'}</div>
+        <div style="font-size:16px;font-weight:800;color:${DB.ext.on?'var(--grn)':'var(--sl2)'}">${DB.ext.on?'<i class="fas fa-circle"></i> Activo':'<i class="fas fa-circle"></i> Inactivo'}</div>
       </div>
     </div>`:''}
   </div>
   <div class="card" style="border:2px solid #bee3f8;margin-top:16px">
-    <div class="chd"><span class="cti">⏰ Horario de Excusas</span></div>
+    <div class="chd"><span class="cti"><i class="fas fa-clock"></i> Horario de Excusas</span></div>
     <div class="al alb" style="margin-bottom:14px;font-size:12px">
       Define el rango horario en que los estudiantes pueden enviar excusas.<br>
       Actualmente: <strong>${DB.excHorario?.ini??18}:00 – ${DB.excHorario?.fin??7}:00</strong>
@@ -11265,11 +11265,11 @@ function pgAFec(){
           style="width:90px;padding:8px 12px;border:1.5px solid var(--bd);border-radius:var(--r);font-size:15px;font-weight:800;text-align:center">
       </div>
       <div style="padding-top:18px">
-        <button class="btn bn" onclick="saveExcHorario()">💾 Guardar Horario</button>
+        <button class="btn bn" onclick="saveExcHorario()"><i class="fas fa-floppy-disk"></i> Guardar Horario</button>
       </div>
     </div>
     <div style="margin-top:10px;font-size:12px;color:var(--sl3)">
-      💡 Si el rango cruza medianoche (ej: inicio 18, fin 7) el sistema lo detecta automáticamente.
+      <i class="fas fa-lightbulb"></i> Si el rango cruza medianoche (ej: inicio 18, fin 7) el sistema lo detecta automáticamente.
     </div>
   </div>`;
 }
@@ -11299,7 +11299,7 @@ function extExpirado(){
 // HELP ya declarado en bloque 1
 function showHelp(panel){
   const txt=HELP[panel]||'Sin ayuda disponible para esta sección.';
-  Swal.fire({title:'❓ Ayuda',html:`<div style="text-align:left;font-size:14px;line-height:1.8">${txt}</div>`,
+  Swal.fire({title:'<i class="fas fa-circle-question"></i> Ayuda',html:`<div style="text-align:left;font-size:14px;line-height:1.8">${txt}</div>`,
     confirmButtonText:'Entendido',icon:'info'});
 }
 /* Log audit entry */
@@ -11310,14 +11310,14 @@ function logAudit(msg,extra){ /* implementado en api-layer.js */ }
 ============================================================ */
 function pgABlk(){
   const list=Object.entries(DB.blk).filter(([,v])=>v.on);
-  return`<div class="ph"><h2>Usuarios Bloqueados</h2><button class="btn xs bg" onclick="showHelp('ablk')" style="margin-top:6px">❓ Ayuda</button></div>
+  return`<div class="ph"><h2>Usuarios Bloqueados</h2><button class="btn xs bg" onclick="showHelp('ablk')" style="margin-top:6px"><i class="fas fa-circle-question"></i> Ayuda</button></div>
   <div class="card">${list.length?`<div class="tw"><table>
     <thead><tr><th>Usuario</th><th>Bloqueado en</th><th>Acción</th></tr></thead>
     <tbody>${list.map(([u,v])=>`<tr>
       <td><strong>${u}</strong></td>
       <td style="font-family:var(--mn);font-size:12px">${new Date(v.ts||'').toLocaleString('es-CO')}</td>
-      <td><button class="btn sm bs" onclick="unblk('${u}')">🔓 Desbloquear</button></td>
-    </tr>`).join('')}</tbody></table></div>`:'<div class="mty"><div class="ei">🔓</div><p>Sin bloqueados</p></div>'}
+      <td><button class="btn sm bs" onclick="unblk('${u}')"><i class="fas fa-lock-open"></i> Desbloquear</button></td>
+    </tr>`).join('')}</tbody></table></div>`:'<div class="mty"><div class="ei"><i class="fas fa-lock-open"></i></div><p>Sin bloqueados</p></div>'}
   </div>`;
 }
 /* ── SOBREESCRITA por api-layer.js ── */
@@ -11348,7 +11348,7 @@ function pgAAud(){
 
   /* Nombre legible del campo */
   const fmtCampo = (mat, accion) => {
-    if(accion && !mat) return `<span style="color:#718096;font-size:.82rem">📌 ${esc(accion)}</span>`;
+    if(accion && !mat) return `<span style="color:#718096;font-size:.82rem"><i class="fas fa-thumbtack"></i> ${esc(accion)}</span>`;
     if(!mat) return '<span style="color:#a0aec0">—</span>';
     /* mat suele ser "Matemáticas (Periodo 1)" */
     const match = mat.match(/^(.+?)\s*\((.+?)\)$/);
@@ -11360,7 +11360,7 @@ function pgAAud(){
       return `<div style="font-size:.82rem"><b>${esc(sub[1])}</b><br><span style="color:#718096">${lbl}</span></div>`;
     }
     /* Acciones especiales */
-    const icons={'Sesión cerrada':'🔒','login':'🔑','Login':'🔑','Auditoria limpiada':'🗑️','bloqueado':'🔴','desbloqueado':'🟢','taller':'📎'};
+    const icons={'Sesión cerrada':'<i class="fas fa-lock"></i>','login':'<i class="fas fa-key"></i>','Login':'<i class="fas fa-key"></i>','Auditoria limpiada':'<i class="fas fa-trash"></i>','bloqueado':'<i class="fas fa-circle"></i>','desbloqueado':'<i class="fas fa-circle"></i>','taller':'<i class="fas fa-paperclip"></i>'};
     const icon=Object.entries(icons).find(([k])=>mat.includes(k))?.[1]||'';
     return `<span style="font-size:.82rem">${icon} ${esc(mat)}</span>`;
   };
@@ -11383,12 +11383,12 @@ function pgAAud(){
     }catch(_){return ts.slice(0,16);}
   };
 
-  return`<div class="ph"><h2>Historial de Auditoría</h2><button class="btn xs bg" onclick="showHelp('aaud')" style="margin-top:6px">❓ Ayuda</button></div>
+  return`<div class="ph"><h2>Historial de Auditoría</h2><button class="btn xs bg" onclick="showHelp('aaud')" style="margin-top:6px"><i class="fas fa-circle-question"></i> Ayuda</button></div>
   <div class="card"><div class="chd">
-    <span class="cti">📋 Cambios (${list.length})</span>
+    <span class="cti"><i class="fas fa-clipboard-list"></i> Cambios (${list.length})</span>
     <div style="display:flex;gap:8px">
-      <button class="btn bg sm" onclick="expAudXls()">📤 Excel</button>
-      <button class="btn br sm" onclick="clearAudit()">🗑️ Limpiar historial</button>
+      <button class="btn bg sm" onclick="expAudXls()"><i class="fas fa-upload"></i> Excel</button>
+      <button class="btn br sm" onclick="clearAudit()"><i class="fas fa-trash"></i> Limpiar historial</button>
     </div>
   </div>
   <div class="tw"><table><thead>
@@ -11433,17 +11433,17 @@ function pgAExp(){
   const yr=new Date().getFullYear();
   const annos=Array.from({length:4},(_,i)=>yr-1+i);
   const salOpts=DB.sals.map(s=>`<option value="${s.nombre}">${s.nombre} (${cicloOf(s.nombre)==='primaria'?'Primaria':'Bach.'})</option>`).join('');
-  return`<div class="ph"><h2>Exportar Datos</h2><button class="btn xs bg" onclick="showHelp('aexp')" style="margin-top:6px">❓ Ayuda</button></div>
+  return`<div class="ph"><h2>Exportar Datos</h2><button class="btn xs bg" onclick="showHelp('aexp')" style="margin-top:6px"><i class="fas fa-circle-question"></i> Ayuda</button></div>
   <div class="g2">
     <!-- Excel exports -->
-    <div class="card"><div class="chd"><span class="cti">📊 Exportar Excel</span></div>
+    <div class="card"><div class="chd"><span class="cti"><i class="fas fa-chart-column"></i> Exportar Excel</span></div>
       <div style="display:flex;flex-direction:column;gap:10px">
-        <button class="btn bn" onclick="expCons()">📊 Consolidado de Notas</button>
-        <button class="btn bg" onclick="expAudXls()">📋 Historial Auditoría</button>
+        <button class="btn bn" onclick="expCons()"><i class="fas fa-chart-column"></i> Consolidado de Notas</button>
+        <button class="btn bg" onclick="expAudXls()"><i class="fas fa-clipboard-list"></i> Historial Auditoría</button>
       </div>
     </div>
     <!-- Boletín por estudiante individual -->
-    <div class="card"><div class="chd"><span class="cti">📄 Boletín PDF — Por Estudiante</span></div>
+    <div class="card"><div class="chd"><span class="cti"><i class="fas fa-file-lines"></i> Boletín PDF — Por Estudiante</span></div>
       <div class="fld"><label>Seleccionar Estudiante</label>
         <select id="expe" onchange="renderExpUI()">
           <option value="">Seleccionar...</option>
@@ -11454,7 +11454,7 @@ function pgAExp(){
     </div>
   </div>
   <!-- Boletín por salón -->
-  <div class="card" style="margin-top:0"><div class="chd"><span class="cti">🏫 Boletín PDF — Por Salón</span></div>
+  <div class="card" style="margin-top:0"><div class="chd"><span class="cti"><i class="fas fa-school"></i> Boletín PDF — Por Salón</span></div>
     <div class="al alb" style="font-size:12px;margin-bottom:14px">
       Selecciona un salón para ver todos sus estudiantes y descargar sus boletines de manera individual.
     </div>
@@ -11474,7 +11474,7 @@ function pgAExp(){
         </select>
       </div>
     </div>
-    <div id="expSalonW"><div class="mty"><div class="ei">🏫</div><p>Selecciona un salón</p></div></div>
+    <div id="expSalonW"><div class="mty"><div class="ei"><i class="fas fa-school"></i></div><p>Selecciona un salón</p></div></div>
   </div>`;
 }
 function renderExpUI(){
@@ -11486,13 +11486,13 @@ function renderExpUI(){
 function renderExpSalon(){
   const salon=gi('expSalon')?.value,box=gi('expSalonW');
   if(!box)return;
-  if(!salon){box.innerHTML='<div class="mty"><div class="ei">🏫</div><p>Selecciona un salón</p></div>';return;}
+  if(!salon){box.innerHTML='<div class="mty"><div class="ei"><i class="fas fa-school"></i></div><p>Selecciona un salón</p></div>';return;}
   const ests=ebySalon(salon);
-  if(!ests.length){box.innerHTML='<div class="mty"><div class="ei">🎓</div><p>Sin estudiantes en este salón</p></div>';return;}
+  if(!ests.length){box.innerHTML='<div class="mty"><div class="ei"><i class="fas fa-graduation-cap"></i></div><p>Sin estudiantes en este salón</p></div>';return;}
   box.innerHTML=`
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
       <strong style="font-size:14px;color:var(--nv)">${salon} — ${ests.length} estudiante(s)</strong>
-      <button class="btn bs sm" onclick="dlSalonTodos()">📄 Descargar todos (zip individual)</button>
+      <button class="btn bs sm" onclick="dlSalonTodos()"><i class="fas fa-file-lines"></i> Descargar todos (zip individual)</button>
     </div>
     <div class="tw"><table><thead>
       <tr><th>Nombre</th><th>T.I.</th><th>Prom. General</th><th>Puesto</th><th>Descargar Boletín</th></tr>
@@ -11505,7 +11505,7 @@ function renderExpSalon(){
         <td style="font-weight:700">${ps}°</td>
         <td>
           <div style="display:flex;gap:6px;flex-wrap:wrap">
-            <button class="btn xs bg" onclick="dlBSalon('${e.id}','TODOS')">📄 Todos</button>
+            <button class="btn xs bg" onclick="dlBSalon('${e.id}','TODOS')"><i class="fas fa-file-lines"></i> Todos</button>
             ${DB.pers.map(p=>`<button class="btn xs bg" onclick="dlBSalon('${e.id}','${encodeURIComponent(p)}')">${p}</button>`).join('')}
           </div>
         </td>
@@ -11546,13 +11546,13 @@ function dlSalonTodos(){
 ============================================================ */
 function pgAHist(){
   return`<div class="ph"><h2>Historial de Estudiantes</h2>
-    <p>Registro de todos los estudiantes que alguna vez fueron dados de alta en el sistema.</p><button class="btn xs bg" onclick="showHelp('ahist')" style="margin-top:6px">❓ Ayuda</button></div>
+    <p>Registro de todos los estudiantes que alguna vez fueron dados de alta en el sistema.</p><button class="btn xs bg" onclick="showHelp('ahist')" style="margin-top:6px"><i class="fas fa-circle-question"></i> Ayuda</button></div>
   <div class="card">
     <div class="chd">
-      <span class="cti">📚 Registro Histórico (${(DB.estHist||[]).length})</span>
+      <span class="cti"><i class="fas fa-book"></i> Registro Histórico (${(DB.estHist||[]).length})</span>
     </div>
     <div style="display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap">
-      <input id="histQ" placeholder="🔍 Buscar por nombre, T.I. o salón..." style="flex:1;min-width:220px;padding:9px 14px;border:1.5px solid var(--bd);border-radius:var(--r);font-size:14px;outline:none" oninput="filtrarHist()">
+      <input id="histQ" placeholder="<i class="fas fa-magnifying-glass"></i> Buscar por nombre, T.I. o salón..." style="flex:1;min-width:220px;padding:9px 14px;border:1.5px solid var(--bd);border-radius:var(--r);font-size:14px;outline:none" oninput="filtrarHist()">
       <select id="histFiltro" style="padding:9px 12px;border:1.5px solid var(--bd);border-radius:var(--r);font-size:13px;outline:none" onchange="filtrarHist()">
         <option value="todos">Todos</option>
         <option value="activo">Solo Activos</option>
@@ -11563,7 +11563,7 @@ function pgAHist(){
   </div>`;
 }
 function renderHistTabla(lista){
-  if(!lista.length) return'<div class="mty"><div class="ei">📚</div><p>Sin registros</p></div>';
+  if(!lista.length) return'<div class="mty"><div class="ei"><i class="fas fa-book"></i></div><p>Sin registros</p></div>';
   return`<div class="tw"><table><thead>
     <tr><th>Nombre</th><th>T.I.</th><th>Salón</th><th>Registrado</th><th>Estado</th><th>Eliminado</th><th>Acciones</th></tr>
   </thead><tbody>${lista.map(h=>`<tr>
@@ -11574,8 +11574,8 @@ function renderHistTabla(lista){
     <td><span class="bdg ${h.activo?'bgr':'brd'}">${h.activo?'Activo':'Eliminado'}</span></td>
     <td style="font-family:var(--mn);font-size:11px;color:var(--sl3)">${h.eliminado||'—'}</td>
     <td style="display:flex;gap:6px;flex-wrap:wrap">
-      <button class="btn xs bg" onclick="verHistAcademico('${h.id}')">📊 Ver notas</button>
-      ${!h.activo?`<button class="btn xs bn" onclick="restaurarEst('${h.id}')">♻️ Restaurar</button>`:''}
+      <button class="btn xs bg" onclick="verHistAcademico('${h.id}')"><i class="fas fa-chart-column"></i> Ver notas</button>
+      ${!h.activo?`<button class="btn xs bn" onclick="restaurarEst('${h.id}')"><i class="fas fa-recycle"></i> Restaurar</button>`:''}
     </td>
   </tr>`).join('')}</tbody></table></div>`;
 }
@@ -11621,7 +11621,7 @@ function verHistAcademico(eid){
         <td style="padding:5px 9px;border-bottom:1px solid #e2e8f0;text-align:center;font-size:12px">${t.c.toFixed(1)}</td>
         <td style="padding:5px 9px;border-bottom:1px solid #e2e8f0;text-align:center;font-size:12px">${t.r.toFixed(1)}</td>
         <td style="padding:5px 9px;border-bottom:1px solid #e2e8f0;text-align:center;font-weight:800;font-size:12px;color:${scCol(d)}">${d.toFixed(2)}</td>
-        <td style="padding:5px 9px;border-bottom:1px solid #e2e8f0;text-align:center;font-size:11px;color:${d===0?'#a0aec0':d>=3?'#276749':'#c53030'}">${d===0?'—':d>=3?'✓':'✗'}</td>
+        <td style="padding:5px 9px;border-bottom:1px solid #e2e8f0;text-align:center;font-size:11px;color:${d===0?'#a0aec0':d>=3?'#276749':'#c53030'}">${d===0?'—':d>=3?'<i class="fas fa-check"></i>':'<i class="fas fa-xmark"></i>'}</td>
       </tr>`;
     }).join('');
     const prom=mats.length?+(mats.reduce((s,m)=>s+def(pd[m]||{a:0,c:0,r:0}),0)/mats.length).toFixed(2):0;
@@ -11639,7 +11639,7 @@ function verHistAcademico(eid){
           <th style="padding:5px 9px;text-align:center;font-size:11px">Act.</th>
           <th style="padding:5px 9px;text-align:center;font-size:11px">Res.</th>
           <th style="padding:5px 9px;text-align:center;font-size:11px">Def.</th>
-          <th style="padding:5px 9px;text-align:center;font-size:11px">✓</th>
+          <th style="padding:5px 9px;text-align:center;font-size:11px"><i class="fas fa-check"></i></th>
         </tr></thead>
         <tbody>${matRows}</tbody>
       </table>
@@ -11654,9 +11654,9 @@ function verHistAcademico(eid){
   const presentes=total-ausentes-tarde;
   const asistHTML=total
     ?`<div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:8px">
-        <span style="background:#c6f6d5;color:#276749;padding:4px 10px;border-radius:6px;font-size:12px;font-weight:700">✓ Presente: ${presentes}</span>
-        <span style="background:#fed7d7;color:#c53030;padding:4px 10px;border-radius:6px;font-size:12px;font-weight:700">✗ Ausente: ${ausentes}</span>
-        <span style="background:#fefcbf;color:#744210;padding:4px 10px;border-radius:6px;font-size:12px;font-weight:700">⏰ Tarde: ${tarde}</span>
+        <span style="background:#c6f6d5;color:#276749;padding:4px 10px;border-radius:6px;font-size:12px;font-weight:700"><i class="fas fa-check"></i> Presente: ${presentes}</span>
+        <span style="background:#fed7d7;color:#c53030;padding:4px 10px;border-radius:6px;font-size:12px;font-weight:700"><i class="fas fa-xmark"></i> Ausente: ${ausentes}</span>
+        <span style="background:#fefcbf;color:#744210;padding:4px 10px;border-radius:6px;font-size:12px;font-weight:700"><i class="fas fa-clock"></i> Tarde: ${tarde}</span>
         <span style="background:#e2e8f0;color:#4a5568;padding:4px 10px;border-radius:6px;font-size:12px">Total registros: ${total}</span>
       </div>`
     :'<p style="color:#a0aec0;font-size:12px;margin-top:6px">Sin registros de asistencia.</p>';
@@ -11705,18 +11705,18 @@ function verHistAcademico(eid){
 
   const dlSection=hayDatos&&anosDisponibles.length
     ?`<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:10px;padding-top:10px;border-top:1px solid #e2e8f0">
-        ${!eActive?`<span style="font-size:11px;color:#c53030;font-weight:700;background:#fff5f5;padding:3px 8px;border-radius:5px;border:1px solid #fed7d7">📁 Archivo histórico</span>`:''}
+        ${!eActive?`<span style="font-size:11px;color:#c53030;font-weight:700;background:#fff5f5;padding:3px 8px;border-radius:5px;border:1px solid #fed7d7"><i class="fas fa-folder"></i> Archivo histórico</span>`:''}
         <label style="font-size:12px;font-weight:700;color:var(--sl)">Año lectivo:</label>
         <select id="haAnno" style="padding:6px 10px;border:1.5px solid var(--bd);border-radius:6px;font-size:13px;outline:none">${annoOpts}</select>
-        ${persConDatos.length>1?`<button class="btn bb sm" onclick="_dlHistBol('${eid}','TODOS')">📋 Todos los Periodos</button>`:''}
-        ${persConDatos.map(p=>`<button class="btn bg sm" onclick="_dlHistBol('${eid}','${encodeURIComponent(p)}')">📄 ${p}</button>`).join('')}
+        ${persConDatos.length>1?`<button class="btn bb sm" onclick="_dlHistBol('${eid}','TODOS')"><i class="fas fa-clipboard-list"></i> Todos los Periodos</button>`:''}
+        ${persConDatos.map(p=>`<button class="btn bg sm" onclick="_dlHistBol('${eid}','${encodeURIComponent(p)}')"><i class="fas fa-file-lines"></i> ${p}</button>`).join('')}
       </div>`
     :`<div style="margin-top:10px;padding-top:10px;border-top:1px solid #e2e8f0;font-size:12px;color:#a0aec0;font-style:italic">
-        📭 Sin notas registradas — no hay boletín disponible para descargar.
+        <i class="fas fa-envelope-open"></i> Sin notas registradas — no hay boletín disponible para descargar.
       </div>`;
 
   Swal.fire({
-    title:`📊 Historial Académico`,
+    title:`<i class="fas fa-chart-column"></i> Historial Académico`,
     width:700,
     html:`<div style="text-align:left;font-family:var(--fn);max-height:70vh;overflow-y:auto;padding-right:4px">
       <!-- Header info -->
@@ -11742,11 +11742,11 @@ function verHistAcademico(eid){
       </div>
       <!-- Asistencia -->
       <div style="margin-bottom:14px">
-        <div style="font-size:12px;font-weight:800;text-transform:uppercase;color:var(--sl);margin-bottom:4px">📅 Asistencia</div>
+        <div style="font-size:12px;font-weight:800;text-transform:uppercase;color:var(--sl);margin-bottom:4px"><i class="fas fa-calendar-days"></i> Asistencia</div>
         ${asistHTML}
       </div>
       <!-- Notas por periodo -->
-      <div style="font-size:12px;font-weight:800;text-transform:uppercase;color:var(--sl);margin-bottom:8px">📝 Notas por Periodo</div>
+      <div style="font-size:12px;font-weight:800;text-transform:uppercase;color:var(--sl);margin-bottom:8px"><i class="fas fa-pen-to-square"></i> Notas por Periodo</div>
       ${perRows}
     </div>`,
     showConfirmButton:false,
@@ -11790,20 +11790,20 @@ function filtrarHist(){
 ============================================================ */
 function _comColorStyle(color){
   const map={
-    azul:   {bg:'#ebf8ff',border:'#3182ce',icon:'🔵',badge:'#3182ce'},
-    verde:  {bg:'#f0fff4',border:'#38a169',icon:'🟢',badge:'#38a169'},
-    naranja:{bg:'#fffaf0',border:'#dd6b20',icon:'🟠',badge:'#dd6b20'},
-    rojo:   {bg:'#fff5f5',border:'#e53e3e',icon:'🔴',badge:'#e53e3e'},
-    morado: {bg:'#faf5ff',border:'#805ad5',icon:'🟣',badge:'#805ad5'},
+    azul:   {bg:'#ebf8ff',border:'#3182ce',icon:'<i class="fas fa-circle"></i>',badge:'#3182ce'},
+    verde:  {bg:'#f0fff4',border:'#38a169',icon:'<i class="fas fa-circle"></i>',badge:'#38a169'},
+    naranja:{bg:'#fffaf0',border:'#dd6b20',icon:'<i class="fas fa-circle"></i>',badge:'#dd6b20'},
+    rojo:   {bg:'#fff5f5',border:'#e53e3e',icon:'<i class="fas fa-circle"></i>',badge:'#e53e3e'},
+    morado: {bg:'#faf5ff',border:'#805ad5',icon:'<i class="fas fa-circle"></i>',badge:'#805ad5'},
   };
   return map[color]||map.azul;
 }
 
 function pgACom(){
-  return`<div class="ph"><h2>📢 Comunicados</h2><button class="btn xs bg" onclick="showHelp('acom')" style="margin-top:6px">❓ Ayuda</button></div>
+  return`<div class="ph"><h2><i class="fas fa-bullhorn"></i> Comunicados</h2><button class="btn xs bg" onclick="showHelp('acom')" style="margin-top:6px"><i class="fas fa-circle-question"></i> Ayuda</button></div>
   <div class="g2">
     <div class="card">
-      <div class="chd"><span class="cti">➕ Nuevo Comunicado</span></div>
+      <div class="chd"><span class="cti"><i class="fas fa-plus"></i> Nuevo Comunicado</span></div>
       <div class="fg">
         <div class="fld" style="grid-column:1/-1"><label>Título</label>
           <input id="comTit" placeholder="Ej: Reunión de padres de familia" style="width:100%">
@@ -11813,18 +11813,18 @@ function pgACom(){
         </div>
         <div class="fld"><label>Dirigido a</label>
           <select id="comPara">
-            <option value="todos">👥 Todos (profesores y estudiantes)</option>
-            <option value="profe">👩‍🏫 Solo Profesores</option>
-            <option value="est">🎓 Solo Estudiantes</option>
+            <option value="todos"><i class="fas fa-users"></i> Todos (profesores y estudiantes)</option>
+            <option value="profe"><i class="fas fa-chalkboard-user"></i> Solo Profesores</option>
+            <option value="est"><i class="fas fa-graduation-cap"></i> Solo Estudiantes</option>
           </select>
         </div>
         <div class="fld"><label>Color / Tipo</label>
           <select id="comColor">
-            <option value="azul">🔵 Azul — Informativo</option>
-            <option value="verde">🟢 Verde — Positivo / Éxito</option>
-            <option value="naranja">🟠 Naranja — Atención</option>
-            <option value="rojo">🔴 Rojo — Urgente</option>
-            <option value="morado">🟣 Morado — Evento especial</option>
+            <option value="azul"><i class="fas fa-circle"></i> Azul — Informativo</option>
+            <option value="verde"><i class="fas fa-circle"></i> Verde — Positivo / Éxito</option>
+            <option value="naranja"><i class="fas fa-circle"></i> Naranja — Atención</option>
+            <option value="rojo"><i class="fas fa-circle"></i> Rojo — Urgente</option>
+            <option value="morado"><i class="fas fa-circle"></i> Morado — Evento especial</option>
           </select>
         </div>
         <div class="fld"><label>Fecha inicio</label>
@@ -11834,11 +11834,11 @@ function pgACom(){
           <input type="date" id="comFf">
         </div>
       </div>
-      <button class="btn bn" style="margin-top:12px" onclick="publicarComunicado()">📢 Publicar Comunicado</button>
+      <button class="btn bn" style="margin-top:12px" onclick="publicarComunicado()"><i class="fas fa-bullhorn"></i> Publicar Comunicado</button>
     </div>
     <div class="card">
-      <div class="chd"><span class="cti">📋 Comunicados Creados</span></div>
-      <div id="comListW"><div class="mty"><div class="ei">📢</div><p>Cargando…</p></div></div>
+      <div class="chd"><span class="cti"><i class="fas fa-clipboard-list"></i> Comunicados Creados</span></div>
+      <div id="comListW"><div class="mty"><div class="ei"><i class="fas fa-bullhorn"></i></div><p>Cargando…</p></div></div>
     </div>
   </div>`;
 }
@@ -11859,31 +11859,31 @@ async function renderComList(){
   const el=gi('comListW');if(!el)return;
   try{
     const lista=await cargarTodosComunicados();
-    if(!lista.length){el.innerHTML='<div class="mty"><div class="ei">📢</div><p>Sin comunicados creados</p></div>';return;}
+    if(!lista.length){el.innerHTML='<div class="mty"><div class="ei"><i class="fas fa-bullhorn"></i></div><p>Sin comunicados creados</p></div>';return;}
     const hoy=today();
     el.innerHTML=lista.map(c=>{
       const cs=_comColorStyle(c.color);
       const vigente=c.activo&&c.fechaInicio<=hoy&&c.fechaFin>=hoy;
       const esSA=!!(c.esSuperAdmin);
-      const paraLabel={todos:'👥 Todos',profe:'👩‍🏫 Profesores',est:'🎓 Estudiantes'}[c.para]||c.para;
+      const paraLabel={todos:'<i class="fas fa-users"></i> Todos',profe:'<i class="fas fa-chalkboard-user"></i> Profesores',est:'<i class="fas fa-graduation-cap"></i> Estudiantes'}[c.para]||c.para;
       return`<div style="border:1.5px solid ${cs.border};border-radius:10px;background:${cs.bg};padding:14px;margin-bottom:10px">
         <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;flex-wrap:wrap">
           <div style="flex:1;min-width:0">
-            <div style="font-weight:800;font-size:14px;margin-bottom:4px">${cs.icon} ${esc(c.titulo)} ${esSA?'<span class="bdg" style="background:#553c9a;color:#fff;font-size:9px">🌐 Plataforma</span>':''}</div>
+            <div style="font-weight:800;font-size:14px;margin-bottom:4px">${cs.icon} ${esc(c.titulo)} ${esSA?'<span class="bdg" style="background:#553c9a;color:#fff;font-size:9px"><i class="fas fa-globe"></i> Plataforma</span>':''}</div>
             <div style="font-size:12px;color:var(--sl2);white-space:pre-line;line-height:1.6">${esc(c.mensaje)}</div>
           </div>
           <div style="display:flex;flex-direction:column;gap:6px;align-items:flex-end;flex-shrink:0">
             <span class="bdg" style="background:${cs.badge};color:#fff;font-size:10px">${paraLabel}</span>
-            <span class="bdg ${vigente?'bgr':'brd'}" style="font-size:10px">${vigente?'✅ Activo':'⭕ Inactivo'}</span>
+            <span class="bdg ${vigente?'bgr':'brd'}" style="font-size:10px">${vigente?'<i class="fas fa-circle-check"></i> Activo':'<i class="fas fa-circle"></i> Inactivo'}</span>
           </div>
         </div>
         <div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px;flex-wrap:wrap;gap:8px">
-          <span style="font-size:11px;color:var(--sl3)">📅 ${c.fechaInicio} → ${c.fechaFin}</span>
+          <span style="font-size:11px;color:var(--sl3)"><i class="fas fa-calendar-days"></i> ${c.fechaInicio} → ${c.fechaFin}</span>
           ${esSA
             ? `<span style="font-size:11px;color:#805ad5;font-style:italic">Solo lectura — enviado por la plataforma</span>`
             : `<div style="display:flex;gap:8px">
-                <button class="btn xs ${c.activo?'brd':'bgr'} sm" onclick="toggleComunicado('${c.id}',${!c.activo})">${c.activo?'⏸ Desactivar':'▶ Activar'}</button>
-                <button class="btn xs br sm" onclick="borrarComunicado('${c.id}')">🗑️ Eliminar</button>
+                <button class="btn xs ${c.activo?'brd':'bgr'} sm" onclick="toggleComunicado('${c.id}',${!c.activo})">${c.activo?'<i class="fas fa-circle-pause"></i> Desactivar':'<i class="fas fa-circle-play"></i> Activar'}</button>
+                <button class="btn xs br sm" onclick="borrarComunicado('${c.id}')"><i class="fas fa-trash"></i> Eliminar</button>
               </div>`
           }
         </div>
@@ -11905,7 +11905,7 @@ async function publicarComunicado(){
   if(fi>ff){sw('warning','La fecha de fin debe ser igual o posterior al inicio');return;}
   const com=await crearComunicado({titulo:tit,mensaje:msg,para,color,fechaInicio:fi,fechaFin:ff});
   if(com){
-    sw('success','📢 Comunicado publicado');
+    sw('success','<i class="fas fa-bullhorn"></i> Comunicado publicado');
     gi('comTit').value='';gi('comMsg').value='';
     await renderComList();
   }
@@ -11930,34 +11930,34 @@ async function editarComunicado(id,d){ /* implementado en api-layer.js */ }
 async function eliminarComunicado(id){ /* implementado en api-layer.js */ }
 async function cargarTodosComunicados(){ /* implementado en api-layer.js */ }
 
-function pgAExc(){return`<div class="ph"><h2>Excusas Recibidas</h2><p>Horario de envío: ${(DB.excHorario?.ini??18)}:00 – ${(DB.excHorario?.fin??7)}:00</p><button class="btn xs bg" onclick="showHelp('aexc')" style="margin-top:6px">❓ Ayuda</button></div><div id="aexcB"></div>`;}
+function pgAExc(){return`<div class="ph"><h2>Excusas Recibidas</h2><p>Horario de envío: ${(DB.excHorario?.ini??18)}:00 – ${(DB.excHorario?.fin??7)}:00</p><button class="btn xs bg" onclick="showHelp('aexc')" style="margin-top:6px"><i class="fas fa-circle-question"></i> Ayuda</button></div><div id="aexcB"></div>`;}
 function initAExc(){
   const el=gi('aexcB');if(!el)return;
   const list=(DB.exc||[]).slice().reverse();
-  if(!list.length){el.innerHTML='<div class="mty"><div class="ei">✉️</div><p>Sin excusas</p></div>';return;}
+  if(!list.length){el.innerHTML='<div class="mty"><div class="ei"><i class="fas fa-envelope"></i></div><p>Sin excusas</p></div>';return;}
   el.innerHTML=list.map(x=>{
     const yaRespondida=!!(x.respProf);
-    const talleresList=(x.talleres||[]).map(t=>`<div style="font-size:11px;padding:3px 7px;background:#ebf8ff;border-radius:5px;display:inline-block;margin:2px">📎 ${t.nombre}</div>`).join('');
+    const talleresList=(x.talleres||[]).map(t=>`<div style="font-size:11px;padding:3px 7px;background:#ebf8ff;border-radius:5px;display:inline-block;margin:2px"><i class="fas fa-paperclip"></i> ${t.nombre}</div>`).join('');
     return`<div class="card" style="margin-bottom:12px">
       <div class="chd" style="display:flex;justify-content:space-between;align-items:center">
-        <span class="cti">✉️ ${x.enombre} <span class="bdg bgy" style="font-size:10px">${x.salon||'—'}</span></span>
-        <span class="bdg ${yaRespondida?'bgr':'bor'}">${yaRespondida?'✅ Respondida':'⏳ Sin respuesta'}</span>
+        <span class="cti"><i class="fas fa-envelope"></i> ${x.enombre} <span class="bdg bgy" style="font-size:10px">${x.salon||'—'}</span></span>
+        <span class="bdg ${yaRespondida?'bgr':'bor'}">${yaRespondida?'<i class="fas fa-circle-check"></i> Respondida':'<i class="fas fa-hourglass-half"></i> Sin respuesta'}</span>
       </div>
       <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:8px">
-        <span style="font-size:12px">📅 <strong>Fecha:</strong> ${x.fecha}</span>
-        <span style="font-size:12px">👤 <strong>Dirigida a:</strong> ${x.dest}</span>
-        <span style="font-size:12px">📋 <strong>Causa:</strong> <span class="bdg bor">${x.causa}</span></span>
-        <span style="font-size:12px">🕐 ${x.ts?.split(',')[1]?.trim()||'—'}</span>
+        <span style="font-size:12px"><i class="fas fa-calendar-days"></i> <strong>Fecha:</strong> ${x.fecha}</span>
+        <span style="font-size:12px"><i class="fas fa-user"></i> <strong>Dirigida a:</strong> ${x.dest}</span>
+        <span style="font-size:12px"><i class="fas fa-clipboard-list"></i> <strong>Causa:</strong> <span class="bdg bor">${x.causa}</span></span>
+        <span style="font-size:12px"><i class="fas fa-clock"></i> ${x.ts?.split(',')[1]?.trim()||'—'}</span>
       </div>
-      ${x.desc?`<div style="font-size:12px;color:var(--sl2);margin-bottom:8px">💬 ${x.desc}</div>`:''}
+      ${x.desc?`<div style="font-size:12px;color:var(--sl2);margin-bottom:8px"><i class="fas fa-comment"></i> ${x.desc}</div>`:''}
       ${yaRespondida?`<div style="background:#f0fff4;border-radius:8px;padding:10px;margin-bottom:8px;font-size:12px">
-        <strong>✅ Respuesta de ${x.respProfNombre||'Profesor'}:</strong> ${x.respProf}
-        ${x.diasExtra>0?`<br>⏰ <strong>Tiempo prolongado:</strong> ${x.diasExtra} día(s) extra — Entrega límite: ${x.fechaLimite||'—'}`:''}
-        ${talleresList?`<br><div style="margin-top:5px">📚 Talleres adjuntos:<br>${talleresList}</div>`:''}
+        <strong><i class="fas fa-circle-check"></i> Respuesta de ${x.respProfNombre||'Profesor'}:</strong> ${x.respProf}
+        ${x.diasExtra>0?`<br><i class="fas fa-clock"></i> <strong>Tiempo prolongado:</strong> ${x.diasExtra} día(s) extra — Entrega límite: ${x.fechaLimite||'—'}`:''}
+        ${talleresList?`<br><div style="margin-top:5px"><i class="fas fa-book"></i> Talleres adjuntos:<br>${talleresList}</div>`:''}
         <div style="font-size:10px;color:var(--sl3);margin-top:4px">${x.respTs||''} ${x.respLeida?'<span class=\'bdg bgr\' style=\'font-size:9px\'>Vista por estudiante</span>':''}</div>
       </div>`:''}
       <button class="btn ${yaRespondida?'bs':'bn'} sm" onclick="responderExcusa('${x._id}')">
-        ${yaRespondida?'✏️ Editar respuesta':'📨 Responder con talleres'}
+        ${yaRespondida?'<i class="fas fa-pen"></i> Editar respuesta':'<i class="fas fa-envelope"></i> Responder con talleres'}
       </button>
     </div>`;
   }).join('');
@@ -11990,13 +11990,13 @@ async function responderExcusa(excId){
       <input type="file" id="rpFiles" multiple accept=".pdf,.doc,.docx,.jpg,.png,.xlsx,.txt"
         style="width:100%;padding:8px;border:1.5px solid var(--bd);border-radius:var(--r);font-size:12px;background:var(--bg2)">
       <div id="rpFileList" style="margin-top:6px">
-        ${(exc.talleres||[]).map(t=>`<div style="font-size:11px;padding:3px 7px;background:#ebf8ff;border-radius:5px;display:inline-block;margin:2px">📎 ${t.nombre}</div>`).join('')}
+        ${(exc.talleres||[]).map(t=>`<div style="font-size:11px;padding:3px 7px;background:#ebf8ff;border-radius:5px;display:inline-block;margin:2px"><i class="fas fa-paperclip"></i> ${t.nombre}</div>`).join('')}
       </div>
     </div>
   </div>`;
   const res=await Swal.fire({
-    title:'📨 Responder Excusa',width:520,html,showCancelButton:true,
-    confirmButtonText:'✅ Enviar respuesta',cancelButtonText:'Cancelar',
+    title:'<i class="fas fa-envelope"></i> Responder Excusa',width:520,html,showCancelButton:true,
+    confirmButtonText:'<i class="fas fa-circle-check"></i> Enviar respuesta',cancelButtonText:'Cancelar',
     confirmButtonColor:'#2b6cb0',
     preConfirm:async()=>{
       const resp=gi('rpResp')?.value.trim();
@@ -12037,7 +12037,7 @@ async function responderExcusa(excId){
     // Mostrar confirmación con resumen de lo enviado
     await Swal.fire({
       icon:'success',
-      title:'✅ Respuesta enviada',
+      title:'<i class="fas fa-circle-check"></i> Respuesta enviada',
       html:`<div style="text-align:left;font-family:var(--fn);font-size:13px">
         <div style="background:#f0fff4;border-radius:8px;padding:10px;margin-bottom:10px">
           <strong>Estudiante:</strong> ${exc.enombre}<br>
@@ -12046,7 +12046,7 @@ async function responderExcusa(excId){
           ${talleres.length?`<strong>Talleres adjuntos:</strong> ${talleres.length} archivo(s)`:''}
         </div>
         <div style="background:#fffbeb;border:1.5px solid #f6ad55;border-radius:8px;padding:10px;font-size:12px;color:#c05621">
-          ⚠️ El estudiante verá esta respuesta en su bandeja de excusas junto con el recordatorio de entregar el trabajo a tiempo.
+          <i class="fas fa-triangle-exclamation"></i> El estudiante verá esta respuesta en su bandeja de excusas junto con el recordatorio de entregar el trabajo a tiempo.
         </div>
       </div>`,
       confirmButtonText:'Aceptar',
@@ -12059,11 +12059,11 @@ async function responderExcusa(excId){
 /* ============================================================
    ADMIN — CLASES VIRTUALES
 ============================================================ */
-function pgAVcl(){return`<div class="ph"><h2>💻 Clases Virtuales</h2><button class="btn xs bg" onclick="showHelp('avcl')" style="margin-top:6px">❓ Ayuda</button></div><div id="avcB"></div>`;}
+function pgAVcl(){return`<div class="ph"><h2><i class="fas fa-laptop"></i> Clases Virtuales</h2><button class="btn xs bg" onclick="showHelp('avcl')" style="margin-top:6px"><i class="fas fa-circle-question"></i> Ayuda</button></div><div id="avcB"></div>`;}
 function initAVcl(){
   const el=gi('avcB');if(!el)return;
   const clases=(DB.vclases||[]).slice().reverse();
-  el.innerHTML=`<div class="card"><div class="chd"><span class="cti">📅 Clases Programadas (${clases.length})</span></div>
+  el.innerHTML=`<div class="card"><div class="chd"><span class="cti"><i class="fas fa-calendar-days"></i> Clases Programadas (${clases.length})</span></div>
   ${clases.length?`<div class="tw"><table><thead>
     <tr><th>Salón</th><th>Profesor</th><th>Fecha</th><th>Hora</th><th>Tema</th><th>Estado</th></tr></thead>
     <tbody>${clases.map(c=>{
@@ -12072,10 +12072,10 @@ function initAVcl(){
       const diffMin=(ahora-claseTs)/60000;
       const activa = c.activa || (diffMin>=-10 && diffMin<=120);
       const estado = activa
-        ? `<span class="bdg" style="background:#d1fae5;color:#065f46;border:1px solid #6ee7b7">🟢 En vivo</span>`
+        ? `<span class="bdg" style="background:#d1fae5;color:#065f46;border:1px solid #6ee7b7"><i class="fas fa-circle"></i> En vivo</span>`
         : diffMin>120
           ? `<span class="bdg bgy">Finalizada</span>`
-          : `<span class="bdg" style="background:#eff6ff;color:#1e40af;border:1px solid #bfdbfe">📅 Programada</span>`;
+          : `<span class="bdg" style="background:#eff6ff;color:#1e40af;border:1px solid #bfdbfe"><i class="fas fa-calendar-days"></i> Programada</span>`;
       return`<tr>
         <td><span class="bdg bgy">${c.salon}</span></td>
         <td>${c.profNombre||'—'}</td>
@@ -12085,7 +12085,7 @@ function initAVcl(){
         <td>${estado}</td>
       </tr>`;
     }).join('')}</tbody></table></div>`
-    :'<div class="mty"><div class="ei">💻</div><p>Sin clases programadas</p></div>'}
+    :'<div class="mty"><div class="ei"><i class="fas fa-laptop"></i></div><p>Sin clases programadas</p></div>'}
   </div>`;
 }
 
@@ -12094,8 +12094,8 @@ function initAVcl(){
    PROFE / ESTUDIANTE — VER COMUNICADOS (solo lectura)
 ============================================================ */
 function pgComVer(){
-  return`<div class="ph"><h2>📢 Comunicados</h2><p>Avisos del colegio para ti</p></div>
-  <div id="comVerW"><div class="mty"><div class="ei">📢</div><p>Cargando…</p></div></div>`;
+  return`<div class="ph"><h2><i class="fas fa-bullhorn"></i> Comunicados</h2><p>Avisos del colegio para ti</p></div>
+  <div id="comVerW"><div class="mty"><div class="ei"><i class="fas fa-bullhorn"></i></div><p>Cargando…</p></div></div>`;
 }
 function initComVer(){
   const el=gi('comVerW');if(!el)return;
@@ -12116,15 +12116,15 @@ function _renderComVer(el){
     return c.para===role;
   });
   if(!coms.length){
-    el.innerHTML='<div class="card"><div class="mty"><div class="ei">📢</div><p>No hay comunicados activos en este momento</p></div></div>';
+    el.innerHTML='<div class="card"><div class="mty"><div class="ei"><i class="fas fa-bullhorn"></i></div><p>No hay comunicados activos en este momento</p></div></div>';
     return;
   }
   const colorMap={
-    azul:  {hdr:'#2b6cb0',bg:'#ebf8ff',border:'#bee3f8',icon:'🔵'},
-    verde: {hdr:'#276749',bg:'#f0fff4',border:'#9ae6b4',icon:'🟢'},
-    naranja:{hdr:'#c05621',bg:'#fffaf0',border:'#fbd38d',icon:'🟠'},
-    rojo:  {hdr:'#c53030',bg:'#fff5f5',border:'#feb2b2',icon:'🔴'},
-    morado:{hdr:'#553c9a',bg:'#faf5ff',border:'#d6bcfa',icon:'🟣'},
+    azul:  {hdr:'#2b6cb0',bg:'#ebf8ff',border:'#bee3f8',icon:'<i class="fas fa-circle"></i>'},
+    verde: {hdr:'#276749',bg:'#f0fff4',border:'#9ae6b4',icon:'<i class="fas fa-circle"></i>'},
+    naranja:{hdr:'#c05621',bg:'#fffaf0',border:'#fbd38d',icon:'<i class="fas fa-circle"></i>'},
+    rojo:  {hdr:'#c53030',bg:'#fff5f5',border:'#feb2b2',icon:'<i class="fas fa-circle"></i>'},
+    morado:{hdr:'#553c9a',bg:'#faf5ff',border:'#d6bcfa',icon:'<i class="fas fa-circle"></i>'},
   };
   el.innerHTML=coms.map(c=>{
     const cs=colorMap[c.color]||colorMap.azul;
@@ -12132,8 +12132,8 @@ function _renderComVer(el){
       <div style="font-weight:800;font-size:16px;color:${cs.hdr};margin-bottom:8px">${cs.icon} ${esc(c.titulo)}</div>
       <div style="font-size:14px;color:#2d3748;white-space:pre-line;line-height:1.8">${esc(c.mensaje)}</div>
       <div style="font-size:11px;color:#718096;margin-top:10px;display:flex;gap:16px;flex-wrap:wrap">
-        <span>📅 Vigente hasta: <strong>${c.fechaFin}</strong></span>
-        ${c.creadoPor?`<span>👤 Publicado por: <strong>${esc(c.creadoPor)}</strong></span>`:''}
+        <span><i class="fas fa-calendar-days"></i> Vigente hasta: <strong>${c.fechaFin}</strong></span>
+        ${c.creadoPor?`<span><i class="fas fa-user"></i> Publicado por: <strong>${esc(c.creadoPor)}</strong></span>`:''}
       </div>
     </div>`;
   }).join('');
@@ -12179,7 +12179,7 @@ function pgPH(){
     if(!horario||!franjas.length){
       // Placeholder elegante cuando no hay horario asignado
       return`<div style="text-align:center;padding:32px 20px;color:var(--sl3)">
-        <div style="font-size:36px;margin-bottom:10px">📅</div>
+        <div style="font-size:36px;margin-bottom:10px"><i class="fas fa-calendar-days"></i></div>
         <div style="font-size:14px;font-weight:600;color:var(--sl2);margin-bottom:4px">Horario no configurado</div>
         <div style="font-size:12px">El administrador debe asignar tu horario desde la configuración del colegio.</div>
       </div>`;
@@ -12213,7 +12213,7 @@ function pgPH(){
     <div>
       <h2 style="margin-bottom:4px">Bienvenido, ${esc(p.nombre)}</h2>
       <span class="bdg ${isBach?'bte':'bbl'}" style="font-size:11px">${isBach?'Bachillerato':'Primaria'}</span>
-      <button class="btn xs bg" onclick="showHelp('ph')" style="margin-left:8px">❓ Ayuda</button>
+      <button class="btn xs bg" onclick="showHelp('ph')" style="margin-left:8px"><i class="fas fa-circle-question"></i> Ayuda</button>
     </div>
     ${_logoP?`<img src="${_logoP}" alt="Logo" style="height:56px;width:auto;max-width:100px;object-fit:contain;border-radius:10px;background:var(--bg2);padding:4px">`:
     `<div style="font-size:22px;font-weight:800;color:var(--nv)">${_nomP||''}</div>`}
@@ -12221,19 +12221,19 @@ function pgPH(){
 
   <!-- STATS ROW -->
   <div class="sr" style="margin-bottom:18px">
-    <div class="scc" data-i="🏫"><div class="sv">${sals.length}</div><div class="sl">Salones</div><div class="bar"></div></div>
-    <div class="scc" data-i="📚"><div class="sv">${matCards.length||sals.reduce((t,s)=>t+getProfMatsSalon(p.id,s).length,0)||'—'}</div><div class="sl">Materias</div><div class="bar"></div></div>
-    <div class="scc" data-i="✉️" style="cursor:pointer" onclick="goto('ph');setTimeout(()=>{const t=gi('phTabExc');if(t)t.click();},100)">
-      <div class="sv" style="color:${excPend>0?'var(--red)':'var(--grn)'}">${excPend>0?excPend:'✓'}</div>
+    <div class="scc" data-i="<i class="fas fa-school"></i>"><div class="sv">${sals.length}</div><div class="sl">Salones</div><div class="bar"></div></div>
+    <div class="scc" data-i="<i class="fas fa-book"></i>"><div class="sv">${matCards.length||sals.reduce((t,s)=>t+getProfMatsSalon(p.id,s).length,0)||'—'}</div><div class="sl">Materias</div><div class="bar"></div></div>
+    <div class="scc" data-i="<i class="fas fa-envelope"></i>" style="cursor:pointer" onclick="goto('ph');setTimeout(()=>{const t=gi('phTabExc');if(t)t.click();},100)">
+      <div class="sv" style="color:${excPend>0?'var(--red)':'var(--grn)'}">${excPend>0?excPend:'<i class="fas fa-check"></i>'}</div>
       <div class="sl">${excPend>0?'Excusas pend.':'Sin pendientes'}</div><div class="bar"></div>
     </div>
-    ${pendRec?`<div class="scc" data-i="🔄" style="cursor:pointer" onclick="goto('prec')">
+    ${pendRec?`<div class="scc" data-i="<i class="fas fa-arrows-rotate"></i>" style="cursor:pointer" onclick="goto('prec')">
       <div class="sv" style="color:var(--ora)">${pendRec}</div><div class="sl">Recup. pend.</div><div class="bar"></div>
     </div>`:''}
   </div>
 
   ${pendRec?`<div class="al aly" style="cursor:pointer;margin-bottom:14px" onclick="goto('prec')">
-    🔄 Tienes <strong>${pendRec}</strong> recuperación(es) pendiente(s). <span style="text-decoration:underline">Ver ahora →</span>
+    <i class="fas fa-arrows-rotate"></i> Tienes <strong>${pendRec}</strong> recuperación(es) pendiente(s). <span style="text-decoration:underline">Ver ahora →</span>
   </div>`:''}
 
   <!-- TABS -->
@@ -12242,39 +12242,39 @@ function pgPH(){
       <button id="phTabMats" onclick="phTab('__mats')"
         style="padding:11px 20px;border:none;background:var(--bg);border-bottom:2px solid var(--nv);margin-bottom:-2px;
         font-size:13px;font-weight:800;color:var(--nv);cursor:pointer;white-space:nowrap;display:flex;align-items:center;gap:6px">
-        📚 Mis Materias
+        <i class="fas fa-book"></i> Mis Materias
         <span style="background:var(--nv);color:#fff;border-radius:20px;padding:1px 8px;font-size:10px;font-weight:700">${matCards.length}</span>
       </button>
       <button id="phTabHor" onclick="phTab('__hor')"
         style="padding:11px 20px;border:none;background:transparent;border-bottom:2px solid transparent;
         margin-bottom:-2px;font-size:13px;font-weight:600;color:var(--sl2);cursor:pointer;white-space:nowrap">
-        📅 Mi Horario
+        <i class="fas fa-calendar-days"></i> Mi Horario
       </button>
       <button id="phTabExc" onclick="phTab('__exc')"
         style="padding:11px 20px;border:none;background:transparent;border-bottom:2px solid transparent;
         margin-bottom:-2px;font-size:13px;font-weight:600;color:${excPend>0?'var(--red)':'var(--sl2)'};
         cursor:pointer;white-space:nowrap;display:flex;align-items:center;gap:6px">
-        ✉️ Excusas
+        <i class="fas fa-envelope"></i> Excusas
         ${excPend?`<span style="background:var(--red);color:#fff;border-radius:20px;padding:1px 7px;font-size:10px;font-weight:800">${excPend}</span>`:
-        `<span style="background:#c6f6d5;color:#276749;border-radius:20px;padding:1px 7px;font-size:10px;font-weight:800">✓</span>`}
+        `<span style="background:#c6f6d5;color:#276749;border-radius:20px;padding:1px 7px;font-size:10px;font-weight:800"><i class="fas fa-check"></i></span>`}
       </button>
       <button id="phTabRpt" onclick="phTab('__rpt')"
         style="padding:11px 20px;border:none;background:transparent;border-bottom:2px solid transparent;
         margin-bottom:-2px;font-size:13px;font-weight:600;color:var(--sl2);cursor:pointer;white-space:nowrap">
-        📥 Informes
+        <i class="fas fa-download"></i> Informes
       </button>
     </div>
 
     <!-- Tab content -->
     <div id="phTabContent" style="padding:16px">
-      ${matCards.length?renderPhMatsGrid(matCards,perActivo):'<div class="mty"><div class="ei">📚</div><p>Sin materias asignadas todavía.<br><small style="color:#a0aec0">Pide al admin que te asigne materias por salón.</small></p></div>'}
+      ${matCards.length?renderPhMatsGrid(matCards,perActivo):'<div class="mty"><div class="ei"><i class="fas fa-book"></i></div><p>Sin materias asignadas todavía.<br><small style="color:#a0aec0">Pide al admin que te asigne materias por salón.</small></p></div>'}
     </div>
   </div>`;
 }
 
 /* Renderiza grid de materias para bachillerato */
 function renderPhMatsGrid(matCards,perActivo){
-  if(!matCards.length) return`<div class="mty"><div class="ei">📚</div><p>Sin materias asignadas todavía</p></div>`;
+  if(!matCards.length) return`<div class="mty"><div class="ei"><i class="fas fa-book"></i></div><p>Sin materias asignadas todavía</p></div>`;
 
   // Group by salon
   const bySalon={};
@@ -12288,20 +12288,20 @@ function renderPhMatsGrid(matCards,perActivo){
   return Object.entries(bySalon).map(([sal,cards])=>`
     <div style="margin-bottom:20px">
       <div style="font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--sl2);margin-bottom:10px">
-        🏫 Salón ${sal} · ${ebySalon(sal).length} estudiantes
+        <i class="fas fa-school"></i> Salón ${sal} · ${ebySalon(sal).length} estudiantes
       </div>
       <div class="phMatsGrid">
         ${cards.map(c=>`<div class="phMatCard" onclick="irANotasSalonMat('${c.sal}','${c.mat}')">
-          <div class="phMatCard-salon">📚 ${c.sal}</div>
+          <div class="phMatCard-salon"><i class="fas fa-book"></i> ${c.sal}</div>
           <div class="phMatCard-nombre">${c.mat}</div>
           <div class="phMatCard-stats">
-            <span>✅ ${c.conNotas}/${c.ests}</span>
+            <span><i class="fas fa-circle-check"></i> ${c.conNotas}/${c.ests}</span>
             <span style="margin-left:auto;font-weight:700;color:${colorPct(c.pct)}">${c.pct}%</span>
           </div>
           <div class="phMatCard-progress">
             <div class="phMatCard-progress-bar" style="width:${c.pct}%"></div>
           </div>
-          ${c.excSal?`<div style="font-size:10px;color:var(--red);font-weight:700">⚠️ ${c.excSal} excusa${c.excSal>1?'s':''} pendiente${c.excSal>1?'s':''}</div>`:''}
+          ${c.excSal?`<div style="font-size:10px;color:var(--red);font-weight:700"><i class="fas fa-triangle-exclamation"></i> ${c.excSal} excusa${c.excSal>1?'s':''} pendiente${c.excSal>1?'s':''}</div>`:''}
         </div>`).join('')}
       </div>
     </div>
@@ -12325,7 +12325,7 @@ function irANotasSalonMat(salon,mat){
 /* Renderiza el contenido de un tab de salón */
 function renderPhSalonTab(sal){
   const ests=ebySalon(sal);
-  if(!ests.length) return`<div class="mty"><div class="ei">🎓</div><p>Sin estudiantes en ${sal}</p></div>`;
+  if(!ests.length) return`<div class="mty"><div class="ei"><i class="fas fa-graduation-cap"></i></div><p>Sin estudiantes en ${sal}</p></div>`;
 
   // Stats del salón
   const perActivo=DB.pers[DB.pers.length-1]||'';
@@ -12336,11 +12336,11 @@ function renderPhSalonTab(sal){
   return`
   <!-- Acciones rápidas del salón -->
   <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px;align-items:center">
-    <button class="btn bg" onclick="irANotasSalon('${sal}')">📝 Ingresar notas</button>
-    <button class="btn bs" onclick="irAAsistSalon('${sal}')">✅ Asistencia</button>
-    <button class="btn bs" onclick="selRptProf('${sal}',DB.pers[0]||'','pdf')">📄 PDF Informe</button>
-    <button class="btn bs" onclick="selRptProf('${sal}',DB.pers[0]||'','xls')">📊 Excel</button>
-    ${excSal.length?`<span style="margin-left:auto;font-size:12px;color:var(--red);font-weight:700">⚠️ ${excSal.length} excusa${excSal.length>1?'s':''} sin responder</span>`:''}
+    <button class="btn bg" onclick="irANotasSalon('${sal}')"><i class="fas fa-pen-to-square"></i> Ingresar notas</button>
+    <button class="btn bs" onclick="irAAsistSalon('${sal}')"><i class="fas fa-circle-check"></i> Asistencia</button>
+    <button class="btn bs" onclick="selRptProf('${sal}',DB.pers[0]||'','pdf')"><i class="fas fa-file-lines"></i> PDF Informe</button>
+    <button class="btn bs" onclick="selRptProf('${sal}',DB.pers[0]||'','xls')"><i class="fas fa-chart-column"></i> Excel</button>
+    ${excSal.length?`<span style="margin-left:auto;font-size:12px;color:var(--red);font-weight:700"><i class="fas fa-triangle-exclamation"></i> ${excSal.length} excusa${excSal.length>1?'s':''} sin responder</span>`:''}
   </div>
 
   <!-- Progreso notas -->
@@ -12355,7 +12355,7 @@ function renderPhSalonTab(sal){
 
   <!-- Buscador + tabla de estudiantes -->
   <div style="display:flex;gap:8px;margin-bottom:10px;align-items:center">
-    <input id="phBusq_${sal}" placeholder="🔍 Buscar estudiante en ${sal}…"
+    <input id="phBusq_${sal}" placeholder="<i class="fas fa-magnifying-glass"></i> Buscar estudiante en ${sal}…"
       style="flex:1;padding:8px 12px;border:1px solid var(--bd);border-radius:8px;font-size:13px;font-family:var(--fn)"
       oninput="filtrarPhEsts('${sal}')">
     <span id="phCount_${sal}" style="font-size:12px;color:var(--sl2);white-space:nowrap">${ests.length} est.</span>
@@ -12392,7 +12392,7 @@ function renderPhSalonTab(sal){
             :'<span style="color:var(--sl3);font-size:12px">—</span>';
           const excTxt=excEst
             ?'<span style="background:var(--red);color:#fff;border-radius:10px;padding:2px 8px;font-size:11px;font-weight:800">'+excEst+'</span>'
-            :'<span style="color:#68d391;font-size:13px">✓</span>';
+            :'<span style="color:#68d391;font-size:13px"><i class="fas fa-check"></i></span>';
           return '<tr data-nombre="'+e.nombre.toLowerCase()+'" style="border-bottom:1px solid var(--bd);background:'+rowBg+'">'
             +'<td style="padding:8px 10px;text-align:center;font-size:11px;color:var(--sl3);font-weight:600">'+(idx+1)+'</td>'
             +'<td style="padding:8px 10px">'
@@ -12403,7 +12403,7 @@ function renderPhSalonTab(sal){
             +'<td style="padding:8px 10px;text-align:center">'+promTxt+'</td>'
             +'<td style="padding:8px 10px;text-align:center">'+excTxt+'</td>'
             +'<td style="padding:8px 10px;text-align:center">'
-              +'<button class="btn xs bg" data-sal="'+sal+'" onclick="_phGoNotes(this)" style="font-size:11px;padding:4px 10px">✏️ Notas</button>'
+              +'<button class="btn xs bg" data-sal="'+sal+'" onclick="_phGoNotes(this)" style="font-size:11px;padding:4px 10px"><i class="fas fa-pen"></i> Notas</button>'
             +'</td>'
             +'</tr>';
         }).join(''); })()}
@@ -12420,7 +12420,7 @@ function renderPhExcTab(){
   const pendientes=todas.filter(x=>!x.respProf);
   const respondidas=todas.filter(x=>!!x.respProf);
 
-  if(!todas.length) return`<div class="mty" style="padding:24px"><div class="ei">📬</div><p>Sin excusas recibidas</p></div>`;
+  if(!todas.length) return`<div class="mty" style="padding:24px"><div class="ei"><i class="fas fa-envelope-circle-check"></i></div><p>Sin excusas recibidas</p></div>`;
 
   const renderExc=(list,label)=>{
     if(!list.length) return`<p style="font-size:13px;color:var(--sl3);padding:8px 0">Sin ${label}</p>`;
@@ -12436,18 +12436,18 @@ function renderPhExcTab(){
               <span class="bdg bor" style="font-size:10px">${x.causa||'—'}</span>
               ${!yaResp?'<span class="bdg brd" style="font-size:9px">PENDIENTE</span>':''}
             </div>
-            <span style="font-size:11px;color:var(--sl2)">📅 ${x.fecha||'—'}</span>
-            ${x.desc?`<div style="font-size:11px;color:var(--sl3);margin-top:3px">💬 ${esc(x.desc)}</div>`:''}
+            <span style="font-size:11px;color:var(--sl2)"><i class="fas fa-calendar-days"></i> ${x.fecha||'—'}</span>
+            ${x.desc?`<div style="font-size:11px;color:var(--sl3);margin-top:3px"><i class="fas fa-comment"></i> ${esc(x.desc)}</div>`:''}
           </div>
           <button class="btn ${yaResp?'bs':'bn'} sm" onclick="responderExcusa('${x._id||x.id}')">
-            ${yaResp?'✏️ Ver/Editar':'📨 Responder'}
+            ${yaResp?'<i class="fas fa-pen"></i> Ver/Editar':'<i class="fas fa-envelope"></i> Responder'}
           </button>
         </div>
         ${yaResp?`<div style="margin-top:8px;font-size:11px;background:#e6fffa;border-radius:6px;padding:8px;border:1px solid #b2f5ea">
-          ✅ <strong>Tu respuesta:</strong> ${esc(x.respProf)}
-          ${x.diasExtra>0?`<br>⏰ ${x.diasExtra} día(s) extra — Límite: ${x.fechaLimite||'—'}`:''}
-          ${(x.talleres||[]).length?`<br>📎 ${x.talleres.length} taller(es) adjunto(s)`:''}
-          ${x.respLeida?'<span class="bdg bgr" style="font-size:9px;margin-left:4px">✓ Vista por estudiante</span>':''}
+          <i class="fas fa-circle-check"></i> <strong>Tu respuesta:</strong> ${esc(x.respProf)}
+          ${x.diasExtra>0?`<br><i class="fas fa-clock"></i> ${x.diasExtra} día(s) extra — Límite: ${x.fechaLimite||'—'}`:''}
+          ${(x.talleres||[]).length?`<br><i class="fas fa-paperclip"></i> ${x.talleres.length} taller(es) adjunto(s)`:''}
+          ${x.respLeida?'<span class="bdg bgr" style="font-size:9px;margin-left:4px"><i class="fas fa-check"></i> Vista por estudiante</span>':''}
         </div>`:''}
       </div>`;
     }).join('');
@@ -12456,18 +12456,18 @@ function renderPhExcTab(){
   return`
   <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;align-items:center">
     <span style="font-size:13px;font-weight:700">${todas.length} excusa${todas.length>1?'s':''} en total</span>
-    ${pendientes.length?`<span class="bdg brd">${pendientes.length} sin responder</span>`:'<span class="bdg bgr">✓ Todas respondidas</span>'}
+    ${pendientes.length?`<span class="bdg brd">${pendientes.length} sin responder</span>`:'<span class="bdg bgr"><i class="fas fa-check"></i> Todas respondidas</span>'}
   </div>
   ${pendientes.length?`
   <div style="margin-bottom:20px">
     <div style="font-size:12px;font-weight:800;color:var(--red);text-transform:uppercase;letter-spacing:.04em;margin-bottom:8px">
-      🔴 Sin Responder (${pendientes.length})
+      <i class="fas fa-circle"></i> Sin Responder (${pendientes.length})
     </div>
     ${renderExc(pendientes,'pendientes')}
   </div>`:''}
   <div>
     <div style="font-size:12px;font-weight:800;color:var(--sl2);text-transform:uppercase;letter-spacing:.04em;margin-bottom:8px">
-      ✅ Respondidas (${respondidas.length})
+      <i class="fas fa-circle-check"></i> Respondidas (${respondidas.length})
     </div>
     ${renderExc(respondidas,'respondidas')}
   </div>`;
@@ -12481,13 +12481,13 @@ function renderPhRptTab(){
   <div style="display:grid;gap:12px">
     ${sals.map(sal=>`
     <div style="border:1px solid var(--bd);border-radius:10px;padding:14px;background:var(--bg2)">
-      <div style="font-size:14px;font-weight:800;margin-bottom:10px">🏫 ${sal}
+      <div style="font-size:14px;font-weight:800;margin-bottom:10px"><i class="fas fa-school"></i> ${sal}
         <span class="bdg bgy" style="margin-left:6px">${ebySalon(sal).length} est.</span>
       </div>
       <div style="display:flex;flex-wrap:wrap;gap:8px">
         ${DB.pers.map(per=>`
-        <button class="btn bs sm" onclick="selRptProf('${sal}','${per}','pdf')">📄 ${per} PDF</button>
-        <button class="btn bs sm" onclick="selRptProf('${sal}','${per}','xls')">📊 ${per} Excel</button>`).join('')}
+        <button class="btn bs sm" onclick="selRptProf('${sal}','${per}','pdf')"><i class="fas fa-file-lines"></i> ${per} PDF</button>
+        <button class="btn bs sm" onclick="selRptProf('${sal}','${per}','xls')"><i class="fas fa-chart-column"></i> ${per} Excel</button>`).join('')}
       </div>
     </div>`).join('')}
   </div>`;
@@ -12550,7 +12550,7 @@ function renderPhHorarioTab(){
   const franjas=horario?.franjas||[];
   if(!horario||!franjas.length){
     return`<div style="text-align:center;padding:40px 20px;color:var(--sl3)">
-      <div style="font-size:40px;margin-bottom:12px">📅</div>
+      <div style="font-size:40px;margin-bottom:12px"><i class="fas fa-calendar-days"></i></div>
       <div style="font-size:15px;font-weight:700;color:var(--sl2);margin-bottom:6px">Horario no configurado</div>
       <div style="font-size:13px">El administrador debe asignar tu horario desde la configuración del colegio.</div>
     </div>`;
@@ -12559,7 +12559,7 @@ function renderPhHorarioTab(){
     if(f.esDescanso){
       return`<tr style="background:#fff8e1">
         <td style="font-family:var(--mn);font-size:11px;color:#b7791f;white-space:nowrap;padding:9px 10px;font-weight:700">${f.hora}</td>
-        <td colspan="5" style="text-align:center;padding:9px;font-size:12px;font-weight:700;color:#b7791f;letter-spacing:.04em">☕ DESCANSO</td>
+        <td colspan="5" style="text-align:center;padding:9px;font-size:12px;font-weight:700;color:#b7791f;letter-spacing:.04em"><i class="fas fa-mug-hot"></i> DESCANSO</td>
       </tr>`;
     }
     const celdas=DIAS.map(dia=>{
@@ -12574,7 +12574,7 @@ function renderPhHorarioTab(){
   }).join('');
   return`<div>
     <div style="display:flex;justify-content:flex-end;padding:10px 14px;background:#f0f7ff;border-bottom:1px solid var(--bd)">
-      <button class="btn bn sm" onclick="descargarMiHorario()">📥 Descargar mi horario</button>
+      <button class="btn bn sm" onclick="descargarMiHorario()"><i class="fas fa-download"></i> Descargar mi horario</button>
     </div>
     <div style="overflow-x:auto"><table class="phHorarioTable">
       <thead><tr><th>Hora</th>${DIAS.map(d=>`<th>${d}</th>`).join('')}</tr></thead>
@@ -12690,7 +12690,7 @@ function _generarHorarioPDF_jspdf(franjas, DIAS){
       doc.setFontSize(7.5);
       doc.text(f.hora||'', ML + horaColW/2, y+4, {align:'center'});
       doc.setFontSize(7);
-      doc.text('☕ DESCANSO', ML + horaColW + (contentW-horaColW)/2, y+6.5, {align:'center'});
+      doc.text('<i class="fas fa-mug-hot"></i> DESCANSO', ML + horaColW + (contentW-horaColW)/2, y+6.5, {align:'center'});
     } else {
       // Hora normal
       doc.setTextColor(...NAVY);
@@ -12759,7 +12759,7 @@ function _generarHorarioPDF_jspdf(franjas, DIAS){
   // ── Descargar ────────────────────────────────────────────
   const filename = `horario_${(CU.nombre||'profesor').replace(/\s+/g,'_')}.pdf`;
   doc.save(filename);
-  sw('success','✅ Horario descargado correctamente','',2000);
+  sw('success','<i class="fas fa-circle-check"></i> Horario descargado correctamente','',2000);
 }
 
 /* Fallback: ventana de impresión si jsPDF no está disponible */
@@ -12767,7 +12767,7 @@ function _horarioFallbackPrint(franjas, DIAS){
   const rows = franjas.map(f=>{
     if(f.esDescanso) return`<tr style="background:#fff8e1">
       <td style="padding:7px 10px;border:1px solid #ddd;font-size:11px;font-weight:700;color:#b7791f">${f.hora||''}</td>
-      <td colspan="5" style="border:1px solid #ddd;text-align:center;font-weight:700;font-size:12px;color:#b7791f">☕ DESCANSO</td></tr>`;
+      <td colspan="5" style="border:1px solid #ddd;text-align:center;font-weight:700;font-size:12px;color:#b7791f"><i class="fas fa-mug-hot"></i> DESCANSO</td></tr>`;
     return`<tr><td style="padding:7px 10px;border:1px solid #ddd;font-size:11px;font-weight:600">${f.hora||''}</td>`+
       DIAS.map(d=>{const c=f.clases?.[d];return c
         ?`<td style="padding:6px;border:1px solid #ddd;text-align:center;background:#eff6ff"><div style="font-size:11px;font-weight:700;color:#1e40af">${c.mat||''}</div><div style="font-size:10px;color:#666">${c.salon||''}</div></td>`
@@ -12830,16 +12830,16 @@ function pgPNot(){
   const pO=DB.pers.map(per=>{
     const ok=notasOk(per);
     return`<option value="${per}" ${!ok?'style="color:#a0aec0"':''}>
-      ${ok?'✓':'🔒'} ${per}${!ok?' (cerrado)':''}
+      ${ok?'<i class="fas fa-check"></i>':'<i class="fas fa-lock"></i>'} ${per}${!ok?' (cerrado)':''}
     </option>`;
   }).join('');
   const extTarget=DB.ext?.on
     ?Object.entries(DB.drPer||{}).find(([,dp])=>dp.extPer)?.[1]?.extPer||null:null;
   const banner=DB.ext?.on
-    ?`<div class="al aly" style="margin-bottom:14px">🔄 Periodo Extraordinario activo.
+    ?`<div class="al aly" style="margin-bottom:14px"><i class="fas fa-arrows-rotate"></i> Periodo Extraordinario activo.
         ${extTarget?`Solo <strong>${extTarget}</strong> está abierto.`:'Configura el Periodo Ext. en Control de Fechas.'}</div>`:'';
   const isBach=p.ciclo==='bachillerato';
-  return`<div class="ph"><h2>Ingresar Notas</h2><button class="btn xs bg" onclick="showHelp('pnot')">❓ Ayuda</button></div>
+  return`<div class="ph"><h2>Ingresar Notas</h2><button class="btn xs bg" onclick="showHelp('pnot')"><i class="fas fa-circle-question"></i> Ayuda</button></div>
   <div id="pnLockBanner"></div>
   ${banner}
   <div class="card">
@@ -12858,7 +12858,7 @@ function pgPNot(){
           <option value="">— Selecciona salón primero —</option>
         </select>
       </div>
-      <button class="btn bn" onclick="loadPN()" style="height:42px;padding:0 20px;font-size:14px;align-self:flex-end">Cargar ▶</button>
+      <button class="btn bn" onclick="loadPN()" style="height:42px;padding:0 20px;font-size:14px;align-self:flex-end">Cargar <i class="fas fa-circle-play"></i></button>
     </div>
     <div id="pnW" style="margin-top:14px"></div>
   </div>`;
@@ -12901,16 +12901,16 @@ function loadPN(){
   if(!ests.length){
     // Intentar recargar DB y reintentar UNA vez — puede ser que aún no cargó
     if(typeof dbLoad==='function'){
-      el.innerHTML='<div style="text-align:center;padding:1rem;color:#718096">🔄 Cargando estudiantes…</div>';
+      el.innerHTML='<div style="text-align:center;padding:1rem;color:#718096"><i class="fas fa-arrows-rotate"></i> Cargando estudiantes…</div>';
       dbLoad().then(()=>{
         const estsReloaded=ebySalon(salonClean);
         if(estsReloaded.length){ loadPN(); return; }
-        el.innerHTML='<div class="mty"><div class="ei">🎓</div><p>Sin estudiantes en el salón <strong>'+salonClean+'</strong>.<br><small style="color:#a0aec0">Verifica que los estudiantes tengan asignado este salón.</small></p></div>';
+        el.innerHTML='<div class="mty"><div class="ei"><i class="fas fa-graduation-cap"></i></div><p>Sin estudiantes en el salón <strong>'+salonClean+'</strong>.<br><small style="color:#a0aec0">Verifica que los estudiantes tengan asignado este salón.</small></p></div>';
       }).catch(()=>{
-        el.innerHTML='<div class="mty"><div class="ei">🎓</div><p>Sin estudiantes en este salón</p></div>';
+        el.innerHTML='<div class="mty"><div class="ei"><i class="fas fa-graduation-cap"></i></div><p>Sin estudiantes en este salón</p></div>';
       });
     } else {
-      el.innerHTML='<div class="mty"><div class="ei">🎓</div><p>Sin estudiantes en este salón</p></div>';
+      el.innerHTML='<div class="mty"><div class="ei"><i class="fas fa-graduation-cap"></i></div><p>Sin estudiantes en este salón</p></div>';
     }
     return;
   }
@@ -12947,7 +12947,7 @@ function loadPN(){
   /* Si aún no hay materias, mostrar advertencia clara */
   if(!mats.length){
     el.innerHTML=`<div class="al aly" style="margin-top:10px">
-      ⚠️ <strong>No se encontraron materias para el salón ${salon}.</strong><br>
+      <i class="fas fa-triangle-exclamation"></i> <strong>No se encontraron materias para el salón ${salon}.</strong><br>
       Verifica que el salón tenga materias asignadas en la configuración del sistema.
     </div>`;
     return;
@@ -12964,11 +12964,11 @@ function loadPN(){
 
   el.innerHTML = `
     <div class="pnInfoBar">
-      <span>📚 <strong>${matSel||'Todas las materias'}</strong></span>
+      <span><i class="fas fa-book"></i> <strong>${matSel||'Todas las materias'}</strong></span>
       <span style="color:var(--bd2)">|</span>
-      <span>👩‍🏫 <strong>${esc(CU.nombre)}</strong></span>
+      <span><i class="fas fa-chalkboard-user"></i> <strong>${esc(CU.nombre)}</strong></span>
       <span style="color:var(--bd2)">|</span>
-      <span>📅 Periodo: <strong>${per}</strong>${_jornadaLabel?' · '+_jornadaLabel:''}</span>
+      <span><i class="fas fa-calendar-days"></i> Periodo: <strong>${per}</strong>${_jornadaLabel?' · '+_jornadaLabel:''}</span>
       <span style="margin-left:auto;font-size:11px">
         Min: <strong>1.0</strong> &nbsp; Max: <strong>5.0</strong> &nbsp;
         Aprueba: <strong style="color:var(--grn)">3.0</strong>
@@ -12977,8 +12977,8 @@ function loadPN(){
     <div class="pnTblToolbar">
       <input class="pnSearch2" id="pnFiltro" placeholder="Buscar estudiante..." oninput="filtrarPNTable()">
       <span id="pnContador" style="font-size:12px;color:var(--sl2);white-space:nowrap">${ests.length} estudiantes</span>
-      <button class="btn bg sm" onclick="selRptProf('${salon}','${per}','pdf')">📄 PDF</button>
-      <button class="btn bs sm" onclick="selRptProf('${salon}','${per}','xls')">📊 Excel</button>
+      <button class="btn bg sm" onclick="selRptProf('${salon}','${per}','pdf')"><i class="fas fa-file-lines"></i> PDF</button>
+      <button class="btn bs sm" onclick="selRptProf('${salon}','${per}','xls')"><i class="fas fa-chart-column"></i> Excel</button>
     </div>
     <div style="overflow-x:auto;border:1.5px solid var(--bd);border-top:none;border-radius:0 0 12px 12px">
       <table class="pnTableV2" id="pnMainTable">
@@ -13125,7 +13125,7 @@ function loadPN(){
     if(badge)badge.remove();
     badge=document.createElement('div');
     badge.className='pn-saved2';
-    badge.textContent='✓ Guardado';
+    badge.textContent='<i class="fas fa-check"></i> Guardado';
     document.body.appendChild(badge);
     setTimeout(()=>{if(badge.parentNode)badge.parentNode.removeChild(badge);},2000);
   };
@@ -13158,8 +13158,8 @@ function loadPN(){
       <tbody id="pnB"></tbody>
     </table></div>
     <div style="margin-top:14px;display:flex;gap:10px;flex-wrap:wrap">
-      <button class="btn bg sm" onclick="selRptProf('${salon}','${per}','pdf')">📄 Reporte PDF</button>
-      <button class="btn bs sm" onclick="selRptProf('${salon}','${per}','xls')">📊 Descargar Excel</button>
+      <button class="btn bg sm" onclick="selRptProf('${salon}','${per}','pdf')"><i class="fas fa-file-lines"></i> Reporte PDF</button>
+      <button class="btn bs sm" onclick="selRptProf('${salon}','${per}','xls')"><i class="fas fa-chart-column"></i> Descargar Excel</button>
     </div>`;
     const body=gi('pnB');
     ests.forEach(e=>{
@@ -13216,7 +13216,7 @@ function selRptProf(defaultSalon,defaultPer,tipo){
   const perOpts=DB.pers.map(p=>`<option value="${p}" ${p===defaultPer?'selected':''}>${p}</option>`).join('');
 
   Swal.fire({
-    title:`${tipo==='pdf'?'📄 Reporte PDF':'📊 Informe Excel'}`,
+    title:`${tipo==='pdf'?'<i class="fas fa-file-lines"></i> Reporte PDF':'<i class="fas fa-chart-column"></i> Informe Excel'}`,
     width:440,
     html:`<div style="text-align:left;font-family:var(--fn)">
       <div class="al alb" style="margin-bottom:12px;font-size:12px">
@@ -13245,7 +13245,7 @@ function selRptProf(defaultSalon,defaultPer,tipo){
       </div>
     </div>`,
     showCancelButton:true,
-    confirmButtonText:tipo==='pdf'?'📄 Generar PDF':'📊 Generar Excel',
+    confirmButtonText:tipo==='pdf'?'<i class="fas fa-file-lines"></i> Generar PDF':'<i class="fas fa-chart-column"></i> Generar Excel',
     didOpen:()=>updateRptMats(),
     preConfirm:()=>({salon:gi('rptSalon')?.value,per:gi('rptPer')?.value,mat:gi('rptMat')?.value})
   }).then(r=>{
@@ -13288,7 +13288,7 @@ function dlRptProf(salon,per,matFilter){
       return`<tr style="background:${mi%2===0?'#f7fafc':'#fff'}">
         <td style="padding:6px 10px;border-bottom:1px solid #e2e8f0;font-weight:500">${m}</td>
         <td style="padding:6px 10px;border-bottom:1px solid #e2e8f0;text-align:center;font-weight:800;font-size:13px;color:${scCol(d)}">${d.toFixed(2)}</td>
-        <td style="padding:6px 10px;border-bottom:1px solid #e2e8f0;text-align:center;font-size:11px;color:${d===0?'#a0aec0':d>=3?'#276749':'#c53030'};font-weight:600">${d===0?'Sin nota':d>=3?'✓ Aprobado':'✗ Reprobado'}</td>
+        <td style="padding:6px 10px;border-bottom:1px solid #e2e8f0;text-align:center;font-size:11px;color:${d===0?'#a0aec0':d>=3?'#276749':'#c53030'};font-weight:600">${d===0?'Sin nota':d>=3?'<i class="fas fa-check"></i> Aprobado':'<i class="fas fa-xmark"></i> Reprobado'}</td>
       </tr>`;
     }).join('');
     return`<div style="margin-bottom:18px;page-break-inside:avoid;border:1px solid #d8e2ef;border-radius:8px;overflow:hidden">
@@ -13319,7 +13319,7 @@ function dlRptProf(salon,per,matFilter){
   box.innerHTML=`<div style="font-family:'Outfit',sans-serif;background:#fff;max-width:780px">
     <!-- HEADER -->
     <div style="background:linear-gradient(135deg,#0b1e33,#1a3a5c);color:#fff;padding:20px 28px;position:relative;overflow:hidden">
-      ${_logoProfe ? `<img src="${_logoProfe}" style="position:absolute;right:18px;top:50%;transform:translateY(-50%);height:52px;width:auto;object-fit:contain;opacity:.92;border-radius:6px;background:rgba(255,255,255,.1);padding:4px" alt="">` : '<div style="position:absolute;right:16px;top:50%;transform:translateY(-50%);font-size:80px;opacity:.07;line-height:1">🏛️</div>'}
+      ${_logoProfe ? `<img src="${_logoProfe}" style="position:absolute;right:18px;top:50%;transform:translateY(-50%);height:52px;width:auto;object-fit:contain;opacity:.92;border-radius:6px;background:rgba(255,255,255,.1);padding:4px" alt="">` : '<div style="position:absolute;right:16px;top:50%;transform:translateY(-50%);font-size:80px;opacity:.07;line-height:1"><i class="fas fa-building-columns"></i></div>'}
       ${_nomProfe ? `<div style="font-size:10px;text-transform:uppercase;letter-spacing:.1em;opacity:.7;margin-bottom:2px;font-weight:600">${_nomProfe}</div>` : ''}
       <div style="font-size:10px;text-transform:uppercase;letter-spacing:.15em;opacity:.5;margin-bottom:5px">EduSistema Pro · Reporte Docente</div>
       <h1 style="font-size:19px;font-weight:900;margin-bottom:4px">Informe de Calificaciones</h1>
@@ -13443,7 +13443,7 @@ function dlRptXls(salon,per,matFilter){
 ============================================================ */
 function pgPAst(){
   const sO=(CU.salones||[]).map(s=>`<option value="${s}">${s}</option>`).join('');
-  return`<div class="ph"><h2>Asistencias</h2><button class="btn xs bg" onclick="showHelp('past')" style="margin-top:6px">❓ Ayuda</button></div>
+  return`<div class="ph"><h2>Asistencias</h2><button class="btn xs bg" onclick="showHelp('past')" style="margin-top:6px"><i class="fas fa-circle-question"></i> Ayuda</button></div>
   <div class="card">
     <div class="fg">
       <div class="fld"><label>Salón</label><select id="pas">${sO||'<option>Sin salones</option>'}</select></div>
@@ -13459,15 +13459,15 @@ function loadAst(){
   const key=`${s}__${d}`;
   if(!DB.asist[key]) DB.asist[key]={};
   const ests=ebySalon(s);const el=gi('paW');
-  if(!ests.length){el.innerHTML='<div class="mty"><div class="ei">🎓</div><p>Sin estudiantes</p></div>';return;}
+  if(!ests.length){el.innerHTML='<div class="mty"><div class="ei"><i class="fas fa-graduation-cap"></i></div><p>Sin estudiantes</p></div>';return;}
   el.innerHTML=`<div class="tw"><table><thead>
     <tr><th>Estudiante</th><th style="width:90px;text-align:center">Presente</th><th style="width:90px;text-align:center">Ausente</th></tr></thead>
     <tbody>${ests.map(e=>{const v=DB.asist[key][e.id]??'presente';return`<tr id="ar${e.id}">
       <td>${esc(e.nombre)}</td>
-      <td style="text-align:center"><button class="btn xs ${v==='presente'?'bs':'bg'}" onclick="setAst('${key}','${e.id}','presente')">✓</button></td>
-      <td style="text-align:center"><button class="btn xs ${v==='ausente'?'bd':'bg'}" onclick="setAst('${key}','${e.id}','ausente')">✗</button></td>
+      <td style="text-align:center"><button class="btn xs ${v==='presente'?'bs':'bg'}" onclick="setAst('${key}','${e.id}','presente')"><i class="fas fa-check"></i></button></td>
+      <td style="text-align:center"><button class="btn xs ${v==='ausente'?'bd':'bg'}" onclick="setAst('${key}','${e.id}','ausente')"><i class="fas fa-xmark"></i></button></td>
     </tr>`;}).join('')}</tbody></table></div>
-    <button class="btn bs" style="margin-top:12px" onclick="saveAst('${key}')">💾 Guardar</button>`;
+    <button class="btn bs" style="margin-top:12px" onclick="saveAst('${key}')"><i class="fas fa-floppy-disk"></i> Guardar</button>`;
 }
 function setAst(key,eid,val){
   if(!DB.asist[key]) DB.asist[key]={};
@@ -13485,8 +13485,8 @@ async function saveAst(key){ /* implementado en api-layer.js */ }
 function pgPVir(){
   const sO=(CU.salones||[]).map(s=>`<option value="${s}">${s}</option>`).join('');
   const mis=(DB.vclases||[]).filter(c=>c.profId===CU.id).slice().reverse();
-  return`<div class="ph"><h2>💻 Clases Virtuales</h2><button class="btn xs bg" onclick="showHelp('pvir')" style="margin-top:6px">❓ Ayuda</button></div>
-  <div class="card"><div class="chd"><span class="cti">📅 Programar Clase</span></div>
+  return`<div class="ph"><h2><i class="fas fa-laptop"></i> Clases Virtuales</h2><button class="btn xs bg" onclick="showHelp('pvir')" style="margin-top:6px"><i class="fas fa-circle-question"></i> Ayuda</button></div>
+  <div class="card"><div class="chd"><span class="cti"><i class="fas fa-calendar-days"></i> Programar Clase</span></div>
     <div class="fg">
       <div class="fld"><label>Salón</label><select id="vcs">${sO||'<option value="">Sin salones asignados</option>'}</select></div>
       <div class="fld"><label>Fecha</label><input type="date" id="vcf" value="${today()}"></div>
@@ -13494,9 +13494,9 @@ function pgPVir(){
     </div>
     <div class="fld"><label>Tema / Descripción</label>
       <input id="vcd" placeholder="Ej: Clase de matemáticas — fracciones"></div>
-    <button class="btn bn" onclick="addVClase()">📅 Programar Clase</button>
+    <button class="btn bn" onclick="addVClase()"><i class="fas fa-calendar-days"></i> Programar Clase</button>
   </div>
-  <div class="card"><div class="chd"><span class="cti">📋 Mis Clases (${mis.length})</span></div>
+  <div class="card"><div class="chd"><span class="cti"><i class="fas fa-clipboard-list"></i> Mis Clases (${mis.length})</span></div>
   ${mis.length?mis.map(c=>{
     const ahora=new Date();
     const claseTs=new Date(c.fecha+'T'+c.hora);
@@ -13506,23 +13506,23 @@ function pgPVir(){
     return`<div class="vc-card" style="flex-direction:column;align-items:stretch;gap:12px">
       <div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:8px">
         <div>
-          <div style="font-size:15px;font-weight:800">💻 ${c.desc||'Clase Virtual'}</div>
+          <div style="font-size:15px;font-weight:800"><i class="fas fa-laptop"></i> ${c.desc||'Clase Virtual'}</div>
           <div style="font-size:11px;opacity:.7;margin-top:3px">Salón ${c.salon} · ${c.fecha} a las ${c.hora}</div>
         </div>
         ${pasada
           ? `<span class="bdg bgy" style="font-size:11px">Finalizada</span>`
           : activa
-            ? `<span class="bdg" style="background:#d1fae5;color:#065f46;border:1px solid #6ee7b7;font-size:11px">🟢 En vivo</span>`
-            : `<span class="bdg" style="background:rgba(255,255,255,.15);color:#fff;border:1px solid rgba(255,255,255,.25);font-size:11px">📅 Programada</span>`
+            ? `<span class="bdg" style="background:#d1fae5;color:#065f46;border:1px solid #6ee7b7;font-size:11px"><i class="fas fa-circle"></i> En vivo</span>`
+            : `<span class="bdg" style="background:rgba(255,255,255,.15);color:#fff;border:1px solid rgba(255,255,255,.25);font-size:11px"><i class="fas fa-calendar-days"></i> Programada</span>`
         }
       </div>
       <div style="display:flex;gap:8px;flex-wrap:wrap">
-        ${!pasada?`<button class="btn sm bs" onclick="abrirSalaJitsi('${c.roomId}','${(c.desc||'Clase Virtual').replace(/'/g,"\'")}',true)">🎥 Iniciar clase</button>`:''}
-        <button class="btn sm bd" onclick="delVClase('${c.id}')">🗑 Eliminar</button>
+        ${!pasada?`<button class="btn sm bs" onclick="abrirSalaJitsi('${c.roomId}','${(c.desc||'Clase Virtual').replace(/'/g,"\'")}',true)"><i class="fas fa-video"></i> Iniciar clase</button>`:''}
+        <button class="btn sm bd" onclick="delVClase('${c.id}')"><i class="fas fa-trash"></i> Eliminar</button>
       </div>
     </div>`;
   }).join('')
-  :'<div class="mty"><div class="ei">💻</div><p>Sin clases programadas aún</p></div>'}
+  :'<div class="mty"><div class="ei"><i class="fas fa-laptop"></i></div><p>Sin clases programadas aún</p></div>'}
   </div>`;
 }
 /* ── SOBREESCRITA por api-layer.js ── */
@@ -13541,9 +13541,9 @@ function pgPTar(){
   todas.sort((a,b)=>(b.id||'').localeCompare(a.id||''));
   const sinRevisar=todas.filter(u=>!u.revisado).length;
   const sOpts=(CU.salones||[]).map(s=>`<option value="${s}">${s}</option>`).join('');
-  return`<div class="ph"><h2>Tareas Recibidas</h2><button class="btn xs bg" style="margin-top:4px" onclick="showHelp('ptar')">❓ Ayuda</button><p>${todas.length} archivo(s) enviados a ti${sinRevisar?` · <strong style="color:var(--red)">${sinRevisar} sin revisar</strong>`:''}</p></div>
+  return`<div class="ph"><h2>Tareas Recibidas</h2><button class="btn xs bg" style="margin-top:4px" onclick="showHelp('ptar')"><i class="fas fa-circle-question"></i> Ayuda</button><p>${todas.length} archivo(s) enviados a ti${sinRevisar?` · <strong style="color:var(--red)">${sinRevisar} sin revisar</strong>`:''}</p></div>
   <div class="card"><div class="chd">
-    <span class="cti">📂 Archivos Recibidos (${todas.length})</span>
+    <span class="cti"><i class="fas fa-folder-open"></i> Archivos Recibidos (${todas.length})</span>
     <select id="ptarF" style="padding:7px 12px;border:1.5px solid var(--bd);border-radius:var(--r);font-size:13px;outline:none" onchange="filtrarPTar()">
       <option value="">Todos los salones</option>${sOpts}
     </select>
@@ -13556,23 +13556,23 @@ function pgPTar(){
       return`<tr data-salon="${est?.salon||''}" style="background:${!u.revisado?'':'#f9fff9'}">
         <td><strong style="font-size:13px">${u.estNombre||'—'}</strong></td>
         <td><span class="bdg bgy">${est?.salon||'—'}</span></td>
-        <td><span style="font-size:12px;font-family:var(--mn)">📎 ${esc(u.nombre)}</span><br>
+        <td><span style="font-size:12px;font-family:var(--mn)"><i class="fas fa-paperclip"></i> ${esc(u.nombre)}</span><br>
           <span style="font-size:10px;color:var(--sl3)">${u.size?(u.size/1024).toFixed(1)+' KB':'—'}</span></td>
         <td><span class="bdg bbl">${u.materia}</span></td>
         <td style="font-size:12px">${u.periodo}</td>
         <td style="font-size:12px;color:var(--sl2);max-width:110px">${u.desc||'—'}</td>
         <td style="font-family:var(--mn);font-size:11px">${u.fecha}</td>
         <td>
-          <span class="bdg ${u.revisado?'bgr':'bwa'}">${u.revisado?'✓ Revisado':'Pendiente'}</span>
+          <span class="bdg ${u.revisado?'bgr':'bwa'}">${u.revisado?'<i class="fas fa-check"></i> Revisado':'Pendiente'}</span>
           ${u.revisado?`<div style="font-size:10px;color:var(--sl3);margin-top:3px">${u.revisadoTs||''}</div>`:''}
         </td>
         <td style="display:flex;flex-direction:column;gap:5px">
-          ${canOpen?`<button class="btn xs bb" onclick="abrirArchivo(${i})">📂 Abrir</button>`:''}
-          ${!u.revisado?`<button class="btn xs bs" onclick="marcarTareaRevisada('${u.id}')">✓ Revisado</button>`
-            :`<button class="btn xs br" onclick="eliminarTallerProf('${u.id}')">🗑️ Eliminar</button>`}
+          ${canOpen?`<button class="btn xs bb" onclick="abrirArchivo(${i})"><i class="fas fa-folder-open"></i> Abrir</button>`:''}
+          ${!u.revisado?`<button class="btn xs bs" onclick="marcarTareaRevisada('${u.id}')"><i class="fas fa-check"></i> Revisado</button>`
+            :`<button class="btn xs br" onclick="eliminarTallerProf('${u.id}')"><i class="fas fa-trash"></i> Eliminar</button>`}
         </td>
       </tr>`;}).join('')}</tbody></table></div>`
-  :'<div class="mty"><div class="ei">📂</div><p>Sin tareas recibidas aún</p></div>'}
+  :'<div class="mty"><div class="ei"><i class="fas fa-folder-open"></i></div><p>Sin tareas recibidas aún</p></div>'}
   </div>`;
 }
 /* Collect professor's received tasks for index-based access */
@@ -13655,7 +13655,7 @@ function exportarHistorialPlanes(){
 ============================================================ */
 function pgPRec(){
   if(!DB.ext.on) return`<div class="ph"><h2>Recuperaciones</h2></div>
-    <div class="al aly">⚠️ El periodo extraordinario no está activo. El admin debe habilitarlo en Control de Fechas.</div>`;
+    <div class="al aly"><i class="fas fa-triangle-exclamation"></i> El periodo extraordinario no está activo. El admin debe habilitarlo en Control de Fechas.</div>`;
 
   /* ── Section 1: Students who need recovery plan from THIS professor ── */
   const misSalones=CU.salones||[];
@@ -13695,21 +13695,21 @@ function pgPRec(){
     <div style="margin-bottom:16px;padding:14px;background:var(--bg2);border-radius:10px;border:1px solid var(--bd)">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;flex-wrap:wrap;gap:8px">
         <div>
-          <span style="font-size:13px;font-weight:800;color:var(--nv)">🏫 Salón ${salon}</span>
+          <span style="font-size:13px;font-weight:800;color:var(--nv)"><i class="fas fa-school"></i> Salón ${salon}</span>
           <span class="bdg bgy" style="margin-left:8px">${items.length} estudiante(s)</span>
           ${matsEnSalon.map(m=>`<span class="bdg brd" style="margin-left:4px">${m}</span>`).join('')}
         </div>
         <button class="btn bn sm" onclick="abrirEnviarPlanSalon('${salon}','${matsEnSalon.join('|')}')">
-          📤 ${planesGrupo.length?'Enviar Otro Plan al Salón':'Enviar Plan al Salón'}
+          <i class="fas fa-upload"></i> ${planesGrupo.length?'Enviar Otro Plan al Salón':'Enviar Plan al Salón'}
         </button>
       </div>
       ${planesGrupo.length?`<div style="margin-bottom:10px">
         <div style="font-size:11px;font-weight:800;color:var(--sl);text-transform:uppercase;margin-bottom:6px">Planes enviados al salón (${planesGrupo.length})</div>
         ${planesGrupo.slice().reverse().map(pl=>`<div style="background:#f0fff4;border:1px solid #9ae6b4;border-radius:7px;padding:8px 12px;font-size:12px;margin-bottom:5px">
-          <span class="bdg bgr" style="margin-right:8px">✓ ${pl.fecha}</span>
+          <span class="bdg bgr" style="margin-right:8px"><i class="fas fa-check"></i> ${pl.fecha}</span>
           <strong>${pl.titulo}</strong>
-          ${pl.archNombre?`<span style="margin-left:8px;color:var(--sl3)">📎 ${pl.archNombre}</span>`:''}
-          <span style="margin-left:8px;color:var(--sl3)">📅 ${pl.fechaLimite||DB.ext.e||'—'}</span>
+          ${pl.archNombre?`<span style="margin-left:8px;color:var(--sl3)"><i class="fas fa-paperclip"></i> ${pl.archNombre}</span>`:''}
+          <span style="margin-left:8px;color:var(--sl3)"><i class="fas fa-calendar-days"></i> ${pl.fechaLimite||DB.ext.e||'—'}</span>
         </div>`).join('')}
       </div>`:''}
       <div class="tw" style="margin-top:10px"><table><thead>
@@ -13721,12 +13721,12 @@ function pgPRec(){
             <td><strong>${esc(est.nombre)}</strong></td>
             <td><span class="bdg brd">${mat}</span></td>
             <td>${planesInd.length
-              ?planesInd.slice().reverse().map(pl=>`<span class="bdg bgr" style="font-size:10px;margin:1px">✓ ${pl.fecha}</span>`).join('')
+              ?planesInd.slice().reverse().map(pl=>`<span class="bdg bgr" style="font-size:10px;margin:1px"><i class="fas fa-check"></i> ${pl.fecha}</span>`).join('')
               :(planesGrupo.length?`<span class="bdg bgy" style="font-size:10px">${planesGrupo.length} via salón</span>`:'<span style="font-size:11px;color:var(--sl3)">—</span>')}
             </td>
             <td>
               <button class="btn xs bg" onclick="abrirEnviarPlan('${est.id}','${mat}','${salon}')">
-                📤 ${planesInd.length?'Otro':'Enviar'}
+                <i class="fas fa-upload"></i> ${planesInd.length?'Otro':'Enviar'}
               </button>
             </td>
           </tr>`;}).join('')}
@@ -13735,27 +13735,27 @@ function pgPRec(){
   }).join('');
 
   return`<div class="ph"><h2>Recuperaciones</h2>
-    <button class="btn xs bg" style="margin-top:4px" onclick="showHelp('prec')">❓ Ayuda</button>
+    <button class="btn xs bg" style="margin-top:4px" onclick="showHelp('prec')"><i class="fas fa-circle-question"></i> Ayuda</button>
     <p>Periodo Extraordinario: <strong>${DB.ext.s} → ${DB.ext.e}</strong></p>
-    <button class="btn bg sm" style="margin-top:8px" onclick="exportarHistorialPlanes()">📊 Exportar Historial de Planes (Excel)</button></div>
+    <button class="btn bg sm" style="margin-top:8px" onclick="exportarHistorialPlanes()"><i class="fas fa-chart-column"></i> Exportar Historial de Planes (Excel)</button></div>
 
   <!-- Plan de recuperación por salón -->
   <div class="card">
-    <div class="chd"><span class="cti">📋 Estudiantes que Deben Recuperar tu Materia</span>
+    <div class="chd"><span class="cti"><i class="fas fa-clipboard-list"></i> Estudiantes que Deben Recuperar tu Materia</span>
       <span class="bdg brd">${elegibles.length} estudiante(s)</span>
     </div>
     ${elegibles.length
       ?`<div class="al alb" style="font-size:12px;margin-bottom:12px">
-          ℹ️ Usa <strong>"Enviar Plan al Salón"</strong> para enviar un plan a todos los estudiantes del salón de una vez (con archivo adjunto). O usa el botón individual 📤 por estudiante si prefieres planes personalizados.
+          <i class="fas fa-circle-info"></i> Usa <strong>"Enviar Plan al Salón"</strong> para enviar un plan a todos los estudiantes del salón de una vez (con archivo adjunto). O usa el botón individual <i class="fas fa-upload"></i> por estudiante si prefieres planes personalizados.
         </div>${salonCards}`
-      :'<div class="mty"><div class="ei">🎓</div><p>Ningún estudiante de tus salones tiene materias a recuperar contigo.</p></div>'}
+      :'<div class="mty"><div class="ei"><i class="fas fa-graduation-cap"></i></div><p>Ningún estudiante de tus salones tiene materias a recuperar contigo.</p></div>'}
   </div>
 
   <!-- Respuestas recibidas — agrupadas por estudiante -->
   <div class="card">
     <div class="chd">
-      <span class="cti">📂 Respuestas de Recuperación por Estudiante</span>
-      ${pendientes?`<span class="bdg brd">⚠️ ${pendientes} pendiente(s)</span>`:''}
+      <span class="cti"><i class="fas fa-folder-open"></i> Respuestas de Recuperación por Estudiante</span>
+      ${pendientes?`<span class="bdg brd"><i class="fas fa-triangle-exclamation"></i> ${pendientes} pendiente(s)</span>`:''}
     </div>
     ${recs.length?(()=>{
       /* Group by student */
@@ -13774,8 +13774,8 @@ function pgPRec(){
               <span class="bdg bgy" style="margin-left:8px">${data.salon||'—'}</span>
               <span class="bdg bbl" style="margin-left:6px">${data.recs.length} archivo(s)</span>
             </div>
-            ${pendEst?`<span class="bdg brd">⚠️ ${pendEst} sin revisar</span>`:
-              `<span class="bdg bgr">✓ Todo revisado</span>`}
+            ${pendEst?`<span class="bdg brd"><i class="fas fa-triangle-exclamation"></i> ${pendEst} sin revisar</span>`:
+              `<span class="bdg bgr"><i class="fas fa-check"></i> Todo revisado</span>`}
           </div>
           <div class="tw"><table><thead>
             <tr><th>Archivo</th><th>Materia</th><th>Responde al Plan</th><th>Descripción</th><th>Fecha</th><th>Estado</th><th>Acción</th></tr>
@@ -13784,7 +13784,7 @@ function pgPRec(){
               const idx=recs.findIndex(x=>x.id===r.id);
               const planRef=r.planId?(DB.planes||[]).find(p=>p.id===r.planId):null;
               return`<tr style="background:${!r.revisado?'#fffff0':''}">
-                <td><span style="font-size:12px;font-family:var(--mn)">📎 ${esc(r.nombre)}</span></td>
+                <td><span style="font-size:12px;font-family:var(--mn)"><i class="fas fa-paperclip"></i> ${esc(r.nombre)}</span></td>
                 <td><span class="bdg brd">${r.materia}</span></td>
                 <td style="font-size:12px;max-width:140px">${planRef
                   ?`<span style="color:var(--nv);font-weight:700">${planRef.titulo}</span><br><span style="font-size:10px;color:var(--sl3)">${planRef.fecha}</span>`
@@ -13793,19 +13793,19 @@ function pgPRec(){
                 <td style="font-size:12px;color:var(--sl2);max-width:110px">${r.desc||'—'}</td>
                 <td style="font-family:var(--mn);font-size:11px">${r.fecha}</td>
                 <td>
-                  <span class="bdg ${r.revisado?'bgr':'bwa'}">${r.revisado?'✓ Revisado':'Pendiente'}</span>
+                  <span class="bdg ${r.revisado?'bgr':'bwa'}">${r.revisado?'<i class="fas fa-check"></i> Revisado':'Pendiente'}</span>
                   ${r.revisado?`<div style="font-size:10px;color:var(--sl3)">${r.revisadoTs||''}</div>`:''}
                 </td>
                 <td style="display:flex;flex-direction:column;gap:4px">
-                  ${(r.id||r.dataUrl)?`<button class="btn xs bb" onclick="abrirRec(${idx})">📂 Abrir</button>`:''}
-                  ${!r.revisado?`<button class="btn xs bs" onclick="marcarRecRevisado('${r.id}')">✓ Revisado</button>`:''}
+                  ${(r.id||r.dataUrl)?`<button class="btn xs bb" onclick="abrirRec(${idx})"><i class="fas fa-folder-open"></i> Abrir</button>`:''}
+                  ${!r.revisado?`<button class="btn xs bs" onclick="marcarRecRevisado('${r.id}')"><i class="fas fa-check"></i> Revisado</button>`:''}
                 </td>
               </tr>`;}).join('')}
           </tbody></table></div>
         </div>`;
       }).join('');
     })()
-    :'<div class="mty"><div class="ei">📂</div><p>Sin respuestas de recuperación aún</p></div>'}
+    :'<div class="mty"><div class="ei"><i class="fas fa-folder-open"></i></div><p>Sin respuestas de recuperación aún</p></div>'}
   </div>`;
 }
 
@@ -13814,13 +13814,13 @@ function _planDialog({titulo='',desc='',archNombre='',archDataUrl='',archType=''
   const fechaLimite=DB.ext.e||'';/* Always locked to admin-defined end date */
   const inputId='planFile_'+Date.now();
   Swal.fire({
-    title:'📋 Plan de Recuperación',width:600,
+    title:'<i class="fas fa-clipboard-list"></i> Plan de Recuperación',width:600,
     html:`<div style="text-align:left;font-family:var(--fn)">
       <div style="background:var(--bg2);border-radius:8px;padding:10px 14px;margin-bottom:12px;font-size:13px">
         ${destinatario}
       </div>
       ${existing?`<div class="al alg" style="margin-bottom:10px;font-size:12px">
-        ✓ Ya enviaste un plan el <strong>${existing.fecha}</strong>. Puedes reenviarlo.</div>`:''}
+        <i class="fas fa-check"></i> Ya enviaste un plan el <strong>${existing.fecha}</strong>. Puedes reenviarlo.</div>`:''}
       <div class="fld" style="margin-bottom:10px">
         <label style="font-size:11px;font-weight:800;text-transform:uppercase;color:var(--sl)">Título del Plan</label>
         <input id="planTitulo" value="${titulo}" placeholder="Ej: Plan de Nivelación — Matemáticas P3">
@@ -13833,20 +13833,20 @@ function _planDialog({titulo='',desc='',archNombre='',archDataUrl='',archType=''
         <label style="font-size:11px;font-weight:800;text-transform:uppercase;color:var(--sl)">Adjuntar Archivo (opcional — PDF, Word, Excel — máx 5 MB)</label>
         <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
           <label style="cursor:pointer;padding:8px 14px;background:var(--nv);color:#fff;border-radius:var(--r);font-size:12px;font-weight:700">
-            📎 Seleccionar archivo
+            <i class="fas fa-paperclip"></i> Seleccionar archivo
             <input type="file" id="${inputId}" accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx" style="display:none" onchange="onPlanFilePick(this,'planFileLabel')">
           </label>
-          <span id="planFileLabel" style="font-size:12px;color:var(--sl2)">${archNombre?'📎 '+archNombre:'Sin archivo seleccionado'}</span>
+          <span id="planFileLabel" style="font-size:12px;color:var(--sl2)">${archNombre?'<i class="fas fa-paperclip"></i> '+archNombre:'Sin archivo seleccionado'}</span>
         </div>
       </div>
       <div class="fld" style="margin-bottom:0;background:#fff3cd;border-radius:8px;padding:10px 14px;border:1px solid #f6c343">
-        <label style="font-size:11px;font-weight:800;text-transform:uppercase;color:#856404">📅 Fecha Límite de Entrega</label>
+        <label style="font-size:11px;font-weight:800;text-transform:uppercase;color:#856404"><i class="fas fa-calendar-days"></i> Fecha Límite de Entrega</label>
         <div style="font-size:15px;font-weight:800;color:#c53030;margin-top:4px">${fechaLimite||'No definida por el admin'}</div>
         <div style="font-size:11px;color:#856404;margin-top:2px">Definida por el administrador (fin del periodo extraordinario)</div>
       </div>
     </div>`,
     showCancelButton:true,
-    confirmButtonText:'📤 Enviar Plan',cancelButtonText:'Cancelar',confirmButtonColor:'var(--nv)',
+    confirmButtonText:'<i class="fas fa-upload"></i> Enviar Plan',cancelButtonText:'Cancelar',confirmButtonColor:'var(--nv)',
     didOpen:()=>{/* store ref to file input */window._planFileInput=gi(inputId);},
     preConfirm:()=>{
       const t=gi('planTitulo').value.trim(),d=gi('planDesc').value.trim();
@@ -13868,7 +13868,7 @@ function _planDialog({titulo='',desc='',archNombre='',archDataUrl='',archType=''
   });
 }
 window.onPlanFilePick=function(inp,labelId){
-  const lb=gi(labelId);if(lb&&inp.files[0]) lb.textContent='📎 '+inp.files[0].name;
+  const lb=gi(labelId);if(lb&&inp.files[0]) lb.textContent='<i class="fas fa-paperclip"></i> '+inp.files[0].name;
 };
 
 /* Send plan to entire salon */
@@ -13971,12 +13971,12 @@ async function marcarRecRevisado(id){ /* implementado en api-layer.js */ }
 function pgEHist(){
   const hist=(DB.histRecs||[]).filter(r=>r.estId===CU.id).slice().reverse();
   const periodos=[...new Set(hist.map(r=>r._periodo))];
-  if(!hist.length) return`<div class="ph"><h2>Historial Recuperaciones</h2><button class="btn xs bg" onclick="showHelp('ehist')" style="margin-top:6px">❓ Ayuda</button></div>
-    <div class="al alb">📭 Aún no hay periodos de recuperación archivados.</div>`;
+  if(!hist.length) return`<div class="ph"><h2>Historial Recuperaciones</h2><button class="btn xs bg" onclick="showHelp('ehist')" style="margin-top:6px"><i class="fas fa-circle-question"></i> Ayuda</button></div>
+    <div class="al alb"><i class="fas fa-envelope-open"></i> Aún no hay periodos de recuperación archivados.</div>`;
   const cards=periodos.map(per=>{
     const items=hist.filter(r=>r._periodo===per);
     return`<div class="card" style="margin-bottom:14px">
-      <div class="chd"><span class="cti">📅 Periodo: ${per}</span>
+      <div class="chd"><span class="cti"><i class="fas fa-calendar-days"></i> Periodo: ${per}</span>
         <span class="bdg bgy" style="font-size:11px">Archivado ${items[0]?._archivedAt||''}</span>
       </div>
       <div class="tw"><table><thead>
@@ -13987,18 +13987,18 @@ function pgEHist(){
           return`<tr>
             <td><span class="bdg brd">${r.materia}</span></td>
             <td style="font-size:12px;max-width:130px">${planRef?`<strong>${planRef.titulo}</strong>`:'<span style="color:var(--sl3)">—</span>'}</td>
-            <td><span style="font-size:12px;font-family:var(--mn)">📎 ${esc(r.nombre)}</span></td>
+            <td><span style="font-size:12px;font-family:var(--mn)"><i class="fas fa-paperclip"></i> ${esc(r.nombre)}</span></td>
             <td style="font-size:12px;color:var(--sl2);max-width:110px">${r.desc||'—'}</td>
             <td style="font-family:var(--mn);font-size:11px">${r.fecha}</td>
-            <td><span class="bdg ${r.revisado?'bgr':'brd'}">${r.revisado?`✓ Revisado ${r.revisadoTs||''}`:'✗ No revisado'}</span></td>
-            <td>${(r.id||r.dataUrl)?`<button class="btn xs bb" onclick="abrirHistRec('histRecs',${(DB.histRecs||[]).indexOf(r)})">📂 Abrir</button>`:'—'}</td>
+            <td><span class="bdg ${r.revisado?'bgr':'brd'}">${r.revisado?`<i class="fas fa-check"></i> Revisado ${r.revisadoTs||''}`:'<i class="fas fa-xmark"></i> No revisado'}</span></td>
+            <td>${(r.id||r.dataUrl)?`<button class="btn xs bb" onclick="abrirHistRec('histRecs',${(DB.histRecs||[]).indexOf(r)})"><i class="fas fa-folder-open"></i> Abrir</button>`:'—'}</td>
           </tr>`;
         }).join('')}
       </tbody></table></div>
     </div>`;
   }).join('');
   return`<div class="ph"><h2>Historial de Recuperaciones</h2>
-    <button class="btn xs bg" style="margin-top:4px" onclick="showHelp('ehist')">❓ Ayuda</button>
+    <button class="btn xs bg" style="margin-top:4px" onclick="showHelp('ehist')"><i class="fas fa-circle-question"></i> Ayuda</button>
     <p>Registro de todos los trabajos enviados en periodos extraordinarios anteriores.</p></div>
   ${cards}`;
 }
@@ -14010,13 +14010,13 @@ function pgPHist(){
   const hist=(DB.histRecs||[]).filter(r=>r.profId===CU.id).slice().reverse();
   const periodos=[...new Set(hist.map(r=>r._periodo))];
   const busqId='phistBusq_'+Date.now();
-  if(!hist.length) return`<div class="ph"><h2>Historial Recuperaciones</h2><button class="btn xs bg" onclick="showHelp('phist')" style="margin-top:6px">❓ Ayuda</button></div>
-    <div class="al alb">📭 Aún no hay periodos de recuperación archivados.</div>`;
+  if(!hist.length) return`<div class="ph"><h2>Historial Recuperaciones</h2><button class="btn xs bg" onclick="showHelp('phist')" style="margin-top:6px"><i class="fas fa-circle-question"></i> Ayuda</button></div>
+    <div class="al alb"><i class="fas fa-envelope-open"></i> Aún no hay periodos de recuperación archivados.</div>`;
   return`<div class="ph"><h2>Historial de Recuperaciones Recibidas</h2>
-    <button class="btn xs bg" style="margin-top:4px" onclick="showHelp('phist')">❓ Ayuda</button>
+    <button class="btn xs bg" style="margin-top:4px" onclick="showHelp('phist')"><i class="fas fa-circle-question"></i> Ayuda</button>
     <p>Registro de todas las recuperaciones recibidas en periodos anteriores.</p></div>
   <div class="card">
-    <div class="chd"><span class="cti">🔍 Buscar</span></div>
+    <div class="chd"><span class="cti"><i class="fas fa-magnifying-glass"></i> Buscar</span></div>
     <input id="phistQ" placeholder="Buscar por nombre de archivo, estudiante o materia..." 
       style="width:100%;padding:9px 12px;border:1.5px solid var(--bd);border-radius:var(--r);font-size:13px;outline:none;box-sizing:border-box"
       oninput="filtrarHistProf()">
@@ -14025,7 +14025,7 @@ function pgPHist(){
     ${periodos.map(per=>{
       const items=hist.filter(r=>r._periodo===per);
       return`<div class="card phist-period" data-periodo="${per}" style="margin-bottom:14px">
-        <div class="chd"><span class="cti">📅 Periodo: ${per}</span>
+        <div class="chd"><span class="cti"><i class="fas fa-calendar-days"></i> Periodo: ${per}</span>
           <span class="bdg bgy" style="font-size:11px">Archivado ${items[0]?._archivedAt||''}</span>
           <span class="bdg bbl">${items.length} archivo(s)</span>
         </div>
@@ -14039,13 +14039,13 @@ function pgPHist(){
               <td><strong>${r.estNombre||'—'}</strong></td>
               <td><span class="bdg bgy">${r.salon||'—'}</span></td>
               <td><span class="bdg brd">${r.materia}</span></td>
-              <td><span style="font-size:12px;font-family:var(--mn)">📎 ${esc(r.nombre)}</span></td>
+              <td><span style="font-size:12px;font-family:var(--mn)"><i class="fas fa-paperclip"></i> ${esc(r.nombre)}</span></td>
               <td style="font-size:12px;max-width:130px">${planRef?`<strong>${planRef.titulo}</strong><br><span style="font-size:10px;color:var(--sl3)">${planRef.fecha}</span>`:'<span style="color:var(--sl3)">—</span>'}</td>
               <td style="font-size:12px;color:var(--sl2);max-width:100px">${r.desc||'—'}</td>
               <td style="font-family:var(--mn);font-size:11px">${r.fecha}</td>
-              <td><span class="bdg ${r.revisado?'bgr':'brd'}">${r.revisado?`✓ Revisado`:'✗ Sin revisar'}</span>
+              <td><span class="bdg ${r.revisado?'bgr':'brd'}">${r.revisado?`<i class="fas fa-check"></i> Revisado`:'<i class="fas fa-xmark"></i> Sin revisar'}</span>
                 ${r.revisado?`<div style="font-size:10px;color:var(--sl3)">${r.revisadoTs||''}</div>`:''}</td>
-              <td>${(r.id||r.dataUrl)?`<button class="btn xs bb" onclick="abrirHistRec('histRecs',${globalIdx})">📂 Abrir</button>`:'—'}</td>
+              <td>${(r.id||r.dataUrl)?`<button class="btn xs bb" onclick="abrirHistRec('histRecs',${globalIdx})"><i class="fas fa-folder-open"></i> Abrir</button>`:'—'}</td>
             </tr>`;
           }).join('')}
         </tbody></table></div>
@@ -14088,7 +14088,7 @@ function pgEB(){
   return`<div class="ph" style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:12px">
     <div>
       <h2>Mi Boletín</h2>
-      <button class="btn xs bg" onclick="showHelp('eb')" style="margin-top:6px">❓ Ayuda</button>
+      <button class="btn xs bg" onclick="showHelp('eb')" style="margin-top:6px"><i class="fas fa-circle-question"></i> Ayuda</button>
     </div>
     ${_logoEB ? `<div style="display:flex;flex-direction:column;align-items:center;gap:6px">
       <img src="${_logoEB}" alt="Logo" style="height:72px;width:auto;max-width:130px;object-fit:contain;border-radius:10px;box-shadow:0 4px 18px rgba(0,0,0,.13);background:var(--bg2);padding:6px">
@@ -14118,12 +14118,12 @@ function initEB(){
     mats.some(m=>{const t=DB.notas[e.id]?.[per]?.[m];return t&&(t.a>0||t.c>0||t.r>0);}));
 
   let h=`<div class="al alb" style="margin-bottom:6px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
-    <span>📅 Año Lectivo: <strong style="font-size:15px;color:var(--nv)">${anoLabel}</strong></span>
+    <span><i class="fas fa-calendar-days"></i> Año Lectivo: <strong style="font-size:15px;color:var(--nv)">${anoLabel}</strong></span>
     <span style="font-size:12px;color:var(--sl2)">Salón: <strong>${e.salon||'Sin asignar'}</strong></span>
   </div>`;
 
   if(!persConDatos.length){
-    h+=`<div class="card"><div class="mty"><div class="ei">📭</div>
+    h+=`<div class="card"><div class="mty"><div class="ei"><i class="fas fa-envelope-open"></i></div>
       <p>Aún no tienes notas registradas.</p>
       <p style="font-size:13px;color:var(--sl3)">Cuando tu profesor ingrese las calificaciones aparecerán aquí.</p>
     </div></div>`;
@@ -14132,17 +14132,17 @@ function initEB(){
   }
 
   h+=`<div class="sr">
-    <div class="scc" data-i="📊"><div class="sv" style="color:${scCol(pg)}">${fmt(pg)}</div><div class="sl">Prom. General</div><div class="bar"></div></div>
-    <div class="scc" data-i="🏆"><div class="sv">${ps}</div><div class="sl">Puesto Salón</div><div class="bar"></div></div>
-    <div class="scc" data-i="🏫"><div class="sv" style="font-size:${(e.salon||'—').length>4?'15px':'22px'};margin-top:2px">${e.salon||'—'}</div><div class="sl">Mi Salón</div><div class="bar"></div></div>
-    <div class="scc" data-i="⚠️"><div class="sv" style="color:${cantPerdidas>0?'var(--red)':'var(--grn)'}">${cantPerdidas}</div><div class="sl">${labelPerdidas}</div><div class="bar"></div></div>
+    <div class="scc" data-i="<i class="fas fa-chart-column"></i>"><div class="sv" style="color:${scCol(pg)}">${fmt(pg)}</div><div class="sl">Prom. General</div><div class="bar"></div></div>
+    <div class="scc" data-i="<i class="fas fa-trophy"></i>"><div class="sv">${ps}</div><div class="sl">Puesto Salón</div><div class="bar"></div></div>
+    <div class="scc" data-i="<i class="fas fa-school"></i>"><div class="sv" style="font-size:${(e.salon||'—').length>4?'15px':'22px'};margin-top:2px">${e.salon||'—'}</div><div class="sl">Mi Salón</div><div class="bar"></div></div>
+    <div class="scc" data-i="<i class="fas fa-triangle-exclamation"></i>"><div class="sv" style="color:${cantPerdidas>0?'var(--red)':'var(--grn)'}">${cantPerdidas}</div><div class="sl">${labelPerdidas}</div><div class="bar"></div></div>
   </div>`;
 
   const elegible=tieneAreas?(areasP.length>=1&&areasP.length<=2):(mp.length>=1&&mp.length<=2);
   const nombresPerdidos=tieneAreas?areasP.map(a=>a.areaNombre):mp;
   if(DB.ext.on&&elegible){
     const tipLabel=tieneAreas?'área(s)':'materia(s)';
-    h+=`<div class="rbc"><h4>⚠️ Tienes ${nombresPerdidos.length} ${tipLabel} en recuperación</h4>
+    h+=`<div class="rbc"><h4><i class="fas fa-triangle-exclamation"></i> Tienes ${nombresPerdidos.length} ${tipLabel} en recuperación</h4>
       <p style="font-size:13px;margin-bottom:8px">${nombresPerdidos.map(m=>`<span class="bdg brd" style="margin:2px">${m}</span>`).join('')}</p>
       <p style="font-size:13px">Extraordinario: <strong>${DB.ext.s} → ${DB.ext.e}</strong></p></div>`;
   }
@@ -14157,7 +14157,7 @@ function initEB(){
         if(!matsArea.length) return;
         const defsA=matsArea.map(m=>def(DB.notas[e.id]?.[per]?.[m]||{a:0,c:0,r:0})).filter(d=>d>0);
         const da=defsA.length?+(defsA.reduce((s,v)=>s+v,0)/defsA.length).toFixed(2):0;
-        tablaBody+=`<tr style="background:#f0f0f0"><td colspan="7" style="padding:5px 8px;font-weight:800;font-size:12px">▸ ${areaNombre} — Def. Área: <span class="${scC(da)}">${da===0?'—':fmt(da)}</span></td></tr>`;
+        tablaBody+=`<tr style="background:#f0f0f0"><td colspan="7" style="padding:5px 8px;font-weight:800;font-size:12px"><i class="fas fa-caret-right"></i> ${areaNombre} — Def. Área: <span class="${scC(da)}">${da===0?'—':fmt(da)}</span></td></tr>`;
         matsArea.forEach(m=>{
           const t=DB.notas[e.id]?.[per]?.[m]||{a:0,c:0,r:0};const d=def(t);
           const prf=profForMat(m,e.salon);
@@ -14239,17 +14239,17 @@ function pgEAst(){
   recs.sort((a,b)=>b.fecha.localeCompare(a.fecha));
   const pres=recs.filter(r=>r.val==='presente').length;
   const aus=recs.filter(r=>r.val==='ausente').length;
-  return`<div class="ph"><h2>Mi Asistencia</h2><button class="btn xs bg" onclick="showHelp('east')">❓ Ayuda</button></div>
+  return`<div class="ph"><h2>Mi Asistencia</h2><button class="btn xs bg" onclick="showHelp('east')"><i class="fas fa-circle-question"></i> Ayuda</button></div>
   <div class="sr">
-    <div class="scc" data-i="✅"><div class="sv" style="color:var(--grn)">${pres}</div><div class="sl">Presente</div><div class="bar"></div></div>
-    <div class="scc" data-i="❌"><div class="sv" style="color:var(--red)">${aus}</div><div class="sl">Ausente</div><div class="bar"></div></div>
-    <div class="scc" data-i="📅"><div class="sv">${recs.length}</div><div class="sl">Total</div><div class="bar"></div></div>
+    <div class="scc" data-i="<i class="fas fa-circle-check"></i>"><div class="sv" style="color:var(--grn)">${pres}</div><div class="sl">Presente</div><div class="bar"></div></div>
+    <div class="scc" data-i="<i class="fas fa-circle-xmark"></i>"><div class="sv" style="color:var(--red)">${aus}</div><div class="sl">Ausente</div><div class="bar"></div></div>
+    <div class="scc" data-i="<i class="fas fa-calendar-days"></i>"><div class="sv">${recs.length}</div><div class="sl">Total</div><div class="bar"></div></div>
   </div>
   <div class="card"><div class="chd"><span class="cti">Historial</span></div>
   ${recs.length?`<div class="tw"><table><thead><tr><th>Fecha</th><th>Estado</th></tr></thead>
   <tbody>${recs.map(r=>`<tr><td style="font-family:var(--mn);font-size:13px">${r.fecha}</td>
     <td><span class="bdg ${r.val==='presente'?'bgr':'brd'}">${r.val}</span></td></tr>`).join('')}</tbody></table></div>`
-  :'<div class="mty"><div class="ei">📅</div><p>Sin registros</p></div>'}
+  :'<div class="mty"><div class="ei"><i class="fas fa-calendar-days"></i></div><p>Sin registros</p></div>'}
   </div>`;
 }
 
@@ -14263,8 +14263,8 @@ function pgETare(){
     ?prfsDelSalon.map(p=>`<option value="${p.id}">${esc(p.nombre)}</option>`).join('')
     :'<option value="">Sin profesores asignados</option>';
   const mis=(DB.ups[e.id]||[]).slice().reverse();
-  return`<div class="ph"><h2>Tareas & Talleres</h2><button class="btn xs bg" onclick="showHelp('etare')">❓ Ayuda</button></div>
-  <div class="card"><div class="chd"><span class="cti">📎 Subir Archivo</span></div>
+  return`<div class="ph"><h2>Tareas & Talleres</h2><button class="btn xs bg" onclick="showHelp('etare')"><i class="fas fa-circle-question"></i> Ayuda</button></div>
+  <div class="card"><div class="chd"><span class="cti"><i class="fas fa-paperclip"></i> Subir Archivo</span></div>
     <div class="fg">
       <div class="fld"><label>Profesor</label><select id="utprof" onchange="onProfChangeTaller()">
         <option value="">Seleccionar profesor...</option>${profOpts}
@@ -14286,15 +14286,15 @@ function pgETare(){
     </div>
     <div class="fld"><label>Título / Descripción</label><input id="utd" placeholder="Taller unidad 3 — Descripción breve..."></div>
     <div class="uzone" onclick="gi('utf').click()">
-      <div class="uzic">📎</div>
+      <div class="uzic"><i class="fas fa-paperclip"></i></div>
       <p><strong>Clic para seleccionar archivo</strong></p>
       <small>PDF, Word (.doc/.docx), Excel (.xls/.xlsx) — máx 10 MB</small>
       <input type="file" id="utf" accept=".pdf,.doc,.docx,.xls,.xlsx" style="display:none" onchange="onFPick(this)">
       <div id="utfn" style="margin-top:8px;font-size:13px;font-weight:700;color:var(--nv)"></div>
     </div>
-    <button class="btn bn" style="margin-top:14px" onclick="subirTarea()">📤 Subir</button>
+    <button class="btn bn" style="margin-top:14px" onclick="subirTarea()"><i class="fas fa-upload"></i> Subir</button>
   </div>
-  <div class="card"><div class="chd"><span class="cti">📂 Mis Archivos Enviados</span></div>
+  <div class="card"><div class="chd"><span class="cti"><i class="fas fa-folder-open"></i> Mis Archivos Enviados</span></div>
   ${mis.length?`<div class="tw"><table><thead>
     <tr><th>Archivo</th><th>Materia</th><th>Periodo</th><th>Profesor</th><th>Descripción</th><th>Fecha</th><th>Estado</th><th>Acción</th></tr></thead>
     <tbody>${mis.map(u=>`<tr>
@@ -14305,19 +14305,19 @@ function pgETare(){
       <td style="font-size:12px;color:var(--sl2)">${u.desc||'—'}</td>
       <td style="font-family:var(--mn);font-size:11px">${u.fecha}</td>
       <td>
-        <span class="bdg ${u.revisado?'bgr':'bwa'}">${u.revisado?'✓ Revisado':'⏳ Pendiente'}</span>
+        <span class="bdg ${u.revisado?'bgr':'bwa'}">${u.revisado?'<i class="fas fa-check"></i> Revisado':'<i class="fas fa-hourglass-half"></i> Pendiente'}</span>
         ${u.revisado?`<div style="font-size:10px;color:var(--sl3);margin-top:3px">${u.revisadoTs||''}</div>`:''}
       </td>
       <td>${u.revisado
-        ?`<button class="btn xs br" onclick="eliminarTallerEst('${u.id}')">🗑️</button>`
+        ?`<button class="btn xs br" onclick="eliminarTallerEst('${u.id}')"><i class="fas fa-trash"></i></button>`
         :'<span style="font-size:10px;color:var(--sl3)">—</span>'}
       </td>
     </tr>`).join('')}</tbody></table></div>`
-  :'<div class="mty"><div class="ei">📂</div><p>Sin archivos subidos</p></div>'}
+  :'<div class="mty"><div class="ei"><i class="fas fa-folder-open"></i></div><p>Sin archivos subidos</p></div>'}
   </div>`;
 }
 function onFPick(inp){
-  if(inp.files[0]) gi('utfn').textContent='📎 '+inp.files[0].name;
+  if(inp.files[0]) gi('utfn').textContent='<i class="fas fa-paperclip"></i> '+inp.files[0].name;
 }
 function onProfChangeTaller(){
   const profId=gi('utprof')?.value;
@@ -14356,11 +14356,11 @@ function pgEExc(){
   const mis=DB.exc.filter(x=>x.estId===e.id||x.eid===e.id).slice().reverse();
   const ventanaOk=excusasOk();
   return`<div class="ph"><h2>Módulo de Excusas</h2>
-    <p>Horario de envío: ${(DB.excHorario?.ini??18)}:00 – ${(DB.excHorario?.fin??7)}:00 ${ventanaOk?'<span class="bdg bgr">✓ Abierto</span>':'<span class="bdg brd">✗ Cerrado</span>'}</p>
-    <button class="btn xs bg" onclick="showHelp('eexc')" style="margin-top:6px">❓ Ayuda</button>
+    <p>Horario de envío: ${(DB.excHorario?.ini??18)}:00 – ${(DB.excHorario?.fin??7)}:00 ${ventanaOk?'<span class="bdg bgr"><i class="fas fa-check"></i> Abierto</span>':'<span class="bdg brd"><i class="fas fa-xmark"></i> Cerrado</span>'}</p>
+    <button class="btn xs bg" onclick="showHelp('eexc')" style="margin-top:6px"><i class="fas fa-circle-question"></i> Ayuda</button>
   </div>
-  ${!ventanaOk?`<div class="al aly">⚠️ Las excusas solo pueden enviarse entre las ${DB.excHorario?.ini??18}:00 y las ${DB.excHorario?.fin??7}:00.</div>`:''}
-  <div class="card"><div class="chd"><span class="cti">✉️ Redactar Excusa</span></div>
+  ${!ventanaOk?`<div class="al aly"><i class="fas fa-triangle-exclamation"></i> Las excusas solo pueden enviarse entre las ${DB.excHorario?.ini??18}:00 y las ${DB.excHorario?.fin??7}:00.</div>`:''}
+  <div class="card"><div class="chd"><span class="cti"><i class="fas fa-envelope"></i> Redactar Excusa</span></div>
     <div class="fg">
       <div class="fld"><label>Fecha de la ausencia</label><input type="date" id="exd" value="${today()}"></div>
       <div class="fld"><label>Dirigir a</label><select id="exdst">
@@ -14373,46 +14373,46 @@ function pgEExc(){
     </div>
     <div class="fld"><label>Descripción adicional</label>
       <textarea id="exdesc" placeholder="Detalles adicionales..."></textarea></div>
-    <button class="btn bn" ${!ventanaOk?'disabled':''} onclick="envExcusa()">📨 Enviar Excusa</button>
+    <button class="btn bn" ${!ventanaOk?'disabled':''} onclick="envExcusa()"><i class="fas fa-envelope"></i> Enviar Excusa</button>
   </div>
-  <div class="card"><div class="chd"><span class="cti">📬 Mis Excusas</span></div>
+  <div class="card"><div class="chd"><span class="cti"><i class="fas fa-envelope-circle-check"></i> Mis Excusas</span></div>
   <div id="excBandeja">${renderBandejaEst(e.id)}</div>
   </div>`;
 }
 
 function renderBandejaEst(estId){
   const mis=(DB.exc||[]).filter(x=>x.estId===estId||x.eid===estId).slice().reverse();
-  if(!mis.length) return '<div class="mty"><div class="ei">📬</div><p>Sin excusas</p></div>';
+  if(!mis.length) return '<div class="mty"><div class="ei"><i class="fas fa-envelope-circle-check"></i></div><p>Sin excusas</p></div>';
   return mis.map(x=>{
     const tieneResp=!!(x.respProf);
     const noLeida=tieneResp&&!x.respLeida;
     const talleresHtml=(x.talleres||[]).map(t=>
       `<div style="display:flex;align-items:center;gap:8px;padding:6px 10px;background:#ebf8ff;border-radius:6px;margin-top:4px">
-        <span>📎</span>
+        <span><i class="fas fa-paperclip"></i></span>
         <span style="font-size:12px;flex:1">${t.nombre} <span style="font-size:10px;color:var(--sl3)">(${t.tamanio||''})</span></span>
-        <button class="btn xs bb" onclick="descargarTallerExcusa('${x._id||x.id}','${encodeURIComponent(t.nombre)}')">⬇️ Descargar</button>
+        <button class="btn xs bb" onclick="descargarTallerExcusa('${x._id||x.id}','${encodeURIComponent(t.nombre)}')"><i class="fas fa-arrow-down"></i> Descargar</button>
       </div>`).join('');
     return`<div style="border:2px solid ${noLeida?'#f6ad55':tieneResp?'#68d391':'var(--bd)'};border-radius:10px;padding:12px;margin-bottom:10px;background:${noLeida?'#fffaf0':tieneResp?'#f0fff4':'var(--bg2)'}">
       <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px;margin-bottom:6px">
         <div>
-          <span style="font-size:12px;font-family:var(--mn)">📅 ${x.fecha}</span>&nbsp;
+          <span style="font-size:12px;font-family:var(--mn)"><i class="fas fa-calendar-days"></i> ${x.fecha}</span>&nbsp;
           <span class="bdg bbl">${x.dest}</span>&nbsp;
           <span class="bdg bor">${x.causa}</span>
         </div>
-        <span class="bdg ${noLeida?'bor':tieneResp?'bgr':'bwa'}">${noLeida?'🔔 Nueva respuesta':tieneResp?'✅ Respondida':'⏳ Pendiente'}</span>
+        <span class="bdg ${noLeida?'bor':tieneResp?'bgr':'bwa'}">${noLeida?'<i class="fas fa-bell"></i> Nueva respuesta':tieneResp?'<i class="fas fa-circle-check"></i> Respondida':'<i class="fas fa-hourglass-half"></i> Pendiente'}</span>
       </div>
-      ${x.desc?`<div style="font-size:12px;color:var(--sl2);margin-bottom:6px">💬 ${x.desc}</div>`:''}
+      ${x.desc?`<div style="font-size:12px;color:var(--sl2);margin-bottom:6px"><i class="fas fa-comment"></i> ${x.desc}</div>`:''}
       ${tieneResp?`<div style="background:#e6fffa;border-radius:8px;padding:10px;margin-top:6px;border:1px solid ${noLeida?'#f6ad55':'#9ae6b4'}">
-        <div style="font-size:12px;font-weight:700;color:#276749;margin-bottom:4px">📩 Respuesta de ${x.respProfNombre||'tu profesor'}: <span style="font-size:10px;color:var(--sl3)">${x.respTs||''}</span></div>
+        <div style="font-size:12px;font-weight:700;color:#276749;margin-bottom:4px"><i class="fas fa-envelope"></i> Respuesta de ${x.respProfNombre||'tu profesor'}: <span style="font-size:10px;color:var(--sl3)">${x.respTs||''}</span></div>
         <div style="font-size:13px;color:#234e52">${x.respProf}</div>
-        ${x.diasExtra>0?`<div style="margin-top:6px;font-size:12px">⏰ <strong>Tiempo extra:</strong> ${x.diasExtra} día(s) — <strong>Fecha límite:</strong> ${x.fechaLimite||'—'}</div>`:''}
-        ${talleresHtml?`<div style="margin-top:8px"><strong style="font-size:12px">📚 Talleres a realizar:</strong>${talleresHtml}</div>`:''}
+        ${x.diasExtra>0?`<div style="margin-top:6px;font-size:12px"><i class="fas fa-clock"></i> <strong>Tiempo extra:</strong> ${x.diasExtra} día(s) — <strong>Fecha límite:</strong> ${x.fechaLimite||'—'}</div>`:''}
+        ${talleresHtml?`<div style="margin-top:8px"><strong style="font-size:12px"><i class="fas fa-book"></i> Talleres a realizar:</strong>${talleresHtml}</div>`:''}
         <div style="margin-top:10px;padding:10px;background:#fffbeb;border:1.5px solid #f6ad55;border-radius:8px;font-size:12px;color:#c05621">
-          ⚠️ <strong>Debes enviar el trabajo en el apartado Talleres y Tareas dentro del tiempo estipulado. Después de la fecha límite no se calificará.</strong>
+          <i class="fas fa-triangle-exclamation"></i> <strong>Debes enviar el trabajo en el apartado Talleres y Tareas dentro del tiempo estipulado. Después de la fecha límite no se calificará.</strong>
         </div>
         ${noLeida
-          ?`<button class="btn xs bg" style="margin-top:8px" onclick="marcarRespLeida('${x._id||x.id}')">👁️ Marcar como leída</button>`
-          :`<div style="font-size:10px;color:var(--sl3);margin-top:6px">✓ Vista el ${x.respTs||''}</div>`}
+          ?`<button class="btn xs bg" style="margin-top:8px" onclick="marcarRespLeida('${x._id||x.id}')"><i class="fas fa-eye"></i> Marcar como leída</button>`
+          :`<div style="font-size:10px;color:var(--sl3);margin-top:6px"><i class="fas fa-check"></i> Vista el ${x.respTs||''}</div>`}
       </div>`:''}
     </div>`;
   }).join('');
@@ -14440,13 +14440,13 @@ function notifNuevasExcusas(){
   const nuevas=mis.filter(x=>!x.respProf);
   if(!nuevas.length) return;
   sessionStorage.setItem(sessionKey,'1');
-  sw('info',`📨 Tienes <strong>${nuevas.length}</strong> excusa${nuevas.length>1?'s':''} sin responder`);
+  sw('info',`<i class="fas fa-envelope"></i> Tienes <strong>${nuevas.length}</strong> excusa${nuevas.length>1?'s':''} sin responder`);
 }
 
 /* Show excusas to professor in their home panel */
 function renderPExcR(){
   // Panel de tabs activo — no se usa este contenedor
-  // Las excusas se muestran en el tab ✉️ del panel principal
+  // Las excusas se muestran en el tab <i class="fas fa-envelope"></i> del panel principal
   const el=gi('pExcR');if(el) el.innerHTML='';
 }
 
@@ -14455,7 +14455,7 @@ function renderPExcR(){
 ============================================================ */
 function pgEProf(){
   const e=CU;const prfs=profsInSalon(e.salon);
-  return`<div class="ph"><h2>Mis Profesores</h2><button class="btn xs bg" onclick="showHelp('eprof')" style="margin-top:6px">❓ Ayuda</button></div>
+  return`<div class="ph"><h2>Mis Profesores</h2><button class="btn xs bg" onclick="showHelp('eprof')" style="margin-top:6px"><i class="fas fa-circle-question"></i> Ayuda</button></div>
   <div class="card"><div class="chd"><span class="cti">Salón: <span class="bdg bbl">${e.salon||'Sin salón'}</span></span></div>
   ${e.salon&&prfs.length?`<div class="tw"><table><thead>
     <tr><th>Profesor</th><th>Ciclo</th><th>Materias</th></tr></thead>
@@ -14467,7 +14467,7 @@ function pgEProf(){
           '<span style="font-size:12px;color:var(--sl3)">Todas (Primaria)</span>'}
       </div></td>
     </tr>`).join('')}</tbody></table></div>`
-  :'<div class="mty"><div class="ei">👩‍🏫</div><p>Sin profesores asignados</p></div>'}
+  :'<div class="mty"><div class="ei"><i class="fas fa-chalkboard-user"></i></div><p>Sin profesores asignados</p></div>'}
   </div>`;
 }
 
@@ -14478,7 +14478,7 @@ function pgEVir(){
   const e=CU;
   const clases=(DB.vclases||[]).filter(c=>c.salon===e.salon)
     .sort((a,b)=>b.fecha.localeCompare(a.fecha)||b.hora.localeCompare(a.hora));
-  return`<div class="ph"><h2>💻 Mis Clases Virtuales</h2><p>Salón: <strong>${e.salon||'Sin salón'}</strong></p><button class="btn xs bg" onclick="showHelp('evir')" style="margin-top:6px">❓ Ayuda</button></div>
+  return`<div class="ph"><h2><i class="fas fa-laptop"></i> Mis Clases Virtuales</h2><p>Salón: <strong>${e.salon||'Sin salón'}</strong></p><button class="btn xs bg" onclick="showHelp('evir')" style="margin-top:6px"><i class="fas fa-circle-question"></i> Ayuda</button></div>
   ${clases.length?clases.map(c=>{
     const ahora=new Date();
     const claseTs=new Date(c.fecha+'T'+c.hora);
@@ -14488,25 +14488,25 @@ function pgEVir(){
     return`<div class="vc-card" style="flex-direction:column;align-items:stretch;gap:12px">
       <div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:8px">
         <div>
-          <h4>💻 ${c.desc||'Clase Virtual'}</h4>
+          <h4><i class="fas fa-laptop"></i> ${c.desc||'Clase Virtual'}</h4>
           <small>Salón ${c.salon} · ${c.fecha} a las ${c.hora} · Prof. ${c.profNombre||'—'}</small>
         </div>
         ${pasada
           ? `<span class="bdg bgy" style="font-size:11px">Finalizada</span>`
           : activa
-            ? `<span class="bdg" style="background:#d1fae5;color:#065f46;border:1px solid #6ee7b7;font-size:11px">🟢 En vivo</span>`
-            : `<span class="bdg" style="background:rgba(255,255,255,.15);color:#fff;border:1px solid rgba(255,255,255,.25);font-size:11px">📅 Programada</span>`
+            ? `<span class="bdg" style="background:#d1fae5;color:#065f46;border:1px solid #6ee7b7;font-size:11px"><i class="fas fa-circle"></i> En vivo</span>`
+            : `<span class="bdg" style="background:rgba(255,255,255,.15);color:#fff;border:1px solid rgba(255,255,255,.25);font-size:11px"><i class="fas fa-calendar-days"></i> Programada</span>`
         }
       </div>
       ${activa
-        ? `<button class="btn sm bs" onclick="abrirSalaJitsi('${c.roomId}','${(c.desc||'Clase Virtual').replace(/'/g,"\'")}',false)" style="align-self:flex-start">🎥 Unirse a la clase</button>`
+        ? `<button class="btn sm bs" onclick="abrirSalaJitsi('${c.roomId}','${(c.desc||'Clase Virtual').replace(/'/g,"\'")}',false)" style="align-self:flex-start"><i class="fas fa-video"></i> Unirse a la clase</button>`
         : pasada
           ? `<span style="font-size:12px;opacity:.7">Esta clase ya finalizó</span>`
           : `<span style="font-size:12px;opacity:.7">La clase aún no ha comenzado. Vuelve el ${c.fecha} a las ${c.hora}.</span>`
       }
     </div>`;
   }).join('')
-  :`<div class="card"><div class="mty"><div class="ei">💻</div><p>Sin clases programadas para tu salón</p></div></div>`}`;
+  :`<div class="card"><div class="mty"><div class="ei"><i class="fas fa-laptop"></i></div><p>Sin clases programadas para tu salón</p></div></div>`}`;
 }
 
 /* ============================================================
@@ -14514,8 +14514,8 @@ function pgEVir(){
 ============================================================ */
 function pgEReh(){
   const e=CU;const mp=matPerd(e.id);
-  if(!DB.ext.on) return`<div class="ph"><h2>Mi Recuperación</h2><button class="btn xs bg" onclick="showHelp('ereh')" style="margin-top:6px">❓ Ayuda</button></div><div class="al aly">⚠️ El periodo extraordinario no está activo.</div>`;
-  if(!mp.length) return`<div class="ph"><h2>Mi Recuperación</h2><button class="btn xs bg" onclick="showHelp('ereh')" style="margin-top:6px">❓ Ayuda</button></div><div class="al alg">✅ No tienes materias en recuperación. ¡Bien hecho!</div>`;
+  if(!DB.ext.on) return`<div class="ph"><h2>Mi Recuperación</h2><button class="btn xs bg" onclick="showHelp('ereh')" style="margin-top:6px"><i class="fas fa-circle-question"></i> Ayuda</button></div><div class="al aly"><i class="fas fa-triangle-exclamation"></i> El periodo extraordinario no está activo.</div>`;
+  if(!mp.length) return`<div class="ph"><h2>Mi Recuperación</h2><button class="btn xs bg" onclick="showHelp('ereh')" style="margin-top:6px"><i class="fas fa-circle-question"></i> Ayuda</button></div><div class="al alg"><i class="fas fa-circle-check"></i> No tienes materias en recuperación. ¡Bien hecho!</div>`;
 
   /* Mark all plans as seen */
   let planesChanged=false;
@@ -14531,9 +14531,9 @@ function pgEReh(){
 
     return`<div class="card" style="border-left:4px solid ${hayPlanes?'var(--grn)':'var(--red)'}">
       <div class="chd">
-        <span class="cti">📚 ${m}</span>
-        <span class="bdg ${hayPlanes?'bgr':'brd'}">${hayPlanes?`📋 ${planesMat.length} Plan(es)`:'⚠️ Sin Plan Aún'}</span>
-        ${periodoVencido?`<span class="bdg brd" style="font-size:10px">🔒 Periodo vencido</span>`:''}
+        <span class="cti"><i class="fas fa-book"></i> ${m}</span>
+        <span class="bdg ${hayPlanes?'bgr':'brd'}">${hayPlanes?`<i class="fas fa-clipboard-list"></i> ${planesMat.length} Plan(es)`:'<i class="fas fa-triangle-exclamation"></i> Sin Plan Aún'}</span>
+        ${periodoVencido?`<span class="bdg brd" style="font-size:10px"><i class="fas fa-lock"></i> Periodo vencido</span>`:''}
       </div>
       <div style="font-size:13px;margin-bottom:14px">
         <strong>Docente:</strong> ${prf?prf.nombre:'<span style="color:var(--sl3)">Sin docente asignado</span>'}<br>
@@ -14548,26 +14548,26 @@ function pgEReh(){
           const keyPlan=plan.id.replace(/[^a-z0-9]/gi,'_');
           return`<div style="background:#f0fff4;border:1.5px solid #9ae6b4;border-radius:8px;padding:14px;margin-bottom:14px">
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;flex-wrap:wrap;gap:6px">
-              <div style="font-size:12px;font-weight:800;color:#276749">📋 Plan ${planesMat.length-pi} — ${plan.fecha}${plan.esSalon?' <span style="font-size:10px;font-weight:400">(salón)</span>':''}</div>
-              ${yaRevisada?`<span class="bdg bgr" style="font-size:11px">✅ Revisado ${ultimaResp.revisadoTs||''}</span>`:''}
+              <div style="font-size:12px;font-weight:800;color:#276749"><i class="fas fa-clipboard-list"></i> Plan ${planesMat.length-pi} — ${plan.fecha}${plan.esSalon?' <span style="font-size:10px;font-weight:400">(salón)</span>':''}</div>
+              ${yaRevisada?`<span class="bdg bgr" style="font-size:11px"><i class="fas fa-circle-check"></i> Revisado ${ultimaResp.revisadoTs||''}</span>`:''}
             </div>
             <div style="font-size:14px;font-weight:700;color:var(--nv);margin-bottom:6px">${plan.titulo}</div>
             <div style="font-size:13px;white-space:pre-line;color:#2d3748;line-height:1.6;margin-bottom:8px">${plan.desc}</div>
             ${plan.fechaLimite?`<div style="font-size:12px;padding:5px 10px;background:#c6f6d5;border-radius:6px;display:inline-block;margin-bottom:8px">
-              📅 Fecha límite: <strong>${plan.fechaLimite}</strong></div>`:''}
+              <i class="fas fa-calendar-days"></i> Fecha límite: <strong>${plan.fechaLimite}</strong></div>`:''}
             ${plan.archNombre?`<div style="display:flex;align-items:center;gap:10px;padding:7px 12px;background:#ebf8ff;border-radius:7px;border:1px solid #90cdf4;margin-bottom:10px">
-              <span style="font-size:12px">📎 ${plan.archNombre}</span>
-              <button class="btn xs bb" onclick="abrirArchivoPlan('${plan.id}')">📂 Abrir</button>
+              <span style="font-size:12px"><i class="fas fa-paperclip"></i> ${plan.archNombre}</span>
+              <button class="btn xs bb" onclick="abrirArchivoPlan('${plan.id}')"><i class="fas fa-folder-open"></i> Abrir</button>
             </div>`:''}
 
             <!-- Respuestas a este plan -->
             ${respuestas.length?`<div style="margin-bottom:10px">
               <div style="font-size:11px;font-weight:800;color:var(--sl);text-transform:uppercase;margin-bottom:5px">Mis respuestas:</div>
               ${respuestas.map(r=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:7px 10px;background:${r.revisado?'#f0fff4':'#fffff0'};border-radius:6px;border:1px solid ${r.revisado?'#9ae6b4':'#f6e05e'};margin-bottom:5px">
-                <span style="font-size:12px">📎 ${esc(r.nombre)} <span style="color:var(--sl3);font-size:11px">${r.fecha}</span>${r.desc?` — <em style="color:var(--sl2)">${r.desc}</em>`:''}</span>
+                <span style="font-size:12px"><i class="fas fa-paperclip"></i> ${esc(r.nombre)} <span style="color:var(--sl3);font-size:11px">${r.fecha}</span>${r.desc?` — <em style="color:var(--sl2)">${r.desc}</em>`:''}</span>
                 <div style="display:flex;align-items:center;gap:6px">
-                  <span class="bdg ${r.revisado?'bgr':'bwa'}">${r.revisado?`✓ Revisado`:'⏳ Pendiente'}</span>
-                  ${r.revisado?`<button class="btn xs br" onclick="eliminarRecEst('${r.id}')">🗑️</button>`:''}
+                  <span class="bdg ${r.revisado?'bgr':'bwa'}">${r.revisado?`<i class="fas fa-check"></i> Revisado`:'<i class="fas fa-hourglass-half"></i> Pendiente'}</span>
+                  ${r.revisado?`<button class="btn xs br" onclick="eliminarRecEst('${r.id}')"><i class="fas fa-trash"></i></button>`:''}
                 </div>
               </div>`).join('')}
             </div>`:''}
@@ -14575,28 +14575,28 @@ function pgEReh(){
             <!-- Formulario respuesta: bloqueado si revisado O periodo vencido -->
             ${yaRevisada
               ?`<div style="background:#c6f6d5;border-radius:7px;padding:10px 14px;display:flex;align-items:center;gap:10px">
-                  <span>✅</span><div style="font-size:12px;color:#276749"><strong>Revisado</strong> por el docente el ${ultimaResp.revisadoTs||''}.</div>
+                  <span><i class="fas fa-circle-check"></i></span><div style="font-size:12px;color:#276749"><strong>Revisado</strong> por el docente el ${ultimaResp.revisadoTs||''}.</div>
                 </div>`
               :periodoVencido
                 ?`<div style="background:#fed7d7;border-radius:7px;padding:10px 14px;display:flex;align-items:center;gap:10px">
-                    <span>🔒</span><div style="font-size:12px;color:#c53030"><strong>Periodo vencido.</strong> Ya no puedes enviar respuestas a este plan.</div>
+                    <span><i class="fas fa-lock"></i></span><div style="font-size:12px;color:#c53030"><strong>Periodo vencido.</strong> Ya no puedes enviar respuestas a este plan.</div>
                   </div>`
                 :`<div style="background:#fff;border:1.5px dashed #9ae6b4;border-radius:7px;padding:12px;margin-top:4px">
-                    <div style="font-size:12px;font-weight:800;color:var(--nv);margin-bottom:8px">📤 Responder → ${prf?prf.nombre:'el docente'}</div>
+                    <div style="font-size:12px;font-weight:800;color:var(--nv);margin-bottom:8px"><i class="fas fa-upload"></i> Responder → ${prf?prf.nombre:'el docente'}</div>
                     <div class="fld" style="margin-bottom:8px"><label style="font-size:11px">Descripción</label>
                       <input id="rdesc_${keyPlan}" placeholder="Describe brevemente..."></div>
                     <div class="uzone" style="padding:10px" onclick="gi('rf_${keyPlan}').click()">
-                      <div class="uzic" style="font-size:20px">📎</div>
+                      <div class="uzic" style="font-size:20px"><i class="fas fa-paperclip"></i></div>
                       <p style="font-size:12px;margin:3px 0"><strong>Clic para seleccionar archivo</strong></p>
                       <small>PDF, Word, Excel — máx 5 MB</small>
                       <input type="file" id="rf_${keyPlan}" accept=".pdf,.doc,.docx,.xls,.xlsx" style="display:none" onchange="onRecFPick(this,'rfn_${keyPlan}')">
                       <div id="rfn_${keyPlan}" style="margin-top:5px;font-size:12px;font-weight:700;color:var(--nv)"></div>
                     </div>
-                    <button class="btn bn sm" style="margin-top:10px" onclick="subirRecPlan('${plan.id}','${m}','${prf?prf.id:''}')">📤 Enviar Respuesta</button>
+                    <button class="btn bn sm" style="margin-top:10px" onclick="subirRecPlan('${plan.id}','${m}','${prf?prf.id:''}')"><i class="fas fa-upload"></i> Enviar Respuesta</button>
                   </div>`}
           </div>`;
         }).join('')
-        :`<div class="al aly" style="font-size:12px;margin-bottom:14px">⏳ Tu docente aún no ha enviado el plan.</div>`}
+        :`<div class="al aly" style="font-size:12px;margin-bottom:14px"><i class="fas fa-hourglass-half"></i> Tu docente aún no ha enviado el plan.</div>`}
 
       <!-- Trabajos sin plan (legado) -->
       ${(()=>{
@@ -14605,10 +14605,10 @@ function pgEReh(){
         return`<div style="margin-top:8px">
           <div style="font-size:11px;font-weight:700;color:var(--sl);margin-bottom:5px">Otros trabajos enviados:</div>
           ${sinPlan.map(r=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:7px 10px;background:${r.revisado?'#f0fff4':'#fffff0'};border-radius:6px;border:1px solid ${r.revisado?'#9ae6b4':'#f6e05e'};margin-bottom:5px">
-            <span style="font-size:12px">📎 ${esc(r.nombre)} <span style="color:var(--sl3);font-size:11px">${r.fecha}</span></span>
+            <span style="font-size:12px"><i class="fas fa-paperclip"></i> ${esc(r.nombre)} <span style="color:var(--sl3);font-size:11px">${r.fecha}</span></span>
             <div style="display:flex;align-items:center;gap:6px">
-              <span class="bdg ${r.revisado?'bgr':'bwa'}">${r.revisado?`✓ Revisado`:'⏳ Pendiente'}</span>
-              ${r.revisado?`<button class="btn xs br" onclick="eliminarRecEst('${r.id}')">🗑️</button>`:''}
+              <span class="bdg ${r.revisado?'bgr':'bwa'}">${r.revisado?`<i class="fas fa-check"></i> Revisado`:'<i class="fas fa-hourglass-half"></i> Pendiente'}</span>
+              ${r.revisado?`<button class="btn xs br" onclick="eliminarRecEst('${r.id}')"><i class="fas fa-trash"></i></button>`:''}
             </div>
           </div>`).join('')}
         </div>`;
@@ -14619,12 +14619,12 @@ function pgEReh(){
   const dot=document.querySelector('#ni_ereh .notif-dot');if(dot)dot.remove();
 
   return`<div class="ph"><h2>Mi Recuperación</h2>
-    <p>Tienes <strong>${mp.length}</strong> materia(s) en periodo extraordinario.</p><button class="btn xs bg" onclick="showHelp('ereh')" style="margin-top:6px">❓ Ayuda</button></div>
-  <div class="al aly" style="margin-bottom:14px">📅 Periodo Extraordinario: <strong>${DB.ext.s} → ${DB.ext.e}</strong></div>
+    <p>Tienes <strong>${mp.length}</strong> materia(s) en periodo extraordinario.</p><button class="btn xs bg" onclick="showHelp('ereh')" style="margin-top:6px"><i class="fas fa-circle-question"></i> Ayuda</button></div>
+  <div class="al aly" style="margin-bottom:14px"><i class="fas fa-calendar-days"></i> Periodo Extraordinario: <strong>${DB.ext.s} → ${DB.ext.e}</strong></div>
   ${tarjetas}`;
 }
 
-function onRecFPick(inp,key){if(inp.files[0]) gi(key).textContent='📎 '+inp.files[0].name;}
+function onRecFPick(inp,key){if(inp.files[0]) gi(key).textContent='<i class="fas fa-paperclip"></i> '+inp.files[0].name;}
 
 /* Submit a reply linked to a specific plan */
 /* ── SOBREESCRITA por api-layer.js ── */
@@ -14703,9 +14703,9 @@ function mkBoletinUI(estId,ctx){
 
   if(!anosConDatos.length){
     return`<div class="card" style="border:2px solid var(--bd)">
-      <div class="chd"><span class="cti">📄 Descargar Boletín PDF</span></div>
+      <div class="chd"><span class="cti"><i class="fas fa-file-lines"></i> Descargar Boletín PDF</span></div>
       <div class="al aly" style="font-size:13px">
-        📭 No hay notas registradas todavía. El boletín estará disponible cuando el profesor ingrese tus calificaciones.
+        <i class="fas fa-envelope-open"></i> No hay notas registradas todavía. El boletín estará disponible cuando el profesor ingrese tus calificaciones.
       </div>
     </div>`;
   }
@@ -14739,18 +14739,18 @@ function mkBoletinUI(estId,ctx){
     });
     const wrap=gi('perWrap_'+uid);if(!wrap)return;
     if(!persSel.length){
-      wrap.innerHTML=`<span style="font-size:13px;color:var(--sl3)">📭 No hay notas registradas para ${annoSel}.</span>`;
+      wrap.innerHTML=`<span style="font-size:13px;color:var(--sl3)"><i class="fas fa-envelope-open"></i> No hay notas registradas para ${annoSel}.</span>`;
       return;
     }
     const tBtn=persSel.length>1
-      ?`<button class="btn bb" onclick="dlBoletin('${estId}','TODOS',gi('yr_${uid}').value)">📋 Todos los Periodos</button>
+      ?`<button class="btn bb" onclick="dlBoletin('${estId}','TODOS',gi('yr_${uid}').value)"><i class="fas fa-clipboard-list"></i> Todos los Periodos</button>
          <span style="font-size:12px;color:var(--sl3);font-weight:600">— o por periodo —</span>`:'';
-    const pBtns=persSel.map(p=>`<button class="btn bg sm" onclick="dlBoletin('${estId}','${encodeURIComponent(p)}',gi('yr_${uid}').value)">📄 ${p}</button>`).join('');
+    const pBtns=persSel.map(p=>`<button class="btn bg sm" onclick="dlBoletin('${estId}','${encodeURIComponent(p)}',gi('yr_${uid}').value)"><i class="fas fa-file-lines"></i> ${p}</button>`).join('');
     wrap.innerHTML=tBtn+pBtns;
   };
 
   return`<div class="card" style="border:2px solid var(--bl3)">
-    <div class="chd"><span class="cti">📄 Descargar Boletín PDF</span></div>
+    <div class="chd"><span class="cti"><i class="fas fa-file-lines"></i> Descargar Boletín PDF</span></div>
     <div class="al alb" style="margin-bottom:14px">
       <div><strong>Todos los periodos:</strong> muestra definitivas resumidas.
       <strong>Por periodo:</strong> incluye desglose tripartita (Apt / Act / Res).
@@ -14768,9 +14768,9 @@ function mkBoletinUI(estId,ctx){
     <div id="perWrap_${uid}" style="display:flex;flex-wrap:wrap;gap:10px;align-items:center">
       ${(()=>{
         const tBtn=persConDatos.length>1
-          ?`<button class="btn bb" onclick="dlBoletin('${estId}','TODOS',gi('yr_${uid}').value)">📋 Todos los Periodos</button>
+          ?`<button class="btn bb" onclick="dlBoletin('${estId}','TODOS',gi('yr_${uid}').value)"><i class="fas fa-clipboard-list"></i> Todos los Periodos</button>
              <span style="font-size:12px;color:var(--sl3);font-weight:600">— o por periodo —</span>`:'';
-        const pBtns=persConDatos.map(p=>`<button class="btn bg sm" onclick="dlBoletin('${estId}','${encodeURIComponent(p)}',gi('yr_${uid}').value)">📄 ${p}</button>`).join('');
+        const pBtns=persConDatos.map(p=>`<button class="btn bg sm" onclick="dlBoletin('${estId}','${encodeURIComponent(p)}',gi('yr_${uid}').value)"><i class="fas fa-file-lines"></i> ${p}</button>`).join('');
         return tBtn+pBtns;
       })()}
     </div>
@@ -15330,7 +15330,7 @@ function dlBoletin(estId,perFilter,anno,snapData){
         }).join('');
         // Fila de área (cabecera de sección)
         bodyHTML += `<tr style="background:#e0e0e0">
-          <td style="padding:5px 8px;border:1px solid #bbb;font-weight:800;font-size:12px;color:#111">▸ ${areaNombre}</td>
+          <td style="padding:5px 8px;border:1px solid #bbb;font-weight:800;font-size:12px;color:#111"><i class="fas fa-caret-right"></i> ${areaNombre}</td>
           ${perCellsArea}
           <td style="padding:5px 7px;border:1px solid #bbb;text-align:center;font-weight:900;font-size:13px;color:${bCol(promArea)}">${promArea===0?'—':fmt(promArea)}</td>
           <td style="padding:5px 7px;border:1px solid #bbb;text-align:center;font-size:11px;font-weight:700;color:${bCol(promArea)}">${promArea===0?'—':bDes(promArea)}</td>
@@ -15377,7 +15377,7 @@ function dlBoletin(estId,perFilter,anno,snapData){
           const defsArea=matsArea.map(m=>def(notas[per]?.[m]||{a:0,c:0,r:0})).filter(d=>d>0);
           const dp=defsArea.length?+(defsArea.reduce((s,v)=>s+v,0)/defsArea.length).toFixed(2):0;
           tableBody+=`<tr style="background:#e0e0e0">
-            <td style="padding:5px 8px;border:1px solid #bbb;font-weight:800;font-size:12px" colspan="5">▸ ${areaNombre}</td>
+            <td style="padding:5px 8px;border:1px solid #bbb;font-weight:800;font-size:12px" colspan="5"><i class="fas fa-caret-right"></i> ${areaNombre}</td>
             <td style="padding:5px 7px;border:1px solid #bbb;text-align:center;font-weight:900;font-size:13px;color:${bCol(dp)}">${dp===0?'—':fmt(dp)}</td>
             <td style="padding:5px 7px;border:1px solid #bbb;text-align:center;font-size:10px;font-weight:700;color:${dp===0?'#aaa':bCol(dp)}">${dp===0?'—':bDes(dp)}</td>
           </tr>`;
@@ -15438,11 +15438,11 @@ function dlBoletin(estId,perFilter,anno,snapData){
     if(verd){
       if(verd.completo){
         // Resultado definitivo
-        const ic = verd.resultado==='gana'?'✓':verd.resultado==='recupera'?'⚠':'✗';
+        const ic = verd.resultado==='gana'?'<i class="fas fa-check"></i>':verd.resultado==='recupera'?'<i class="fas fa-triangle-exclamation"></i>':'<i class="fas fa-xmark"></i>';
         let resumenHTML = '';
         if(verd.tieneAreas && verd.resAreas){
           resumenHTML = verd.resAreas.map(a=>`<tr>
-            <td style="padding:5px 8px;border:1px solid #ddd;font-size:12px;font-weight:700">${a.gana?'✓':'✗'} ${a.areaNombre}</td>
+            <td style="padding:5px 8px;border:1px solid #ddd;font-size:12px;font-weight:700">${a.gana?'<i class="fas fa-check"></i>':'<i class="fas fa-xmark"></i>'} ${a.areaNombre}</td>
             <td style="padding:5px 7px;border:1px solid #ddd;text-align:center;font-size:13px;font-weight:800;color:${bCol(a.prom)}">${a.prom.toFixed(2)}</td>
             <td style="padding:5px 7px;border:1px solid #ddd;font-size:11px;font-weight:700;color:${bCol(a.prom)}">${a.gana?'Aprobada':'Perdida'}</td>
           </tr>`).join('');
@@ -15450,7 +15450,7 @@ function dlBoletin(estId,perFilter,anno,snapData){
           resumenHTML = `<table style="width:100%;border-collapse:collapse;font-size:11px;margin-top:8px"><tbody>${cabeza}${resumenHTML}</tbody></table>`;
         } else {
           resumenHTML = verd.resMateria.map(x=>`<tr>
-            <td style="padding:5px 8px;border:1px solid #ddd;font-size:12px;font-weight:700">${x.gana?'✓':'✗'} ${x.mat}</td>
+            <td style="padding:5px 8px;border:1px solid #ddd;font-size:12px;font-weight:700">${x.gana?'<i class="fas fa-check"></i>':'<i class="fas fa-xmark"></i>'} ${x.mat}</td>
             <td style="padding:5px 7px;border:1px solid #ddd;text-align:center;font-size:13px;font-weight:800;color:${bCol(x.prom)}">${x.prom.toFixed(2)}</td>
             <td style="padding:5px 7px;border:1px solid #ddd;font-size:11px;font-weight:700;color:${bCol(x.prom)}">${x.gana?'Aprobada':'Perdida'}</td>
           </tr>`).join('');
@@ -15462,7 +15462,7 @@ function dlBoletin(estId,perFilter,anno,snapData){
           : 'Aprobado ≥ 3.0 · Recuperación: 1–2 materias perdidas · Pierde año: 3+ materias perdidas';
         veredictoHTML = `<div style="border:1.5px solid #333;margin-top:16px;page-break-inside:avoid">
           <div style="background:#111;color:#fff;padding:10px 14px">
-            <div style="font-size:14px;font-weight:800">${ic} ${verd.mensaje.replace(/[🎉⚠️❌]/g,'').trim()}</div>
+            <div style="font-size:14px;font-weight:800">${ic} ${verd.mensaje.replace(/[<i class="fas fa-champagne-glasses"></i><i class="fas fa-triangle-exclamation"></i><i class="fas fa-circle-xmark"></i>]/g,'').trim()}</div>
             ${verd.resultado==='recupera'?'<div style="font-size:11px;margin-top:3px;opacity:.85">Tiene derecho a recuperación al finalizar el año por las áreas/materias perdidas.</div>':''}
             ${verd.resultado==='pierde'?'<div style="font-size:11px;margin-top:3px;opacity:.85">Perdió 3 o más áreas. Debe repetir el año escolar.</div>':''}
             ${verd.resultado==='gana'?'<div style="font-size:11px;margin-top:3px;opacity:.85">Felicitaciones. Aprobó todas las áreas del año lectivo.</div>':''}
@@ -15622,7 +15622,7 @@ function icfesGenerar(asig){
 
 // ─── pgEIcfes — página principal del simulacro ────────────────────────────
 function pgEIcfes(){
-  return `<div id="icfesRoot"><div class="ph"><h2>🎯 Simulacro ICFES</h2>
+  return `<div id="icfesRoot"><div class="ph"><h2><i class="fas fa-bullseye"></i> Simulacro ICFES</h2>
     <p style="font-size:13px;color:var(--sl2)">Practica con preguntas reales de las pruebas ICFES colombianas 2023-2025.</p>
   </div><div id="icfesContent"></div></div>`;
 }
@@ -15652,19 +15652,19 @@ function icfesRenderMenu(el, state){
     const progreso = state?.progreso?.[a];
     let badge = '';
     if(completada){
-      badge = `<span class="bdg bgr" style="font-size:11px">✅ ${res.correctas}/20</span>`;
+      badge = `<span class="bdg bgr" style="font-size:11px"><i class="fas fa-circle-check"></i> ${res.correctas}/20</span>`;
     } else if(enCurso && progreso){
-      badge = `<span class="bdg bor" style="font-size:11px">▶ En curso (${progreso.actual+1}/20)</span>`;
+      badge = `<span class="bdg bor" style="font-size:11px"><i class="fas fa-circle-play"></i> En curso (${progreso.actual+1}/20)</span>`;
     } else if(progreso && !completada){
-      badge = `<span class="bdg bor" style="font-size:11px">⏸ Pausado (${progreso.actual+1}/20)</span>`;
+      badge = `<span class="bdg bor" style="font-size:11px"><i class="fas fa-circle-pause"></i> Pausado (${progreso.actual+1}/20)</span>`;
     }
     const bg = completada ? '#f0fff4' : enCurso ? '#fffbeb' : 'var(--bg2)';
     const border = completada ? '#68d391' : enCurso ? '#f6ad55' : 'var(--bd)';
-    const iconos = {'Lectura Crítica':'📖','Matemáticas':'🔢','Sociales y Ciudadanas':'🌎','Ciencias Naturales':'🔬','Inglés':'🇬🇧'};
+    const iconos = {'Lectura Crítica':'<i class="fas fa-book-open"></i>','Matemáticas':'<i class="fas fa-hashtag"></i>','Sociales y Ciudadanas':'<i class="fas fa-earth-americas"></i>','Ciencias Naturales':'<i class="fas fa-microscope"></i>','Inglés':'<i class="fas fa-language"></i>'};
     return `<div onclick="icfesIniciarAsig('${encodeURIComponent(a)}')"
       style="cursor:pointer;border:2px solid ${border};border-radius:12px;padding:16px;background:${bg};transition:box-shadow .2s"
       onmouseover="this.style.boxShadow='0 4px 16px rgba(0,0,0,.12)'" onmouseout="this.style.boxShadow='none'">
-      <div style="font-size:24px;margin-bottom:6px">${iconos[a]||'📝'}</div>
+      <div style="font-size:24px;margin-bottom:6px">${iconos[a]||'<i class="fas fa-pen-to-square"></i>'}</div>
       <div style="font-weight:800;font-size:14px;margin-bottom:4px">${a}</div>
       <div style="font-size:11px;color:var(--sl2);margin-bottom:8px">20 preguntas</div>
       ${badge}
@@ -15681,10 +15681,10 @@ function icfesRenderMenu(el, state){
     const pct = Math.round((totalCorrectas/totalPreguntas)*100);
     const color = pct>=70?'#276749':pct>=50?'#c05621':'#c53030';
     resultadoFinalHtml = `<div style="background:#f0f4ff;border:2px solid #667eea;border-radius:12px;padding:20px;margin-bottom:20px;text-align:center">
-      <div style="font-size:28px;margin-bottom:8px">🏆</div>
+      <div style="font-size:28px;margin-bottom:8px"><i class="fas fa-trophy"></i></div>
       <div style="font-size:18px;font-weight:900;color:${color};margin-bottom:4px">${totalCorrectas} / ${totalPreguntas} correctas</div>
       <div style="font-size:14px;color:var(--sl2)">${pct}% de respuestas correctas en todas las asignaturas</div>
-      <button class="btn brd" style="margin-top:14px;font-size:13px" onclick="icfesReiniciarTodo()">🔄 Reiniciar simulacro</button>
+      <button class="btn brd" style="margin-top:14px;font-size:13px" onclick="icfesReiniciarTodo()"><i class="fas fa-arrows-rotate"></i> Reiniciar simulacro</button>
     </div>`;
   }
 
@@ -15692,7 +15692,7 @@ function icfesRenderMenu(el, state){
     <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:14px;margin-bottom:20px">
       ${cards}
     </div>
-    ${state && !todasCompletas ? `<button class="btn bs" style="font-size:12px" onclick="icfesReiniciarTodo()">🗑 Reiniciar todo el progreso</button>` : ''}`;
+    ${state && !todasCompletas ? `<button class="btn bs" style="font-size:12px" onclick="icfesReiniciarTodo()"><i class="fas fa-trash"></i> Reiniciar todo el progreso</button>` : ''}`;
 }
 
 // ─── Iniciar o continuar una asignatura ────────────────────────────────────
@@ -15706,7 +15706,7 @@ function icfesIniciarAsig(asigEnc){
     Swal.fire({
       title:`Resultado: ${asig}`,
       html:`<div style="font-size:28px;font-weight:900;color:#276749">${res.correctas}/20</div>
-        <div style="font-size:14px;margin-top:6px;color:#555">${res.correctas>=15?'🏆 Excelente':res.correctas>=10?'👍 Bien':' Puedes mejorar'}</div>`,
+        <div style="font-size:14px;margin-top:6px;color:#555">${res.correctas>=15?'<i class="fas fa-trophy"></i> Excelente':res.correctas>=10?'<i class="fas fa-thumbs-up"></i> Bien':' Puedes mejorar'}</div>`,
       icon: res.correctas>=15?'success':res.correctas>=10?'info':'warning',
       confirmButtonText:'Ver simulacro',
       showCancelButton:true, cancelButtonText:'Cerrar'
@@ -15771,7 +15771,7 @@ function icfesRenderPregunta(asig){
     </div>
     <button onclick="icfesSalirAsig('${encodeURIComponent(asig)}')"
       style="font-size:12px;color:var(--sl3);background:none;border:1px dashed var(--bd);border-radius:8px;padding:8px 14px;cursor:pointer">
-      ⏸ Pausar y salir (el progreso se guarda)
+      <i class="fas fa-circle-pause"></i> Pausar y salir (el progreso se guarda)
     </button>`;
 }
 
@@ -15841,21 +15841,21 @@ function icfesFinalizarAsig(asig){
     const pendiente = asigs.find(a => !state.resultados?.[a]?.finalizado);
     if(pendiente){
       siguienteHtml = `<button class="btn bn" style="margin-top:10px" onclick="icfesIniciarAsig('${encodeURIComponent(pendiente)}')">
-        ➡️ Continuar con: ${pendiente}</button>`;
+        <i class="fas fa-arrow-right"></i> Continuar con: ${pendiente}</button>`;
     }
   }
 
   el.innerHTML = `<div class="card" style="text-align:center;padding:28px 20px">
-    <div style="font-size:40px;margin-bottom:12px">${correctas>=15?'🏆':correctas>=10?'👍':'📚'}</div>
+    <div style="font-size:40px;margin-bottom:12px">${correctas>=15?'<i class="fas fa-trophy"></i>':correctas>=10?'<i class="fas fa-thumbs-up"></i>':'<i class="fas fa-book"></i>'}</div>
     <div style="font-size:28px;font-weight:900;color:${color};margin-bottom:6px">${correctas} / 20</div>
     <div style="font-size:15px;color:var(--sl2);margin-bottom:4px"><strong>${asig}</strong></div>
     <div style="font-size:13px;color:var(--sl3);margin-bottom:16px">${correctas>=15?'¡Excelente resultado!':correctas>=10?'Buen resultado, sigue practicando':'Sigue estudiando, tú puedes lograrlo'}</div>
     ${todasCompletas?`<div style="background:#f0f4ff;border-radius:10px;padding:14px;margin-bottom:16px">
-      <div style="font-size:15px;font-weight:800">🎓 Simulacro completo: ${totalCorrectas}/${asigs.length*20} total</div>
+      <div style="font-size:15px;font-weight:800"><i class="fas fa-graduation-cap"></i> Simulacro completo: ${totalCorrectas}/${asigs.length*20} total</div>
     </div>`:''}
     <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap">
-      <button class="btn bs" onclick="icfesIniciarAsig('${encodeURIComponent(asig)}')">🔄 Repetir ${asig}</button>
-      <button class="btn bg" onclick="icfesSalirAsig('${encodeURIComponent(asig)}')">📋 Ver resumen</button>
+      <button class="btn bs" onclick="icfesIniciarAsig('${encodeURIComponent(asig)}')"><i class="fas fa-arrows-rotate"></i> Repetir ${asig}</button>
+      <button class="btn bg" onclick="icfesSalirAsig('${encodeURIComponent(asig)}')"><i class="fas fa-clipboard-list"></i> Ver resumen</button>
       ${siguienteHtml}
     </div>
   </div>`;
@@ -15882,17 +15882,17 @@ function icfesReiniciarTodo(){
 ════════════════════════════════════════════════════════════ */
 function pgECuen(){
   return`<div style="margin-bottom:20px">
-    <h2 style="margin:0;font-size:20px">💳 Mi Cuenta</h2>
+    <h2 style="margin:0;font-size:20px"><i class="fas fa-credit-card"></i> Mi Cuenta</h2>
     <p style="margin:4px 0 0;font-size:13px;color:var(--sl2)">Consulta el estado de tus cobros y pagos pendientes.</p>
   </div>
-  <div id="ecuenW"><div class="mty"><div class="ei">💳</div><p>Cargando tu estado de cuenta…</p></div></div>`;
+  <div id="ecuenW"><div class="mty"><div class="ei"><i class="fas fa-credit-card"></i></div><p>Cargando tu estado de cuenta…</p></div></div>`;
 }
 /* ═══════════════════════════════════════════════════════════
    SUPERADMIN — MÓDULO FINANCIERO
 ════════════════════════════════════════════════════════════ */
 function pgSAFin(){
   return`<div style="margin-bottom:20px">
-    <h2 style="margin:0;font-size:20px">💰 Módulo Financiero</h2>
+    <h2 style="margin:0;font-size:20px"><i class="fas fa-sack-dollar"></i> Módulo Financiero</h2>
     <p style="margin:5px 0 0;font-size:13px;color:var(--sl2)">Gestiona los usuarios financieros (finAdmin / finUser) de cada colegio.</p>
   </div>
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
@@ -15900,7 +15900,7 @@ function pgSAFin(){
     <!-- Crear usuario financiero -->
     <div class="card" style="padding:0;overflow:hidden">
       <div style="padding:14px 20px;background:var(--bg2);border-bottom:1px solid var(--bd)">
-        <span style="font-weight:800;font-size:14px;color:var(--nv)">➕ Nuevo Usuario Financiero</span>
+        <span style="font-weight:800;font-size:14px;color:var(--nv)"><i class="fas fa-plus"></i> Nuevo Usuario Financiero</span>
       </div>
       <div style="padding:18px;display:flex;flex-direction:column;gap:13px">
         <div>
@@ -15918,8 +15918,8 @@ function pgSAFin(){
           <div>
             <label style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--sl);display:block;margin-bottom:5px">Rol *</label>
             <select id="safinRol" style="width:100%;padding:9px 12px;font-size:13px;border:1.5px solid var(--bd);border-radius:8px;background:var(--bg2);color:var(--tx);outline:none">
-              <option value="finAdmin">💼 finAdmin — Gestión completa</option>
-              <option value="finUser">👁️ finUser — Solo lectura / caja</option>
+              <option value="finAdmin"><i class="fas fa-briefcase"></i> finAdmin — Gestión completa</option>
+              <option value="finUser"><i class="fas fa-eye"></i> finUser — Solo lectura / caja</option>
             </select>
           </div>
         </div>
@@ -15937,7 +15937,7 @@ function pgSAFin(){
         </div>
         <button onclick="saFinCrearUsuario()"
           style="padding:11px;font-size:14px;font-weight:700;background:var(--nv);color:#fff;border:none;border-radius:9px;cursor:pointer;width:100%">
-          💾 Crear Usuario Financiero
+          <i class="fas fa-floppy-disk"></i> Crear Usuario Financiero
         </button>
       </div>
     </div>
@@ -15945,18 +15945,18 @@ function pgSAFin(){
     <!-- Lista de usuarios financieros -->
     <div class="card" style="padding:0;overflow:hidden">
       <div style="padding:14px 20px;background:var(--bg2);border-bottom:1px solid var(--bd);display:flex;align-items:center;justify-content:space-between">
-        <span style="font-weight:800;font-size:14px;color:var(--nv)">👥 Usuarios Financieros</span>
-        <button onclick="saFinLoadUsuarios()" style="background:none;border:none;cursor:pointer;font-size:16px;color:var(--sl3)">🔄</button>
+        <span style="font-weight:800;font-size:14px;color:var(--nv)"><i class="fas fa-users"></i> Usuarios Financieros</span>
+        <button onclick="saFinLoadUsuarios()" style="background:none;border:none;cursor:pointer;font-size:16px;color:var(--sl3)"><i class="fas fa-arrows-rotate"></i></button>
       </div>
       <div style="padding:10px 14px;border-bottom:1px solid var(--bd)">
         <div style="display:flex;align-items:center;gap:8px;background:var(--bg2);border:1.5px solid var(--bd);border-radius:8px;padding:8px 12px">
-          <span style="color:var(--sl3)">🔍</span>
+          <span style="color:var(--sl3)"><i class="fas fa-magnifying-glass"></i></span>
           <input id="safinQ" placeholder="Buscar por nombre o colegio…" oninput="saFinFiltrar()"
             style="border:none;background:transparent;font-size:13px;outline:none;color:var(--tx);flex:1">
         </div>
       </div>
       <div id="safinListW" style="padding:10px;max-height:520px;overflow-y:auto">
-        <div class="mty"><div class="ei">💰</div><p>Cargando...</p></div>
+        <div class="mty"><div class="ei"><i class="fas fa-sack-dollar"></i></div><p>Cargando...</p></div>
       </div>
     </div>
   </div>`;
@@ -15977,7 +15977,7 @@ async function initSAFin(){
 
 async function saFinLoadUsuarios(){
   const el = gi('safinListW'); if(!el) return;
-  el.innerHTML='<div style="text-align:center;padding:20px;font-size:12px;color:var(--sl3)">⏳ Cargando...</div>';
+  el.innerHTML='<div style="text-align:center;padding:20px;font-size:12px;color:var(--sl3)"><i class="fas fa-hourglass-half"></i> Cargando...</div>';
   try{
     const data = await saApiFetch('/api/fin/superadmin/usuarios');
     window._saFinUsuarios = Array.isArray(data) ? data : [];
@@ -15991,32 +15991,32 @@ function saFinFiltrar(){
   let lista = window._saFinUsuarios||[];
   if(q) lista = lista.filter(u=>(u.nombre+u.usuario+u.colegioNombre).toLowerCase().includes(q));
   if(!lista.length){
-    el.innerHTML='<div class="mty" style="padding:20px"><div class="ei" style="font-size:28px">😶</div><p style="font-size:12px">Sin usuarios financieros</p></div>';
+    el.innerHTML='<div class="mty" style="padding:20px"><div class="ei" style="font-size:28px"><i class="fas fa-face-meh"></i></div><p style="font-size:12px">Sin usuarios financieros</p></div>';
     return;
   }
   const rolBadge = r => r==='finAdmin'
-    ?'<span class="bdg" style="font-size:10px;background:#ede9fe;color:#5b21b6;border:1px solid #c4b5fd">💼 finAdmin</span>'
-    :'<span class="bdg bgy" style="font-size:10px">👁️ finUser</span>';
+    ?'<span class="bdg" style="font-size:10px;background:#ede9fe;color:#5b21b6;border:1px solid #c4b5fd"><i class="fas fa-briefcase"></i> finAdmin</span>'
+    :'<span class="bdg bgy" style="font-size:10px"><i class="fas fa-eye"></i> finUser</span>';
   el.innerHTML = lista.map(u=>`
     <div style="display:flex;align-items:center;gap:10px;padding:10px 8px;border-radius:9px;
       border:1.5px solid var(--bd);background:var(--bg2);margin-bottom:8px">
       <div style="flex:1;min-width:0">
         <div style="font-weight:700;font-size:13px;display:flex;align-items:center;gap:7px;flex-wrap:wrap">
-          💰 ${esc(u.nombre)} ${rolBadge(u.role)}
-          ${u.blocked?'<span class="bdg bred" style="font-size:10px">🔒 Bloqueado</span>':''}
+          <i class="fas fa-sack-dollar"></i> ${esc(u.nombre)} ${rolBadge(u.role)}
+          ${u.blocked?'<span class="bdg bred" style="font-size:10px"><i class="fas fa-lock"></i> Bloqueado</span>':''}
         </div>
         <div style="font-size:11px;color:var(--sl3);margin-top:2px">${esc(u.usuario)} · ${esc(u.colegioNombre||u.colegioId)}</div>
       </div>
       <div style="display:flex;gap:6px;flex-shrink:0">
         <button onclick="saFinEditUsuario('${u.id}')"
-          style="padding:5px 10px;font-size:11px;font-weight:600;background:#e0e7ff;color:#3730a3;border:1.5px solid #a5b4fc;border-radius:7px;cursor:pointer">✏️</button>
+          style="padding:5px 10px;font-size:11px;font-weight:600;background:#e0e7ff;color:#3730a3;border:1.5px solid #a5b4fc;border-radius:7px;cursor:pointer"><i class="fas fa-pen"></i></button>
         <button onclick="saFinToggleBlocked('${u.id}',${!u.blocked},'${esc(u.nombre)}')"
           style="padding:5px 10px;font-size:11px;font-weight:600;border-radius:7px;cursor:pointer;border:1.5px solid;
             ${u.blocked?'background:#dcfce7;color:#166534;border-color:#86efac':'background:#fff5f5;color:#b91c1c;border-color:#fca5a5'}">
-          ${u.blocked?'🔓':'🔒'}
+          ${u.blocked?'<i class="fas fa-lock-open"></i>':'<i class="fas fa-lock"></i>'}
         </button>
         <button onclick="saFinEliminar('${u.id}','${esc(u.nombre)}')"
-          style="padding:5px 10px;font-size:11px;font-weight:600;background:#fff5f5;color:#b91c1c;border:1.5px solid #fca5a5;border-radius:7px;cursor:pointer">🗑</button>
+          style="padding:5px 10px;font-size:11px;font-weight:600;background:#fff5f5;color:#b91c1c;border:1.5px solid #fca5a5;border-radius:7px;cursor:pointer"><i class="fas fa-trash"></i></button>
       </div>
     </div>`).join('');
 }
@@ -16063,7 +16063,7 @@ async function saFinToggleBlocked(uid, block, nombre){
 async function saFinEditUsuario(uid){
   const u = window._saFinUsuarios.find(x=>x.id===uid); if(!u) return;
   const r = await Swal.fire({
-    title:`✏️ Editar — ${u.nombre}`,width:440,
+    title:`<i class="fas fa-pen"></i> Editar — ${u.nombre}`,width:440,
     html:`<div style="text-align:left;font-family:var(--fn);display:flex;flex-direction:column;gap:11px">
       <div>
         <label style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--sl);display:block;margin-bottom:4px">Nombre</label>
@@ -16072,8 +16072,8 @@ async function saFinEditUsuario(uid){
       <div>
         <label style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--sl);display:block;margin-bottom:4px">Rol</label>
         <select id="sefr" style="width:100%;padding:9px 12px;font-size:13px;border:1.5px solid var(--bd);border-radius:8px;background:var(--bg2);color:var(--tx);outline:none">
-          <option value="finAdmin" ${u.role==='finAdmin'?'selected':''}>💼 finAdmin — Gestión completa</option>
-          <option value="finUser"  ${u.role==='finUser' ?'selected':''}>👁️ finUser — Solo lectura / caja</option>
+          <option value="finAdmin" ${u.role==='finAdmin'?'selected':''}><i class="fas fa-briefcase"></i> finAdmin — Gestión completa</option>
+          <option value="finUser"  ${u.role==='finUser' ?'selected':''}><i class="fas fa-eye"></i> finUser — Solo lectura / caja</option>
         </select>
       </div>
       <div>
@@ -16117,13 +16117,13 @@ async function saFinEliminar(uid, nombre){
 /* ── pgSACom ── */
 function pgSACom() {
   return `<div style="margin-bottom:20px">
-    <h2 style="margin:0;font-size:20px">📢 Comunicados Globales</h2>
+    <h2 style="margin:0;font-size:20px"><i class="fas fa-bullhorn"></i> Comunicados Globales</h2>
     <p style="margin:5px 0 0;font-size:13px;color:var(--sl2)">Publica mensajes para todos los colegios, para grupos específicos o para una persona en particular.</p>
   </div>
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
     <div class="card" style="padding:0;overflow:hidden">
       <div style="padding:14px 20px;background:var(--bg2);border-bottom:1px solid var(--bd)">
-        <span style="font-weight:800;font-size:14px;color:var(--nv)">➕ Nuevo Comunicado</span>
+        <span style="font-weight:800;font-size:14px;color:var(--nv)"><i class="fas fa-plus"></i> Nuevo Comunicado</span>
       </div>
       <div style="padding:18px;display:flex;flex-direction:column;gap:14px">
         <div>
@@ -16140,11 +16140,11 @@ function pgSACom() {
           <div>
             <label style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--sl);display:block;margin-bottom:5px">Color / Tipo</label>
             <select id="sacomColor" style="width:100%;padding:9px 12px;border:1.5px solid var(--bd);border-radius:8px;font-size:13px;background:var(--bg2);color:var(--tx);outline:none">
-              <option value="azul">🔵 Azul — Informativo</option>
-              <option value="verde">🟢 Verde — Positivo</option>
-              <option value="naranja">🟠 Naranja — Precaución</option>
-              <option value="rojo">🔴 Rojo — Urgente</option>
-              <option value="morado">🟣 Morado — Especial</option>
+              <option value="azul"><i class="fas fa-circle"></i> Azul — Informativo</option>
+              <option value="verde"><i class="fas fa-circle"></i> Verde — Positivo</option>
+              <option value="naranja"><i class="fas fa-circle"></i> Naranja — Precaución</option>
+              <option value="rojo"><i class="fas fa-circle"></i> Rojo — Urgente</option>
+              <option value="morado"><i class="fas fa-circle"></i> Morado — Especial</option>
             </select>
           </div>
           <div>
@@ -16160,11 +16160,11 @@ function pgSACom() {
         <!-- Destinatario -->
         <div style="border:1.5px solid var(--bd);border-radius:10px;overflow:hidden">
           <div style="padding:10px 14px;background:var(--bg2);border-bottom:1px solid var(--bd)">
-            <span style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--sl)">🎯 Destinatario</span>
+            <span style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--sl)"><i class="fas fa-bullseye"></i> Destinatario</span>
           </div>
           <div style="padding:12px 14px;display:flex;flex-direction:column;gap:10px">
             <div style="display:flex;gap:8px;flex-wrap:wrap">
-              ${[['grupo','👥 Grupo / Rol'],['persona','👤 Persona específica']].map(([v,l])=>`
+              ${[['grupo','<i class="fas fa-users"></i> Grupo / Rol'],['persona','<i class="fas fa-user"></i> Persona específica']].map(([v,l])=>`
                 <label style="display:flex;align-items:center;gap:6px;padding:7px 13px;background:var(--bg2);border:1.5px solid var(--bd);border-radius:8px;cursor:pointer;font-size:13px;font-weight:600">
                   <input type="radio" name="sacomTipo" value="${v}" ${v==='grupo'?'checked':''} onchange="sacomTipoChange()"> ${l}
                 </label>`).join('')}
@@ -16175,10 +16175,10 @@ function pgSACom() {
               <div>
                 <label style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--sl);display:block;margin-bottom:5px">Dirigido a</label>
                 <select id="sacomPara" style="width:100%;padding:9px 12px;border:1.5px solid var(--bd);border-radius:8px;font-size:13px;background:var(--bg2);color:var(--tx);outline:none">
-                  <option value="todos">👥 Todos (admins, profes y estudiantes)</option>
-                  <option value="admin">🏫 Solo Administradores</option>
-                  <option value="profe">👩‍🏫 Solo Profesores</option>
-                  <option value="est">🎓 Solo Estudiantes</option>
+                  <option value="todos"><i class="fas fa-users"></i> Todos (admins, profes y estudiantes)</option>
+                  <option value="admin"><i class="fas fa-school"></i> Solo Administradores</option>
+                  <option value="profe"><i class="fas fa-chalkboard-user"></i> Solo Profesores</option>
+                  <option value="est"><i class="fas fa-graduation-cap"></i> Solo Estudiantes</option>
                 </select>
               </div>
               <div>
@@ -16204,14 +16204,14 @@ function pgSACom() {
                   <label style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--sl);display:block;margin-bottom:5px">Rol</label>
                   <select id="sacomPRol" onchange="sacomBuscarPersonas()"
                     style="width:100%;padding:9px 12px;border:1.5px solid var(--bd);border-radius:8px;font-size:13px;background:var(--bg2);color:var(--tx);outline:none">
-                    <option value="admin">🏫 Admin</option>
-                    <option value="profe">👩‍🏫 Profesor</option>
-                    <option value="est">🎓 Estudiante</option>
+                    <option value="admin"><i class="fas fa-school"></i> Admin</option>
+                    <option value="profe"><i class="fas fa-chalkboard-user"></i> Profesor</option>
+                    <option value="est"><i class="fas fa-graduation-cap"></i> Estudiante</option>
                   </select>
                 </div>
               </div>
               <div style="display:flex;align-items:center;gap:8px;background:var(--bg2);border:1.5px solid var(--bd);border-radius:8px;padding:8px 12px">
-                <span style="color:var(--sl3)">🔍</span>
+                <span style="color:var(--sl3)"><i class="fas fa-magnifying-glass"></i></span>
                 <input id="sacomPQ" placeholder="Buscar por nombre…" oninput="sacomFiltrarPersonas()"
                   style="border:none;background:transparent;font-size:13px;outline:none;color:var(--tx);flex:1">
               </div>
@@ -16219,7 +16219,7 @@ function pgSACom() {
                 <div style="text-align:center;padding:16px;font-size:12px;color:var(--sl3)">Selecciona colegio y rol</div>
               </div>
               <div id="sacomPersonaSelW" style="display:none;padding:9px 12px;background:#eff6ff;border:1.5px solid #bfdbfe;border-radius:8px;font-size:13px;font-weight:700;color:#1d4ed8">
-                ✅ <span id="sacomPersonaNombre">—</span>
+                <i class="fas fa-circle-check"></i> <span id="sacomPersonaNombre">—</span>
                 <button onclick="sacomDeselectPersona()" style="float:right;background:none;border:none;cursor:pointer;color:#6b7280;font-size:16px;line-height:1">×</button>
               </div>
             </div>
@@ -16228,18 +16228,18 @@ function pgSACom() {
 
         <button onclick="sacomPublicar()"
           style="width:100%;padding:11px;font-size:14px;font-weight:700;background:var(--nv);color:#fff;border:none;border-radius:9px;cursor:pointer">
-          📢 Publicar Comunicado
+          <i class="fas fa-bullhorn"></i> Publicar Comunicado
         </button>
       </div>
     </div>
 
     <div class="card" style="padding:0;overflow:hidden">
       <div style="padding:14px 20px;background:var(--bg2);border-bottom:1px solid var(--bd);display:flex;align-items:center;justify-content:space-between">
-        <span style="font-weight:800;font-size:14px;color:var(--nv)">📋 Comunicados Creados</span>
-        <button onclick="sacomRenderList()" style="background:none;border:none;cursor:pointer;font-size:16px;color:var(--sl3)" title="Actualizar">🔄</button>
+        <span style="font-weight:800;font-size:14px;color:var(--nv)"><i class="fas fa-clipboard-list"></i> Comunicados Creados</span>
+        <button onclick="sacomRenderList()" style="background:none;border:none;cursor:pointer;font-size:16px;color:var(--sl3)" title="Actualizar"><i class="fas fa-arrows-rotate"></i></button>
       </div>
       <div id="sacomListW" style="padding:12px;max-height:700px;overflow-y:auto">
-        <div class="mty"><div class="ei">📢</div><p>Cargando...</p></div>
+        <div class="mty"><div class="ei"><i class="fas fa-bullhorn"></i></div><p>Cargando...</p></div>
       </div>
     </div>
   </div>`;
@@ -16256,7 +16256,7 @@ async function initSACom() {
     if(chkEl && colegios.length) {
       chkEl.innerHTML = `<label style="font-size:12px;font-weight:700;color:var(--nv);width:100%;display:flex;align-items:center;gap:6px">
           <input type="checkbox" id="sacomTodos" checked onchange="sacomToggleTodos(this)">
-          🌐 Todos los colegios (${colegios.length})</label>` +
+          <i class="fas fa-globe"></i> Todos los colegios (${colegios.length})</label>` +
         colegios.map(c=>`<label style="font-size:12px;padding:4px 9px;background:var(--wh);border-radius:6px;border:1px solid var(--bd);cursor:pointer;display:flex;align-items:center;gap:5px">
           <input type="checkbox" class="sacomCh" value="${c.id}" disabled> ${esc(c.nombre)}</label>`).join('');
     }
@@ -16288,7 +16288,7 @@ async function sacomBuscarPersonas(){
   const rol = gi('sacomPRol')?.value||'admin';
   const el = gi('sacomPersonaListW'); if(!el) return;
   if(!cid){ el.innerHTML='<div style="text-align:center;padding:14px;font-size:12px;color:var(--sl3)">Selecciona un colegio</div>'; return; }
-  el.innerHTML='<div style="text-align:center;padding:14px;font-size:12px;color:var(--sl3)">⏳ Cargando...</div>';
+  el.innerHTML='<div style="text-align:center;padding:14px;font-size:12px;color:var(--sl3)"><i class="fas fa-hourglass-half"></i> Cargando...</div>';
   try{
     const data = await saApiFetch(`/api/superadmin/usuarios?colegioId=${cid}&rol=${rol}`);
     window._sacomPersonasTodas = Array.isArray(data) ? data : [];
@@ -16303,14 +16303,14 @@ function sacomFiltrarPersonas(){
     !q||(u.nombre||u.usuario||'').toLowerCase().includes(q)
   );
   if(!lista.length){ el.innerHTML='<div style="text-align:center;padding:14px;font-size:12px;color:var(--sl3)">Sin resultados</div>'; return; }
-  const roleIcon={admin:'🏫',profe:'👩‍🏫',est:'🎓'};
+  const roleIcon={admin:'<i class="fas fa-school"></i>',profe:'<i class="fas fa-chalkboard-user"></i>',est:'<i class="fas fa-graduation-cap"></i>'};
   el.innerHTML=lista.map(u=>`
     <div onclick="sacomSelectPersona('${u.id}','${esc(u.nombre||u.usuario)}','${u.role}')"
       style="padding:8px 10px;border-radius:8px;cursor:pointer;display:flex;align-items:center;gap:9px;
         transition:background .15s;border:1.5px solid transparent"
       onmouseover="this.style.background='var(--bg2)'" onmouseout="this.style.background='transparent'">
       <div style="flex:1">
-        <div style="font-size:13px;font-weight:700">${roleIcon[u.role]||'👤'} ${esc(u.nombre||u.usuario)}</div>
+        <div style="font-size:13px;font-weight:700">${roleIcon[u.role]||'<i class="fas fa-user"></i>'} ${esc(u.nombre||u.usuario)}</div>
         <div style="font-size:11px;color:var(--sl3)">${esc(u.usuario)} · ${u.role}</div>
       </div>
     </div>`).join('');
@@ -16370,8 +16370,8 @@ async function sacomPublicar() {
         colegiosDestino, destinatarioId, destinatarioNombre })
     });
     sw('success', destinatarioId
-      ? `📢 Comunicado enviado a ${destinatarioNombre}`
-      : '📢 Comunicado global publicado');
+      ? `<i class="fas fa-bullhorn"></i> Comunicado enviado a ${destinatarioNombre}`
+      : '<i class="fas fa-bullhorn"></i> Comunicado global publicado');
     gi('sacomTit').value=''; gi('sacomMsg').value='';
     window._sacomPersonasSel=null;
     const selW=gi('sacomPersonaSelW'); if(selW) selW.style.display='none';
@@ -16384,24 +16384,24 @@ async function sacomRenderList() {
   const el = gi('sacomListW'); if(!el) return;
   try {
     const lista = await saApiFetch('/api/superadmin/comunicados');
-    if(!lista.length){ el.innerHTML='<div class="mty"><div class="ei">📢</div><p>Sin comunicados creados</p></div>'; return; }
+    if(!lista.length){ el.innerHTML='<div class="mty"><div class="ei"><i class="fas fa-bullhorn"></i></div><p>Sin comunicados creados</p></div>'; return; }
     const hoy = new Date().toISOString().slice(0,10);
     const colorMap = {
-      azul:{border:'#bee3f8',bg:'#ebf8ff',badge:'#2b6cb0',icon:'🔵'},
-      verde:{border:'#9ae6b4',bg:'#f0fff4',badge:'#276749',icon:'🟢'},
-      naranja:{border:'#fbd38d',bg:'#fffaf0',badge:'#c05621',icon:'🟠'},
-      rojo:{border:'#feb2b2',bg:'#fff5f5',badge:'#c53030',icon:'🔴'},
-      morado:{border:'#d6bcfa',bg:'#faf5ff',badge:'#553c9a',icon:'🟣'},
+      azul:{border:'#bee3f8',bg:'#ebf8ff',badge:'#2b6cb0',icon:'<i class="fas fa-circle"></i>'},
+      verde:{border:'#9ae6b4',bg:'#f0fff4',badge:'#276749',icon:'<i class="fas fa-circle"></i>'},
+      naranja:{border:'#fbd38d',bg:'#fffaf0',badge:'#c05621',icon:'<i class="fas fa-circle"></i>'},
+      rojo:{border:'#feb2b2',bg:'#fff5f5',badge:'#c53030',icon:'<i class="fas fa-circle"></i>'},
+      morado:{border:'#d6bcfa',bg:'#faf5ff',badge:'#553c9a',icon:'<i class="fas fa-circle"></i>'},
     };
     el.innerHTML = lista.map(c=>{
       const cs = colorMap[c.color]||colorMap.azul;
       const vigente = c.activo&&c.fechaInicio<=hoy&&c.fechaFin>=hoy;
       const destLabel = c.destinatarioId
-        ? `👤 ${esc(c.destinatarioNombre||c.destinatarioId)}`
+        ? `<i class="fas fa-user"></i> ${esc(c.destinatarioNombre||c.destinatarioId)}`
         : (!c.colegiosDestino||!c.colegiosDestino.length)
-          ? '🌐 Todos los colegios'
+          ? '<i class="fas fa-globe"></i> Todos los colegios'
           : `${c.colegiosDestino.length} colegio(s) específico(s)`;
-      const paraLabel = {todos:'👥 Todos',admin:'🏫 Admins',profe:'👩‍🏫 Profes',est:'🎓 Estudiantes'}[c.para]||c.para;
+      const paraLabel = {todos:'<i class="fas fa-users"></i> Todos',admin:'<i class="fas fa-school"></i> Admins',profe:'<i class="fas fa-chalkboard-user"></i> Profes',est:'<i class="fas fa-graduation-cap"></i> Estudiantes'}[c.para]||c.para;
       return `<div style="border:1.5px solid ${cs.border};border-radius:10px;background:${cs.bg};padding:14px;margin-bottom:10px">
         <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;flex-wrap:wrap">
           <div style="flex:1">
@@ -16410,15 +16410,15 @@ async function sacomRenderList() {
           </div>
           <div style="display:flex;flex-direction:column;gap:4px;align-items:flex-end;flex-shrink:0">
             <span class="bdg" style="background:${cs.badge};color:#fff;font-size:10px">${paraLabel}</span>
-            <span class="bdg ${vigente?'bgr':'brd'}" style="font-size:10px">${vigente?'✅ Activo':'⭕ Inactivo'}</span>
+            <span class="bdg ${vigente?'bgr':'brd'}" style="font-size:10px">${vigente?'<i class="fas fa-circle-check"></i> Activo':'<i class="fas fa-circle"></i> Inactivo'}</span>
           </div>
         </div>
         <div style="font-size:11px;color:var(--sl3);margin-bottom:8px">
-          📅 ${c.fechaInicio} → ${c.fechaFin} &nbsp;·&nbsp; 🎯 ${destLabel}
+          <i class="fas fa-calendar-days"></i> ${c.fechaInicio} → ${c.fechaFin} &nbsp;·&nbsp; <i class="fas fa-bullseye"></i> ${destLabel}
         </div>
         <div style="display:flex;gap:8px;flex-wrap:wrap">
-          <button class="btn xs ${c.activo?'brd':'bgr'} sm" onclick="sacomToggle('${c.id}',${!c.activo})">${c.activo?'⏸ Desactivar':'▶ Activar'}</button>
-          <button class="btn xs br sm" onclick="sacomBorrar('${c.id}')">🗑️ Eliminar</button>
+          <button class="btn xs ${c.activo?'brd':'bgr'} sm" onclick="sacomToggle('${c.id}',${!c.activo})">${c.activo?'<i class="fas fa-circle-pause"></i> Desactivar':'<i class="fas fa-circle-play"></i> Activar'}</button>
+          <button class="btn xs br sm" onclick="sacomBorrar('${c.id}')"><i class="fas fa-trash"></i> Eliminar</button>
         </div>
       </div>`;
     }).join('');
@@ -16458,8 +16458,8 @@ const FRANJAS_DEFAULT = [
 // ─── pgAHor ───────────────────────────────────────────────────────────────────
 function pgAHor(){
   return`<div class="ph">
-    <h2>🕐 Horarios de Profesores</h2>
-    <p style="font-size:13px;color:var(--sl2)">Asigna el horario semanal a cada profesor. Puedes agregar franjas, descansos y personalizar por docente. 🟢 Primaria · 🔵 Bachillerato</p>
+    <h2><i class="fas fa-clock"></i> Horarios de Profesores</h2>
+    <p style="font-size:13px;color:var(--sl2)">Asigna el horario semanal a cada profesor. Puedes agregar franjas, descansos y personalizar por docente. <i class="fas fa-circle"></i> Primaria · <i class="fas fa-circle"></i> Bachillerato</p>
   </div>
   <div id="ahorContent"></div>`;
 }
@@ -16469,7 +16469,7 @@ function initAHor(){
   const todosProfs = (DB.profs||[]);
 
   if(!todosProfs.length){
-    el.innerHTML = `<div class="card"><div class="mty"><div class="ei">👩‍🏫</div>
+    el.innerHTML = `<div class="card"><div class="mty"><div class="ei"><i class="fas fa-chalkboard-user"></i></div>
       <p>No hay profesores registrados.<br><button class="btn bg" onclick="goto('aprf')">Ir a Profesores</button></p>
     </div></div>`;
     return;
@@ -16485,15 +16485,15 @@ function initAHor(){
           <select id="horProfSel" onchange="renderHorarioGrid()" style="width:100%;padding:10px 12px;border:1.5px solid var(--bd);border-radius:var(--r);font-size:14px;font-weight:600">
             ${todosProfs.map(p => {
               const tiene = !!(horarios[p.id]?.franjas?.length);
-              const cicloLabel = p.ciclo==='primaria'?'🟢':'🔵';
-              return `<option value="${p.id}">${cicloLabel} ${esc(p.nombre)}${tiene?' ✓':''}`;
+              const cicloLabel = p.ciclo==='primaria'?'<i class="fas fa-circle"></i>':'<i class="fas fa-circle"></i>';
+              return `<option value="${p.id}">${cicloLabel} ${esc(p.nombre)}${tiene?' <i class="fas fa-check"></i>':''}`;
             }).join('')}
           </select>
         </div>
         <div style="display:flex;gap:8px;align-items:flex-end;padding-bottom:2px;flex-wrap:wrap">
-          <button class="btn bn" onclick="guardarHorario()" style="padding:10px 20px">💾 Guardar horario</button>
-          <button class="btn bg" onclick="limpiarHorario()" style="padding:10px 14px">🗑 Limpiar</button>
-          <button class="btn bs" onclick="copiarHorarioDesde()" style="padding:10px 14px">📋 Copiar de otro prof</button>
+          <button class="btn bn" onclick="guardarHorario()" style="padding:10px 20px"><i class="fas fa-floppy-disk"></i> Guardar horario</button>
+          <button class="btn bg" onclick="limpiarHorario()" style="padding:10px 14px"><i class="fas fa-trash"></i> Limpiar</button>
+          <button class="btn bs" onclick="copiarHorarioDesde()" style="padding:10px 14px"><i class="fas fa-clipboard-list"></i> Copiar de otro prof</button>
         </div>
       </div>
     </div>
@@ -16534,12 +16534,12 @@ function renderHorarioGrid(){
       return `<tr style="background:#fff8e1">
         <td style="padding:8px 12px;border-bottom:1px solid var(--bd);border-right:2px solid var(--bd2);white-space:nowrap">
           <div style="font-family:var(--mn);font-size:12px;font-weight:700;color:#b7791f">${f.hora}</div>
-          <div style="font-size:10px;color:#b7791f;margin-top:2px">☕ DESCANSO</div>
+          <div style="font-size:10px;color:#b7791f;margin-top:2px"><i class="fas fa-mug-hot"></i> DESCANSO</div>
         </td>
         <td colspan="5" style="text-align:center;padding:8px;border-bottom:1px solid var(--bd)">
-          <span style="font-size:12px;font-weight:700;color:#b7791f;letter-spacing:.05em">☕ DESCANSO</span>
-          <button onclick="editarFranja(${fi})" style="margin-left:12px;background:none;border:1px solid #d69e2e;color:#b7791f;border-radius:6px;padding:3px 8px;font-size:11px;cursor:pointer">✏️ Editar hora</button>
-          <button onclick="eliminarFranja(${fi})" style="margin-left:6px;background:none;border:1px solid #fc8181;color:#e53e3e;border-radius:6px;padding:3px 8px;font-size:11px;cursor:pointer">🗑</button>
+          <span style="font-size:12px;font-weight:700;color:#b7791f;letter-spacing:.05em"><i class="fas fa-mug-hot"></i> DESCANSO</span>
+          <button onclick="editarFranja(${fi})" style="margin-left:12px;background:none;border:1px solid #d69e2e;color:#b7791f;border-radius:6px;padding:3px 8px;font-size:11px;cursor:pointer"><i class="fas fa-pen"></i> Editar hora</button>
+          <button onclick="eliminarFranja(${fi})" style="margin-left:6px;background:none;border:1px solid #fc8181;color:#e53e3e;border-radius:6px;padding:3px 8px;font-size:11px;cursor:pointer"><i class="fas fa-trash"></i></button>
         </td>
       </tr>`;
     }
@@ -16559,8 +16559,8 @@ function renderHorarioGrid(){
       <td style="padding:8px 12px;border-bottom:1px solid var(--bd);border-right:2px solid var(--bd2);white-space:nowrap">
         <div style="font-family:var(--mn);font-size:12px;font-weight:700;color:var(--nv)">${f.hora}</div>
         <div style="display:flex;gap:4px;margin-top:4px">
-          <button onclick="editarFranja(${fi})" style="background:none;border:1px solid var(--bd);color:var(--sl2);border-radius:5px;padding:2px 6px;font-size:10px;cursor:pointer">✏️</button>
-          <button onclick="eliminarFranja(${fi})" style="background:none;border:1px solid #fc8181;color:#e53e3e;border-radius:5px;padding:2px 6px;font-size:10px;cursor:pointer">🗑</button>
+          <button onclick="editarFranja(${fi})" style="background:none;border:1px solid var(--bd);color:var(--sl2);border-radius:5px;padding:2px 6px;font-size:10px;cursor:pointer"><i class="fas fa-pen"></i></button>
+          <button onclick="eliminarFranja(${fi})" style="background:none;border:1px solid #fc8181;color:#e53e3e;border-radius:5px;padding:2px 6px;font-size:10px;cursor:pointer"><i class="fas fa-trash"></i></button>
         </div>
       </td>
       ${celdas}
@@ -16569,9 +16569,9 @@ function renderHorarioGrid(){
 
   wrap.innerHTML = `
     <div style="display:flex;align-items:center;gap:10px;padding:12px 16px;background:var(--bg2);border-bottom:1.5px solid var(--bd);flex-wrap:wrap">
-      <span style="font-size:13px;font-weight:700;color:var(--nv)">👩‍🏫 ${esc(prof.nombre)}</span>
+      <span style="font-size:13px;font-weight:700;color:var(--nv)"><i class="fas fa-chalkboard-user"></i> ${esc(prof.nombre)}</span>
       <span class="bdg ${prof.ciclo==='primaria'?'bbl':'bte'}" style="font-size:11px">${prof.ciclo}</span>
-      ${(prof.salones||[]).map(s => `<span class="bdg bgy" style="font-size:11px">🏫 ${s}</span>`).join('')}
+      ${(prof.salones||[]).map(s => `<span class="bdg bgy" style="font-size:11px"><i class="fas fa-school"></i> ${s}</span>`).join('')}
       <span style="margin-left:auto;font-size:11px;color:var(--sl2)">${salMats.length} combinaciones salón-materia</span>
     </div>
     <div style="overflow-x:auto">
@@ -16586,8 +16586,8 @@ function renderHorarioGrid(){
       </table>
     </div>
     <div style="padding:10px 16px;background:#f0f7ff;border-top:1px solid var(--bl3);display:flex;align-items:center;gap:8px;flex-wrap:wrap">
-      <button class="btn bg sm" onclick="agregarFranja()">➕ Franja de clase</button>
-      <button class="btn sm" style="background:#fff8e1;border:1.5px solid #d69e2e;color:#b7791f" onclick="agregarDescanso()">☕ Agregar descanso</button>
+      <button class="btn bg sm" onclick="agregarFranja()"><i class="fas fa-plus"></i> Franja de clase</button>
+      <button class="btn sm" style="background:#fff8e1;border:1.5px solid #d69e2e;color:#b7791f" onclick="agregarDescanso()"><i class="fas fa-mug-hot"></i> Agregar descanso</button>
       <span style="font-size:11px;color:var(--sl2);margin-left:auto">${franjas.length} franjas · Selecciona salón-materia en cada celda</span>
     </div>`;
 
@@ -16610,7 +16610,7 @@ function renderHorarioGrid(){
 
 function agregarFranja(){
   Swal.fire({
-    title:'➕ Nueva franja horaria',
+    title:'<i class="fas fa-plus"></i> Nueva franja horaria',
     html:`<input id="swalHora" class="swal2-input" placeholder="Ej: 16:15 - 17:10">`,
     focusConfirm:false,
     preConfirm:()=>{ const v=gi('swalHora')?.value?.trim(); if(!v){Swal.showValidationMessage('Ingresa la hora');return false;} return v; },
@@ -16626,7 +16626,7 @@ function agregarFranja(){
 
 function agregarDescanso(){
   Swal.fire({
-    title:'☕ Agregar descanso',
+    title:'<i class="fas fa-mug-hot"></i> Agregar descanso',
     html:`<input id="swalHora" class="swal2-input" placeholder="Ej: 09:45 - 10:00">`,
     focusConfirm:false,
     preConfirm:()=>{ const v=gi('swalHora')?.value?.trim(); if(!v){Swal.showValidationMessage('Ingresa la hora');return false;} return v; },
@@ -16643,7 +16643,7 @@ function agregarDescanso(){
 function editarFranja(fi){
   const f = window._horFranjas?.[fi]; if(!f) return;
   Swal.fire({
-    title:'✏️ Editar franja',
+    title:'<i class="fas fa-pen"></i> Editar franja',
     html:`<input id="swalHora" class="swal2-input" value="${f.hora}" placeholder="Ej: 07:00 - 07:55">`,
     focusConfirm:false,
     preConfirm:()=>{ const v=gi('swalHora')?.value?.trim(); if(!v){Swal.showValidationMessage('Ingresa la hora');return false;} return v; },
@@ -16688,7 +16688,7 @@ async function copiarHorarioDesde(){
   if(!profs.length){sw('info','No hay otros profesores');return;}
   const opts = profs.map(p=>`<option value="${p.id}">${esc(p.nombre)}</option>`).join('');
   const r = await Swal.fire({
-    title:'📋 Copiar horario de otro profesor',
+    title:'<i class="fas fa-clipboard-list"></i> Copiar horario de otro profesor',
     html:`<select id="swalCopyProf" class="swal2-input" style="margin:0;width:100%">${opts}</select>`,
     confirmButtonText:'Copiar', showCancelButton:true
   });
@@ -16733,7 +16733,7 @@ async function guardarHorario(){
       method: 'PUT',
       body: JSON.stringify({ value: DB.horarioPorProf })
     });
-    sw('success', '✓ Horario guardado', '', 1600);
+    sw('success', '<i class="fas fa-check"></i> Horario guardado', '', 1600);
     initAHor();
   } catch(e) {
     sw('error', 'Error al guardar: ' + e.message);
@@ -16826,50 +16826,50 @@ function pgSADash() {
           </div>
         </div>
         <div style="display:flex;gap:.5rem;flex-wrap:wrap;align-items:center">
-          <span id="saSugBadge" style="display:none;background:#e53e3e;color:#fff;border-radius:20px;padding:4px 12px;font-size:12px;font-weight:700;cursor:pointer" onclick="goto('sasug')">💡 Sugerencias</span>
-          <button class="btn" style="background:rgba(255,255,255,.18);color:#fff;border:1.5px solid rgba(255,255,255,.35);font-size:13px;font-weight:700;padding:8px 18px;border-radius:9px" onclick="initSADash()">🔄 Actualizar</button>
+          <span id="saSugBadge" style="display:none;background:#e53e3e;color:#fff;border-radius:20px;padding:4px 12px;font-size:12px;font-weight:700;cursor:pointer" onclick="goto('sasug')"><i class="fas fa-lightbulb"></i> Sugerencias</span>
+          <button class="btn" style="background:rgba(255,255,255,.18);color:#fff;border:1.5px solid rgba(255,255,255,.35);font-size:13px;font-weight:700;padding:8px 18px;border-radius:9px" onclick="initSADash()"><i class="fas fa-arrows-rotate"></i> Actualizar</button>
         </div>
       </div>
       <div id="saStatsGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(155px,1fr));gap:.75rem;margin-top:1.25rem">
-        <div style="text-align:center;opacity:.6;padding:1rem"><div style="font-size:1.6rem">⏳</div><p style="font-size:.8rem;margin:.25rem 0">Cargando estadísticas…</p></div>
+        <div style="text-align:center;opacity:.6;padding:1rem"><div style="font-size:1.6rem"><i class="fas fa-hourglass-half"></i></div><p style="font-size:.8rem;margin:.25rem 0">Cargando estadísticas…</p></div>
       </div>
     </div>
     <div style="display:grid;grid-template-columns:1fr 320px;gap:1rem;margin-bottom:1rem" id="saDashMidRow">
       <div class="card">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.75rem;flex-wrap:wrap;gap:.5rem">
-          <h3 style="margin:0">📊 Comparativa por institución</h3>
+          <h3 style="margin:0"><i class="fas fa-chart-column"></i> Comparativa por institución</h3>
           <div id="saDashChartMode" style="display:flex;gap:6px;flex-wrap:wrap">
             <button onclick="setSAMode(this,'est')" data-mode="est"
               style="padding:6px 14px;border-radius:20px;border:2px solid #1d6fef;background:#1d6fef;color:#fff;font-size:11px;font-weight:700;cursor:pointer;transition:all .15s;font-family:inherit">
-              🎓 Estudiantes
+              <i class="fas fa-graduation-cap"></i> Estudiantes
             </button>
             <button onclick="setSAMode(this,'profs')" data-mode="profs"
               style="padding:6px 14px;border-radius:20px;border:2px solid #e3eaf3;background:#f7fafd;color:#6b7f96;font-size:11px;font-weight:700;cursor:pointer;transition:all .15s;font-family:inherit">
-              👩‍🏫 Profesores
+              <i class="fas fa-chalkboard-user"></i> Profesores
             </button>
             <button onclick="setSAMode(this,'prom')" data-mode="prom"
               style="padding:6px 14px;border-radius:20px;border:2px solid #e3eaf3;background:#f7fafd;color:#6b7f96;font-size:11px;font-weight:700;cursor:pointer;transition:all .15s;font-family:inherit">
-              📊 Prom. Notas
+              <i class="fas fa-chart-column"></i> Prom. Notas
             </button>
             <button onclick="setSAMode(this,'asist')" data-mode="asist"
               style="padding:6px 14px;border-radius:20px;border:2px solid #e3eaf3;background:#f7fafd;color:#6b7f96;font-size:11px;font-weight:700;cursor:pointer;transition:all .15s;font-family:inherit">
-              ✅ Asistencia
+              <i class="fas fa-circle-check"></i> Asistencia
             </button>
           </div>
         </div>
         <div id="saDashChart" style="overflow-x:auto;min-height:160px;display:flex;align-items:flex-end;padding-bottom:4px"></div>
       </div>
       <div class="card">
-        <h3 style="margin:0 0 .75rem">⚡ Resumen rápido</h3>
+        <h3 style="margin:0 0 .75rem"><i class="fas fa-bolt"></i> Resumen rápido</h3>
         <div id="saDashQuickBody" style="color:#888;font-size:.9rem">Cargando…</div>
       </div>
     </div>
     <div class="card">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.75rem;flex-wrap:wrap;gap:.5rem">
-        <h3 style="margin:0">🏫 Todas las instituciones</h3>
+        <h3 style="margin:0"><i class="fas fa-school"></i> Todas las instituciones</h3>
         <div style="display:flex;gap:.5rem;flex-wrap:wrap">
-          <input id="saDashSearch" style="padding:9px 12px;border:1.5px solid var(--bd);border-radius:var(--r);font-size:13px;background:var(--bg2);color:var(--tx);outline:none;font-family:var(--fn)" style="width:180px;font-size:.85rem" placeholder="🔍 Buscar…" oninput="renderSADashTable(window._saStatsData||[])">
-          <button class="btn bsec" style="font-size:.8rem" onclick="exportarSADashCSV()">📤 CSV</button>
+          <input id="saDashSearch" style="padding:9px 12px;border:1.5px solid var(--bd);border-radius:var(--r);font-size:13px;background:var(--bg2);color:var(--tx);outline:none;font-family:var(--fn)" style="width:180px;font-size:.85rem" placeholder="<i class="fas fa-magnifying-glass"></i> Buscar…" oninput="renderSADashTable(window._saStatsData||[])">
+          <button class="btn bsec" style="font-size:.8rem" onclick="exportarSADashCSV()"><i class="fas fa-upload"></i> CSV</button>
         </div>
       </div>
       <div id="saColegiosList" style="overflow-x:auto"><p style="color:#999;text-align:center;padding:1rem">Cargando…</p></div>
@@ -16887,12 +16887,12 @@ function renderSADashKPIs(stats, sugCount) {
   const promNotas = stats.length ? +(stats.reduce((a, s) => a + (s.promNotas || 0), 0) / stats.length).toFixed(2) : 0;
   const promAsist = stats.length ? +(stats.reduce((a, s) => a + (s.asistPct || 0), 0) / stats.length).toFixed(1) : 0;
   const kpis = [
-    { ic: '🏫', lb: 'Instituciones', val: stats.length, sub: `${activos} activas` },
-    { ic: '👨‍🎓', lb: 'Estudiantes', val: totalEst.toLocaleString(), sub: 'total sistema' },
-    { ic: '👩‍🏫', lb: 'Profesores', val: totalProfs.toLocaleString(), sub: 'total sistema' },
-    { ic: '🏛️', lb: 'Salones', val: totalSal.toLocaleString(), sub: 'en total' },
-    { ic: '📊', lb: 'Prom. Notas', val: promNotas, sub: promNotas >= 4 ? '🟢 Excelente' : promNotas >= 3 ? '🟡 Aceptable' : '🔴 Bajo' },
-    { ic: '✅', lb: 'Asistencia', val: promAsist + '%', sub: promAsist >= 85 ? '🟢 Buena' : '🟡 Regular' },
+    { ic: '<i class="fas fa-school"></i>', lb: 'Instituciones', val: stats.length, sub: `${activos} activas` },
+    { ic: '<i class="fas fa-person"></i> <i class="fas fa-graduation-cap"></i>', lb: 'Estudiantes', val: totalEst.toLocaleString(), sub: 'total sistema' },
+    { ic: '<i class="fas fa-chalkboard-user"></i>', lb: 'Profesores', val: totalProfs.toLocaleString(), sub: 'total sistema' },
+    { ic: '<i class="fas fa-building-columns"></i>', lb: 'Salones', val: totalSal.toLocaleString(), sub: 'en total' },
+    { ic: '<i class="fas fa-chart-column"></i>', lb: 'Prom. Notas', val: promNotas, sub: promNotas >= 4 ? '<i class="fas fa-circle"></i> Excelente' : promNotas >= 3 ? '<i class="fas fa-circle"></i> Aceptable' : '<i class="fas fa-circle"></i> Bajo' },
+    { ic: '<i class="fas fa-circle-check"></i>', lb: 'Asistencia', val: promAsist + '%', sub: promAsist >= 85 ? '<i class="fas fa-circle"></i> Buena' : '<i class="fas fa-circle"></i> Regular' },
   ];
   grid.innerHTML = kpis.map(k => `
     <div style="background:rgba(255,255,255,.12);border-radius:10px;padding:.7rem .9rem;text-align:center">
@@ -17008,7 +17008,7 @@ function exportarSADashCSV() {
 async function initSADash() {
   // Reset UI a estado de carga
   const grid = gi('saStatsGrid');
-  if (grid) grid.innerHTML = '<div style="text-align:center;opacity:.6;padding:1rem"><div style="font-size:1.6rem">⏳</div><p style="font-size:.8rem;margin:.25rem 0;color:#fff">Cargando…</p></div>';
+  if (grid) grid.innerHTML = '<div style="text-align:center;opacity:.6;padding:1rem"><div style="font-size:1.6rem"><i class="fas fa-hourglass-half"></i></div><p style="font-size:.8rem;margin:.25rem 0;color:#fff">Cargando…</p></div>';
   const list = gi('saColegiosList');
   if (list) list.innerHTML = '<p style="color:#999;text-align:center;padding:1rem">Cargando…</p>';
   try {
@@ -17028,14 +17028,14 @@ async function initSADash() {
     }
     const badge = gi('saSugBadge');
     if (badge && sugCount && sugCount.noLeidas > 0) {
-      badge.textContent = `💡 ${sugCount.noLeidas} nueva${sugCount.noLeidas > 1 ? 's' : ''}`;
+      badge.textContent = `<i class="fas fa-lightbulb"></i> ${sugCount.noLeidas} nueva${sugCount.noLeidas > 1 ? 's' : ''}`;
       badge.style.display = 'inline-block';
     }
     // Responsive
     const midRow = gi('saDashMidRow');
     if (midRow && window.innerWidth < 768) midRow.style.gridTemplateColumns = '1fr';
   } catch (e) {
-    if (grid) grid.innerHTML = `<div style="color:#fed7d7;padding:1rem;text-align:center">❌ Error al cargar: ${e.message}<br><button class="btn" style="background:rgba(255,255,255,.2);color:#fff;margin-top:.5rem" onclick="initSADash()">Reintentar</button></div>`;
+    if (grid) grid.innerHTML = `<div style="color:#fed7d7;padding:1rem;text-align:center"><i class="fas fa-circle-xmark"></i> Error al cargar: ${e.message}<br><button class="btn" style="background:rgba(255,255,255,.2);color:#fff;margin-top:.5rem" onclick="initSADash()">Reintentar</button></div>`;
   }
 }
 
@@ -17043,7 +17043,7 @@ async function initSADash() {
 function pgSAColegios() {
   return `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;flex-wrap:wrap;gap:12px">
     <div>
-      <h2 style="margin:0;font-size:20px">🏫 Colegios & Admins</h2>
+      <h2 style="margin:0;font-size:20px"><i class="fas fa-school"></i> Colegios & Admins</h2>
       <p style="margin:4px 0 0;font-size:13px;color:var(--sl2)">Administra colegios, usuarios y accesos del sistema.</p>
     </div>
     <button class="btn bn" onclick="modalNuevoColegio()">＋ Nuevo Colegio</button>
@@ -17052,9 +17052,9 @@ function pgSAColegios() {
   <div style="display:grid;grid-template-columns:1fr 420px;gap:20px;align-items:start">
     <div class="card" style="padding:0;overflow:hidden">
       <div style="padding:16px 20px;border-bottom:1px solid var(--bd);display:flex;align-items:center;gap:12px;background:var(--bg2)">
-        <span style="font-size:14px;font-weight:700;color:var(--nv)">📋 Listado de Colegios</span>
+        <span style="font-size:14px;font-weight:700;color:var(--nv)"><i class="fas fa-clipboard-list"></i> Listado de Colegios</span>
         <div style="flex:1;display:flex;align-items:center;gap:8px;background:var(--wh);border:1.5px solid var(--bd);border-radius:8px;padding:7px 12px;margin-left:auto;max-width:260px">
-          <span style="color:var(--sl3)">🔍</span>
+          <span style="color:var(--sl3)"><i class="fas fa-magnifying-glass"></i></span>
           <input id="saColSearch" placeholder="Buscar colegio…" oninput="filtrarColegios()"
             style="border:none;background:transparent;font-size:13px;outline:none;color:var(--tx);width:100%">
         </div>
@@ -17066,7 +17066,7 @@ function pgSAColegios() {
       <!-- Panel bloqueo individual -->
       <div class="card" style="padding:0;overflow:hidden;border:1.5px solid #fde68a">
         <div style="padding:14px 18px;background:#fffbeb;border-bottom:1px solid #fde68a;display:flex;align-items:center;gap:10px">
-          <span style="font-size:18px">🔒</span>
+          <span style="font-size:18px"><i class="fas fa-lock"></i></span>
           <div>
             <div style="font-weight:800;font-size:14px;color:#92400e">Bloquear / Desbloquear Usuario</div>
             <div style="font-size:11px;color:#b45309;margin-top:2px">Busca por nombre y gestiona el acceso individualmente</div>
@@ -17086,17 +17086,17 @@ function pgSAColegios() {
               ${['todos','admin','profe','est'].map(r=>`
                 <label style="display:flex;align-items:center;gap:5px;padding:6px 11px;background:var(--bg2);border:1.5px solid var(--bd);border-radius:7px;cursor:pointer;font-size:12px;font-weight:600">
                   <input type="radio" name="saBlkRol" value="${r}" ${r==='todos'?'checked':''} onchange="saBlkFiltrar()">
-                  ${{todos:'👥 Todos',admin:'🏫 Admin',profe:'👩‍🏫 Profe',est:'🎓 Est.'}[r]}
+                  ${{todos:'<i class="fas fa-users"></i> Todos',admin:'<i class="fas fa-school"></i> Admin',profe:'<i class="fas fa-chalkboard-user"></i> Profe',est:'<i class="fas fa-graduation-cap"></i> Est.'}[r]}
                 </label>`).join('')}
             </div>
           </div>
           <div style="display:flex;align-items:center;gap:8px;background:var(--bg2);border:1.5px solid var(--bd);border-radius:8px;padding:8px 12px;margin-bottom:12px">
-            <span style="color:var(--sl3)">🔍</span>
+            <span style="color:var(--sl3)"><i class="fas fa-magnifying-glass"></i></span>
             <input id="saBlkQ" placeholder="Buscar por nombre…" oninput="saBlkFiltrar()"
               style="border:none;background:transparent;font-size:13px;outline:none;color:var(--tx);flex:1">
           </div>
           <div id="saBlkListW" style="max-height:320px;overflow-y:auto">
-            <div class="mty" style="padding:20px"><div class="ei" style="font-size:28px">🔍</div><p style="font-size:12px">Selecciona un colegio</p></div>
+            <div class="mty" style="padding:20px"><div class="ei" style="font-size:28px"><i class="fas fa-magnifying-glass"></i></div><p style="font-size:12px">Selecciona un colegio</p></div>
           </div>
         </div>
       </div>
@@ -17126,8 +17126,8 @@ window._saBlkUsuarios = [];
 async function saBlkLoadUsuarios(){
   const cid = gi('saBlkColegio')?.value;
   const el = gi('saBlkListW');
-  if(!cid){ if(el) el.innerHTML='<div class="mty" style="padding:20px"><div class="ei" style="font-size:28px">🔍</div><p style="font-size:12px">Selecciona un colegio</p></div>'; return; }
-  if(el) el.innerHTML='<div style="text-align:center;padding:20px;font-size:12px;color:var(--sl3)">⏳ Cargando usuarios...</div>';
+  if(!cid){ if(el) el.innerHTML='<div class="mty" style="padding:20px"><div class="ei" style="font-size:28px"><i class="fas fa-magnifying-glass"></i></div><p style="font-size:12px">Selecciona un colegio</p></div>'; return; }
+  if(el) el.innerHTML='<div style="text-align:center;padding:20px;font-size:12px;color:var(--sl3)"><i class="fas fa-hourglass-half"></i> Cargando usuarios...</div>';
   try{
     const data = await saApiFetch(`/api/superadmin/usuarios?colegioId=${cid}`);
     window._saBlkUsuarios = Array.isArray(data) ? data : [];
@@ -17143,24 +17143,24 @@ function saBlkFiltrar(){
   if(rol!=='todos') lista=lista.filter(u=>u.role===rol);
   if(q) lista=lista.filter(u=>(u.nombre||u.usuario||'').toLowerCase().includes(q));
   if(!lista.length){
-    el.innerHTML='<div class="mty" style="padding:16px"><div class="ei" style="font-size:24px">😶</div><p style="font-size:12px">Sin resultados</p></div>';
+    el.innerHTML='<div class="mty" style="padding:16px"><div class="ei" style="font-size:24px"><i class="fas fa-face-meh"></i></div><p style="font-size:12px">Sin resultados</p></div>';
     return;
   }
-  const roleIcon={admin:'🏫',profe:'👩‍🏫',est:'🎓',superadmin:'⭐'};
+  const roleIcon={admin:'<i class="fas fa-school"></i>',profe:'<i class="fas fa-chalkboard-user"></i>',est:'<i class="fas fa-graduation-cap"></i>',superadmin:'<i class="fas fa-star"></i>'};
   el.innerHTML=lista.map(u=>`
     <div style="display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:9px;
       border:1.5px solid ${u.blocked?'#fecaca':'var(--bd)'};background:${u.blocked?'#fff5f5':'var(--bg2)'};margin-bottom:7px">
       <div style="flex:1;min-width:0">
         <div style="font-weight:700;font-size:13px;color:var(--tx);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">
-          ${roleIcon[u.role]||'👤'} ${esc(u.nombre||u.usuario)}
+          ${roleIcon[u.role]||'<i class="fas fa-user"></i>'} ${esc(u.nombre||u.usuario)}
         </div>
         <div style="font-size:11px;color:var(--sl3);margin-top:1px">${esc(u.usuario)} · ${u.role}</div>
       </div>
-      <span class="bdg ${u.blocked?'bred':'bgr'}" style="font-size:10px;white-space:nowrap">${u.blocked?'🔒 Bloqueado':'✅ Activo'}</span>
+      <span class="bdg ${u.blocked?'bred':'bgr'}" style="font-size:10px;white-space:nowrap">${u.blocked?'<i class="fas fa-lock"></i> Bloqueado':'<i class="fas fa-circle-check"></i> Activo'}</span>
       <button onclick="saBlkToggleUsuario('${u.id}',${!u.blocked},'${esc(u.nombre||u.usuario)}')"
         style="padding:5px 11px;font-size:11px;font-weight:700;border-radius:7px;cursor:pointer;white-space:nowrap;border:1.5px solid;
           ${u.blocked?'background:#dcfce7;color:#166534;border-color:#86efac':'background:#fff5f5;color:#b91c1c;border-color:#fca5a5'}">
-        ${u.blocked?'🔓 Desbloquear':'🔒 Bloquear'}
+        ${u.blocked?'<i class="fas fa-lock-open"></i> Desbloquear':'<i class="fas fa-lock"></i> Bloquear'}
       </button>
     </div>`).join('');
 }
@@ -17200,7 +17200,7 @@ function renderSAColegiosTable(lista) {
   </tr></thead><tbody>${lista.map(c => `<tr>
     <td>
       <div style="display:flex;align-items:center;gap:8px">
-        ${c.logo ? `<img src="${c.logo}" style="width:32px;height:32px;object-fit:contain;border-radius:5px;border:1px solid #e2e8f0;background:#f7fafc;flex-shrink:0" title="Logo ${esc(c.nombre)}">` : '<div style="width:32px;height:32px;border-radius:5px;background:#e2e8f0;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0">🏫</div>'}
+        ${c.logo ? `<img src="${c.logo}" style="width:32px;height:32px;object-fit:contain;border-radius:5px;border:1px solid #e2e8f0;background:#f7fafc;flex-shrink:0" title="Logo ${esc(c.nombre)}">` : '<div style="width:32px;height:32px;border-radius:5px;background:#e2e8f0;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0"><i class="fas fa-school"></i></div>'}
         <strong>${esc(c.nombre)}</strong>
       </div>
     </td>
@@ -17208,10 +17208,10 @@ function renderSAColegiosTable(lista) {
     <td>${c.admins || 0}</td><td>${c.ests || 0}</td><td>${c.profs || 0}</td>
     <td><span class="bdg ${c.activo ? 'bgr' : 'bred'}">${c.activo ? 'Activo' : 'Inactivo'}</span></td>
     <td style="display:flex;gap:.4rem;flex-wrap:wrap">
-      <button class="btn bsm" onclick="modalEditColegio('${c.id}')">✏️ Editar</button>
-      <button class="btn bsm" onclick="modalAdmins('${c.id}','${c.nombre.replace(/'/g, "\\'")}')">👤 Admins</button>
-      <button class="btn bsm" onclick="toggleColegio('${c.id}',${!c.activo})">${c.activo ? '🔒 Desactivar' : '🔓 Activar'}</button>
-      <button class="btn bsm bdan" onclick="modalEliminarColegio('${c.id}','${c.nombre.replace(/'/g, "\\'")}')">🗑️</button>
+      <button class="btn bsm" onclick="modalEditColegio('${c.id}')"><i class="fas fa-pen"></i> Editar</button>
+      <button class="btn bsm" onclick="modalAdmins('${c.id}','${c.nombre.replace(/'/g, "\\'")}')"><i class="fas fa-user"></i> Admins</button>
+      <button class="btn bsm" onclick="toggleColegio('${c.id}',${!c.activo})">${c.activo ? '<i class="fas fa-lock"></i> Desactivar' : '<i class="fas fa-lock-open"></i> Activar'}</button>
+      <button class="btn bsm bdan" onclick="modalEliminarColegio('${c.id}','${c.nombre.replace(/'/g, "\\'")}')"><i class="fas fa-trash"></i></button>
     </td>
   </tr>`).join('')}</tbody></table>`;
 }
@@ -17255,7 +17255,7 @@ async function modalNuevoColegio() {
         <div style="display:flex;align-items:center;gap:10px">
           <label style="cursor:pointer;background:#edf2f7;border:1.5px dashed #a0aec0;border-radius:8px;padding:8px 14px;font-size:12px;color:#4a5568;flex:1;text-align:center;transition:background .15s"
             onmouseover="this.style.background='#e2e8f0'" onmouseout="this.style.background='#edf2f7'">
-            📁 Seleccionar imagen
+            <i class="fas fa-folder"></i> Seleccionar imagen
             <input type="file" id="snLogo" accept="image/png,image/jpeg,image/svg+xml,image/webp" style="display:none"
               onchange="(function(inp){
                 const file=inp.files[0];if(!file)return;
@@ -17276,7 +17276,7 @@ async function modalNuevoColegio() {
         <div id="snLogoLabel" style="font-size:11px;color:#a0aec0;margin-top:3px">PNG, JPG, SVG o WEBP · máx 2 MB</div>
       </div>
       <hr style="margin:.5rem 0">
-      <p style="margin:.5rem 1rem;font-size:.85rem;color:#555;text-align:left;font-weight:700">📊 Porcentajes de calificación (deben sumar 100%)</p>
+      <p style="margin:.5rem 1rem;font-size:.85rem;color:#555;text-align:left;font-weight:700"><i class="fas fa-chart-column"></i> Porcentajes de calificación (deben sumar 100%)</p>
       <div style="display:flex;gap:8px;margin:0 .5rem .5rem;align-items:center">
         <div style="flex:1;text-align:center">
           <label style="font-size:10px;font-weight:700;color:#4a5568;display:block;margin-bottom:3px">Aptitud %</label>
@@ -17358,7 +17358,7 @@ async function modalEditColegio(id) {
           ${col.logo ? `<img src="${col.logo}" style="width:48px;height:48px;object-fit:contain;border-radius:7px;border:1.5px solid #e2e8f0;background:#f7fafc" title="Logo actual">` : ''}
           <label style="cursor:pointer;background:#edf2f7;border:1.5px dashed #a0aec0;border-radius:8px;padding:7px 12px;font-size:12px;color:#4a5568;flex:1;text-align:center"
             onmouseover="this.style.background='#e2e8f0'" onmouseout="this.style.background='#edf2f7'">
-            ${col.logo ? '🔄 Cambiar logo' : '📁 Subir logo'}
+            ${col.logo ? '<i class="fas fa-arrows-rotate"></i> Cambiar logo' : '<i class="fas fa-folder"></i> Subir logo'}
             <input type="file" id="enLogo" accept="image/png,image/jpeg,image/svg+xml,image/webp" style="display:none"
               onchange="(function(inp){
                 const file=inp.files[0];if(!file)return;
@@ -17406,12 +17406,12 @@ async function modalAdmins(colegioId, colegioNombre) {
       <td>${a.nombre}</td><td style="font-size:.82rem">${a.usuario}</td>
       <td><span class="bdg ${a.blocked ? 'bred' : 'bgr'}">${a.blocked ? 'Bloqueado' : 'Activo'}</span></td>
       <td style="display:flex;gap:.3rem">
-        <button class="btn bsm" onclick="editAdmin('${a.id}')">✏️</button>
-        <button class="btn bsm" onclick="toggleAdmin('${a.id}',${!a.blocked})">${a.blocked ? '🔓' : '🔒'}</button>
+        <button class="btn bsm" onclick="editAdmin('${a.id}')"><i class="fas fa-pen"></i></button>
+        <button class="btn bsm" onclick="toggleAdmin('${a.id}',${!a.blocked})">${a.blocked ? '<i class="fas fa-lock-open"></i>' : '<i class="fas fa-lock"></i>'}</button>
       </td>
     </tr>`).join('');
     Swal.fire({
-      title: `👤 Admins — ${colegioNombre}`,
+      title: `<i class="fas fa-user"></i> Admins — ${colegioNombre}`,
       html: `<div style="overflow-x:auto"><table class="tbl"><thead><tr><th>Nombre</th><th>Usuario</th><th>Estado</th><th>Acc.</th></tr></thead>
         <tbody>${lista || '<tr><td colspan="4" style="text-align:center;color:#999">Sin administradores</td></tr>'}</tbody></table></div>
         <hr style="margin:.75rem 0">
@@ -17463,7 +17463,7 @@ async function toggleAdmin(id, blocked) {
 /* ─── PLAN DE ESTUDIOS ─────────────────────────────────── */
 function pgSAPlan() {
   return `<div class="card">
-    <h2>📖 Plan de Estudios</h2>
+    <h2><i class="fas fa-book-open"></i> Plan de Estudios</h2>
     <p style="color:#888;margin-bottom:1rem">Define áreas, asignaturas e intensidades horarias por colegio.</p>
     <div style="display:flex;gap:.75rem;flex-wrap:wrap;margin-bottom:1rem">
       <select id="saPlanCol" style="padding:9px 12px;border:1.5px solid var(--bd);border-radius:var(--r);font-size:13px;background:var(--bg2);color:var(--tx);outline:none;font-family:var(--fn)" style="min-width:200px" onchange="loadSAPlan()">
@@ -17475,8 +17475,8 @@ function pgSAPlan() {
         <option value="bachillerato">Bachillerato</option>
       </select>
       <button class="btn" onclick="modalNuevaMateria()">＋ Agregar Asignatura</button>
-      <button class="btn bsec" onclick="importarPlanDefecto()">📥 Plan por Defecto</button>
-      <button class="btn bdan" onclick="eliminarPlanCompleto()" style="margin-left:auto">🗑️ Eliminar Todo</button>
+      <button class="btn bsec" onclick="importarPlanDefecto()"><i class="fas fa-download"></i> Plan por Defecto</button>
+      <button class="btn bdan" onclick="eliminarPlanCompleto()" style="margin-left:auto"><i class="fas fa-trash"></i> Eliminar Todo</button>
     </div>
     <div id="saPlanTable" style="overflow-x:auto">Selecciona un colegio.</div>
   </div>`;
@@ -17581,19 +17581,19 @@ function pgSAEstadisticas() {
   return `<div id="saEstPage">
     <div class="card" style="background:linear-gradient(135deg,#1a365d 0%,#2b6cb0 100%);color:#fff;margin-bottom:1rem">
       <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:.5rem;margin-bottom:1rem">
-        <h2 style="color:#fff;margin:0">📊 Estadísticas Globales del Sistema</h2>
+        <h2 style="color:#fff;margin:0"><i class="fas fa-chart-column"></i> Estadísticas Globales del Sistema</h2>
         <div style="display:flex;gap:.5rem;flex-wrap:wrap">
-          <button class="btn" style="background:rgba(255,255,255,.18);color:#fff;border:1.5px solid rgba(255,255,255,.35);font-size:13px;font-weight:700;padding:8px 18px;border-radius:9px" onclick="initSAEstadisticas()">🔄 Actualizar</button>
-          <button class="btn" style="background:rgba(0,182,155,.25);color:#fff;border:1.5px solid rgba(0,182,155,.4);font-size:13px;font-weight:700;padding:8px 18px;border-radius:9px" onclick="exportarEstCSV()">📤 CSV</button>
+          <button class="btn" style="background:rgba(255,255,255,.18);color:#fff;border:1.5px solid rgba(255,255,255,.35);font-size:13px;font-weight:700;padding:8px 18px;border-radius:9px" onclick="initSAEstadisticas()"><i class="fas fa-arrows-rotate"></i> Actualizar</button>
+          <button class="btn" style="background:rgba(0,182,155,.25);color:#fff;border:1.5px solid rgba(0,182,155,.4);font-size:13px;font-weight:700;padding:8px 18px;border-radius:9px" onclick="exportarEstCSV()"><i class="fas fa-upload"></i> CSV</button>
         </div>
       </div>
       <div id="saEstGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(155px,1fr));gap:.75rem">
-        <div style="text-align:center;opacity:.6;padding:1rem"><div style="font-size:1.5rem">⏳</div><p style="font-size:.8rem;margin:.25rem 0">Cargando…</p></div>
+        <div style="text-align:center;opacity:.6;padding:1rem"><div style="font-size:1.5rem"><i class="fas fa-hourglass-half"></i></div><p style="font-size:.8rem;margin:.25rem 0">Cargando…</p></div>
       </div>
     </div>
     <div class="card" style="margin-bottom:1rem">
       <div style="display:flex;gap:.75rem;flex-wrap:wrap;align-items:center">
-        <input id="saEstSearch" style="padding:9px 12px;border:1.5px solid var(--bd);border-radius:var(--r);font-size:13px;background:var(--bg2);color:var(--tx);outline:none;font-family:var(--fn)" style="width:200px;font-size:.85rem" placeholder="🔍 Buscar institución…" oninput="renderEstDetalle(window._saEstData||[])">
+        <input id="saEstSearch" style="padding:9px 12px;border:1.5px solid var(--bd);border-radius:var(--r);font-size:13px;background:var(--bg2);color:var(--tx);outline:none;font-family:var(--fn)" style="width:200px;font-size:.85rem" placeholder="<i class="fas fa-magnifying-glass"></i> Buscar institución…" oninput="renderEstDetalle(window._saEstData||[])">
         <select id="saEstFiltroEstado" style="padding:9px 12px;border:1.5px solid var(--bd);border-radius:var(--r);font-size:13px;background:var(--bg2);color:var(--tx);outline:none;font-family:var(--fn)" style="width:auto;font-size:.85rem" onchange="renderEstDetalle(window._saEstData||[])">
           <option value="">Todos los estados</option>
           <option value="activo">Solo activos</option>
@@ -17601,24 +17601,24 @@ function pgSAEstadisticas() {
         </select>
         <select id="saEstOrden" style="padding:9px 12px;border:1.5px solid var(--bd);border-radius:var(--r);font-size:13px;background:var(--bg2);color:var(--tx);outline:none;font-family:var(--fn)" style="width:auto;font-size:.85rem" onchange="renderEstDetalle(window._saEstData||[])">
           <option value="nombre">Por nombre</option>
-          <option value="est_desc">↓ Más estudiantes</option>
-          <option value="prom_desc">↓ Mejor promedio</option>
-          <option value="asist_desc">↓ Mejor asistencia</option>
+          <option value="est_desc"><i class="fas fa-arrow-down"></i> Más estudiantes</option>
+          <option value="prom_desc"><i class="fas fa-arrow-down"></i> Mejor promedio</option>
+          <option value="asist_desc"><i class="fas fa-arrow-down"></i> Mejor asistencia</option>
         </select>
       </div>
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1rem" id="saEstChartsRow">
       <div class="card">
-        <h3 style="margin:0 0 .75rem;font-size:.95rem">📈 Promedio de Notas</h3>
+        <h3 style="margin:0 0 .75rem;font-size:.95rem"><i class="fas fa-chart-line"></i> Promedio de Notas</h3>
         <div id="saEstChartNotas" style="overflow-x:auto;min-height:130px;display:flex;align-items:flex-end"></div>
       </div>
       <div class="card">
-        <h3 style="margin:0 0 .75rem;font-size:.95rem">✅ Asistencia %</h3>
+        <h3 style="margin:0 0 .75rem;font-size:.95rem"><i class="fas fa-circle-check"></i> Asistencia %</h3>
         <div id="saEstChartAsist" style="overflow-x:auto;min-height:130px;display:flex;align-items:flex-end"></div>
       </div>
     </div>
     <div class="card">
-      <h3 style="margin:0 0 .75rem">📋 Detalle completo por institución</h3>
+      <h3 style="margin:0 0 .75rem"><i class="fas fa-clipboard-list"></i> Detalle completo por institución</h3>
       <div id="saEstDetalle" style="overflow-x:auto">Cargando…</div>
     </div>
   </div>`;
@@ -17634,12 +17634,12 @@ function renderEstKPIs(stats) {
   const promNotas = stats.length ? +(stats.reduce((a, s) => a + (s.promNotas || 0), 0) / stats.length).toFixed(2) : 0;
   const promAsist = stats.length ? +(stats.reduce((a, s) => a + (s.asistPct || 0), 0) / stats.length).toFixed(1) : 0;
   const kpis = [
-    { ic: '🏫', lb: 'Instituciones', val: stats.length, sub: `${activos} activas · ${stats.length - activos} inactivas` },
-    { ic: '👨‍🎓', lb: 'Estudiantes', val: totalEst.toLocaleString(), sub: `~${stats.length ? Math.round(totalEst / stats.length) : 0} por inst.` },
-    { ic: '👩‍🏫', lb: 'Profesores', val: totalProfs.toLocaleString(), sub: `~${stats.length ? Math.round(totalProfs / stats.length) : 0} por inst.` },
-    { ic: '🏛️', lb: 'Salones', val: totalSal.toLocaleString(), sub: `~${stats.length ? Math.round(totalSal / stats.length) : 0} por inst.` },
-    { ic: '📊', lb: 'Prom. Notas Global', val: promNotas, sub: promNotas >= 4 ? '🟢 Excelente' : promNotas >= 3 ? '🟡 Aceptable' : '🔴 Bajo' },
-    { ic: '✅', lb: 'Asistencia Global', val: promAsist + '%', sub: promAsist >= 90 ? '🟢 Excelente' : promAsist >= 75 ? '🟡 Regular' : '🔴 Baja' },
+    { ic: '<i class="fas fa-school"></i>', lb: 'Instituciones', val: stats.length, sub: `${activos} activas · ${stats.length - activos} inactivas` },
+    { ic: '<i class="fas fa-person"></i> <i class="fas fa-graduation-cap"></i>', lb: 'Estudiantes', val: totalEst.toLocaleString(), sub: `~${stats.length ? Math.round(totalEst / stats.length) : 0} por inst.` },
+    { ic: '<i class="fas fa-chalkboard-user"></i>', lb: 'Profesores', val: totalProfs.toLocaleString(), sub: `~${stats.length ? Math.round(totalProfs / stats.length) : 0} por inst.` },
+    { ic: '<i class="fas fa-building-columns"></i>', lb: 'Salones', val: totalSal.toLocaleString(), sub: `~${stats.length ? Math.round(totalSal / stats.length) : 0} por inst.` },
+    { ic: '<i class="fas fa-chart-column"></i>', lb: 'Prom. Notas Global', val: promNotas, sub: promNotas >= 4 ? '<i class="fas fa-circle"></i> Excelente' : promNotas >= 3 ? '<i class="fas fa-circle"></i> Aceptable' : '<i class="fas fa-circle"></i> Bajo' },
+    { ic: '<i class="fas fa-circle-check"></i>', lb: 'Asistencia Global', val: promAsist + '%', sub: promAsist >= 90 ? '<i class="fas fa-circle"></i> Excelente' : promAsist >= 75 ? '<i class="fas fa-circle"></i> Regular' : '<i class="fas fa-circle"></i> Baja' },
   ];
   grid.innerHTML = kpis.map(k => `
     <div style="background:rgba(255,255,255,.12);border-radius:10px;padding:.7rem .9rem;text-align:center">
@@ -17722,7 +17722,7 @@ function exportarEstCSV() {
 
 async function initSAEstadisticas() {
   const grid = gi('saEstGrid');
-  if (grid) grid.innerHTML = '<div style="text-align:center;opacity:.6;padding:1rem;color:#fff">⏳ Cargando…</div>';
+  if (grid) grid.innerHTML = '<div style="text-align:center;opacity:.6;padding:1rem;color:#fff"><i class="fas fa-hourglass-half"></i> Cargando…</div>';
   try {
     const statsRaw = await saApiFetch('/api/superadmin/stats');
     const stats = Array.isArray(statsRaw) ? statsRaw : [];
@@ -17740,16 +17740,16 @@ async function initSAEstadisticas() {
     const chartsRow = gi('saEstChartsRow');
     if (chartsRow && window.innerWidth < 640) chartsRow.style.gridTemplateColumns = '1fr';
   } catch (e) {
-    if (grid) grid.innerHTML = `<div style="color:#fed7d7;padding:1rem;text-align:center">❌ Error: ${e.message}<br><button class="btn" style="background:rgba(255,255,255,.2);color:#fff;margin-top:.5rem" onclick="initSAEstadisticas()">Reintentar</button></div>`;
+    if (grid) grid.innerHTML = `<div style="color:#fed7d7;padding:1rem;text-align:center"><i class="fas fa-circle-xmark"></i> Error: ${e.message}<br><button class="btn" style="background:rgba(255,255,255,.2);color:#fff;margin-top:.5rem" onclick="initSAEstadisticas()">Reintentar</button></div>`;
   }
 }
 
 /* ─── AUDITORÍA GLOBAL ──────────────────────────────────── */
 function pgSAAuditoria() {
-  return `<div class="ph"><h2>🔍 Auditoría Global</h2></div>
+  return `<div class="ph"><h2><i class="fas fa-magnifying-glass"></i> Auditoría Global</h2></div>
   <div class="card">
     <div class="chd"><span class="cti">Filtros</span>
-      <button class="btn bg sm" onclick="loadSAAuditoria()">🔄 Actualizar</button>
+      <button class="btn bg sm" onclick="loadSAAuditoria()"><i class="fas fa-arrows-rotate"></i> Actualizar</button>
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr 2fr;gap:14px;align-items:end">
       <div class="fld" style="margin:0">
@@ -17762,23 +17762,23 @@ function pgSAAuditoria() {
         <label>Rol</label>
         <select id="saAudRol" onchange="loadSAAuditoria()" style="font-size:13px;padding:10px 14px">
           <option value="">Todos los roles</option>
-          <option value="admin">👤 Admin</option>
-          <option value="profe">🧑‍🏫 Profesor</option>
-          <option value="est">🎓 Estudiante</option>
-          <option value="superadmin">🌐 Superadmin</option>
+          <option value="admin"><i class="fas fa-user"></i> Admin</option>
+          <option value="profe"><i class="fas fa-user"></i> <i class="fas fa-school"></i> Profesor</option>
+          <option value="est"><i class="fas fa-graduation-cap"></i> Estudiante</option>
+          <option value="superadmin"><i class="fas fa-globe"></i> Superadmin</option>
         </select>
       </div>
       <div class="fld" style="margin:0">
         <label>Buscar</label>
         <div class="srch" style="margin:0">
-          <span style="color:var(--sl3)">🔍</span>
+          <span style="color:var(--sl3)"><i class="fas fa-magnifying-glass"></i></span>
           <input id="saAudSearch" placeholder="Buscar acción, usuario…" oninput="loadSAAuditoria()">
         </div>
       </div>
     </div>
   </div>
   <div class="card">
-    <div id="saAudTable" style="overflow-x:auto"><div class="mty"><div class="ei">⏳</div><p>Cargando…</p></div></div>
+    <div id="saAudTable" style="overflow-x:auto"><div class="mty"><div class="ei"><i class="fas fa-hourglass-half"></i></div><p>Cargando…</p></div></div>
   </div>`;
 }
 
@@ -17807,18 +17807,18 @@ function _fmtAccion(l) {
 
   /* Registro de nota */
   if (mat && mat.includes('(') && !accion) {
-    return `📝 Nota ingresada — <b>${mat}</b>${est ? ` · Est: <code>${est.slice(-8)}</code>` : ''}`;
+    return `<i class="fas fa-pen-to-square"></i> Nota ingresada — <b>${mat}</b>${est ? ` · Est: <code>${est.slice(-8)}</code>` : ''}`;
   }
   /* Acciones con texto descriptivo */
   if (accion) {
     const icons = {
-      'Sesión cerrada': '🔒', 'login': '🔑', 'Login': '🔑',
-      'Colegio creado': '🏫', 'creado': '✅', 'eliminado': '🗑️',
-      'Intento': '⚠️', 'bloqueado': '🔴', 'desbloqueado': '🟢',
-      'contraseña': '🔑', 'reset': '🔄', 'Backup': '💾',
-      'Auditoria limpiada': '🗑️', 'taller': '📎',
+      'Sesión cerrada': '<i class="fas fa-lock"></i>', 'login': '<i class="fas fa-key"></i>', 'Login': '<i class="fas fa-key"></i>',
+      'Colegio creado': '<i class="fas fa-school"></i>', 'creado': '<i class="fas fa-circle-check"></i>', 'eliminado': '<i class="fas fa-trash"></i>',
+      'Intento': '<i class="fas fa-triangle-exclamation"></i>', 'bloqueado': '<i class="fas fa-circle"></i>', 'desbloqueado': '<i class="fas fa-circle"></i>',
+      'contraseña': '<i class="fas fa-key"></i>', 'reset': '<i class="fas fa-arrows-rotate"></i>', 'Backup': '<i class="fas fa-floppy-disk"></i>',
+      'Auditoria limpiada': '<i class="fas fa-trash"></i>', 'taller': '<i class="fas fa-paperclip"></i>',
     };
-    const icon = Object.entries(icons).find(([k]) => accion.includes(k))?.[1] || '📌';
+    const icon = Object.entries(icons).find(([k]) => accion.includes(k))?.[1] || '<i class="fas fa-thumbtack"></i>';
     return `${icon} ${accion}`;
   }
   return mat || '—';
@@ -17910,10 +17910,10 @@ async function loadSAAuditoria() {
 
 /* ─── MANTENIMIENTO TÉCNICO ─────────────────────────────── */
 function pgSAMantenimiento() {
-  return `<div class="ph"><h2>⚙️ Mantenimiento Técnico</h2></div>
+  return `<div class="ph"><h2><i class="fas fa-gear"></i> Mantenimiento Técnico</h2></div>
   <div class="g2">
     <div class="card">
-      <div class="chd"><span class="cti">💾 Copia de Seguridad</span></div>
+      <div class="chd"><span class="cti"><i class="fas fa-floppy-disk"></i> Copia de Seguridad</span></div>
       <p style="font-size:13px;color:var(--sl2);margin-bottom:18px;line-height:1.6">
         Descarga un backup JSON completo de una institución para guardarlo localmente.
       </p>
@@ -17925,11 +17925,11 @@ function pgSAMantenimiento() {
       </div>
       <button class="btn bn" onclick="descargarBackup()"
         style="width:100%;padding:13px;font-size:14px;font-weight:700;margin-top:4px">
-        📥 Descargar Backup JSON
+        <i class="fas fa-download"></i> Descargar Backup JSON
       </button>
     </div>
     <div class="card">
-      <div class="chd"><span class="cti">🔑 Reset de Contraseña</span></div>
+      <div class="chd"><span class="cti"><i class="fas fa-key"></i> Reset de Contraseña</span></div>
       <p style="font-size:13px;color:var(--sl2);margin-bottom:18px;line-height:1.6">
         Cambia la contraseña de cualquier usuario de una institución.
       </p>
@@ -17942,7 +17942,7 @@ function pgSAMantenimiento() {
       <div class="fld">
         <label>Buscar usuario</label>
         <div class="srch" style="margin:0">
-          <span style="color:var(--sl3)">🔍</span>
+          <span style="color:var(--sl3)"><i class="fas fa-magnifying-glass"></i></span>
           <input id="saResetSearch" placeholder="Nombre o ID de usuario…" oninput="filtrarSAResetUsuarios()">
         </div>
       </div>
@@ -17959,7 +17959,7 @@ function pgSAMantenimiento() {
       </div>
       <button class="btn bd" onclick="resetUsuario()"
         style="width:100%;padding:13px;font-size:14px;font-weight:700">
-        🔑 Cambiar Contraseña
+        <i class="fas fa-key"></i> Cambiar Contraseña
       </button>
     </div>
   </div>`;
@@ -18027,7 +18027,7 @@ function renderSAResetUsuarios(lista) {
     if (info) info.textContent = 'Sin usuarios que coincidan con la búsqueda';
     return;
   }
-  const roleLabel = { admin: '👤 Admin', profe: '🧑‍🏫 Profe', est: '🎓 Est' };
+  const roleLabel = { admin: '<i class="fas fa-user"></i> Admin', profe: '<i class="fas fa-user"></i> <i class="fas fa-school"></i> Profe', est: '<i class="fas fa-graduation-cap"></i> Est' };
   sel.innerHTML = lista.map(u =>
     `<option value="${esc(u.id)}">[${roleLabel[u.role] || u.role}] ${esc(u.nombre)} — ${esc(u.usuario || u.id)}</option>`
   ).join('');
@@ -18055,7 +18055,7 @@ async function resetUsuario() {
       method: 'POST', body: JSON.stringify({ newPassword: pwd })
     });
     if (!res) return;
-    sw('success', `✅ Contraseña de ${esc(nombre)} actualizada`);
+    sw('success', `<i class="fas fa-circle-check"></i> Contraseña de ${esc(nombre)} actualizada`);
     const inp = gi('saResetPwd'); if (inp) inp.value = '';
   } catch (e) { sw('error', e.message); }
 }
@@ -18083,10 +18083,10 @@ async function descargarBackup() {
 
 /* ─── SUGERENCIAS — superadmin recibe ──────────────────── */
 function pgSASug() {
-  return `<div class="ph"><h2>💡 Sugerencias Recibidas</h2></div>
+  return `<div class="ph"><h2><i class="fas fa-lightbulb"></i> Sugerencias Recibidas</h2></div>
   <div class="card">
     <div class="chd"><span class="cti">Filtros</span>
-      <button class="btn bg sm" onclick="loadSASug()">🔄 Actualizar</button>
+      <button class="btn bg sm" onclick="loadSASug()"><i class="fas fa-arrows-rotate"></i> Actualizar</button>
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
       <div class="fld" style="margin:0">
@@ -18099,13 +18099,13 @@ function pgSASug() {
         <label>Estado</label>
         <select id="saSugFiltLeida" onchange="loadSASug()" style="font-size:13px;padding:10px 14px">
           <option value="">Todas</option>
-          <option value="false">🔵 No leídas</option>
-          <option value="true">✅ Leídas</option>
+          <option value="false"><i class="fas fa-circle"></i> No leídas</option>
+          <option value="true"><i class="fas fa-circle-check"></i> Leídas</option>
         </select>
       </div>
     </div>
   </div>
-  <div id="saSugTable"><div class="mty"><div class="ei">⏳</div><p>Cargando…</p></div></div>`;
+  <div id="saSugTable"><div class="mty"><div class="ei"><i class="fas fa-hourglass-half"></i></div><p>Cargando…</p></div></div>`;
 }
 
 async function initSASug() {
@@ -18140,14 +18140,14 @@ async function loadSASug() {
         </div>
         <div style="display:flex;gap:.4rem;align-items:center;flex-wrap:wrap">
           <span style="font-size:.75rem;color:#718096">${(s.ts || '').slice(0, 10)}</span>
-          ${!s.leida ? `<button class="btn bsm" onclick="marcarSugLeida('${s._id}')">✓ Leída</button>` : ''}
-          <button class="btn bsm" onclick="responderSug('${s._id}','${encodeURIComponent(s.nombre)}')">💬 Responder</button>
-          <button class="btn bsm bdan" onclick="eliminarSug('${s._id}')">🗑️</button>
+          ${!s.leida ? `<button class="btn bsm" onclick="marcarSugLeida('${s._id}')"><i class="fas fa-check"></i> Leída</button>` : ''}
+          <button class="btn bsm" onclick="responderSug('${s._id}','${encodeURIComponent(s.nombre)}')"><i class="fas fa-comment"></i> Responder</button>
+          <button class="btn bsm bdan" onclick="eliminarSug('${s._id}')"><i class="fas fa-trash"></i></button>
         </div>
       </div>
       ${s.titulo ? `<div style="font-weight:700;margin:.4rem 0 .2rem"><span class="bdg" style="background:#ebf4ff;color:#2b6cb0">${s.categoria || 'general'}</span> ${s.titulo}</div>` : `<div style="font-size:.8rem;color:#718096;margin:.2rem 0"><span class="bdg" style="background:#ebf4ff;color:#2b6cb0">${s.categoria || 'general'}</span></div>`}
       <p style="color:#4a5568;margin:.2rem 0">${s.mensaje}</p>
-      ${s.respuesta ? `<div style="background:#f0fff4;border-radius:6px;padding:.5rem .75rem;margin-top:.4rem;font-size:.87rem"><strong>✅ Tu respuesta:</strong> ${s.respuesta}</div>` : ''}
+      ${s.respuesta ? `<div style="background:#f0fff4;border-radius:6px;padding:.5rem .75rem;margin-top:.4rem;font-size:.87rem"><strong><i class="fas fa-circle-check"></i> Tu respuesta:</strong> ${s.respuesta}</div>` : ''}
     </div>`).join('');
   } catch (e) { el.innerHTML = `<p style="color:red">Error: ${e.message} <button class="btn bsm" onclick="loadSASug()">Reintentar</button></p>`; }
 }
@@ -18179,7 +18179,7 @@ async function eliminarSug(id) {
 
 /* ─── SUGERENCIAS — admin/profe/est envían ──────────────── */
 function pgSugerencias() {
-  return `<div class="ph"><h2>💡 Sugerencias</h2><p>Envía sugerencias, comentarios o reportes al super administrador de la plataforma.</p></div>
+  return `<div class="ph"><h2><i class="fas fa-lightbulb"></i> Sugerencias</h2><p>Envía sugerencias, comentarios o reportes al super administrador de la plataforma.</p></div>
   <div class="card">
     <div class="chd"><span class="cti">Nueva Sugerencia</span></div>
     <div class="fg">
@@ -18195,7 +18195,7 @@ function pgSugerencias() {
     <div class="fld"><label>Mensaje *</label>
       <textarea id="sugMensaje" rows="4" style="width:100%;resize:vertical;padding:10px;border:1px solid var(--bd);border-radius:8px;font-size:14px;font-family:inherit" placeholder="Describe tu sugerencia o comentario…"></textarea>
     </div>
-    <button class="btn bg" onclick="enviarSugerencia()" style="margin-top:.5rem">📨 Enviar Sugerencia</button>
+    <button class="btn bg" onclick="enviarSugerencia()" style="margin-top:.5rem"><i class="fas fa-envelope"></i> Enviar Sugerencia</button>
   </div>
   <div class="card" style="margin-top:1rem">
     <div class="chd"><span class="cti">Mis Sugerencias Enviadas</span></div>
@@ -18231,7 +18231,7 @@ async function cargarMisSugerencias() {
       </div>
       ${s.titulo ? `<div style="font-weight:600;margin:.25rem 0">${s.titulo}</div>` : ''}
       <p style="color:#4a5568;margin:.25rem 0;font-size:.9rem">${s.mensaje}</p>
-      ${s.respuesta ? `<div style="background:#f0fff4;border-radius:6px;padding:.4rem .6rem;margin-top:.35rem;font-size:.85rem;color:#276749"><strong>💬 Respuesta:</strong> ${s.respuesta}</div>` : '<div style="font-size:.78rem;color:#a0aec0;margin-top:.25rem">Pendiente de respuesta</div>'}
+      ${s.respuesta ? `<div style="background:#f0fff4;border-radius:6px;padding:.4rem .6rem;margin-top:.35rem;font-size:.85rem;color:#276749"><strong><i class="fas fa-comment"></i> Respuesta:</strong> ${s.respuesta}</div>` : '<div style="font-size:.78rem;color:#a0aec0;margin-top:.25rem">Pendiente de respuesta</div>'}
     </div>`).join('');
   } catch (e) { cont.innerHTML = `<p style="color:red;font-size:.85rem">Error: ${e.message}</p>`; }
 }
@@ -18248,30 +18248,30 @@ document.addEventListener('keydown',ev=>{
 
 // ── Panel principal financiero ───────────────────────────────
 function pgFinDash(){
-  const rol=CU.role==='finAdmin'?'💼 Administrador Financiero':'👁️ Usuario de Caja';
+  const rol=CU.role==='finAdmin'?'<i class="fas fa-briefcase"></i> Administrador Financiero':'<i class="fas fa-eye"></i> Usuario de Caja';
   const ano=new Date().getFullYear();
   return`<div style="margin-bottom:20px">
     <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">
-      <div><h2 style="margin:0;font-size:20px">💰 Panel Financiero</h2>
+      <div><h2 style="margin:0;font-size:20px"><i class="fas fa-sack-dollar"></i> Panel Financiero</h2>
         <p style="margin:4px 0 0;font-size:13px;color:var(--sl2)">${esc(CU.colegioNombre)} · ${rol} · Año ${ano}</p></div>
-      <button onclick="initFinDash()" style="padding:8px 14px;font-size:13px;background:var(--bg2);border:1.5px solid var(--bd);border-radius:8px;cursor:pointer">🔄 Actualizar</button>
+      <button onclick="initFinDash()" style="padding:8px 14px;font-size:13px;background:var(--bg2);border:1.5px solid var(--bd);border-radius:8px;cursor:pointer"><i class="fas fa-arrows-rotate"></i> Actualizar</button>
     </div></div>
-  <div id="finDashW"><div class="mty"><div class="ei">📊</div><p>Cargando...</p></div></div>`;
+  <div id="finDashW"><div class="mty"><div class="ei"><i class="fas fa-chart-column"></i></div><p>Cargando...</p></div></div>`;
 }
 async function initFinDash(){
 
   const el=gi('finDashW'); if(!el) return;
-  el.innerHTML='<div style="text-align:center;padding:24px;color:var(--sl3)">⏳ Cargando resumen...</div>';
+  el.innerHTML='<div style="text-align:center;padding:24px;color:var(--sl3)"><i class="fas fa-hourglass-half"></i> Cargando resumen...</div>';
   try{
     const r=await apiFin('/resumen');
     const fmt=v=>`$${(v||0).toLocaleString('es-CO')}`;
     el.innerHTML=`
       <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;margin-bottom:20px">
         ${[
-          {l:'Pagado',v:fmt(r.pagado),c:'#dcfce7',tc:'#166534',ic:'✅',click:"nav('finpagos');setTimeout(()=>{const s=gi('fpEstado');if(s)s.value='pagado';finLoadPagos();},400)"},
-          {l:'Pendiente',v:fmt(r.pendiente?.monto),c:'#fef9c3',tc:'#854d0e',ic:'⏳',sub:`${r.pendiente?.cantidad||0} cobros`,click:"nav('finpagos');setTimeout(()=>{const s=gi('fpEstado');if(s)s.value='pendiente';finLoadPagos();},400)"},
-          {l:'Vencido',v:fmt(r.vencido?.monto),c:'#fee2e2',tc:'#b91c1c',ic:'🚨',sub:`${r.vencido?.cantidad||0} cobros`,click:"nav('finmorosos')"},
-          {l:'Anulados',v:r.anulados||0,c:'#f3f4f6',tc:'#6b7280',ic:'❌',sub:'transacciones',click:"nav('finpagos');setTimeout(()=>{const s=gi('fpEstado');if(s)s.value='anulado';finLoadPagos();},400)"},
+          {l:'Pagado',v:fmt(r.pagado),c:'#dcfce7',tc:'#166534',ic:'<i class="fas fa-circle-check"></i>',click:"nav('finpagos');setTimeout(()=>{const s=gi('fpEstado');if(s)s.value='pagado';finLoadPagos();},400)"},
+          {l:'Pendiente',v:fmt(r.pendiente?.monto),c:'#fef9c3',tc:'#854d0e',ic:'<i class="fas fa-hourglass-half"></i>',sub:`${r.pendiente?.cantidad||0} cobros`,click:"nav('finpagos');setTimeout(()=>{const s=gi('fpEstado');if(s)s.value='pendiente';finLoadPagos();},400)"},
+          {l:'Vencido',v:fmt(r.vencido?.monto),c:'#fee2e2',tc:'#b91c1c',ic:'<i class="fas fa-triangle-exclamation"></i>',sub:`${r.vencido?.cantidad||0} cobros`,click:"nav('finmorosos')"},
+          {l:'Anulados',v:r.anulados||0,c:'#f3f4f6',tc:'#6b7280',ic:'<i class="fas fa-circle-xmark"></i>',sub:'transacciones',click:"nav('finpagos');setTimeout(()=>{const s=gi('fpEstado');if(s)s.value='anulado';finLoadPagos();},400)"},
         ].map(s=>`<div onclick="${s.click}" style="padding:16px 18px;border-radius:12px;background:${s.c};border:1px solid ${s.c};cursor:pointer;transition:opacity .15s" onmouseover="this.style.opacity='.85'" onmouseout="this.style.opacity='1'">
           <div style="font-size:22px;margin-bottom:4px">${s.ic}</div>
           <div style="font-size:20px;font-weight:800;color:${s.tc}">${s.v}</div>
@@ -18281,7 +18281,7 @@ async function initFinDash(){
       </div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
         <div class="card" style="padding:0;overflow:hidden">
-          <div style="padding:12px 16px;background:var(--bg2);border-bottom:1px solid var(--bd);font-weight:800;font-size:13px">📋 Por Concepto</div>
+          <div style="padding:12px 16px;background:var(--bg2);border-bottom:1px solid var(--bd);font-weight:800;font-size:13px"><i class="fas fa-clipboard-list"></i> Por Concepto</div>
           <div style="padding:12px">${(r.porConcepto||[]).length?r.porConcepto.map(c=>`
             <div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--bd);font-size:13px">
               <span>${esc(c._id)}</span><strong>${fmt(c.total)}</strong>
@@ -18289,7 +18289,7 @@ async function initFinDash(){
           </div>
         </div>
         <div class="card" style="padding:0;overflow:hidden">
-          <div style="padding:12px 16px;background:var(--bg2);border-bottom:1px solid var(--bd);font-weight:800;font-size:13px">🕐 Últimas Transacciones</div>
+          <div style="padding:12px 16px;background:var(--bg2);border-bottom:1px solid var(--bd);font-weight:800;font-size:13px"><i class="fas fa-clock"></i> Últimas Transacciones</div>
           <div style="padding:12px">${(r.recientes||[]).length?r.recientes.map(p=>`
             <div style="padding:7px 0;border-bottom:1px solid var(--bd);font-size:12px;cursor:pointer" onclick="nav('finpagos');setTimeout(()=>{const inp=gi('fpEstNombre');if(inp){inp.value='${esc(p.estNombre)}';finLoadPagos();}},400)">
               <div style="display:flex;justify-content:space-between">
@@ -18309,13 +18309,13 @@ function pgFinPagos(){
   const curYear=new Date().getFullYear();
   const yearOpts=[curYear,curYear-1,curYear-2].map(y=>`<option value="${y}"${y===curYear?' selected':''}>${y}</option>`).join('');
   return`<div style="margin-bottom:16px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">
-    <h2 style="margin:0">💳 Pagos & Cobros</h2>
-    ${CU.role==='finAdmin'?`<button onclick="finNuevoPago()" style="padding:10px 18px;font-size:13px;font-weight:700;background:#dcfce7;color:#166534;border:1.5px solid #86efac;border-radius:8px;cursor:pointer">➕ Nuevo Pago</button>`:''}
+    <h2 style="margin:0"><i class="fas fa-credit-card"></i> Pagos & Cobros</h2>
+    ${CU.role==='finAdmin'?`<button onclick="finNuevoPago()" style="padding:10px 18px;font-size:13px;font-weight:700;background:#dcfce7;color:#166534;border:1.5px solid #86efac;border-radius:8px;cursor:pointer"><i class="fas fa-plus"></i> Nuevo Pago</button>`:''}
   </div>
   <div class="card" style="padding:16px;margin-bottom:16px">
     <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end">
       <div style="flex:1;min-width:200px">
-        <label style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--sl);display:block;margin-bottom:4px">🔍 Estudiante</label>
+        <label style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--sl);display:block;margin-bottom:4px"><i class="fas fa-magnifying-glass"></i> Estudiante</label>
         <input id="fpEstNombre" placeholder="Buscar por nombre…" oninput="finLoadPagos()"
           style="width:100%;padding:9px 12px;font-size:13px;border:1.5px solid var(--bd);border-radius:8px;background:var(--bg2);color:var(--tx);outline:none;box-sizing:border-box">
       </div>
@@ -18335,10 +18335,10 @@ function pgFinPagos(){
         <label style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--sl);display:block;margin-bottom:4px">Estado</label>
         <select id="fpEstado" onchange="finLoadPagos()" style="width:100%;padding:9px 12px;font-size:13px;border:1.5px solid var(--bd);border-radius:8px;background:var(--bg2);color:var(--tx);outline:none">
           <option value="">Todos</option>
-          <option value="pendiente">⏳ Pendiente</option>
-          <option value="pagado">✅ Pagado</option>
-          <option value="vencido">🚨 Vencido</option>
-          <option value="anulado">❌ Anulado</option>
+          <option value="pendiente"><i class="fas fa-hourglass-half"></i> Pendiente</option>
+          <option value="pagado"><i class="fas fa-circle-check"></i> Pagado</option>
+          <option value="vencido"><i class="fas fa-triangle-exclamation"></i> Vencido</option>
+          <option value="anulado"><i class="fas fa-circle-xmark"></i> Anulado</option>
         </select>
       </div>
       <div style="flex:0;min-width:100px">
@@ -18348,12 +18348,12 @@ function pgFinPagos(){
         </select>
       </div>
       <div style="display:flex;gap:8px;align-items:flex-end">
-        <button onclick="finLimpiarFiltrosPagos()" style="padding:10px 14px;font-size:13px;font-weight:700;background:var(--bg2);color:var(--sl);border:1.5px solid var(--bd);border-radius:8px;cursor:pointer" title="Limpiar filtros">🧹</button>
+        <button onclick="finLimpiarFiltrosPagos()" style="padding:10px 14px;font-size:13px;font-weight:700;background:var(--bg2);color:var(--sl);border:1.5px solid var(--bd);border-radius:8px;cursor:pointer" title="Limpiar filtros"><i class="fas fa-broom"></i></button>
       </div>
     </div>
     <div id="fpResumen" style="margin-top:10px;font-size:12px;color:var(--sl3)"></div>
   </div>
-  <div id="fpW"><div class="mty"><div class="ei">💳</div><p>Usa los filtros para buscar pagos</p></div></div>`;
+  <div id="fpW"><div class="mty"><div class="ei"><i class="fas fa-credit-card"></i></div><p>Usa los filtros para buscar pagos</p></div></div>`;
 }
 window._fpTimer=null;
 async function initFinPagos(){
@@ -18376,7 +18376,7 @@ async function finLoadPagos(){
   clearTimeout(window._fpTimer);
   window._fpTimer=setTimeout(async()=>{
     const el=gi('fpW');if(!el)return;
-    el.innerHTML='<div style="text-align:center;padding:24px;color:var(--sl3)">⏳ Cargando...</div>';
+    el.innerHTML='<div style="text-align:center;padding:24px;color:var(--sl3)"><i class="fas fa-hourglass-half"></i> Cargando...</div>';
     const salon=gi('fpSalon')?.value||'';
     const estado=gi('fpEstado')?.value||'';
     const conceptoId=gi('fpConcepto')?.value||'';
@@ -18401,9 +18401,9 @@ async function finLoadPagos(){
         const total=pagos.reduce((a,p)=>a+(p.valorFinal||0),0);
         const pagados=pagos.filter(p=>p.estado==='pagado').length;
         const pendientes=pagos.filter(p=>p.estado==='pendiente'||p.estado==='vencido').length;
-        resEl.innerHTML=pagos.length?`<span style="margin-right:14px">📄 <strong>${pagos.length}</strong> registro${pagos.length!==1?'s':''}</span><span style="margin-right:14px">💰 Total: <strong>$${total.toLocaleString('es-CO')}</strong></span><span style="color:#166534;margin-right:14px">✅ ${pagados} pagados</span><span style="color:#b91c1c">⏳ ${pendientes} pendientes/vencidos</span>`:'';
+        resEl.innerHTML=pagos.length?`<span style="margin-right:14px"><i class="fas fa-file-lines"></i> <strong>${pagos.length}</strong> registro${pagos.length!==1?'s':''}</span><span style="margin-right:14px"><i class="fas fa-sack-dollar"></i> Total: <strong>$${total.toLocaleString('es-CO')}</strong></span><span style="color:#166534;margin-right:14px"><i class="fas fa-circle-check"></i> ${pagados} pagados</span><span style="color:#b91c1c"><i class="fas fa-hourglass-half"></i> ${pendientes} pendientes/vencidos</span>`:'';
       }
-      if(!pagos.length){el.innerHTML='<div class="mty"><div class="ei">🔍</div><p>Sin resultados con estos filtros</p></div>';return;}
+      if(!pagos.length){el.innerHTML='<div class="mty"><div class="ei"><i class="fas fa-magnifying-glass"></i></div><p>Sin resultados con estos filtros</p></div>';return;}
       const fmt=v=>`$${(v||0).toLocaleString('es-CO')}`;
       const stColors={
         pagado:  {bg:'#dcfce7',color:'#166534',border:'#86efac'},
@@ -18415,17 +18415,17 @@ async function finLoadPagos(){
         const sc=stColors[p.estado]||stColors.anulado;
         // Pagado: badge fijo, nunca editable
         if(p.estado==='pagado'){
-          return`<span style="display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;background:${sc.bg};color:${sc.color};border:1px solid ${sc.border};user-select:none" title="Pago confirmado — no se puede modificar">✅ pagado</span>`;
+          return`<span style="display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;background:${sc.bg};color:${sc.color};border:1px solid ${sc.border};user-select:none" title="Pago confirmado — no se puede modificar"><i class="fas fa-circle-check"></i> pagado</span>`;
         }
         if(CU.role!=='finAdmin'){
           return`<span style="display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;background:${sc.bg};color:${sc.color};border:1px solid ${sc.border}">${p.estado}</span>`;
         }
         return`<select onchange="finCambioRapidoEstado('${p.id}',this)"
           style="padding:3px 10px;font-size:12px;font-weight:700;border-radius:20px;border:1.5px solid ${sc.border};background:${sc.bg};color:${sc.color};cursor:pointer;outline:none">
-          <option value="pendiente"${p.estado==='pendiente'?' selected':''}>⏳ pendiente</option>
-          <option value="vencido"${p.estado==='vencido'?' selected':''}>🚨 vencido</option>
-          <option value="anulado"${p.estado==='anulado'?' selected':''}>❌ anulado</option>
-          <option value="pagado">✅ marcar como pagado</option>
+          <option value="pendiente"${p.estado==='pendiente'?' selected':''}><i class="fas fa-hourglass-half"></i> pendiente</option>
+          <option value="vencido"${p.estado==='vencido'?' selected':''}><i class="fas fa-triangle-exclamation"></i> vencido</option>
+          <option value="anulado"${p.estado==='anulado'?' selected':''}><i class="fas fa-circle-xmark"></i> anulado</option>
+          <option value="pagado"><i class="fas fa-circle-check"></i> marcar como pagado</option>
         </select>`;
       };
       el.innerHTML=`<div class="tw"><table>
@@ -18438,10 +18438,10 @@ async function finLoadPagos(){
           <td class="pago-estado-cell">${stSelect(p)}</td>
           <td style="font-size:11px;color:var(--sl3)">${p.fechaPago||p.fechaVence||'—'}</td>
           ${CU.role==='finAdmin'?`<td><div style="display:flex;gap:5px">
-            ${p.estado!=='pagado'?`<button onclick="finEditPago('${p.id}','${esc(p.estado)}')" style="padding:4px 9px;font-size:11px;background:#e0e7ff;color:#3730a3;border:1.5px solid #a5b4fc;border-radius:6px;cursor:pointer" title="Editar">✏️</button>`:'<span style="width:30px;display:inline-block"></span>'}
-            <button onclick="finVerDetalle('${p.id}')" style="padding:4px 9px;font-size:11px;background:#f0f9ff;color:#0369a1;border:1.5px solid #7dd3fc;border-radius:6px;cursor:pointer" title="Ver detalle">👁</button>
-            ${p.estado!=='pagado'?`<button onclick="finSolicitarComprobante('${p.id}')" style="padding:4px 9px;font-size:11px;background:#fef9c3;color:#854d0e;border:1.5px solid #fde68a;border-radius:6px;cursor:pointer" title="Solicitar comprobante de pago">📎</button>`:''}
-            ${p.estado!=='pagado'?`<button onclick="finEliminarPago('${p.id}')" style="padding:4px 9px;font-size:11px;background:#fee2e2;color:#b91c1c;border:1.5px solid #fca5a5;border-radius:6px;cursor:pointer" title="Anular">🗑</button>`:'<span style="width:30px;display:inline-block" title="Los pagos confirmados no se pueden eliminar desde aquí">🔒</span>'}
+            ${p.estado!=='pagado'?`<button onclick="finEditPago('${p.id}','${esc(p.estado)}')" style="padding:4px 9px;font-size:11px;background:#e0e7ff;color:#3730a3;border:1.5px solid #a5b4fc;border-radius:6px;cursor:pointer" title="Editar"><i class="fas fa-pen"></i></button>`:'<span style="width:30px;display:inline-block"></span>'}
+            <button onclick="finVerDetalle('${p.id}')" style="padding:4px 9px;font-size:11px;background:#f0f9ff;color:#0369a1;border:1.5px solid #7dd3fc;border-radius:6px;cursor:pointer" title="Ver detalle"><i class="fas fa-eye"></i></button>
+            ${p.estado!=='pagado'?`<button onclick="finSolicitarComprobante('${p.id}')" style="padding:4px 9px;font-size:11px;background:#fef9c3;color:#854d0e;border:1.5px solid #fde68a;border-radius:6px;cursor:pointer" title="Solicitar comprobante de pago"><i class="fas fa-paperclip"></i></button>`:''}
+            ${p.estado!=='pagado'?`<button onclick="finEliminarPago('${p.id}')" style="padding:4px 9px;font-size:11px;background:#fee2e2;color:#b91c1c;border:1.5px solid #fca5a5;border-radius:6px;cursor:pointer" title="Anular"><i class="fas fa-trash"></i></button>`:'<span style="width:30px;display:inline-block" title="Los pagos confirmados no se pueden eliminar desde aquí"><i class="fas fa-lock"></i></span>'}
           </div></td>`:''}
         </tr>`).join('')}</tbody>
       </table></div>`;
@@ -18462,7 +18462,7 @@ async function finVerDetalle(pid){
     const fmt=v=>`$${(v||0).toLocaleString('es-CO')}`;
     const stBadge=s=>({pagado:'bgr',pendiente:'bgy',vencido:'bred',anulado:'bgy'}[s]||'bgy');
     await Swal.fire({
-      title:'📄 Detalle del Pago',width:440,
+      title:'<i class="fas fa-file-lines"></i> Detalle del Pago',width:440,
       html:`<div style="text-align:left;font-family:var(--fn);font-size:13px;display:flex;flex-direction:column;gap:0">
         ${[['Estudiante',`<strong>${esc(p.estNombre)}</strong>`],['Salón',esc(p.salon||'—')],
            ['Concepto',esc(p.conceptoNombre||p.concepto||'—')],
@@ -18476,8 +18476,8 @@ async function finVerDetalle(pid){
       showCancelButton:false,confirmButtonText:'Cerrar',
       footer:CU.role==='finAdmin'?`
         <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center">
-          <button onclick="finDescargarRecibo('${pid}')" style="background:#dcfce7;color:#166534;border:1.5px solid #86efac;border-radius:6px;padding:6px 14px;font-size:12px;font-weight:700;cursor:pointer">📄 Descargar recibo</button>
-          ${p.estado!=='pagado'?`<button onclick="Swal.close();finEliminarPago('${pid}')" style="background:#fee2e2;color:#b91c1c;border:1.5px solid #fca5a5;border-radius:6px;padding:6px 14px;font-size:12px;font-weight:700;cursor:pointer">🗑 Eliminar / Anular pago</button>`:''}
+          <button onclick="finDescargarRecibo('${pid}')" style="background:#dcfce7;color:#166534;border:1.5px solid #86efac;border-radius:6px;padding:6px 14px;font-size:12px;font-weight:700;cursor:pointer"><i class="fas fa-file-lines"></i> Descargar recibo</button>
+          ${p.estado!=='pagado'?`<button onclick="Swal.close();finEliminarPago('${pid}')" style="background:#fee2e2;color:#b91c1c;border:1.5px solid #fca5a5;border-radius:6px;padding:6px 14px;font-size:12px;font-weight:700;cursor:pointer"><i class="fas fa-trash"></i> Eliminar / Anular pago</button>`:''}
         </div>`:''
     });
   }catch(e){sw('error','Error al cargar detalle: '+e.message);}
@@ -18538,7 +18538,7 @@ function _generarHtmlRecibo(p){
       <div class="footer">Generado el ${hoy} · ${esc(DB?.colegioNombre||'Colegio')}</div>
     </div>
     <div class="no-print">
-      <button class="btn-print" onclick="window.print()">🖨️ Imprimir / Guardar PDF</button>
+      <button class="btn-print" onclick="window.print()"><i class="fas fa-print"></i> Imprimir / Guardar PDF</button>
     </div>
   </div>
 </body></html>`;
@@ -18582,7 +18582,7 @@ async function finVerReciboEst(pid){
 // ─── SOLICITAR COMPROBANTE (desde tabla de pagos) ───────────────────
 async function finSolicitarComprobante(pagoId){
   const r=await Swal.fire({
-    title:'📎 Solicitar comprobante',
+    title:'<i class="fas fa-paperclip"></i> Solicitar comprobante',
     text:'Se le notificará al estudiante que debe subir el comprobante de pago.',
     icon:'question', showCancelButton:true,
     confirmButtonText:'Sí, solicitar', cancelButtonText:'Cancelar',
@@ -18602,19 +18602,19 @@ async function finSolicitarComprobante(pagoId){
 function pgFinComprobantes(){
   return`<div style="margin-bottom:20px">
     <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">
-      <div><h2 style="margin:0;font-size:20px">📎 Comprobantes de Pago</h2>
+      <div><h2 style="margin:0;font-size:20px"><i class="fas fa-paperclip"></i> Comprobantes de Pago</h2>
         <p style="margin:4px 0 0;font-size:13px;color:var(--sl2)">Revisa y aprueba los comprobantes enviados por los estudiantes.</p></div>
-      <button onclick="initFinComprobantes()" style="padding:8px 14px;font-size:13px;background:var(--bg2);border:1.5px solid var(--bd);border-radius:8px;cursor:pointer">🔄 Actualizar</button>
+      <button onclick="initFinComprobantes()" style="padding:8px 14px;font-size:13px;background:var(--bg2);border:1.5px solid var(--bd);border-radius:8px;cursor:pointer"><i class="fas fa-arrows-rotate"></i> Actualizar</button>
     </div></div>
   <!-- Filtro de estado -->
   <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap">
     ${['todos','solicitado','enviado','aprobado','rechazado'].map(s=>`
       <button onclick="finCompFiltro('${s}')" id="fcfBtn_${s}"
         style="padding:6px 14px;font-size:12px;font-weight:700;border-radius:20px;border:1.5px solid var(--bd);background:var(--bg2);color:var(--tx);cursor:pointer">
-        ${{todos:'🗂 Todos',solicitado:'⏳ Solicitado',enviado:'📬 Enviado',aprobado:'✅ Aprobado',rechazado:'❌ Rechazado'}[s]}
+        ${{todos:'<i class="fas fa-box-archive"></i> Todos',solicitado:'<i class="fas fa-hourglass-half"></i> Solicitado',enviado:'<i class="fas fa-envelope-circle-check"></i> Enviado',aprobado:'<i class="fas fa-circle-check"></i> Aprobado',rechazado:'<i class="fas fa-circle-xmark"></i> Rechazado'}[s]}
       </button>`).join('')}
   </div>
-  <div id="finCompW"><div class="mty"><div class="ei">📎</div><p>Cargando...</p></div></div>`;
+  <div id="finCompW"><div class="mty"><div class="ei"><i class="fas fa-paperclip"></i></div><p>Cargando...</p></div></div>`;
 }
 window._finCompFiltro='enviado';
 async function finCompFiltro(estado){
@@ -18631,22 +18631,22 @@ async function finCompFiltro(estado){
 }
 async function initFinComprobantes(){
   const el=gi('finCompW'); if(!el) return;
-  el.innerHTML='<div style="text-align:center;padding:24px;color:var(--sl3)">⏳ Cargando...</div>';
+  el.innerHTML='<div style="text-align:center;padding:24px;color:var(--sl3)"><i class="fas fa-hourglass-half"></i> Cargando...</div>';
   const estado=window._finCompFiltro||'enviado';
   try{
     const qs=estado==='todos'?'':'&estado='+estado;
     const lista=await apiFin('/comprobantes?limit=100'+qs);
     if(!lista.length){
-      el.innerHTML='<div class="mty"><div class="ei">📭</div><p>No hay comprobantes '+
+      el.innerHTML='<div class="mty"><div class="ei"><i class="fas fa-envelope-open"></i></div><p>No hay comprobantes '+
         (estado==='enviado'?'pendientes de revisión':estado==='todos'?'registrados':'con estado "'+estado+'"')+'.</p></div>';
       return;
     }
     const fmt=v=>`$${(v||0).toLocaleString('es-CO')}`;
     const stInfo={
-      solicitado:{ic:'⏳',bg:'#fef9c3',c:'#854d0e',lbl:'Esperando al estudiante'},
-      enviado:   {ic:'📬',bg:'#dbeafe',c:'#1e40af',lbl:'Esperando revisión'},
-      aprobado:  {ic:'✅',bg:'#dcfce7',c:'#166534',lbl:'Aprobado'},
-      rechazado: {ic:'❌',bg:'#fee2e2',c:'#b91c1c',lbl:'Rechazado'},
+      solicitado:{ic:'<i class="fas fa-hourglass-half"></i>',bg:'#fef9c3',c:'#854d0e',lbl:'Esperando al estudiante'},
+      enviado:   {ic:'<i class="fas fa-envelope-circle-check"></i>',bg:'#dbeafe',c:'#1e40af',lbl:'Esperando revisión'},
+      aprobado:  {ic:'<i class="fas fa-circle-check"></i>',bg:'#dcfce7',c:'#166534',lbl:'Aprobado'},
+      rechazado: {ic:'<i class="fas fa-circle-xmark"></i>',bg:'#fee2e2',c:'#b91c1c',lbl:'Rechazado'},
     };
     el.innerHTML=lista.map(c=>{
       const si=stInfo[c.estado]||stInfo.solicitado;
@@ -18667,9 +18667,9 @@ async function initFinComprobantes(){
         ${c.motivoRechazo?`<div style="padding:8px 16px;background:#fff1f2;font-size:12px;color:#b91c1c;border-top:1px solid #fca5a5">
           <strong>Motivo del rechazo:</strong> ${esc(c.motivoRechazo)}</div>`:''}
         ${c.estado==='enviado'?`<div style="padding:10px 16px;display:flex;gap:8px;flex-wrap:wrap;border-top:1px solid var(--bd)">
-          <button onclick="finVerComprobante('${c.id}')" style="padding:6px 14px;font-size:12px;font-weight:700;background:#f0f9ff;color:#0369a1;border:1.5px solid #7dd3fc;border-radius:7px;cursor:pointer">👁 Ver archivo</button>
-          <button onclick="finAprobarComp('${c.id}')" style="padding:6px 14px;font-size:12px;font-weight:700;background:#dcfce7;color:#166534;border:1.5px solid #86efac;border-radius:7px;cursor:pointer">✅ Aprobar</button>
-          <button onclick="finRechazarComp('${c.id}')" style="padding:6px 14px;font-size:12px;font-weight:700;background:#fee2e2;color:#b91c1c;border:1.5px solid #fca5a5;border-radius:7px;cursor:pointer">❌ Rechazar</button>
+          <button onclick="finVerComprobante('${c.id}')" style="padding:6px 14px;font-size:12px;font-weight:700;background:#f0f9ff;color:#0369a1;border:1.5px solid #7dd3fc;border-radius:7px;cursor:pointer"><i class="fas fa-eye"></i> Ver archivo</button>
+          <button onclick="finAprobarComp('${c.id}')" style="padding:6px 14px;font-size:12px;font-weight:700;background:#dcfce7;color:#166534;border:1.5px solid #86efac;border-radius:7px;cursor:pointer"><i class="fas fa-circle-check"></i> Aprobar</button>
+          <button onclick="finRechazarComp('${c.id}')" style="padding:6px 14px;font-size:12px;font-weight:700;background:#fee2e2;color:#b91c1c;border:1.5px solid #fca5a5;border-radius:7px;cursor:pointer"><i class="fas fa-circle-xmark"></i> Rechazar</button>
         </div>`:''}
       </div>`;
     }).join('');
@@ -18686,9 +18686,9 @@ async function initFinComprobantes(){
 
 async function finVerComprobante(cid){
   const el=document.createElement('div');
-  el.innerHTML='<div style="text-align:center;padding:24px;color:var(--sl3)">⏳ Cargando archivo...</div>';
+  el.innerHTML='<div style="text-align:center;padding:24px;color:var(--sl3)"><i class="fas fa-hourglass-half"></i> Cargando archivo...</div>';
   Swal.fire({
-    title:'📎 Comprobante de Pago',
+    title:'<i class="fas fa-paperclip"></i> Comprobante de Pago',
     html:el,
     showConfirmButton:false,
     showCloseButton:true,
@@ -18710,7 +18710,7 @@ async function finVerComprobante(cid){
           <button id="${uid}_zi" style="padding:5px 16px;font-size:15px;font-weight:800;border:1.5px solid #94a3b8;border-radius:7px;background:#f1f5f9;cursor:pointer">+</button>
           <button id="${uid}_zr" style="padding:5px 14px;font-size:12px;font-weight:700;border:1.5px solid #94a3b8;border-radius:7px;background:#f1f5f9;cursor:pointer">Reset</button>
           <button id="${uid}_zo" style="padding:5px 16px;font-size:15px;font-weight:800;border:1.5px solid #94a3b8;border-radius:7px;background:#f1f5f9;cursor:pointer">−</button>
-          <a href="${dataUrl}" download="comprobante" target="_blank" style="padding:5px 14px;font-size:12px;font-weight:700;color:#2563eb;border:1.5px solid #93c5fd;border-radius:7px;background:#eff6ff;text-decoration:none">📥 Descargar</a>
+          <a href="${dataUrl}" download="comprobante" target="_blank" style="padding:5px 14px;font-size:12px;font-weight:700;color:#2563eb;border:1.5px solid #93c5fd;border-radius:7px;background:#eff6ff;text-decoration:none"><i class="fas fa-download"></i> Descargar</a>
         </div>
         <p style="text-align:center;font-size:11px;color:#94a3b8;margin:5px 0 0">Scroll para zoom · Arrastra para mover · Doble clic para resetear</p>
       </div>`;
@@ -18830,7 +18830,7 @@ async function finVerComprobante(cid){
           <div style="margin-top:8px">
             <a href="${dataUrl}" download="comprobante.pdf" target="_blank"
               style="font-size:12px;color:#2563eb;text-decoration:none;font-weight:600">
-              📥 Descargar PDF
+              <i class="fas fa-download"></i> Descargar PDF
             </a>
           </div>
         </div>`;
@@ -18838,10 +18838,10 @@ async function finVerComprobante(cid){
       // Tipo desconocido: botón de descarga
       el.innerHTML=`
         <div style="text-align:center;padding:20px">
-          <div style="font-size:40px;margin-bottom:10px">📄</div>
+          <div style="font-size:40px;margin-bottom:10px"><i class="fas fa-file-lines"></i></div>
           <a href="${dataUrl}" download="comprobante" target="_blank"
             style="display:inline-block;padding:10px 24px;background:#2563eb;color:#fff;border-radius:8px;font-weight:700;text-decoration:none">
-            📥 Descargar archivo
+            <i class="fas fa-download"></i> Descargar archivo
           </a>
         </div>`;
     }
@@ -18850,7 +18850,7 @@ async function finVerComprobante(cid){
 
 async function finAprobarComp(cid){
   const r=await Swal.fire({
-    title:'✅ Aprobar comprobante',
+    title:'<i class="fas fa-circle-check"></i> Aprobar comprobante',
     text:'El pago se marcará como PAGADO automáticamente.',
     icon:'question', showCancelButton:true,
     confirmButtonText:'Aprobar', cancelButtonText:'Cancelar',
@@ -18859,7 +18859,7 @@ async function finAprobarComp(cid){
   if(!r.isConfirmed) return;
   try{
     const res=await apiFin(`/comprobantes/${cid}/revisar`,{method:'PUT',body:JSON.stringify({accion:'aprobar'})});
-    sw('success','✅ Comprobante aprobado. Pago confirmado.','',2000);
+    sw('success','<i class="fas fa-circle-check"></i> Comprobante aprobado. Pago confirmado.','',2000);
     // Actualizar fila en la tabla de pagos si está visible
     if(res.pagoId) _actualizarFilaPago(res.pagoId,'pagado');
     initFinComprobantes();
@@ -18869,7 +18869,7 @@ async function finAprobarComp(cid){
 
 async function finRechazarComp(cid){
   const r=await Swal.fire({
-    title:'❌ Rechazar comprobante',
+    title:'<i class="fas fa-circle-xmark"></i> Rechazar comprobante',
     input:'textarea', inputLabel:'Motivo del rechazo',
     inputPlaceholder:'Ej: El monto no corresponde, imagen ilegible...',
     inputAttributes:{'minlength':5},
@@ -18894,10 +18894,10 @@ function _actualizarFilaPago(pagoId, nuevoEstado){
   const stCell=row.querySelector('.pago-estado-cell');
   if(!stCell) return;
   const esCfg={
-    pagado:  {lbl:'✅ pagado',  bg:'#dcfce7',c:'#166534',bd:'#86efac'},
-    pendiente:{lbl:'⏳ pendiente',bg:'#fef9c3',c:'#854d0e',bd:'#fde68a'},
-    vencido: {lbl:'⚠️ vencido', bg:'#fee2e2',c:'#b91c1c',bd:'#fca5a5'},
-    anulado: {lbl:'🚫 anulado', bg:'#f1f5f9',c:'#64748b',bd:'#cbd5e1'},
+    pagado:  {lbl:'<i class="fas fa-circle-check"></i> pagado',  bg:'#dcfce7',c:'#166534',bd:'#86efac'},
+    pendiente:{lbl:'<i class="fas fa-hourglass-half"></i> pendiente',bg:'#fef9c3',c:'#854d0e',bd:'#fde68a'},
+    vencido: {lbl:'<i class="fas fa-triangle-exclamation"></i> vencido', bg:'#fee2e2',c:'#b91c1c',bd:'#fca5a5'},
+    anulado: {lbl:'<i class="fas fa-ban"></i> anulado', bg:'#f1f5f9',c:'#64748b',bd:'#cbd5e1'},
   };
   const cfg=esCfg[nuevoEstado]||esCfg.pendiente;
   // Mantener el select pero actualizar su valor y colores
@@ -18988,39 +18988,39 @@ async function finNuevoPago(){
   const salPrimaria  = sals.filter(s=>s.ciclo==='primaria').map(s=>s.nombre);
   const salBach      = sals.filter(s=>s.ciclo==='bachillerato').map(s=>s.nombre);
   const cicloOpts = `
-    <option value="todos">👥 Todos los estudiantes</option>
-    <option value="primaria">📚 Primaria (1°–5°)</option>
-    <option value="bachillerato">🎓 Bachillerato (6°–11°)</option>`;
+    <option value="todos"><i class="fas fa-users"></i> Todos los estudiantes</option>
+    <option value="primaria"><i class="fas fa-book"></i> Primaria (1°–5°)</option>
+    <option value="bachillerato"><i class="fas fa-graduation-cap"></i> Bachillerato (6°–11°)</option>`;
   const salonOpts = (ciclo='todos') => {
     const lista = ciclo==='primaria' ? salPrimaria : ciclo==='bachillerato' ? salBach : [...salPrimaria,...salBach];
     return '<option value="">— Todos los salones —</option>'+lista.sort().map(s=>`<option value="${s}">${s}</option>`).join('');
   };
 
   const {value,isConfirmed}=await Swal.fire({
-    title:'➕ Registrar Pago',width:660,
+    title:'<i class="fas fa-plus"></i> Registrar Pago',width:660,
     html:`<div style="text-align:left;font-family:var(--fn);display:flex;flex-direction:column;gap:14px">
 
       <!-- MODO -->
       <div style="display:flex;gap:8px;background:#f1f5f9;border-radius:12px;padding:6px">
         <button type="button" id="modoIndBtn" onclick="fnSetModo('ind')"
           style="flex:1;padding:10px 6px;font-size:14px;font-weight:700;border-radius:9px;border:none;cursor:pointer;background:#3730a3;color:#fff">
-          👤 Individual</button>
+          <i class="fas fa-user"></i> Individual</button>
         <button type="button" id="modoMasBtn" onclick="fnSetModo('mas')"
           style="flex:1;padding:10px 6px;font-size:14px;font-weight:700;border-radius:9px;border:none;cursor:pointer;background:transparent;color:#64748b">
-          🏫 Todo un salón</button>
+          <i class="fas fa-school"></i> Todo un salón</button>
         <button type="button" id="modoGrpBtn" onclick="fnSetModo('grp')"
           style="flex:1;padding:10px 6px;font-size:14px;font-weight:700;border-radius:9px;border:none;cursor:pointer;background:transparent;color:#64748b">
-          ✏️ Varios</button>
+          <i class="fas fa-pen"></i> Varios</button>
       </div>
 
       <!-- MODO INDIVIDUAL -->
       <div id="modoInd">
-        <label style="font-size:12px;font-weight:800;text-transform:uppercase;color:#475569;display:block;margin-bottom:6px">🔍 Buscar Estudiante</label>
+        <label style="font-size:12px;font-weight:800;text-transform:uppercase;color:#475569;display:block;margin-bottom:6px"><i class="fas fa-magnifying-glass"></i> Buscar Estudiante</label>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
-          <input id="fpEstSearch" placeholder="✏️ Nombre del estudiante…" autocomplete="off"
+          <input id="fpEstSearch" placeholder="<i class="fas fa-pen"></i> Nombre del estudiante…" autocomplete="off"
             oninput="fnFilterInd()"
             style="padding:12px 14px;font-size:15px;border:2px solid #e2e8f0;border-radius:10px;background:#f8fafc;color:#1e293b;outline:none;width:100%;box-sizing:border-box">
-          <input id="fpEstCedula" placeholder="🪪 Cédula / TI…" autocomplete="off"
+          <input id="fpEstCedula" placeholder="<i class="fas fa-id-card"></i> Cédula / TI…" autocomplete="off"
             oninput="fnFilterInd()"
             style="padding:12px 14px;font-size:15px;border:2px solid #e2e8f0;border-radius:10px;background:#f8fafc;color:#1e293b;outline:none;width:100%;box-sizing:border-box">
         </div>
@@ -19031,7 +19031,7 @@ async function finNuevoPago(){
               style="padding:12px 14px;border-radius:9px;border:2px solid #e2e8f0;background:#fff;cursor:pointer;display:flex;align-items:center;gap:12px;transition:all .15s"
               onmouseover="this.style.borderColor='#6366f1';this.style.background='#eef2ff'"
               onmouseout="if(!this.classList.contains('selected')){this.style.borderColor='#e2e8f0';this.style.background='#fff'}">
-              <div style="width:40px;height:40px;border-radius:50%;background:#e0e7ff;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0">🎓</div>
+              <div style="width:40px;height:40px;border-radius:50%;background:#e0e7ff;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0"><i class="fas fa-graduation-cap"></i></div>
               <div style="flex:1;min-width:0">
                 <div style="font-size:15px;font-weight:700;color:#1e293b">${esc(e.nombre)}</div>
                 <div style="font-size:12px;color:#64748b">${e.salon||'Sin salón'} ${e.ti?'· CC/TI: '+e.ti:''}</div>
@@ -19039,7 +19039,7 @@ async function finNuevoPago(){
             </div>`).join('')}
         </div>
         <div id="fpEstSelW" style="display:none;margin-top:8px;padding:12px 16px;background:#eef2ff;border:2px solid #6366f1;border-radius:10px;font-size:15px;font-weight:700;color:#3730a3">
-          ✅ <span id="fpEstSelNombre">—</span>
+          <i class="fas fa-circle-check"></i> <span id="fpEstSelNombre">—</span>
           <button type="button" onclick="fnDeselEst()" style="float:right;background:none;border:none;cursor:pointer;font-size:20px;color:#94a3b8;line-height:1">×</button>
         </div>
         <input type="hidden" id="fpEstId">
@@ -19049,7 +19049,7 @@ async function finNuevoPago(){
 
       <!-- MODO MASIVO POR SALÓN / CICLO -->
       <div id="modoMas" style="display:none">
-        <label style="font-size:12px;font-weight:800;text-transform:uppercase;color:#475569;display:block;margin-bottom:6px">🏫 Seleccionar grupo</label>
+        <label style="font-size:12px;font-weight:800;text-transform:uppercase;color:#475569;display:block;margin-bottom:6px"><i class="fas fa-school"></i> Seleccionar grupo</label>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
           <div>
             <label style="font-size:12px;color:#64748b;font-weight:600;display:block;margin-bottom:4px">Ciclo</label>
@@ -19069,9 +19069,9 @@ async function finNuevoPago(){
 
       <!-- MODO VARIOS -->
       <div id="modoGrp" style="display:none">
-        <label style="font-size:12px;font-weight:800;text-transform:uppercase;color:#475569;display:block;margin-bottom:6px">✏️ Seleccionar varios estudiantes</label>
+        <label style="font-size:12px;font-weight:800;text-transform:uppercase;color:#475569;display:block;margin-bottom:6px"><i class="fas fa-pen"></i> Seleccionar varios estudiantes</label>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
-          <input id="fpGrpSearch" placeholder="✏️ Filtrar por nombre…" oninput="fnFilterGrp()"
+          <input id="fpGrpSearch" placeholder="<i class="fas fa-pen"></i> Filtrar por nombre…" oninput="fnFilterGrp()"
             style="padding:12px 14px;font-size:15px;border:2px solid #e2e8f0;border-radius:10px;background:#f8fafc;color:#1e293b;outline:none;box-sizing:border-box">
           <select id="fpGrpCiclo" onchange="fnFilterGrp()"
             style="width:100%;padding:12px 14px;font-size:15px;border:2px solid #e2e8f0;border-radius:10px;background:#f8fafc;color:#1e293b;outline:none">
@@ -19097,7 +19097,7 @@ async function finNuevoPago(){
 
       <!-- CONCEPTO -->
       <div>
-        <label style="font-size:12px;font-weight:800;text-transform:uppercase;color:#475569;display:block;margin-bottom:6px">📋 Concepto de Cobro *</label>
+        <label style="font-size:12px;font-weight:800;text-transform:uppercase;color:#475569;display:block;margin-bottom:6px"><i class="fas fa-clipboard-list"></i> Concepto de Cobro *</label>
         <select id="fpConId" style="width:100%;padding:12px 14px;font-size:15px;border:2px solid #e2e8f0;border-radius:10px;background:#f8fafc;color:#1e293b;outline:none">
           <option value="">— Seleccionar —</option>
           ${conceptos.map(c=>`<option value="${c.id}" data-valor="${c.valor}">${esc(c.nombre)} — $${c.valor.toLocaleString('es-CO')}</option>`).join('')}
@@ -19109,8 +19109,8 @@ async function finNuevoPago(){
         <div>
           <label style="font-size:12px;font-weight:800;text-transform:uppercase;color:#475569;display:block;margin-bottom:6px">Estado inicial</label>
           <select id="fpEstado" style="width:100%;padding:12px 14px;font-size:15px;border:2px solid #e2e8f0;border-radius:10px;background:#f8fafc;color:#1e293b;outline:none">
-            <option value="pendiente">⏳ Pendiente</option>
-            <option value="pagado">✅ Pagado</option>
+            <option value="pendiente"><i class="fas fa-hourglass-half"></i> Pendiente</option>
+            <option value="pagado"><i class="fas fa-circle-check"></i> Pagado</option>
           </select>
         </div>
         <div>
@@ -19143,12 +19143,12 @@ async function finNuevoPago(){
       window._fnGrpSelected=new Set();
     },
     showCancelButton:true,
-    confirmButtonText:'💾 Guardar Pago',
+    confirmButtonText:'<i class="fas fa-floppy-disk"></i> Guardar Pago',
     cancelButtonText:'Cancelar',
     confirmButtonColor:'#3730a3',
     preConfirm:()=>{
       const conEl=gi('fpConId');
-      if(!conEl.value){Swal.showValidationMessage('⚠️ Selecciona un concepto');return false;}
+      if(!conEl.value){Swal.showValidationMessage('<i class="fas fa-triangle-exclamation"></i> Selecciona un concepto');return false;}
       const modo=window._fnModo||'ind';
       const ano=String(new Date().getFullYear());
       const base={
@@ -19161,7 +19161,7 @@ async function finNuevoPago(){
       };
       if(modo==='ind'){
         const estId=gi('fpEstId')?.value;
-        if(!estId){Swal.showValidationMessage('⚠️ Selecciona un estudiante');return false;}
+        if(!estId){Swal.showValidationMessage('<i class="fas fa-triangle-exclamation"></i> Selecciona un estudiante');return false;}
         return{mode:'single',pago:{...base,estId,estNombre:gi('fpEstNombre')?.value||'',salon:gi('fpEstSalon')?.value||''}};
       }
       if(modo==='mas'){
@@ -19171,12 +19171,12 @@ async function finNuevoPago(){
         if(salon) arr=arr.filter(e=>e.salon===salon);
         else if(ciclo==='primaria') arr=arr.filter(e=>(window._fnSalPrimaria||[]).includes(e.salon));
         else if(ciclo==='bachillerato') arr=arr.filter(e=>(window._fnSalBach||[]).includes(e.salon));
-        if(!arr.length){Swal.showValidationMessage('⚠️ No hay estudiantes con ese filtro');return false;}
+        if(!arr.length){Swal.showValidationMessage('<i class="fas fa-triangle-exclamation"></i> No hay estudiantes con ese filtro');return false;}
         return{mode:'bulk',pagos:arr.map(e=>({...base,estId:e.id,estNombre:e.nombre,salon:e.salon||''}))};
       }
       if(modo==='grp'){
         const sel=window._fnGrpSelected||new Set();
-        if(!sel.size){Swal.showValidationMessage('⚠️ Selecciona al menos un estudiante');return false;}
+        if(!sel.size){Swal.showValidationMessage('<i class="fas fa-triangle-exclamation"></i> Selecciona al menos un estudiante');return false;}
         const arr=(window._fnEstsCache||[]).filter(e=>sel.has(e.id));
         return{mode:'bulk',pagos:arr.map(e=>({...base,estId:e.id,estNombre:e.nombre,salon:e.salon||''}))};
       }
@@ -19186,10 +19186,10 @@ async function finNuevoPago(){
   try{
     if(value.mode==='single'){
       await apiFin('/pagos',{method:'POST',body:JSON.stringify(value.pago)});
-      sw('success','✅ Pago registrado','',1800);
+      sw('success','<i class="fas fa-circle-check"></i> Pago registrado','',1800);
     } else {
       const tot=value.pagos.length;
-      sw('info',`⏳ Creando ${tot} pago${tot!==1?'s':''}…`,'',0);
+      sw('info',`<i class="fas fa-hourglass-half"></i> Creando ${tot} pago${tot!==1?'s':''}…`,'',0);
       let ok=0,err=0;
       for(const p of value.pagos){
         try{ await apiFin('/pagos',{method:'POST',body:JSON.stringify(p)}); ok++; }
@@ -19197,7 +19197,7 @@ async function finNuevoPago(){
       }
       Swal.close();
       if(err) sw('warning',`${ok} pagos creados, ${err} fallaron`,'',2500);
-      else sw('success',`✅ ${ok} pago${ok!==1?'s':''} registrado${ok!==1?'s':''}!`,'',2000);
+      else sw('success',`<i class="fas fa-circle-check"></i> ${ok} pago${ok!==1?'s':''} registrado${ok!==1?'s':''}!`,'',2000);
     }
     finLoadPagos();
   }catch(e){sw('error','Error: '+e.message);}
@@ -19271,7 +19271,7 @@ function fnPreviewSalon(){
   else if(ciclo==='bachillerato') arr=arr.filter(e=>(window._fnSalBach||[]).includes(e.salon));
   if(!arr.length){ el.style.display='none'; return; }
   el.style.display='block';
-  el.textContent=`📋 Se registrará pago para ${arr.length} estudiante${arr.length!==1?'s':''}`+(salon?` del salón ${salon}`:'');
+  el.textContent=`<i class="fas fa-clipboard-list"></i> Se registrará pago para ${arr.length} estudiante${arr.length!==1?'s':''}`+(salon?` del salón ${salon}`:'');
 }
 
 function fnToggleGrp(card){
@@ -19286,7 +19286,7 @@ function fnToggleGrp(card){
   } else {
     sel.add(id);
     card.style.borderColor='#6366f1'; card.style.background='#eef2ff';
-    if(chk){ chk.style.background='#6366f1'; chk.style.borderColor='#6366f1'; chk.textContent='✓'; chk.style.color='#fff'; }
+    if(chk){ chk.style.background='#6366f1'; chk.style.borderColor='#6366f1'; chk.textContent='<i class="fas fa-check"></i>'; chk.style.color='#fff'; }
   }
   const cnt=gi('fpGrpCount'); if(cnt) cnt.textContent=sel.size+' estudiante'+(sel.size!==1?'s':'')+' seleccionado'+(sel.size!==1?'s':'');
 }
@@ -19317,7 +19317,7 @@ function fnPreviewSalon(){
   const el=gi('fpSalonPreview'); if(!el) return;
   if(!salon){el.textContent='';return;}
   const cnt=(window._fnEstsCache||[]).filter(e=>e.salon===salon).length;
-  el.textContent=`📋 ${cnt} estudiante${cnt!==1?'s':''} en este salón`;
+  el.textContent=`<i class="fas fa-clipboard-list"></i> ${cnt} estudiante${cnt!==1?'s':''} en este salón`;
 }
 function fnFilterGrp(){
   const q=(gi('fpGrpSearch')?.value||'').toLowerCase();
@@ -19331,7 +19331,7 @@ async function finEditPago(pid, estadoActual=''){
   const est=pagoActual.estado||estadoActual;
   const hoy=new Date().toISOString().slice(0,10);
   const r=await Swal.fire({
-    title:'✏️ Editar Pago',width:460,
+    title:'<i class="fas fa-pen"></i> Editar Pago',width:460,
     html:`<div style="text-align:left;font-family:var(--fn);display:flex;flex-direction:column;gap:11px">
       <div style="padding:10px 12px;background:var(--bg2);border-radius:8px;border:1.5px solid var(--bd);font-size:12px">
         <strong>${esc(pagoActual.estNombre||'')}</strong> · ${esc(pagoActual.conceptoNombre||'')}
@@ -19340,10 +19340,10 @@ async function finEditPago(pid, estadoActual=''){
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
         <div><label style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--sl);display:block;margin-bottom:4px">Estado</label>
           <select id="epEst" style="width:100%;padding:9px 12px;font-size:13px;border:1.5px solid var(--bd);border-radius:8px;background:var(--bg2);color:var(--tx);outline:none">
-            <option value="pendiente"${est==='pendiente'?' selected':''}>⏳ Pendiente</option>
-            <option value="pagado"${est==='pagado'?' selected':''}>✅ Pagado</option>
-            <option value="vencido"${est==='vencido'?' selected':''}>🚨 Vencido</option>
-            <option value="anulado"${est==='anulado'?' selected':''}>❌ Anulado</option>
+            <option value="pendiente"${est==='pendiente'?' selected':''}><i class="fas fa-hourglass-half"></i> Pendiente</option>
+            <option value="pagado"${est==='pagado'?' selected':''}><i class="fas fa-circle-check"></i> Pagado</option>
+            <option value="vencido"${est==='vencido'?' selected':''}><i class="fas fa-triangle-exclamation"></i> Vencido</option>
+            <option value="anulado"${est==='anulado'?' selected':''}><i class="fas fa-circle-xmark"></i> Anulado</option>
           </select></div>
         <div><label style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--sl);display:block;margin-bottom:4px">Método de pago</label>
           <select id="epMet" style="width:100%;padding:9px 12px;font-size:13px;border:1.5px solid var(--bd);border-radius:8px;background:var(--bg2);color:var(--tx);outline:none">
@@ -19385,18 +19385,18 @@ async function finEditPago(pid, estadoActual=''){
 function pgFinConceptos(){
   return`<div style="margin-bottom:16px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">
     <div>
-      <h2 style="margin:0">📋 Conceptos de Cobro</h2>
+      <h2 style="margin:0"><i class="fas fa-clipboard-list"></i> Conceptos de Cobro</h2>
       <p style="margin:4px 0 0;font-size:12px;color:var(--sl2)">Crea conceptos y luego genera cobros masivos para asignarlos a los estudiantes.</p>
     </div>
-    <button onclick="finNuevoConcepto()" style="padding:10px 18px;font-size:13px;font-weight:700;background:#dcfce7;color:#166534;border:1.5px solid #86efac;border-radius:8px;cursor:pointer">➕ Nuevo Concepto</button>
+    <button onclick="finNuevoConcepto()" style="padding:10px 18px;font-size:13px;font-weight:700;background:#dcfce7;color:#166534;border:1.5px solid #86efac;border-radius:8px;cursor:pointer"><i class="fas fa-plus"></i> Nuevo Concepto</button>
   </div>
-  <div id="fcW"><div class="mty"><div class="ei">📋</div><p>Cargando...</p></div></div>`;
+  <div id="fcW"><div class="mty"><div class="ei"><i class="fas fa-clipboard-list"></i></div><p>Cargando...</p></div></div>`;
 }
 async function initFinConceptos(){
   const el=gi('fcW');if(!el)return;
   try{
     const list=await apiFin('/conceptos');
-    if(!list.length){el.innerHTML='<div class="mty"><div class="ei">📋</div><p>Sin conceptos. Crea uno primero.</p></div>';return;}
+    if(!list.length){el.innerHTML='<div class="mty"><div class="ei"><i class="fas fa-clipboard-list"></i></div><p>Sin conceptos. Crea uno primero.</p></div>';return;}
     el.innerHTML=`<div class="tw"><table>
       <thead><tr><th>Nombre</th><th>Valor</th><th>Aplica</th><th>Estado</th><th>Acciones</th></tr></thead>
       <tbody>${list.map(c=>`<tr>
@@ -19407,9 +19407,9 @@ async function initFinConceptos(){
         <td><div style="display:flex;gap:6px;flex-wrap:wrap">
           <button onclick="finGenerarCobros('${c.id}','${esc(c.nombre)}','${c.valor}','${esc(c.aplica||'todos')}')"
             style="padding:5px 10px;font-size:11px;font-weight:700;background:#eff6ff;color:#1d4ed8;border:1.5px solid #93c5fd;border-radius:6px;cursor:pointer"
-            title="Asignar este cobro a estudiantes en masa">⚡ Cobro masivo</button>
-          <button onclick="finEditConcepto('${c.id}')" style="padding:4px 9px;font-size:11px;background:#e0e7ff;color:#3730a3;border:1.5px solid #a5b4fc;border-radius:6px;cursor:pointer">✏️</button>
-          <button onclick="finDelConcepto('${c.id}','${esc(c.nombre)}')" style="padding:4px 9px;font-size:11px;background:#fff5f5;color:#b91c1c;border:1.5px solid #fca5a5;border-radius:6px;cursor:pointer">🗑</button>
+            title="Asignar este cobro a estudiantes en masa"><i class="fas fa-bolt"></i> Cobro masivo</button>
+          <button onclick="finEditConcepto('${c.id}')" style="padding:4px 9px;font-size:11px;background:#e0e7ff;color:#3730a3;border:1.5px solid #a5b4fc;border-radius:6px;cursor:pointer"><i class="fas fa-pen"></i></button>
+          <button onclick="finDelConcepto('${c.id}','${esc(c.nombre)}')" style="padding:4px 9px;font-size:11px;background:#fff5f5;color:#b91c1c;border:1.5px solid #fca5a5;border-radius:6px;cursor:pointer"><i class="fas fa-trash"></i></button>
         </div></td>
       </tr>`).join('')}</tbody></table></div>`;
   }catch(e){el.innerHTML=`<div class="al aly">Error: ${esc(e.message)}</div>`;}
@@ -19430,13 +19430,13 @@ async function finGenerarCobros(conceptoId, conceptoNombre, valorBase, aplica){
     +sals.map(s=>`<option value="${s.nombre}">${esc(s.nombre)}</option>`).join('');
 
   const {value,isConfirmed}=await Swal.fire({
-    title:'⚡ Cobro Masivo',
+    title:'<i class="fas fa-bolt"></i> Cobro Masivo',
     width:540,
     html:`<div style="text-align:left;font-family:var(--fn);display:flex;flex-direction:column;gap:13px">
 
       <!-- Info del concepto -->
       <div style="padding:10px 14px;border-radius:9px;background:#eff6ff;border:1.5px solid #93c5fd;font-size:13px">
-        <span style="font-weight:700;color:#1d4ed8">📋 ${esc(conceptoNombre)}</span>
+        <span style="font-weight:700;color:#1d4ed8"><i class="fas fa-clipboard-list"></i> ${esc(conceptoNombre)}</span>
         <span style="float:right;font-weight:700;color:#166534">$${Number(valorBase).toLocaleString('es-CO')}</span><br>
         <span style="font-size:11px;color:var(--sl3)">Aplica a: ${aplica}</span>
       </div>
@@ -19478,7 +19478,7 @@ async function finGenerarCobros(conceptoId, conceptoNombre, valorBase, aplica){
     </div>`,
     didOpen:()=>{ finPrevisualizarCobro(); },
     showCancelButton:true,
-    confirmButtonText:'⚡ Generar cobros',
+    confirmButtonText:'<i class="fas fa-bolt"></i> Generar cobros',
     cancelButtonText:'Cancelar',
     preConfirm:()=>({
       salon:    document.getElementById('cmSalon').value,
@@ -19505,7 +19505,7 @@ async function finGenerarCobros(conceptoId, conceptoNombre, valorBase, aplica){
 
   // 3. Cargar estudiantes y generar los cobros
   try{
-    Swal.fire({title:'⚡ Generando cobros…',text:'Por favor espera.',allowOutsideClick:false,showConfirmButton:false,
+    Swal.fire({title:'<i class="fas fa-bolt"></i> Generando cobros…',text:'Por favor espera.',allowOutsideClick:false,showConfirmButton:false,
       didOpen:()=>Swal.showLoading()});
 
     // Obtener estudiantes filtrados
@@ -19555,7 +19555,7 @@ async function finGenerarCobros(conceptoId, conceptoNombre, valorBase, aplica){
 
     Swal.close();
     if(creados>0){
-      sw('success',`✅ ${creados} cobro${creados!==1?'s':''} generado${creados!==1?'s':''}`,
+      sw('success',`<i class="fas fa-circle-check"></i> ${creados} cobro${creados!==1?'s':''} generado${creados!==1?'s':''}`,
         errores?`${errores} error${errores!==1?'es':''}. Revisa la consola.`:'Todos los estudiantes tienen su cobro pendiente.',3500);
     } else {
       sw('error','No se generó ningún cobro',`${errores} errores. Revisa la conexión.`);
@@ -19586,7 +19586,7 @@ async function finPrevisualizarCobro(){
   window._cmPrevTimer=setTimeout(async()=>{
     const prevEl=document.getElementById('cmPreview');
     if(!prevEl)return;
-    prevEl.innerHTML='<span style="color:var(--sl3)">⏳ Contando estudiantes…</span>';
+    prevEl.innerHTML='<span style="color:var(--sl3)"><i class="fas fa-hourglass-half"></i> Contando estudiantes…</span>';
     try{
       const salon=document.getElementById('cmSalon')?.value||'';
       let url='/estudiantes';
@@ -19595,14 +19595,14 @@ async function finPrevisualizarCobro(){
       const n=ests.length;
       prevEl.dataset.cant=String(n);
       prevEl.innerHTML=n
-        ?`<span style="color:#1d4ed8;font-weight:700">👥 ${n} estudiante${n!==1?'s':''}</span> recibirán este cobro${salon?' en '+salon:''}.<br><span style="font-size:11px;color:var(--sl3)">El sistema omitirá automáticamente a quienes ya lo tengan (si la opción está activa).</span>`
+        ?`<span style="color:#1d4ed8;font-weight:700"><i class="fas fa-users"></i> ${n} estudiante${n!==1?'s':''}</span> recibirán este cobro${salon?' en '+salon:''}.<br><span style="font-size:11px;color:var(--sl3)">El sistema omitirá automáticamente a quienes ya lo tengan (si la opción está activa).</span>`
         :`<span style="color:#b91c1c">Sin estudiantes en este filtro.</span>`;
     }catch(e){prevEl.innerHTML=`<span style="color:#b91c1c">Error al contar: ${esc(e.message)}</span>`;}
   },400);
 }
 async function finNuevoConcepto(){
   const{value,isConfirmed}=await Swal.fire({
-    title:'➕ Nuevo Concepto de Cobro',width:440,
+    title:'<i class="fas fa-plus"></i> Nuevo Concepto de Cobro',width:440,
     html:`<div style="text-align:left;font-family:var(--fn);display:flex;flex-direction:column;gap:11px">
       <div><label style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--sl);display:block;margin-bottom:4px">Nombre *</label>
         <input id="ncN" placeholder="Ej: Matrícula anual" style="width:100%;padding:9px 12px;font-size:13px;border:1.5px solid var(--bd);border-radius:8px;background:var(--bg2);color:var(--tx);outline:none;box-sizing:border-box"></div>
@@ -19624,7 +19624,7 @@ async function finNuevoConcepto(){
 }
 async function finEditConcepto(cid){
   const r=await Swal.fire({
-    title:'✏️ Editar Concepto',width:400,
+    title:'<i class="fas fa-pen"></i> Editar Concepto',width:400,
     html:`<div style="text-align:left;font-family:var(--fn);display:flex;flex-direction:column;gap:11px">
       <div><label style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--sl);display:block;margin-bottom:4px">Nuevo Valor (COP)</label>
         <input id="ecV" type="number" min="0" style="width:100%;padding:9px 12px;font-size:13px;border:1.5px solid var(--bd);border-radius:8px;background:var(--bg2);color:var(--tx);outline:none;box-sizing:border-box"></div>
@@ -19649,13 +19649,13 @@ async function finDelConcepto(cid,nombre){
 // ── Reporte de morosos ───────────────────────────────────────
 function pgFinMorosos(){
   return`<div style="margin-bottom:16px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">
-    <h2 style="margin:0">⚠️ Reporte de Morosos</h2>
-    <button onclick="initFinMorosos()" style="padding:8px 14px;font-size:13px;background:var(--bg2);border:1.5px solid var(--bd);border-radius:8px;cursor:pointer">🔄 Actualizar</button>
+    <h2 style="margin:0"><i class="fas fa-triangle-exclamation"></i> Reporte de Morosos</h2>
+    <button onclick="initFinMorosos()" style="padding:8px 14px;font-size:13px;background:var(--bg2);border:1.5px solid var(--bd);border-radius:8px;cursor:pointer"><i class="fas fa-arrows-rotate"></i> Actualizar</button>
   </div>
   <div class="card" style="padding:14px;margin-bottom:16px">
     <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end">
       <div style="flex:1;min-width:200px">
-        <label style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--sl);display:block;margin-bottom:4px">🔍 Buscar estudiante</label>
+        <label style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--sl);display:block;margin-bottom:4px"><i class="fas fa-magnifying-glass"></i> Buscar estudiante</label>
         <input id="fmSearch" placeholder="Nombre del estudiante…" oninput="finFiltrarMorosos()"
           style="width:100%;padding:9px 12px;font-size:13px;border:1.5px solid var(--bd);border-radius:8px;background:var(--bg2);color:var(--tx);outline:none;box-sizing:border-box">
       </div>
@@ -19675,12 +19675,12 @@ function pgFinMorosos(){
       </div>
     </div>
   </div>
-  <div id="fmW"><div class="mty"><div class="ei">⏳</div><p>Cargando...</p></div></div>`;
+  <div id="fmW"><div class="mty"><div class="ei"><i class="fas fa-hourglass-half"></i></div><p>Cargando...</p></div></div>`;
 }
 window._fmData=[];
 async function initFinMorosos(){
   const el=gi('fmW');if(!el)return;
-  el.innerHTML='<div style="text-align:center;padding:24px;color:var(--sl3)">⏳ Cargando reporte...</div>';
+  el.innerHTML='<div style="text-align:center;padding:24px;color:var(--sl3)"><i class="fas fa-hourglass-half"></i> Cargando reporte...</div>';
   try{
     const data=await apiFin('/reporte/morosos');
     window._fmData=data;
@@ -19703,7 +19703,7 @@ function finFiltrarMorosos(){
   else if(orden==='nombre') data.sort((a,b)=>(a.estNombre||'').localeCompare(b.estNombre||''));
   else if(orden==='cant') data.sort((a,b)=>(b.cantPendientes||0)-(a.cantPendientes||0));
   if(!data.length){
-    el.innerHTML='<div class="mty"><div class="ei">'+(window._fmData.length?'🔍':'🎉')+'</div><p>'+(window._fmData.length?'Sin resultados con esos filtros':'¡Sin morosos! Excelente.')+'</p></div>';
+    el.innerHTML='<div class="mty"><div class="ei">'+(window._fmData.length?'<i class="fas fa-magnifying-glass"></i>':'<i class="fas fa-champagne-glasses"></i>')+'</div><p>'+(window._fmData.length?'Sin resultados con esos filtros':'¡Sin morosos! Excelente.')+'</p></div>';
     return;
   }
   const fmt=v=>`$${(v||0).toLocaleString('es-CO')}`;
@@ -19727,7 +19727,7 @@ function finFiltrarMorosos(){
         <td style="font-weight:700;color:#b91c1c">${fmt(m.deuda)}</td>
         <td><span class="bdg bred" style="font-size:11px">${m.cantPendientes}</span></td>
         <td><button onclick="finVerPagosEstudiante('${m.estId||''}','${esc(m.estNombre)}')"
-          style="padding:4px 9px;font-size:11px;background:#f0f9ff;color:#0369a1;border:1.5px solid #7dd3fc;border-radius:6px;cursor:pointer" title="Ver pagos">👁 Ver</button></td>
+          style="padding:4px 9px;font-size:11px;background:#f0f9ff;color:#0369a1;border:1.5px solid #7dd3fc;border-radius:6px;cursor:pointer" title="Ver pagos"><i class="fas fa-eye"></i> Ver</button></td>
       </tr>`).join('')}</tbody>
     </table></div>`;
 }
@@ -19744,12 +19744,12 @@ async function finVerPagosEstudiante(estId,nombre){
 // ── Comunicados financieros ───────────────────────────────────
 function pgFinCom(){
   return`<div style="margin-bottom:16px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">
-    <div><h2 style="margin:0">📢 Comunicados Financieros</h2>
+    <div><h2 style="margin:0"><i class="fas fa-bullhorn"></i> Comunicados Financieros</h2>
       <p style="margin:4px 0 0;font-size:12px;color:var(--sl2)">Visibles para profes y estudiantes en la app educativa.</p></div>
   </div>
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px">
     <div class="card" style="padding:0;overflow:hidden">
-      <div style="padding:12px 18px;background:var(--bg2);border-bottom:1px solid var(--bd);font-weight:800;font-size:13px">➕ Nuevo Comunicado</div>
+      <div style="padding:12px 18px;background:var(--bg2);border-bottom:1px solid var(--bd);font-weight:800;font-size:13px"><i class="fas fa-plus"></i> Nuevo Comunicado</div>
       <div style="padding:16px;display:flex;flex-direction:column;gap:12px">
         <div><label style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--sl);display:block;margin-bottom:4px">Título *</label>
           <input id="fcomT" style="width:100%;padding:9px 12px;font-size:13px;border:1.5px solid var(--bd);border-radius:8px;background:var(--bg2);color:var(--tx);outline:none;box-sizing:border-box"></div>
@@ -19758,11 +19758,11 @@ function pgFinCom(){
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
           <div><label style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--sl);display:block;margin-bottom:4px">Dirigido a</label>
             <select id="fcomP" style="width:100%;padding:9px 12px;font-size:13px;border:1.5px solid var(--bd);border-radius:8px;background:var(--bg2);color:var(--tx);outline:none">
-              <option value="todos">👥 Todos</option><option value="profe">👩‍🏫 Profes</option><option value="est">🎓 Estudiantes</option>
+              <option value="todos"><i class="fas fa-users"></i> Todos</option><option value="profe"><i class="fas fa-chalkboard-user"></i> Profes</option><option value="est"><i class="fas fa-graduation-cap"></i> Estudiantes</option>
             </select></div>
           <div><label style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--sl);display:block;margin-bottom:4px">Color</label>
             <select id="fcomC" style="width:100%;padding:9px 12px;font-size:13px;border:1.5px solid var(--bd);border-radius:8px;background:var(--bg2);color:var(--tx);outline:none">
-              <option value="naranja">🟠 Naranja</option><option value="rojo">🔴 Urgente</option><option value="azul">🔵 Info</option>
+              <option value="naranja"><i class="fas fa-circle"></i> Naranja</option><option value="rojo"><i class="fas fa-circle"></i> Urgente</option><option value="azul"><i class="fas fa-circle"></i> Info</option>
             </select></div>
         </div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
@@ -19771,13 +19771,13 @@ function pgFinCom(){
           <div><label style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--sl);display:block;margin-bottom:4px">Fecha fin *</label>
             <input type="date" id="fcomFf" style="width:100%;padding:9px 12px;font-size:13px;border:1.5px solid var(--bd);border-radius:8px;background:var(--bg2);color:var(--tx);outline:none;box-sizing:border-box"></div>
         </div>
-        <button onclick="finPublicarCom()" style="padding:11px;font-size:14px;font-weight:700;background:var(--nv);color:#fff;border:none;border-radius:9px;cursor:pointer;width:100%">📢 Publicar</button>
+        <button onclick="finPublicarCom()" style="padding:11px;font-size:14px;font-weight:700;background:var(--nv);color:#fff;border:none;border-radius:9px;cursor:pointer;width:100%"><i class="fas fa-bullhorn"></i> Publicar</button>
       </div>
     </div>
     <div class="card" style="padding:0;overflow:hidden">
-      <div style="padding:12px 18px;background:var(--bg2);border-bottom:1px solid var(--bd);font-weight:800;font-size:13px">📋 Publicados</div>
+      <div style="padding:12px 18px;background:var(--bg2);border-bottom:1px solid var(--bd);font-weight:800;font-size:13px"><i class="fas fa-clipboard-list"></i> Publicados</div>
       <div id="fcomListW" style="padding:12px;max-height:520px;overflow-y:auto">
-        <div class="mty"><div class="ei">📢</div><p>Cargando...</p></div>
+        <div class="mty"><div class="ei"><i class="fas fa-bullhorn"></i></div><p>Cargando...</p></div>
       </div>
     </div>
   </div>`;
@@ -19791,19 +19791,19 @@ async function finCargarComs(){
   const el=gi('fcomListW');if(!el)return;
   try{
     const list=await apiFin('/comunicados');
-    if(!list.length){el.innerHTML='<div class="mty"><div class="ei">📢</div><p>Sin comunicados publicados</p></div>';return;}
+    if(!list.length){el.innerHTML='<div class="mty"><div class="ei"><i class="fas fa-bullhorn"></i></div><p>Sin comunicados publicados</p></div>';return;}
     el.innerHTML=list.map(c=>`
       <div style="padding:10px 12px;border-radius:9px;border:1.5px solid var(--bd);margin-bottom:8px;background:var(--bg2)">
         <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px">
           <div style="flex:1">
-            <div style="font-weight:700;font-size:13px">💰 ${esc(c.titulo)}</div>
+            <div style="font-weight:700;font-size:13px"><i class="fas fa-sack-dollar"></i> ${esc(c.titulo)}</div>
             <div style="font-size:12px;color:var(--sl2);margin-top:2px">${esc(c.mensaje)}</div>
             <div style="font-size:10px;color:var(--sl3);margin-top:4px">${c.para} · ${c.fechaInicio} → ${c.fechaFin}</div>
           </div>
           <div style="display:flex;gap:5px;flex-shrink:0">
             <span class="bdg ${c.activo?'bgr':'bgy'}" style="font-size:10px">${c.activo?'Activo':'Inactivo'}</span>
             <button onclick="finToggleCom('${c.id}',${!c.activo})" style="padding:4px 8px;font-size:10px;background:${c.activo?'#fff5f5':'#dcfce7'};color:${c.activo?'#b91c1c':'#166534'};border:1px solid ${c.activo?'#fca5a5':'#86efac'};border-radius:5px;cursor:pointer">${c.activo?'Desactivar':'Activar'}</button>
-            <button onclick="finDelCom('${c.id}')" style="padding:4px 8px;font-size:10px;background:#fff5f5;color:#b91c1c;border:1px solid #fca5a5;border-radius:5px;cursor:pointer">🗑</button>
+            <button onclick="finDelCom('${c.id}')" style="padding:4px 8px;font-size:10px;background:#fff5f5;color:#b91c1c;border:1px solid #fca5a5;border-radius:5px;cursor:pointer"><i class="fas fa-trash"></i></button>
           </div>
         </div>
       </div>`).join('');
@@ -19834,16 +19834,16 @@ async function finDelCom(id){
 // ── Bloqueos de estudiantes ───────────────────────────────────
 function pgFinBloqueos(){
   return`<div style="margin-bottom:16px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">
-    <div><h2 style="margin:0">🔒 Bloqueos de Acceso</h2>
+    <div><h2 style="margin:0"><i class="fas fa-lock"></i> Bloqueos de Acceso</h2>
       <p style="margin:4px 0 0;font-size:12px;color:var(--sl2)">Bloquea o desbloquea estudiantes de este colegio.</p></div>
-    <button onclick="initFinBloqueos()" style="padding:8px 14px;font-size:13px;background:var(--bg2);border:1.5px solid var(--bd);border-radius:8px;cursor:pointer">🔄 Actualizar</button>
+    <button onclick="initFinBloqueos()" style="padding:8px 14px;font-size:13px;background:var(--bg2);border:1.5px solid var(--bd);border-radius:8px;cursor:pointer"><i class="fas fa-arrows-rotate"></i> Actualizar</button>
   </div>
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px">
     <div class="card" style="padding:0;overflow:hidden">
-      <div style="padding:12px 18px;background:#fff5f5;border-bottom:1px solid #fecaca;font-weight:800;font-size:13px;color:#b91c1c">🔒 Bloquear Estudiante</div>
+      <div style="padding:12px 18px;background:#fff5f5;border-bottom:1px solid #fecaca;font-weight:800;font-size:13px;color:#b91c1c"><i class="fas fa-lock"></i> Bloquear Estudiante</div>
       <div style="padding:16px;display:flex;flex-direction:column;gap:10px">
         <div style="display:flex;align-items:center;gap:8px;background:var(--bg2);border:1.5px solid var(--bd);border-radius:8px;padding:8px 12px">
-          <span style="color:var(--sl3)">🔍</span>
+          <span style="color:var(--sl3)"><i class="fas fa-magnifying-glass"></i></span>
           <input id="fblkQ" placeholder="Buscar estudiante por nombre…" oninput="finBuscarEstBlk()"
             style="border:none;background:transparent;font-size:13px;outline:none;color:var(--tx);flex:1">
         </div>
@@ -19851,9 +19851,9 @@ function pgFinBloqueos(){
       </div>
     </div>
     <div class="card" style="padding:0;overflow:hidden">
-      <div style="padding:12px 18px;background:#fff5f5;border-bottom:1px solid #fecaca;font-weight:800;font-size:13px;color:#b91c1c">🔒 Estudiantes Bloqueados</div>
+      <div style="padding:12px 18px;background:#fff5f5;border-bottom:1px solid #fecaca;font-weight:800;font-size:13px;color:#b91c1c"><i class="fas fa-lock"></i> Estudiantes Bloqueados</div>
       <div id="fblkListW" style="padding:12px;max-height:420px;overflow-y:auto">
-        <div class="mty"><div class="ei">🔍</div><p style="font-size:12px">Cargando...</p></div>
+        <div class="mty"><div class="ei"><i class="fas fa-magnifying-glass"></i></div><p style="font-size:12px">Cargando...</p></div>
       </div>
     </div>
   </div>`;
@@ -19862,16 +19862,16 @@ async function initFinBloqueos(){
   const el=gi('fblkListW');if(!el)return;
   try{
     const list=await apiFin('/bloqueos');
-    if(!list.length){el.innerHTML='<div class="mty"><div class="ei">✅</div><p style="font-size:12px">Sin estudiantes bloqueados</p></div>';return;}
+    if(!list.length){el.innerHTML='<div class="mty"><div class="ei"><i class="fas fa-circle-check"></i></div><p style="font-size:12px">Sin estudiantes bloqueados</p></div>';return;}
     el.innerHTML=list.map(b=>`
       <div style="display:flex;align-items:center;gap:9px;padding:9px 8px;border-radius:9px;border:1.5px solid #fecaca;background:#fff5f5;margin-bottom:7px">
         <div style="flex:1;min-width:0">
-          <div style="font-weight:700;font-size:13px">🎓 ${esc(b.est?.nombre||b.usuario)}</div>
+          <div style="font-weight:700;font-size:13px"><i class="fas fa-graduation-cap"></i> ${esc(b.est?.nombre||b.usuario)}</div>
           <div style="font-size:11px;color:var(--sl3)">${esc(b.est?.salon||'—')} · ${b.usuario}</div>
         </div>
         <button onclick="finDesbloquear('${b.est?.id||''}','${esc(b.est?.nombre||b.usuario)}')"
           style="padding:5px 11px;font-size:11px;font-weight:700;background:#dcfce7;color:#166534;border:1.5px solid #86efac;border-radius:7px;cursor:pointer;white-space:nowrap">
-          🔓 Desbloquear
+          <i class="fas fa-lock-open"></i> Desbloquear
         </button>
       </div>`).join('');
   }catch(e){el.innerHTML=`<div class="al aly" style="font-size:12px">Error: ${esc(e.message)}</div>`;}
@@ -19883,17 +19883,17 @@ async function finBuscarEstBlk(){
     const q=(gi('fblkQ')?.value||'').trim();
     const el=gi('fblkResultados');if(!el)return;
     if(q.length<2){el.innerHTML='';return;}
-    el.innerHTML='<div style="font-size:12px;color:var(--sl3);padding:8px">⏳ Buscando...</div>';
+    el.innerHTML='<div style="font-size:12px;color:var(--sl3);padding:8px"><i class="fas fa-hourglass-half"></i> Buscando...</div>';
     try{
       const ests=await apiFin(`/estudiantes?q=${encodeURIComponent(q)}`);
       if(!ests.length){el.innerHTML='<div style="font-size:12px;color:var(--sl3);padding:8px">Sin resultados</div>';return;}
       el.innerHTML=ests.map(e=>`
         <div style="display:flex;align-items:center;gap:9px;padding:8px;border-radius:8px;border:1.5px solid var(--bd);background:var(--bg2);margin-bottom:6px">
-          <div style="flex:1"><div style="font-weight:700;font-size:13px">🎓 ${esc(e.nombre)}</div>
+          <div style="flex:1"><div style="font-weight:700;font-size:13px"><i class="fas fa-graduation-cap"></i> ${esc(e.nombre)}</div>
             <div style="font-size:11px;color:var(--sl3)">${esc(e.salon||'Sin salón')} · ${e.ti||''}</div></div>
           <button onclick="finBloquear('${e.id}','${esc(e.nombre)}')"
             style="padding:5px 11px;font-size:11px;font-weight:700;background:#fff5f5;color:#b91c1c;border:1.5px solid #fca5a5;border-radius:7px;cursor:pointer;white-space:nowrap">
-            🔒 Bloquear
+            <i class="fas fa-lock"></i> Bloquear
           </button>
         </div>`).join('');
     }catch(e2){el.innerHTML=`<div class="al aly" style="font-size:12px">Error: ${esc(e2.message)}</div>`;}

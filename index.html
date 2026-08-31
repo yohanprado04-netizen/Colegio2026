@@ -65,6 +65,8 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=DM+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<!-- Font Awesome 6 Free — íconos usados en toda la interfaz (sidebar, botones, badges, mensajes) -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" integrity="sha512-SnH5WK+bZxgPHs44uWIX+LLJAJ9/2PkPKZ5QiAj6Ta86w+fsb2TkcmfRyVX3pBnMFcV7oQPJkl9QevSCWr3W6A==" crossorigin="anonymous" referrerpolicy="no-referrer" />
 
 <!-- ─── Estilos propios ─────────────────────────────────────────── -->
 <link rel="stylesheet" href="styles.css">
@@ -104,11 +106,11 @@
       <p style="font-size:15px;color:rgba(255,255,255,.65);line-height:1.75;margin-top:16px;max-width:320px">Tu colegio en un solo lugar — calificaciones, asistencia, clases virtuales, boletines y mucho más.</p>
       <div class="lgr">
         <div class="lgc p">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+          <i class="fas fa-chalkboard-user" style="font-size:15px"></i>
           <span>Profesor</span>
         </div>
         <div class="lgc e">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/></svg>
+          <i class="fas fa-graduation-cap" style="font-size:15px"></i>
           <span>Estudiante</span>
         </div>
       </div>
@@ -130,7 +132,7 @@
       <div id="lierr" style="font-size:13px;color:var(--red);margin-bottom:12px;display:none;
         padding:8px 12px;background:var(--rbg);border-radius:8px;border:1px solid #fed7d7"></div>
       <!-- onclick="doLogin()" → implementado en api-layer.js, llama POST /api/auth/login -->
-      <button class="bl" onclick="doLogin()"><span>Ingresar al sistema</span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg></button>
+      <button class="bl" onclick="doLogin()"><span>Ingresar al sistema</span><i class="fas fa-arrow-right" style="font-size:15px"></i></button>
     </div>
   </div>
 </div>
@@ -171,7 +173,7 @@
     <div class="sbft">
       <!-- onclick="doLogout()" → implementado en api-layer.js, limpia token JWT -->
       <button class="sbi" onclick="doLogout()" style="width:100%">
-        <span class="ic">🚪</span>Cerrar Sesión
+        <span class="ic"><i class="fas fa-right-from-bracket"></i></span>Cerrar Sesión
       </button>
     </div>
   </nav>

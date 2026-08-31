@@ -115,7 +115,7 @@ function _showServerStartingBanner(show) {
       box-shadow:0 2px 12px rgba(0,0,0,.3);
     `;
     banner.innerHTML = `
-      <span style="font-size:18px">⏳</span>
+      <span style="font-size:18px"><i class="fas fa-hourglass-half"></i></span>
       <span>El servidor está iniciando (Render free tier). Reintentando automáticamente...</span>
       <span id="_serverBannerDots">.</span>
     `;
@@ -182,12 +182,12 @@ async function dbLoad() {
       if (typeof Swal !== 'undefined') {
         Swal.fire({
           icon: 'warning',
-          title: '⏳ Servidor iniciando',
+          title: '<i class="fas fa-hourglass-half"></i> Servidor iniciando',
           html: `<div style="font-size:14px;line-height:1.7">
             El servidor está despertando (Render free tier).<br>
             <strong>Esto tarda entre 30 y 60 segundos</strong> la primera vez del día.<br><br>
             <button onclick="location.reload()" style="padding:10px 24px;background:#2b6cb0;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer">
-              🔄 Recargar e intentar de nuevo
+              <i class="fas fa-arrows-rotate"></i> Recargar e intentar de nuevo
             </button>
           </div>`,
           showConfirmButton: false,
@@ -238,12 +238,12 @@ async function doLogin() {
         body: JSON.stringify({ usuario: u, password: p })
       });
     } catch (netErr) {
-      show('⚠️ No se pudo conectar al servidor. Verifica tu conexión a internet.');
+      show('<i class="fas fa-triangle-exclamation"></i> No se pudo conectar al servidor. Verifica tu conexión a internet.');
       return;
     }
 
     if (res.status === 502 || res.status === 503 || res.status === 504) {
-      show('⚠️ El servidor está iniciando (puede tardar ~30 segundos en Render). Intenta de nuevo en un momento.');
+      show('<i class="fas fa-triangle-exclamation"></i> El servidor está iniciando (puede tardar ~30 segundos en Render). Intenta de nuevo en un momento.');
       return;
     }
 
@@ -358,7 +358,7 @@ async function doLogin() {
   } catch (e) {
     // Solo errores de red o del servidor llegan aquí
     if (e.name === 'AbortError') {
-      show('⚠️ El servidor tardó demasiado. Intenta de nuevo en unos segundos.');
+      show('<i class="fas fa-triangle-exclamation"></i> El servidor tardó demasiado. Intenta de nuevo en unos segundos.');
     } else {
       show('Error conectando al servidor. Verifica que el backend esté activo.');
     }
@@ -680,20 +680,20 @@ async function marcarRespLeida(excId) {
     const exc = (DB.exc || []).find(x => x._id === excId || x.id === excId) || updated;
     await Swal.fire({
       icon: 'warning',
-      title: '📚 Recuerda entregar el trabajo',
+      title: '<i class="fas fa-book"></i> Recuerda entregar el trabajo',
       html: `<div style="font-size:13px;line-height:1.7;text-align:left">
         ${exc.respProf ? `<div style="background:#e6fffa;border-radius:8px;padding:10px;margin-bottom:10px;border:1px solid #9ae6b4">
           <strong>Indicaciones de tu profesor:</strong><br>${exc.respProf}
-          ${exc.diasExtra > 0 ? `<br><br>⏰ <strong>Tienes ${exc.diasExtra} día(s) extra.</strong> Fecha límite: <strong>${exc.fechaLimite || '—'}</strong>` : ''}
+          ${exc.diasExtra > 0 ? `<br><br><i class="fas fa-clock"></i> <strong>Tienes ${exc.diasExtra} día(s) extra.</strong> Fecha límite: <strong>${exc.fechaLimite || '—'}</strong>` : ''}
         </div>` : ''}
         <div style="background:#fffbeb;border:2px solid #f6ad55;border-radius:8px;padding:12px;font-size:13px;font-weight:700;color:#c05621">
-          ⚠️ Debes enviar el trabajo en el apartado<br>
-          <span style="font-size:15px;color:#2b6cb0">📎 Talleres y Tareas</span><br>
+          <i class="fas fa-triangle-exclamation"></i> Debes enviar el trabajo en el apartado<br>
+          <span style="font-size:15px;color:#2b6cb0"><i class="fas fa-paperclip"></i> Talleres y Tareas</span><br>
           dentro del tiempo estipulado.<br>
           <span style="color:#c53030">Después de la fecha límite NO se calificará.</span>
         </div>
       </div>`,
-      confirmButtonText: '📎 Ir a Talleres y Tareas',
+      confirmButtonText: '<i class="fas fa-paperclip"></i> Ir a Talleres y Tareas',
       confirmButtonColor: '#2b6cb0',
       showCancelButton: true,
       cancelButtonText: 'Cerrar',
@@ -732,8 +732,8 @@ function descargarTallerExcusa(excId, nombreEnc) {
     // Aviso de envío
     setTimeout(() => {
       Swal.fire({
-        icon: 'warning', title: '⚠️ Recuerda',
-        html: `<div style="font-size:14px">Debes enviar el taller completado en el apartado<br><strong style="color:#2b6cb0">📎 Talleres y Tareas</strong></div>`,
+        icon: 'warning', title: '<i class="fas fa-triangle-exclamation"></i> Recuerda',
+        html: `<div style="font-size:14px">Debes enviar el taller completado en el apartado<br><strong style="color:#2b6cb0"><i class="fas fa-paperclip"></i> Talleres y Tareas</strong></div>`,
         confirmButtonText: 'Ir a Talleres y Tareas', confirmButtonColor: '#2b6cb0',
         showCancelButton: true, cancelButtonText: 'Cerrar',
       }).then(r => { if (r.isConfirmed) goto('etare'); });
@@ -1218,7 +1218,7 @@ async function saveAno() {
   if (nuevo === actual) { sw('info', 'Sin cambios', 'Ese ya es el año activo.', 1500); return; }
 
   Swal.fire({
-    title: `🗓️ Cambiar a año ${nuevo}`, icon: 'question', width: 520,
+    title: `Cambiar a año ${nuevo}`, icon: 'question', width: 520,
     html: `<div style="text-align:left;font-family:var(--fn);font-size:13px">
       <div class="al alb" style="margin-bottom:12px">Se archivará el año <strong>${actual}</strong> y se activará <strong>${nuevo}</strong>.</div>
       <label style="display:flex;align-items:center;gap:10px;margin-bottom:8px;cursor:pointer">
@@ -1249,7 +1249,7 @@ async function saveAno() {
         }).catch(e => console.warn(`[saveAno] snapshot error ${est.id}:`, e.message));
       });
       await Promise.all(snapPromises);
-      console.log(`[saveAno] ✅ Notas del año ${actual} archivadas (${snapPromises.length} estudiantes)`);
+      console.log(`[saveAno] <i class="fas fa-circle-check"></i> Notas del año ${actual} archivadas (${snapPromises.length} estudiantes)`);
     } catch (snapErr) {
       console.warn('[saveAno] Error archivando snapshots:', snapErr.message);
     }
@@ -1383,14 +1383,14 @@ async function restaurarEst(eid) {
   if (!h) { sw('error', 'No se encontró el registro'); return; }
 
   Swal.fire({
-    title: '♻️ Restaurar estudiante', icon: 'question', width: 480,
+    title: '<i class="fas fa-recycle"></i> Restaurar estudiante', icon: 'question', width: 480,
     html: `<div style="text-align:left;font-family:var(--fn)">
       <div style="background:#eef2f7;padding:12px 16px;border-radius:8px;margin-bottom:14px">
         <div style="font-size:13px;line-height:1.9"><strong>Nombre:</strong> ${esc(h.nombre)}</div>
         <div style="font-size:13px;line-height:1.9"><strong>T.I.:</strong> ${esc(h.ti || '—')}</div>
         <div style="font-size:13px;line-height:1.9"><strong>Eliminado:</strong> ${h.eliminado || '—'}</div>
       </div>
-      <div class="al alb" style="font-size:12px">✅ Se restaurarán todos sus datos académicos guardados.</div>
+      <div class="al alb" style="font-size:12px"><i class="fas fa-circle-check"></i> Se restaurarán todos sus datos académicos guardados.</div>
     </div>`,
     showCancelButton: true, confirmButtonText: 'Restaurar', confirmButtonColor: 'var(--nv)'
   }).then(async r => {
@@ -1511,7 +1511,7 @@ function abrirCSVEst(ciclo) {
   const salonesDisp = DB.sals.filter(s => s.ciclo === ciclo).map(s => s.nombre);
 
   Swal.fire({
-    title: `📂 Carga Masiva — Estudiantes ${ciclo === 'primaria' ? 'Primaria' : 'Bachillerato'}`,
+    title: `<i class="fas fa-folder-open"></i> Carga Masiva — Estudiantes ${ciclo === 'primaria' ? 'Primaria' : 'Bachillerato'}`,
     width: 620,
     html: `
       <div style="text-align:left;font-family:var(--fn);font-size:13px">
@@ -1529,11 +1529,11 @@ function abrirCSVEst(ciclo) {
           </div>
         </div>
         <div style="display:flex;gap:8px;margin-bottom:12px">
-          <button class="btn bg sm" onclick="descargarPlantillaCSV('est','${ciclo}')">⬇️ Descargar plantilla</button>
+          <button class="btn bg sm" onclick="descargarPlantillaCSV('est','${ciclo}')"><i class="fas fa-arrow-down"></i> Descargar plantilla</button>
         </div>
         <div style="border:2px dashed #cbd5e0;border-radius:8px;padding:16px;text-align:center;cursor:pointer;background:#f7fafc"
           id="csvDropZoneEst" onclick="document.getElementById('csvInputEst').click()">
-          <div style="font-size:2rem">📄</div>
+          <div style="font-size:2rem"><i class="fas fa-file-lines"></i></div>
           <div style="color:#4a5568;font-size:13px">Haz clic para seleccionar el archivo CSV</div>
           <div style="color:#a0aec0;font-size:11px;margin-top:4px">Solo archivos .csv — codificación UTF-8</div>
           <input type="file" id="csvInputEst" accept=".csv" style="display:none"
@@ -1543,7 +1543,7 @@ function abrirCSVEst(ciclo) {
       </div>
     `,
     showCancelButton: true,
-    confirmButtonText: '✅ Importar',
+    confirmButtonText: '<i class="fas fa-circle-check"></i> Importar',
     cancelButtonText: 'Cancelar',
     confirmButtonColor: 'var(--nv)',
     preConfirm: () => {
@@ -1567,7 +1567,7 @@ function previsualizarCSVEst(file, ciclo) {
   reader.onload = e => {
     const rows = parseCSV(e.target.result);
     if (rows.length < 2) {
-      gi('csvPreviewEst').innerHTML = '<div style="color:red;font-size:12px">⚠️ El archivo está vacío o solo tiene encabezado.</div>';
+      gi('csvPreviewEst').innerHTML = '<div style="color:red;font-size:12px"><i class="fas fa-triangle-exclamation"></i> El archivo está vacío o solo tiene encabezado.</div>';
       return;
     }
     // Detectar si tiene encabezado
@@ -1617,11 +1617,11 @@ function previsualizarCSVEst(file, ciclo) {
 
     gi('csvPreviewEst').innerHTML = `
       ${errores.length ? `<div style="background:#fff5f5;border-radius:6px;padding:8px 12px;margin-bottom:8px;font-size:12px;color:#c53030">
-        ⚠️ ${errores.length} fila(s) con errores (se omitirán):<br>${errores.slice(0,5).map(e=>`• ${e}`).join('<br>')}
+        <i class="fas fa-triangle-exclamation"></i> ${errores.length} fila(s) con errores (se omitirán):<br>${errores.slice(0,5).map(e=>`• ${e}`).join('<br>')}
         ${errores.length>5?`<br>... y ${errores.length-5} más`:''}
       </div>` : ''}
       <div style="background:#f0fff4;border-radius:6px;padding:8px 12px;font-size:12px;color:#276749;margin-bottom:8px">
-        ✅ <strong>${parsed.length}</strong> estudiante(s) listos para importar
+        <i class="fas fa-circle-check"></i> <strong>${parsed.length}</strong> estudiante(s) listos para importar
       </div>
       ${parsed.length ? `<div style="overflow-x:auto"><table class="tbl" style="font-size:12px">
         <thead><tr><th>Nombre</th><th>T.I.</th><th>Salón</th><th>Usuario</th></tr></thead>
@@ -1676,8 +1676,8 @@ async function importarEstudiantesCSV(rows, ciclo) {
     icon: fail === 0 ? 'success' : 'warning',
     title: 'Importación completada',
     html: `<div style="font-size:14px">
-      ✅ <strong>${ok}</strong> estudiante(s) importados correctamente<br>
-      ${fail ? `❌ <strong>${fail}</strong> fila(s) con error (revisa la consola)` : ''}
+      <i class="fas fa-circle-check"></i> <strong>${ok}</strong> estudiante(s) importados correctamente<br>
+      ${fail ? `<i class="fas fa-circle-xmark"></i> <strong>${fail}</strong> fila(s) con error (revisa la consola)` : ''}
     </div>`,
     confirmButtonText: 'Aceptar'
   });
@@ -1690,7 +1690,7 @@ function abrirCSVPrf(ciclo) {
   const salonesDisp = DB.sals.filter(s => s.ciclo === ciclo).map(s => s.nombre);
 
   Swal.fire({
-    title: `📂 Carga Masiva — Profesores ${ciclo === 'primaria' ? 'Primaria' : 'Bachillerato'}`,
+    title: `<i class="fas fa-folder-open"></i> Carga Masiva — Profesores ${ciclo === 'primaria' ? 'Primaria' : 'Bachillerato'}`,
     width: 640,
     html: `
       <div style="text-align:left;font-family:var(--fn);font-size:13px">
@@ -1709,11 +1709,11 @@ function abrirCSVPrf(ciclo) {
           </div>
         </div>
         <div style="display:flex;gap:8px;margin-bottom:12px">
-          <button class="btn bg sm" onclick="descargarPlantillaCSV('prf','${ciclo}')">⬇️ Descargar plantilla</button>
+          <button class="btn bg sm" onclick="descargarPlantillaCSV('prf','${ciclo}')"><i class="fas fa-arrow-down"></i> Descargar plantilla</button>
         </div>
         <div style="border:2px dashed #cbd5e0;border-radius:8px;padding:16px;text-align:center;cursor:pointer;background:#f7fafc"
           onclick="document.getElementById('csvInputPrf').click()">
-          <div style="font-size:2rem">📄</div>
+          <div style="font-size:2rem"><i class="fas fa-file-lines"></i></div>
           <div style="color:#4a5568;font-size:13px">Haz clic para seleccionar el archivo CSV</div>
           <input type="file" id="csvInputPrf" accept=".csv" style="display:none"
             onchange="previsualizarCSVPrf(this.files[0],'${ciclo}')">
@@ -1722,7 +1722,7 @@ function abrirCSVPrf(ciclo) {
       </div>
     `,
     showCancelButton: true,
-    confirmButtonText: '✅ Importar',
+    confirmButtonText: '<i class="fas fa-circle-check"></i> Importar',
     cancelButtonText: 'Cancelar',
     confirmButtonColor: '#805ad5',
     preConfirm: () => {
@@ -1746,7 +1746,7 @@ function previsualizarCSVPrf(file, ciclo) {
   reader.onload = e => {
     const rows = parseCSV(e.target.result);
     if (rows.length < 2) {
-      gi('csvPreviewPrf').innerHTML = '<div style="color:red;font-size:12px">⚠️ Archivo vacío o solo encabezado.</div>';
+      gi('csvPreviewPrf').innerHTML = '<div style="color:red;font-size:12px"><i class="fas fa-triangle-exclamation"></i> Archivo vacío o solo encabezado.</div>';
       return;
     }
     const header = rows[0].map(h => h.toLowerCase().trim());
@@ -1798,11 +1798,11 @@ function previsualizarCSVPrf(file, ciclo) {
 
     gi('csvPreviewPrf').innerHTML = `
       ${errores.length ? `<div style="background:#fff5f5;border-radius:6px;padding:8px 12px;margin-bottom:8px;font-size:12px;color:#c53030">
-        ⚠️ ${errores.length} fila(s) con errores:<br>${errores.slice(0,5).map(e=>`• ${e}`).join('<br>')}
+        <i class="fas fa-triangle-exclamation"></i> ${errores.length} fila(s) con errores:<br>${errores.slice(0,5).map(e=>`• ${e}`).join('<br>')}
         ${errores.length>5?`<br>... y ${errores.length-5} más`:''}
       </div>` : ''}
       <div style="background:#f0fff4;border-radius:6px;padding:8px 12px;font-size:12px;color:#276749;margin-bottom:8px">
-        ✅ <strong>${parsed.length}</strong> profesor(es) listos para importar
+        <i class="fas fa-circle-check"></i> <strong>${parsed.length}</strong> profesor(es) listos para importar
       </div>
       ${parsed.length ? `<div style="overflow-x:auto"><table class="tbl" style="font-size:12px">
         <thead><tr><th>Nombre</th><th>T.I./CC</th><th>Usuario</th><th>Salones</th></tr></thead>
@@ -1850,9 +1850,9 @@ async function importarProfesoresCSV(rows, ciclo) {
     icon: fail === 0 ? 'success' : 'warning',
     title: 'Importación completada',
     html: `<div style="font-size:14px">
-      ✅ <strong>${ok}</strong> profesor(es) importados correctamente<br>
-      ${fail ? `❌ <strong>${fail}</strong> fila(s) con error` : ''}
-      ${ok > 0 && ciclo === 'bachillerato' ? '<br><br>💡 Recuerda asignar materias por salón a cada profesor.' : ''}
+      <i class="fas fa-circle-check"></i> <strong>${ok}</strong> profesor(es) importados correctamente<br>
+      ${fail ? `<i class="fas fa-circle-xmark"></i> <strong>${fail}</strong> fila(s) con error` : ''}
+      ${ok > 0 && ciclo === 'bachillerato' ? '<br><br><i class="fas fa-lightbulb"></i> Recuerda asignar materias por salón a cada profesor.' : ''}
     </div>`,
     confirmButtonText: 'Aceptar'
   });
@@ -1866,7 +1866,7 @@ async function eliminarTodosEsts(ciclo) {
   const lista = DB.ests.filter(e => cicloOf(e.salon) === ciclo);
   if (!lista.length) { sw('info', 'No hay estudiantes en este ciclo'); return; }
   const conf = await Swal.fire({
-    title: `⚠️ ¿Eliminar TODOS los estudiantes de ${ciclo === 'primaria' ? 'Primaria' : 'Bachillerato'}?`,
+    title: `<i class="fas fa-triangle-exclamation"></i> ¿Eliminar TODOS los estudiantes de ${ciclo === 'primaria' ? 'Primaria' : 'Bachillerato'}?`,
     html: `<div style="font-size:14px">
       <p>Se eliminarán <strong>${lista.length} estudiante(s)</strong> permanentemente.</p>
       <p style="color:#c53030">Esta acción no se puede deshacer. Quedarán en el historial.</p>
@@ -1912,7 +1912,7 @@ async function eliminarTodosEsts(ciclo) {
   Swal.fire({
     icon: fail === 0 ? 'success' : 'warning',
     title: 'Eliminación completada',
-    html: `✅ <strong>${ok}</strong> eliminados${fail ? `<br>❌ <strong>${fail}</strong> con error` : ''}`,
+    html: `<i class="fas fa-circle-check"></i> <strong>${ok}</strong> eliminados${fail ? `<br><i class="fas fa-circle-xmark"></i> <strong>${fail}</strong> con error` : ''}`,
   });
 }
 
@@ -1991,7 +1991,7 @@ async function promoverEstudiantes(ciclo) {
   if (faltanPeriodosList.length > 0) {
     await Swal.fire({
       icon: 'warning',
-      title: '⚠️ Periodos sin calificar',
+      title: '<i class="fas fa-triangle-exclamation"></i> Periodos sin calificar',
       width: 520,
       html: `<div style="text-align:left;font-size:13px;font-family:var(--fn)">
         <div class="al aly" style="margin-bottom:12px">
@@ -1999,7 +1999,7 @@ async function promoverEstudiantes(ciclo) {
           No pueden ser promovidos hasta que todos los periodos tengan notas ingresadas.
         </div>
         <div style="background:#fef9c3;border-radius:8px;padding:10px;font-size:12px">
-          <strong style="color:#92400e">📋 Estudiantes con periodos faltantes:</strong><br><br>
+          <strong style="color:#92400e"><i class="fas fa-clipboard-list"></i> Estudiantes con periodos faltantes:</strong><br><br>
           ${faltanPeriodosList.map(r=>
             `<div style="margin-bottom:6px;padding:6px 10px;background:#fff;border-radius:6px;border-left:3px solid #f59e0b">
               <strong>${r.est.salon}</strong> — Faltan: <span style="color:#92400e;font-weight:600">${r.periodosFaltantes.join(', ')}</span>
@@ -2007,7 +2007,7 @@ async function promoverEstudiantes(ciclo) {
           ).join('')}
         </div>
         <div style="font-size:12px;color:#718096;margin-top:10px">
-          💡 Ve a <strong>Gestión de Notas</strong> e ingresa las notas de los periodos faltantes.
+          <i class="fas fa-lightbulb"></i> Ve a <strong>Gestión de Notas</strong> e ingresa las notas de los periodos faltantes.
         </div>
       </div>`,
       confirmButtonText: 'Entendido',
@@ -2020,7 +2020,7 @@ async function promoverEstudiantes(ciclo) {
   if (enRecupList.length > 0) {
     await Swal.fire({
       icon: 'warning',
-      title: '🔒 Promoción bloqueada',
+      title: '<i class="fas fa-lock"></i> Promoción bloqueada',
       width: 560,
       html: `<div style="text-align:left;font-size:13px;font-family:var(--fn)">
         <div class="al aly" style="margin-bottom:12px">
@@ -2034,7 +2034,7 @@ async function promoverEstudiantes(ciclo) {
           <span style="font-size:11px;color:#718096">Recuperaciones enviadas sin revisar: ${r.recsPendientes}</span>
         </div>`).join('')}
         <div style="font-size:12px;color:#718096;margin-top:8px">
-          💡 Ve a <strong>Recuperaciones</strong> y marca las respuestas como revisadas para desbloquear.
+          <i class="fas fa-lightbulb"></i> Ve a <strong>Recuperaciones</strong> y marca las respuestas como revisadas para desbloquear.
         </div>
       </div>`,
       confirmButtonText: 'Entendido',
@@ -2073,12 +2073,12 @@ async function promoverEstudiantes(ciclo) {
       const v = r.verd;
       // Ícono y color según resultado
       let ic, col, bg, etiq;
-      if (r.sinDatos)                          { ic='⚠️'; col='#92400e'; bg='#fef9c3'; etiq='Sin notas'; }
-      else if (r.graduado)                     { ic='🎓'; col='#2b6cb0'; bg='#ebf8ff'; etiq='Graduado'; }
-      else if (r.pierde)                       { ic='❌'; col='#742a2a'; bg='#fff5f5'; etiq='Repite año'; }
-      else if (r.enRecuperacion && !r.recuperacionCompleta) { ic='🔒'; col='#92400e'; bg='#fffbeb'; etiq='Recuperación pend.'; }
-      else if (r.enRecuperacion && r.recuperacionCompleta)  { ic='✅'; col='#553c9a'; bg='#faf5ff'; etiq='Recup. aprobada'; }
-      else                                     { ic='⬆️'; col='#276749'; bg='#f0fff4'; etiq='Promueve'; }
+      if (r.sinDatos)                          { ic='<i class="fas fa-triangle-exclamation"></i>'; col='#92400e'; bg='#fef9c3'; etiq='Sin notas'; }
+      else if (r.graduado)                     { ic='<i class="fas fa-graduation-cap"></i>'; col='#2b6cb0'; bg='#ebf8ff'; etiq='Graduado'; }
+      else if (r.pierde)                       { ic='<i class="fas fa-circle-xmark"></i>'; col='#742a2a'; bg='#fff5f5'; etiq='Repite año'; }
+      else if (r.enRecuperacion && !r.recuperacionCompleta) { ic='<i class="fas fa-lock"></i>'; col='#92400e'; bg='#fffbeb'; etiq='Recuperación pend.'; }
+      else if (r.enRecuperacion && r.recuperacionCompleta)  { ic='<i class="fas fa-circle-check"></i>'; col='#553c9a'; bg='#faf5ff'; etiq='Recup. aprobada'; }
+      else                                     { ic='<i class="fas fa-arrow-up"></i>'; col='#276749'; bg='#f0fff4'; etiq='Promueve'; }
 
       // Definitivas por área o materia (si hay veredicto)
       let matsHTML;
@@ -2104,8 +2104,8 @@ async function promoverEstudiantes(ciclo) {
 
     return `<details style="margin-bottom:8px;border-radius:8px;overflow:hidden;border:1px solid #e2e8f0">
       <summary style="cursor:pointer;padding:8px 12px;background:#f7fafc;font-size:12px;font-weight:700;color:#2d3748;list-style:none;display:flex;justify-content:space-between;align-items:center">
-        <span>🏫 Salón <strong>${sal}</strong> — ${ests.length} estudiante${ests.length>1?'s':''}</span>
-        <span style="font-size:10px;color:#718096">▼ ver detalle</span>
+        <span><i class="fas fa-school"></i> Salón <strong>${sal}</strong> — ${ests.length} estudiante${ests.length>1?'s':''}</span>
+        <span style="font-size:10px;color:#718096"><i class="fas fa-caret-down"></i> ver detalle</span>
       </summary>
       <div style="overflow-x:auto">
         <table style="width:100%;border-collapse:collapse;font-size:11px">
@@ -2122,33 +2122,33 @@ async function promoverEstudiantes(ciclo) {
   }).join('');
 
   const conf = await Swal.fire({
-    title: '🎓 Promover año — Resumen',
+    title: '<i class="fas fa-graduation-cap"></i> Promover año — Resumen',
     width: 740,
     html: `<div style="text-align:left;font-size:13px;font-family:var(--fn)">
       <!-- Tarjetas de resumen global -->
       <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-bottom:16px">
         <div style="background:#f0fff4;border-radius:10px;padding:12px 8px;text-align:center">
-          <div style="font-size:1.6rem">⬆️</div>
+          <div style="font-size:1.6rem"><i class="fas fa-arrow-up"></i></div>
           <div style="font-size:1.5rem;font-weight:800;color:#276749">${promueven.length + recupOkList.length}</div>
           <div style="font-size:10px;color:#4a5568;font-weight:600">Promueven</div>
         </div>
         <div style="background:#fff5f5;border-radius:10px;padding:12px 8px;text-align:center">
-          <div style="font-size:1.6rem">🔁</div>
+          <div style="font-size:1.6rem"><i class="fas fa-rotate"></i></div>
           <div style="font-size:1.5rem;font-weight:800;color:#c53030">${repiten.length}</div>
           <div style="font-size:10px;color:#4a5568;font-weight:600">Repiten año</div>
         </div>
         <div style="background:#ebf8ff;border-radius:10px;padding:12px 8px;text-align:center">
-          <div style="font-size:1.6rem">🎓</div>
+          <div style="font-size:1.6rem"><i class="fas fa-graduation-cap"></i></div>
           <div style="font-size:1.5rem;font-weight:800;color:#2b6cb0">${graduados.length}</div>
           <div style="font-size:10px;color:#4a5568;font-weight:600">Graduados</div>
         </div>
         <div style="background:#fef9c3;border-radius:10px;padding:12px 8px;text-align:center">
-          <div style="font-size:1.6rem">⚠️</div>
+          <div style="font-size:1.6rem"><i class="fas fa-triangle-exclamation"></i></div>
           <div style="font-size:1.5rem;font-weight:800;color:#92400e">${sinDatosList.length}</div>
           <div style="font-size:10px;color:#4a5568;font-weight:600">Sin notas</div>
         </div>
         <div style="background:#f7fafc;border-radius:10px;padding:12px 8px;text-align:center">
-          <div style="font-size:1.6rem">👥</div>
+          <div style="font-size:1.6rem"><i class="fas fa-users"></i></div>
           <div style="font-size:1.5rem;font-weight:800;color:#4a5568">${lista.length}</div>
           <div style="font-size:10px;color:#4a5568;font-weight:600">Total</div>
         </div>
@@ -2156,15 +2156,15 @@ async function promoverEstudiantes(ciclo) {
 
       <!-- Tabla por salón (resumen) -->
       <div style="background:#f7fafc;border-radius:10px;padding:12px;margin-bottom:12px">
-        <div style="font-size:11px;font-weight:800;text-transform:uppercase;color:#4a5568;margin-bottom:8px;letter-spacing:.05em">📊 Resumen por salón</div>
+        <div style="font-size:11px;font-weight:800;text-transform:uppercase;color:#4a5568;margin-bottom:8px;letter-spacing:.05em"><i class="fas fa-chart-column"></i> Resumen por salón</div>
         <table style="width:100%;border-collapse:collapse;font-size:12px">
           <thead>
             <tr style="border-bottom:2px solid #e2e8f0">
               <th style="text-align:left;padding:5px 8px;color:#718096">Salón</th>
-              <th style="text-align:center;padding:5px;color:#276749">⬆️ Prom.</th>
-              <th style="text-align:center;padding:5px;color:#c53030">🔁 Repite</th>
-              <th style="text-align:center;padding:5px;color:#2b6cb0">🎓 Grad.</th>
-              <th style="text-align:center;padding:5px;color:#553c9a">✅ Recup.</th>
+              <th style="text-align:center;padding:5px;color:#276749"><i class="fas fa-arrow-up"></i> Prom.</th>
+              <th style="text-align:center;padding:5px;color:#c53030"><i class="fas fa-rotate"></i> Repite</th>
+              <th style="text-align:center;padding:5px;color:#2b6cb0"><i class="fas fa-graduation-cap"></i> Grad.</th>
+              <th style="text-align:center;padding:5px;color:#553c9a"><i class="fas fa-circle-check"></i> Recup.</th>
               <th style="text-align:center;padding:5px;color:#718096">Total</th>
             </tr>
           </thead>
@@ -2183,22 +2183,22 @@ async function promoverEstudiantes(ciclo) {
 
       <!-- Detalle por estudiante expandible por salón -->
       <div style="margin-bottom:12px">
-        <div style="font-size:11px;font-weight:800;text-transform:uppercase;color:#4a5568;margin-bottom:8px;letter-spacing:.05em">📋 Detalle por estudiante <span style="font-weight:400;font-style:italic;text-transform:none">(haz clic en cada salón para ver)</span></div>
+        <div style="font-size:11px;font-weight:800;text-transform:uppercase;color:#4a5568;margin-bottom:8px;letter-spacing:.05em"><i class="fas fa-clipboard-list"></i> Detalle por estudiante <span style="font-weight:400;font-style:italic;text-transform:none">(haz clic en cada salón para ver)</span></div>
         ${htmlDetalleSalones}
       </div>
 
       ${sinDatosList.length ? `<div style="background:#fef9c3;border-radius:8px;padding:10px;font-size:12px;color:#92400e;margin-bottom:8px">
-        ⚠️ <strong>${sinDatosList.length} estudiante(s) sin notas no serán movidos.</strong>
+        <i class="fas fa-triangle-exclamation"></i> <strong>${sinDatosList.length} estudiante(s) sin notas no serán movidos.</strong>
         Ingresa sus notas antes de promover el año.
       </div>` : ''}
 
       <div style="padding:10px;background:#ebf8ff;border-radius:8px;font-size:12px;color:#2c5282">
-        ℹ️ Al confirmar se aplicarán los cambios de salón. Esta acción no se puede deshacer fácilmente.
+        <i class="fas fa-circle-info"></i> Al confirmar se aplicarán los cambios de salón. Esta acción no se puede deshacer fácilmente.
         <br><span style="font-size:10px;color:#4a5568;margin-top:4px;display:block">Regla: 0 materias perdidas → promueve &nbsp;·&nbsp; 1–2 → recuperación &nbsp;·&nbsp; 3+ → repite el año</span>
       </div>
     </div>`,
     showCancelButton: true,
-    confirmButtonText: '✅ Aplicar cambios',
+    confirmButtonText: '<i class="fas fa-circle-check"></i> Aplicar cambios',
     confirmButtonColor: 'var(--nv)',
     cancelButtonText: 'Cancelar'
   });
@@ -2262,10 +2262,10 @@ async function promoverEstudiantes(ciclo) {
     icon: fail === 0 ? 'success' : 'warning',
     title: 'Año promovido',
     html: `<div style="font-size:14px">
-      ✅ Promovidos: <strong>${promueven.length}</strong><br>
-      🔁 Repiten: <strong>${repiten.length}</strong><br>
-      🎓 Graduados: <strong>${graduados.length}</strong>
-      ${fail ? `<br>❌ Errores: <strong>${fail}</strong>` : ''}
+      <i class="fas fa-circle-check"></i> Promovidos: <strong>${promueven.length}</strong><br>
+      <i class="fas fa-rotate"></i> Repiten: <strong>${repiten.length}</strong><br>
+      <i class="fas fa-graduation-cap"></i> Graduados: <strong>${graduados.length}</strong>
+      ${fail ? `<br><i class="fas fa-circle-xmark"></i> Errores: <strong>${fail}</strong>` : ''}
     </div>`
   });
 }
@@ -2408,5 +2408,5 @@ document.addEventListener('DOMContentLoaded', async () => {
   }, INTERVALO);
 })();
 
-console.log('✅ EduSistema Pro — API Layer cargado. Backend:', API_BASE);
+console.log('<i class="fas fa-circle-check"></i> EduSistema Pro — API Layer cargado. Backend:', API_BASE);
 // force redeploy 04/10/2026
